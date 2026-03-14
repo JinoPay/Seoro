@@ -107,6 +107,13 @@
                             }
                         }
                         break;
+
+                    case "error":
+                        if (!string.IsNullOrEmpty(evt.Error))
+                        {
+                            ChatState.AppendText(assistantMsg, $"\n\n**Error:** {evt.Error}");
+                        }
+                        break;
                 }
 
                 StateHasChanged();
