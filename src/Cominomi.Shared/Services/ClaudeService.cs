@@ -12,6 +12,8 @@ public class ClaudeService : IClaudeService
     private readonly ISettingsService _settingsService;
     private volatile CancellationTokenSource? _internalCts;
     private volatile Process? _currentProcess;
+    private CliCapabilities? _capabilities;
+    private readonly SemaphoreSlim _capLock = new(1, 1);
 
     public ClaudeService(ISettingsService settingsService)
     {
@@ -26,13 +28,104 @@ public class ClaudeService : IClaudeService
     {
         var settings = await _settingsService.LoadAsync();
         var (fileName, baseArgs) = ResolveClaudeCommand(settings.ClaudePath);
+        var caps = await DetectCapabilitiesAsync(fileName, baseArgs);
 
         var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var previous = Interlocked.Exchange(ref _internalCts, cts);
         previous?.Cancel();
 
-        var arguments = $"{baseArgs}--print --output-format stream-json --model {model}";
+        var arguments = BuildArguments(baseArgs, model, caps);
+        var token = cts.Token;
 
+        var process = StartClaudeProcess(fileName, arguments, workingDir);
+        await process.StandardInput.WriteAsync(message);
+        process.StandardInput.Close();
+
+        var stderrBuilder = new StringBuilder();
+        var stderrTask = CollectStderrAsync(process, stderrBuilder, token);
+
+        var reader = process.StandardOutput;
+        bool anyEvents = false;
+
+        while (!reader.EndOfStream && !token.IsCancellationRequested)
+        {
+            string? line;
+            try { line = await reader.ReadLineAsync(token); }
+            catch (OperationCanceledException) { break; }
+
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            StreamEvent? evt = null;
+            try { evt = JsonSerializer.Deserialize<StreamEvent>(line); }
+            catch (JsonException) { }
+
+            if (evt != null)
+            {
+                anyEvents = true;
+                yield return evt;
+            }
+        }
+
+        await FinishProcess(process, token);
+        try { await stderrTask; } catch { }
+
+        var stderr = stderrBuilder.ToString().Trim();
+
+        // Retry with --verbose if process failed before producing events
+        if (!anyEvents && process.ExitCode != 0
+            && stderr.Contains("requires --verbose", StringComparison.OrdinalIgnoreCase)
+            && !caps.RequiresVerboseForStreamJson)
+        {
+            caps.RequiresVerboseForStreamJson = true;
+            caps.SupportsVerbose = true;
+            process.Dispose();
+            Interlocked.CompareExchange(ref _currentProcess, null, process);
+
+            arguments = BuildArguments(baseArgs, model, caps);
+            process = StartClaudeProcess(fileName, arguments, workingDir);
+            await process.StandardInput.WriteAsync(message);
+            process.StandardInput.Close();
+
+            stderrBuilder.Clear();
+            stderrTask = CollectStderrAsync(process, stderrBuilder, token);
+            reader = process.StandardOutput;
+
+            while (!reader.EndOfStream && !token.IsCancellationRequested)
+            {
+                string? line;
+                try { line = await reader.ReadLineAsync(token); }
+                catch (OperationCanceledException) { break; }
+
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                StreamEvent? evt = null;
+                try { evt = JsonSerializer.Deserialize<StreamEvent>(line); }
+                catch (JsonException) { }
+
+                if (evt != null)
+                    yield return evt;
+            }
+
+            await FinishProcess(process, token);
+            try { await stderrTask; } catch { }
+            stderr = stderrBuilder.ToString().Trim();
+        }
+
+        if (!string.IsNullOrEmpty(stderr) && process.ExitCode != 0)
+        {
+            yield return new StreamEvent
+            {
+                Type = "error",
+                Error = stderr
+            };
+        }
+
+        process.Dispose();
+        Interlocked.CompareExchange(ref _currentProcess, null, process);
+    }
+
+    private Process StartClaudeProcess(string fileName, string arguments, string workingDir)
+    {
         var process = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -56,58 +149,26 @@ public class ClaudeService : IClaudeService
             previousProcess.Dispose();
         }
 
-        var token = cts.Token;
-
         process.Start();
+        return process;
+    }
 
-        // Send message via stdin to avoid argument escaping issues
-        await process.StandardInput.WriteAsync(message);
-        process.StandardInput.Close();
-
-        // Collect stderr asynchronously
-        var stderrBuilder = new StringBuilder();
-        var stderrTask = Task.Run(async () =>
+    private static Task CollectStderrAsync(Process process, StringBuilder sb, CancellationToken token)
+    {
+        return Task.Run(async () =>
         {
             try
             {
                 var errLine = await process.StandardError.ReadToEndAsync(token);
                 if (!string.IsNullOrWhiteSpace(errLine))
-                    stderrBuilder.Append(errLine);
+                    sb.Append(errLine);
             }
             catch (OperationCanceledException) { }
         }, token);
+    }
 
-        var reader = process.StandardOutput;
-
-        while (!reader.EndOfStream && !token.IsCancellationRequested)
-        {
-            string? line;
-            try
-            {
-                line = await reader.ReadLineAsync(token);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-
-            if (string.IsNullOrWhiteSpace(line))
-                continue;
-
-            StreamEvent? evt = null;
-            try
-            {
-                evt = JsonSerializer.Deserialize<StreamEvent>(line);
-            }
-            catch (JsonException)
-            {
-                // skip malformed lines
-            }
-
-            if (evt != null)
-                yield return evt;
-        }
-
+    private static async Task FinishProcess(Process process, CancellationToken token)
+    {
         if (token.IsCancellationRequested && process is { HasExited: false })
         {
             try { process.Kill(entireProcessTree: true); } catch { }
@@ -117,22 +178,76 @@ public class ClaudeService : IClaudeService
         {
             await process.WaitForExitAsync(CancellationToken.None);
         }
+    }
 
-        // Wait for stderr collection to finish
-        try { await stderrTask; } catch { }
+    private static string BuildArguments(string baseArgs, string model, CliCapabilities caps)
+    {
+        var sb = new StringBuilder(baseArgs);
+        sb.Append("--print --output-format stream-json ");
+        if (caps.RequiresVerboseForStreamJson || caps.SupportsVerbose)
+            sb.Append("--verbose ");
+        sb.Append($"--model {model}");
+        return sb.ToString();
+    }
 
-        // If there was stderr output and process exited with error, yield an error event
-        if (stderrBuilder.Length > 0 && process.ExitCode != 0)
+    private async Task<CliCapabilities> DetectCapabilitiesAsync(string fileName, string baseArgs)
+    {
+        if (_capabilities != null)
+            return _capabilities;
+
+        await _capLock.WaitAsync();
+        try
         {
-            yield return new StreamEvent
-            {
-                Type = "error",
-                Error = stderrBuilder.ToString().Trim()
-            };
-        }
+            if (_capabilities != null)
+                return _capabilities;
 
-        process.Dispose();
-        Interlocked.CompareExchange(ref _currentProcess, null, process);
+            var caps = new CliCapabilities();
+
+            var version = await RunSimpleCommand(fileName, $"{baseArgs}--version");
+            caps.Version = version?.Trim() ?? "";
+
+            var help = await RunSimpleCommand(fileName, $"{baseArgs}--help");
+            if (help != null)
+            {
+                caps.SupportsVerbose = help.Contains("--verbose", StringComparison.OrdinalIgnoreCase);
+            }
+
+            _capabilities = caps;
+            return caps;
+        }
+        finally
+        {
+            _capLock.Release();
+        }
+    }
+
+    private static async Task<string?> RunSimpleCommand(string fileName, string arguments)
+    {
+        try
+        {
+            var proc = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = fileName,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    Environment = { ["NO_COLOR"] = "1" }
+                }
+            };
+            proc.Start();
+            var output = await proc.StandardOutput.ReadToEndAsync();
+            await proc.WaitForExitAsync();
+            proc.Dispose();
+            return output;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public void Cancel()
@@ -144,7 +259,6 @@ public class ClaudeService : IClaudeService
     {
         if (!string.IsNullOrWhiteSpace(configuredPath))
         {
-            // On Windows, .cmd files need cmd.exe wrapping when UseShellExecute=false
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                 && configuredPath.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
             {
@@ -153,7 +267,6 @@ public class ClaudeService : IClaudeService
             return (configuredPath, "");
         }
 
-        // Auto-detect
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             var resolved = TryWhich("where.exe", "claude");
@@ -166,12 +279,10 @@ public class ClaudeService : IClaudeService
             return ("claude.exe", "");
         }
 
-        // macOS / Linux
         var path = TryWhich("/usr/bin/which", "claude");
         if (path != null)
             return (path, "");
 
-        // Common install locations
         string[] candidates =
         [
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".npm", "bin", "claude"),

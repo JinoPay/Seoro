@@ -9,6 +9,17 @@
         New Chat
     </MudButton>
 
+    <MudAutocomplete T="string" @bind-Value="_newChatPath"
+                     Placeholder="Working directory..."
+                     Variant="Variant.Outlined"
+                     Margin="Margin.Dense"
+                     Dense="true"
+                     SearchFunc="SearchDirectories"
+                     CoerceText="true"
+                     AdornmentIcon="@Icons.Material.Filled.Folder"
+                     Adornment="Adornment.Start"
+                     Style="font-size: 0.8rem;" />
+
     <MudDivider Class="my-2" />
 
     <MudStack Style="overflow-y: auto; flex: 1;">
@@ -39,11 +50,16 @@
 
 @code {
     private List<Session> _sessions = [];
+    private string _newChatPath = "";
+    private List<string> _recentDirs = [];
 
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += async () => await InvokeAsync(StateHasChanged);
         await LoadSessions();
+        var settings = await SettingsService.LoadAsync();
+        _recentDirs = settings.RecentDirectories;
+        _newChatPath = settings.DefaultWorkingDirectory;
     }
 
     private async Task LoadSessions()
@@ -51,13 +67,42 @@
         _sessions = await SessionService.GetSessionsAsync();
     }
 
+    private Task<IEnumerable<string>> SearchDirectories(string? value, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Task.FromResult<IEnumerable<string>>(_recentDirs);
+
+        var filtered = _recentDirs
+            .Where(d => d.Contains(value, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        // Also include the typed value itself so user can enter a new path
+        if (!filtered.Contains(value))
+            filtered.Add(value);
+
+        return Task.FromResult<IEnumerable<string>>(filtered);
+    }
+
     private async Task CreateNewSession()
     {
         var settings = await SettingsService.LoadAsync();
-        var session = await SessionService.CreateSessionAsync(
-            settings.DefaultWorkingDirectory, settings.DefaultModel);
+        var workDir = string.IsNullOrWhiteSpace(_newChatPath)
+            ? settings.DefaultWorkingDirectory
+            : _newChatPath.Trim();
+        var session = await SessionService.CreateSessionAsync(workDir, settings.DefaultModel);
         ChatState.SetSession(session);
         _sessions.Insert(0, session);
+
+        // Track in recent directories
+        if (!string.IsNullOrWhiteSpace(workDir))
+        {
+            settings.RecentDirectories.Remove(workDir);
+            settings.RecentDirectories.Insert(0, workDir);
+            if (settings.RecentDirectories.Count > 10)
+                settings.RecentDirectories.RemoveRange(10, settings.RecentDirectories.Count - 10);
+            _recentDirs = settings.RecentDirectories;
+            await SettingsService.SaveAsync(settings);
+        }
     }
 
     private async Task SelectSession(Session session)
