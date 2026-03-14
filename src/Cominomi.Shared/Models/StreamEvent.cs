@@ -26,6 +26,9 @@ public class StreamEvent
     [JsonPropertyName("error")]
     public string? Error { get; set; }
 
+    [JsonPropertyName("result")]
+    public string? Result { get; set; }
+
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }

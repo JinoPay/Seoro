@@ -198,25 +198,33 @@
                         break;
 
                     case "result":
-                        // Final result from stream-json
-                        if (evt.Subtype == "result" && evt.Message?.Content != null)
+                        if (string.IsNullOrEmpty(assistantMsg.Text) && evt.Message?.Content != null)
                         {
                             foreach (var block in evt.Message.Content)
                             {
                                 if (block.Type == "text" && block.Text != null)
-                                {
-                                    // If we haven't gotten text through deltas, use the final result
-                                    if (string.IsNullOrEmpty(assistantMsg.Text))
-                                        ChatState.AppendText(assistantMsg, block.Text);
-                                }
+                                    ChatState.AppendText(assistantMsg, block.Text);
                             }
                         }
+                        if (string.IsNullOrEmpty(assistantMsg.Text) && !string.IsNullOrEmpty(evt.Result))
+                            ChatState.AppendText(assistantMsg, evt.Result);
                         break;
 
                     case "error":
                         if (!string.IsNullOrEmpty(evt.Error))
                         {
                             ChatState.AppendText(assistantMsg, $"\n\n**Error:** {evt.Error}");
+                        }
+                        break;
+
+                    default:
+                        if (evt.Message?.Content != null)
+                        {
+                            foreach (var block in evt.Message.Content)
+                            {
+                                if (block.Type == "text" && !string.IsNullOrEmpty(block.Text))
+                                    ChatState.AppendText(assistantMsg, block.Text);
+                            }
                         }
                         break;
                 }
