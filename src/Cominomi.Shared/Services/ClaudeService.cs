@@ -24,6 +24,7 @@ public class ClaudeService : IClaudeService
         string message,
         string workingDir,
         string model,
+        string permissionMode = "default",
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var settings = await _settingsService.LoadAsync();
@@ -34,7 +35,7 @@ public class ClaudeService : IClaudeService
         var previous = Interlocked.Exchange(ref _internalCts, cts);
         previous?.Cancel();
 
-        var arguments = BuildArguments(baseArgs, model, caps);
+        var arguments = BuildArguments(baseArgs, model, permissionMode, caps);
         var token = cts.Token;
 
         var process = StartClaudeProcess(fileName, arguments, workingDir);
@@ -81,7 +82,7 @@ public class ClaudeService : IClaudeService
             process.Dispose();
             Interlocked.CompareExchange(ref _currentProcess, null, process);
 
-            arguments = BuildArguments(baseArgs, model, caps);
+            arguments = BuildArguments(baseArgs, model, permissionMode, caps);
             process = StartClaudeProcess(fileName, arguments, workingDir);
             await process.StandardInput.WriteAsync(message);
             process.StandardInput.Close();
@@ -180,13 +181,15 @@ public class ClaudeService : IClaudeService
         }
     }
 
-    private static string BuildArguments(string baseArgs, string model, CliCapabilities caps)
+    private static string BuildArguments(string baseArgs, string model, string permissionMode, CliCapabilities caps)
     {
         var sb = new StringBuilder(baseArgs);
         sb.Append("--print --output-format stream-json ");
         if (caps.RequiresVerboseForStreamJson || caps.SupportsVerbose)
             sb.Append("--verbose ");
         sb.Append($"--model {model}");
+        if (permissionMode == "plan")
+            sb.Append(" --permission-mode plan");
         return sb.ToString();
     }
 

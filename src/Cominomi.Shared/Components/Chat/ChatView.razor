@@ -5,6 +5,15 @@
 @implements IDisposable
 
 <MudStack Style="height: 100%; overflow: hidden;" Justify="Justify.SpaceBetween" Spacing="0">
+    @if (ChatState.CurrentSession?.PermissionMode == "plan")
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" NoIcon="false"
+                  Icon="@Icons.Material.Filled.Description"
+                  Style="border-radius: 0; flex-shrink: 0;">
+            Plan Mode — Claude will only read and research, not make edits
+        </MudAlert>
+    }
+
     <MudStack Style="flex: 1; overflow-y: auto; padding: 16px;" id="message-list" @ref="_messageListRef">
         @if (ChatState.CurrentSession == null)
         {
@@ -72,7 +81,11 @@
     }
 
     <InputArea OnSend="HandleSend" OnCancel="HandleCancel" IsStreaming="ChatState.IsStreaming"
-               Disabled="ChatState.CurrentSession == null" />
+               Disabled="ChatState.CurrentSession == null"
+               IsPlanMode="@(ChatState.CurrentSession?.PermissionMode == "plan")"
+               IsPlanModeChanged="HandlePlanModeChanged"
+               Model="@(ChatState.CurrentSession?.Model ?? "")"
+               OnModelChanged="HandleModelChanged" />
 </MudStack>
 
 @code {
@@ -126,6 +139,14 @@
         return path;
     }
 
+    private async Task HandlePlanModeChanged(bool isPlan)
+    {
+        if (ChatState.CurrentSession == null) return;
+        ChatState.CurrentSession.PermissionMode = isPlan ? "plan" : "default";
+        ChatState.NotifyStateChanged();
+        await SessionService.SaveSessionAsync(ChatState.CurrentSession);
+    }
+
     private async Task HandleSend(string message)
     {
         if (ChatState.CurrentSession == null || string.IsNullOrWhiteSpace(message))
@@ -142,7 +163,8 @@
             await foreach (var evt in ClaudeService.SendMessageAsync(
                 message,
                 ChatState.CurrentSession.WorkingDirectory,
-                ChatState.CurrentSession.Model))
+                ChatState.CurrentSession.Model,
+                ChatState.CurrentSession.PermissionMode))
             {
                 switch (evt.Type)
                 {
@@ -211,6 +233,15 @@
         {
             ChatState.FinishMessage(assistantMsg);
             ChatState.SetStreaming(false);
+            await SessionService.SaveSessionAsync(ChatState.CurrentSession);
+        }
+    }
+
+    private async Task HandleModelChanged(string model)
+    {
+        if (ChatState.CurrentSession != null)
+        {
+            ChatState.CurrentSession.Model = model;
             await SessionService.SaveSessionAsync(ChatState.CurrentSession);
         }
     }
