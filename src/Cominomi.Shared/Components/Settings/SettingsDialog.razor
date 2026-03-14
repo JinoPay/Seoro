@@ -1,0 +1,66 @@
+@inject ISettingsService SettingsService
+
+<MudDialog @bind-Visible="IsOpen" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
+            Settings
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3" Class="pa-2" Style="min-width: 400px;">
+            <MudSelect T="string" @bind-Value="_settings.DefaultModel" Label="Default Model"
+                       Variant="Variant.Outlined">
+                <MudSelectItem T="string" Value="@("claude-opus-4-20250514")">Claude Opus</MudSelectItem>
+                <MudSelectItem T="string" Value="@("claude-sonnet-4-20250514")">Claude Sonnet</MudSelectItem>
+                <MudSelectItem T="string" Value="@("claude-haiku-3-20250307")">Claude Haiku</MudSelectItem>
+            </MudSelect>
+
+            <MudSelect T="string" @bind-Value="_settings.Theme" Label="Theme" Variant="Variant.Outlined">
+                <MudSelectItem T="string" Value="@("dark")">Dark</MudSelectItem>
+                <MudSelectItem T="string" Value="@("light")">Light</MudSelectItem>
+                <MudSelectItem T="string" Value="@("system")">System</MudSelectItem>
+            </MudSelect>
+
+            <MudTextField @bind-Value="_settings.DefaultWorkingDirectory" Label="Default Working Directory"
+                          Variant="Variant.Outlined" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private AppSettings _settings = new();
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen)
+        {
+            _settings = await SettingsService.LoadAsync();
+        }
+    }
+
+    private async Task Save()
+    {
+        await SettingsService.SaveAsync(_settings);
+        await Close();
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+}

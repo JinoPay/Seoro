@@ -1,0 +1,59 @@
+<MudPaper Class="pa-3" Elevation="3" Style="border-top: 1px solid var(--mud-palette-lines-default);">
+    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.End">
+        <MudTextField @bind-Value="_inputText"
+                      Placeholder="@(Disabled ? "Select or create a session first..." : "Type a message...")"
+                      Variant="Variant.Outlined"
+                      Lines="1"
+                      AutoGrow="true"
+                      MaxLines="8"
+                      Immediate="true"
+                      Disabled="Disabled || IsStreaming"
+                      OnKeyDown="HandleKeyDown"
+                      Class="flex-grow-1" />
+
+        @if (IsStreaming)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Stop"
+                           Color="Color.Error"
+                           Variant="Variant.Filled"
+                           OnClick="@(() => OnCancel.InvokeAsync())"
+                           Size="Size.Medium" />
+        }
+        else
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Send"
+                           Color="Color.Primary"
+                           Variant="Variant.Filled"
+                           OnClick="Send"
+                           Disabled="Disabled || string.IsNullOrWhiteSpace(_inputText)"
+                           Size="Size.Medium" />
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter] public EventCallback<string> OnSend { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool IsStreaming { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private string _inputText = string.Empty;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await Send();
+        }
+    }
+
+    private async Task Send()
+    {
+        if (string.IsNullOrWhiteSpace(_inputText) || Disabled)
+            return;
+
+        var text = _inputText.Trim();
+        _inputText = string.Empty;
+        await OnSend.InvokeAsync(text);
+    }
+}

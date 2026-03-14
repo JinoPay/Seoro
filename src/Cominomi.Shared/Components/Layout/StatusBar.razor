@@ -1,0 +1,35 @@
+@inject ChatState ChatState
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mr-4">
+    @if (!string.IsNullOrEmpty(ChatState.CurrentSession?.Model))
+    {
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+            @GetModelDisplayName(ChatState.CurrentSession.Model)
+        </MudChip>
+    }
+    @if (!string.IsNullOrEmpty(ChatState.CurrentSession?.WorkingDirectory))
+    {
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+                 Icon="@Icons.Material.Filled.Folder">
+            @ShortenPath(ChatState.CurrentSession.WorkingDirectory)
+        </MudChip>
+    }
+</MudStack>
+
+@code {
+    private static string GetModelDisplayName(string model) => model switch
+    {
+        var m when m.Contains("opus") => "Opus",
+        var m when m.Contains("sonnet") => "Sonnet",
+        var m when m.Contains("haiku") => "Haiku",
+        _ => model
+    };
+
+    private static string ShortenPath(string path)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (path.StartsWith(home))
+            return "~" + path[home.Length..];
+        return path.Length > 30 ? "..." + path[^27..] : path;
+    }
+}

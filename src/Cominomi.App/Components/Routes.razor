@@ -1,0 +1,8 @@
+<Router AppAssembly="typeof(MauiProgram).Assembly"
+        AdditionalAssemblies="new[] { typeof(Cominomi.Shared.Services.ChatState).Assembly }"
+        NotFoundPage="typeof(Pages.NotFound)">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Cominomi.Shared.Components.Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>

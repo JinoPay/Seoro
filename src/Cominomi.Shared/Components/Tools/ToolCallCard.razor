@@ -1,0 +1,61 @@
+<MudPaper Class="pa-2 my-1" Outlined="true" Style="border-radius: 8px;">
+    <MudStack Spacing="1">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1"
+                  Style="cursor: pointer;" @onclick="@(() => _expanded = !_expanded)">
+            @if (!Tool.IsComplete)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            }
+            else if (Tool.IsError)
+            {
+                <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success" />
+            }
+            <MudIcon Icon="@GetToolIcon()" Size="Size.Small" />
+            <MudText Typo="Typo.body2" Style="font-weight: 600;">@Tool.Name</MudText>
+            <MudSpacer />
+            <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                     Size="Size.Small" />
+        </MudStack>
+
+        @if (_expanded)
+        {
+            @if (!string.IsNullOrEmpty(Tool.Input))
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Input</MudText>
+                <MudPaper Class="pa-2" Style="background: var(--mud-palette-background); border-radius: 4px; overflow-x: auto;">
+                    <pre style="margin: 0; font-size: 12px; white-space: pre-wrap; word-break: break-all;">@Tool.Input</pre>
+                </MudPaper>
+            }
+
+            @if (!string.IsNullOrEmpty(Tool.Output))
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Output</MudText>
+                <MudPaper Class="pa-2" Style="background: var(--mud-palette-background); border-radius: 4px; overflow-x: auto; max-height: 300px; overflow-y: auto;">
+                    <pre style="margin: 0; font-size: 12px; white-space: pre-wrap; word-break: break-all;">@Tool.Output</pre>
+                </MudPaper>
+            }
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired]
+    public ToolCall Tool { get; set; } = default!;
+
+    private bool _expanded;
+
+    private string GetToolIcon() => Tool.Name.ToLowerInvariant() switch
+    {
+        "bash" or "execute_bash" => Icons.Material.Filled.Terminal,
+        "read" or "read_file" => Icons.Material.Filled.Description,
+        "write" or "write_file" => Icons.Material.Filled.Edit,
+        "edit" or "edit_file" => Icons.Material.Filled.EditNote,
+        "glob" => Icons.Material.Filled.Search,
+        "grep" => Icons.Material.Filled.FindInPage,
+        _ => Icons.Material.Filled.Extension
+    };
+}
