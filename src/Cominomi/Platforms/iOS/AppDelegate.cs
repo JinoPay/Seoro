@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace Cominomi.App;
+namespace Cominomi;
 
 [Register("AppDelegate")]
 public class AppDelegate : MauiUIApplicationDelegate

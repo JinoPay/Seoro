@@ -1,4 +1,4 @@
-﻿namespace Cominomi.App;
+﻿namespace Cominomi;
 
 public partial class MainPage : ContentPage
 {

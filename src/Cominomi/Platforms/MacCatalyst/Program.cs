@@ -1,7 +1,7 @@
 ﻿using ObjCRuntime;
 using UIKit;
 
-namespace Cominomi.App;
+namespace Cominomi;
 
 public class Program
 {

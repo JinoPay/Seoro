@@ -1,7 +1,7 @@
 ﻿using Android.App;
 using Android.Runtime;
 
-namespace Cominomi.App;
+namespace Cominomi;
 
 [Application]
 public class MainApplication : MauiApplication

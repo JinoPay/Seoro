@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:local="clr-namespace:Cominomi.App"
-             xmlns:components="clr-namespace:Cominomi.App.Components"
-             x:Class="Cominomi.App.MainPage">
+             xmlns:local="clr-namespace:Cominomi"
+             xmlns:components="clr-namespace:Cominomi.Components"
+             x:Class="Cominomi.MainPage">
 
     <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html">
         <BlazorWebView.RootComponents>
