@@ -1,0 +1,137 @@
+@inject ChatState ChatState
+@inject IClaudeService ClaudeService
+@inject ISessionService SessionService
+@implements IDisposable
+
+<MudStack Style="height: 100%; overflow: hidden;" Justify="Justify.SpaceBetween" Spacing="0">
+    <MudStack Style="flex: 1; overflow-y: auto; padding: 16px;" id="message-list" @ref="_messageListRef">
+        @if (ChatState.CurrentSession == null)
+        {
+            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Chat" Size="Size.Large" Color="Color.Primary" />
+                <MudText Typo="Typo.h5" Align="Align.Center" Color="Color.Primary">Cominomi</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                    Start a new conversation or select one from the sidebar
+                </MudText>
+            </MudStack>
+        }
+        else if (ChatState.CurrentSession.Messages.Count == 0)
+        {
+            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Color="Color.Primary" />
+                <MudText Typo="Typo.h6" Align="Align.Center">What can I help you with?</MudText>
+            </MudStack>
+        }
+        else
+        {
+            @foreach (var message in ChatState.CurrentSession.Messages)
+            {
+                <MessageBubble Message="message" />
+            }
+        }
+    </MudStack>
+
+    <InputArea OnSend="HandleSend" OnCancel="HandleCancel" IsStreaming="ChatState.IsStreaming"
+               Disabled="ChatState.CurrentSession == null" />
+</MudStack>
+
+@code {
+    private MudStack? _messageListRef;
+
+    protected override void OnInitialized()
+    {
+        ChatState.OnChange += StateHasChanged;
+    }
+
+    private async Task HandleSend(string message)
+    {
+        if (ChatState.CurrentSession == null || string.IsNullOrWhiteSpace(message))
+            return;
+
+        ChatState.AddUserMessage(message);
+        ChatState.SetStreaming(true);
+
+        var assistantMsg = ChatState.StartAssistantMessage();
+        ToolCall? currentToolCall = null;
+
+        try
+        {
+            await foreach (var evt in ClaudeService.SendMessageAsync(
+                message,
+                ChatState.CurrentSession.WorkingDirectory,
+                ChatState.CurrentSession.Model))
+            {
+                switch (evt.Type)
+                {
+                    case "content_block_start" when evt.ContentBlock?.Type == "tool_use":
+                        currentToolCall = new ToolCall
+                        {
+                            Id = evt.ContentBlock.Id ?? "",
+                            Name = evt.ContentBlock.Name ?? ""
+                        };
+                        ChatState.AddToolCall(assistantMsg, currentToolCall);
+                        break;
+
+                    case "content_block_delta":
+                        if (evt.Delta?.Type == "text_delta" && evt.Delta.Text != null)
+                        {
+                            ChatState.AppendText(assistantMsg, evt.Delta.Text);
+                        }
+                        else if (evt.Delta?.Type == "input_json_delta" && evt.Delta.PartialJson != null && currentToolCall != null)
+                        {
+                            currentToolCall.Input += evt.Delta.PartialJson;
+                        }
+                        break;
+
+                    case "content_block_stop":
+                        if (currentToolCall != null)
+                        {
+                            currentToolCall.IsComplete = true;
+                            currentToolCall = null;
+                            ChatState.NotifyStateChanged();
+                        }
+                        break;
+
+                    case "result":
+                        // Final result from stream-json
+                        if (evt.Subtype == "result" && evt.Message?.Content != null)
+                        {
+                            foreach (var block in evt.Message.Content)
+                            {
+                                if (block.Type == "text" && block.Text != null)
+                                {
+                                    // If we haven't gotten text through deltas, use the final result
+                                    if (string.IsNullOrEmpty(assistantMsg.Text))
+                                        ChatState.AppendText(assistantMsg, block.Text);
+                                }
+                            }
+                        }
+                        break;
+                }
+
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            if (string.IsNullOrEmpty(assistantMsg.Text))
+                ChatState.AppendText(assistantMsg, $"Error: {ex.Message}");
+        }
+        finally
+        {
+            ChatState.FinishMessage(assistantMsg);
+            ChatState.SetStreaming(false);
+            await SessionService.SaveSessionAsync(ChatState.CurrentSession);
+        }
+    }
+
+    private void HandleCancel()
+    {
+        ClaudeService.Cancel();
+    }
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= StateHasChanged;
+    }
+}

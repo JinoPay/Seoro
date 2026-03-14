@@ -1,0 +1,12 @@
+using Cominomi.Shared.Models;
+
+namespace Cominomi.Shared.Services;
+
+public interface ISessionService
+{
+    Task<List<Session>> GetSessionsAsync();
+    Task<Session> CreateSessionAsync(string workingDir, string model);
+    Task<Session?> LoadSessionAsync(string sessionId);
+    Task SaveSessionAsync(Session session);
+    Task DeleteSessionAsync(string sessionId);
+}

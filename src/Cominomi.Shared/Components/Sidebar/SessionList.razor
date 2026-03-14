@@ -1,0 +1,90 @@
+@inject ChatState ChatState
+@inject ISessionService SessionService
+@inject ISettingsService SettingsService
+@implements IDisposable
+
+<MudStack Class="pa-2" Spacing="1" Style="height: 100%;">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="CreateNewSession">
+        New Chat
+    </MudButton>
+
+    <MudDivider Class="my-2" />
+
+    <MudStack Style="overflow-y: auto; flex: 1;">
+        @foreach (var session in _sessions)
+        {
+            var isActive = ChatState.CurrentSession?.Id == session.Id;
+            <MudPaper Class="pa-2 mb-1" Outlined="true"
+                      Style="@($"cursor: pointer; border-radius: 8px; {(isActive ? "border-color: var(--mud-palette-primary);" : "")}")"
+                      @onclick="@(() => SelectSession(session))">
+                <MudStack Spacing="0">
+                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.body2"
+                                 Style="@($"flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; {(isActive ? "font-weight: 600;" : "")}")">
+                            @session.Title
+                        </MudText>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                       Color="Color.Error" OnClick="@(() => DeleteSession(session))"
+                                       OnClickStopPropagation="true" />
+                    </MudStack>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @session.UpdatedAt.ToLocalTime().ToString("MM/dd HH:mm")
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+        }
+    </MudStack>
+</MudStack>
+
+@code {
+    private List<Session> _sessions = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        ChatState.OnChange += async () => await InvokeAsync(StateHasChanged);
+        await LoadSessions();
+    }
+
+    private async Task LoadSessions()
+    {
+        _sessions = await SessionService.GetSessionsAsync();
+    }
+
+    private async Task CreateNewSession()
+    {
+        var settings = await SettingsService.LoadAsync();
+        var session = await SessionService.CreateSessionAsync(
+            settings.DefaultWorkingDirectory, settings.DefaultModel);
+        ChatState.SetSession(session);
+        _sessions.Insert(0, session);
+    }
+
+    private async Task SelectSession(Session session)
+    {
+        var fullSession = await SessionService.LoadSessionAsync(session.Id);
+        if (fullSession != null)
+        {
+            ChatState.SetSession(fullSession);
+        }
+        else
+        {
+            ChatState.SetSession(session);
+        }
+    }
+
+    private async Task DeleteSession(Session session)
+    {
+        await SessionService.DeleteSessionAsync(session.Id);
+        _sessions.Remove(session);
+        if (ChatState.CurrentSession?.Id == session.Id)
+        {
+            ChatState.SetSession(null!);
+        }
+    }
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= async () => await InvokeAsync(StateHasChanged);
+    }
+}

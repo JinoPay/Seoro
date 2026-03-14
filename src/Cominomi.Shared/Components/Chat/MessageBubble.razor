@@ -1,0 +1,47 @@
+@using Markdig
+
+<div class="message-bubble @(Message.Role == MessageRole.User ? "user-message" : "assistant-message")">
+    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start">
+        <MudAvatar Size="Size.Small"
+                   Color="@(Message.Role == MessageRole.User ? Color.Primary : Color.Secondary)"
+                   Variant="Variant.Filled">
+            @(Message.Role == MessageRole.User ? "U" : "A")
+        </MudAvatar>
+
+        <MudStack Spacing="1" Style="flex: 1; min-width: 0;">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @(Message.Role == MessageRole.User ? "You" : "Claude")
+                <span style="margin-left: 8px; opacity: 0.6;">@Message.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+            </MudText>
+
+            @if (Message.ToolCalls.Count > 0)
+            {
+                @foreach (var tool in Message.ToolCalls)
+                {
+                    <ToolCallCard Tool="tool" />
+                }
+            }
+
+            @if (!string.IsNullOrEmpty(Message.Text))
+            {
+                <div class="markdown-body">
+                    @((MarkupString)Markdown.ToHtml(Message.Text, _pipeline))
+                </div>
+            }
+
+            @if (Message.IsStreaming && string.IsNullOrEmpty(Message.Text) && Message.ToolCalls.Count == 0)
+            {
+                <StreamingIndicator />
+            }
+        </MudStack>
+    </MudStack>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ChatMessage Message { get; set; } = default!;
+
+    private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+}
