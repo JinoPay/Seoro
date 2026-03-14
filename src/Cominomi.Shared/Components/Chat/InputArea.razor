@@ -1,4 +1,14 @@
 <MudPaper Class="pa-3" Elevation="3" Style="border-top: 1px solid var(--mud-palette-lines-default);">
+    <MudSelect T="string" Value="Model" ValueChanged="HandleModelChanged"
+               Variant="Variant.Text" Dense="true" Margin="Margin.Dense"
+               Disabled="Disabled || IsStreaming"
+               Style="max-width: 240px; margin-bottom: 4px;"
+               AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft">
+        @foreach (var model in ModelDefinitions.All)
+        {
+            <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+        }
+    </MudSelect>
     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.End">
         <MudTooltip Text="@(IsPlanMode ? "Plan Mode (read-only)" : "Code Mode")">
             <MudToggleIconButton Toggled="@_planToggled"
@@ -49,6 +59,8 @@
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public bool IsPlanMode { get; set; }
     [Parameter] public EventCallback<bool> IsPlanModeChanged { get; set; }
+    [Parameter] public string Model { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> OnModelChanged { get; set; }
 
     private string _inputText = string.Empty;
     private bool _planToggled;
@@ -68,6 +80,12 @@
     {
         _planToggled = toggled;
         await IsPlanModeChanged.InvokeAsync(toggled);
+    }
+
+    private async Task HandleModelChanged(string value)
+    {
+        Model = value;
+        await OnModelChanged.InvokeAsync(value);
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)

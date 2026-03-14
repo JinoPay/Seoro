@@ -43,7 +43,9 @@
     <InputArea OnSend="HandleSend" OnCancel="HandleCancel" IsStreaming="ChatState.IsStreaming"
                Disabled="ChatState.CurrentSession == null"
                IsPlanMode="@(ChatState.CurrentSession?.PermissionMode == "plan")"
-               IsPlanModeChanged="HandlePlanModeChanged" />
+               IsPlanModeChanged="HandlePlanModeChanged"
+               Model="@(ChatState.CurrentSession?.Model ?? "")"
+               OnModelChanged="HandleModelChanged" />
 </MudStack>
 
 @code {
@@ -148,6 +150,15 @@
         {
             ChatState.FinishMessage(assistantMsg);
             ChatState.SetStreaming(false);
+            await SessionService.SaveSessionAsync(ChatState.CurrentSession);
+        }
+    }
+
+    private async Task HandleModelChanged(string model)
+    {
+        if (ChatState.CurrentSession != null)
+        {
+            ChatState.CurrentSession.Model = model;
             await SessionService.SaveSessionAsync(ChatState.CurrentSession);
         }
     }
