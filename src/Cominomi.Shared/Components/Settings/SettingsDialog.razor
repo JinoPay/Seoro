@@ -11,9 +11,10 @@
         <MudStack Spacing="3" Class="pa-2" Style="min-width: 400px;">
             <MudSelect T="string" @bind-Value="_settings.DefaultModel" Label="Default Model"
                        Variant="Variant.Outlined">
-                <MudSelectItem T="string" Value="@("claude-opus-4-20250514")">Claude Opus</MudSelectItem>
-                <MudSelectItem T="string" Value="@("claude-sonnet-4-20250514")">Claude Sonnet</MudSelectItem>
-                <MudSelectItem T="string" Value="@("claude-haiku-3-20250307")">Claude Haiku</MudSelectItem>
+                @foreach (var model in ModelDefinitions.All)
+                {
+                    <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                }
             </MudSelect>
 
             <MudSelect T="string" @bind-Value="_settings.Theme" Label="Theme" Variant="Variant.Outlined">
