@@ -22,6 +22,7 @@ public class ClaudeService : IClaudeService
         string message,
         string workingDir,
         string model,
+        string permissionMode = "default",
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var settings = await _settingsService.LoadAsync();
@@ -32,6 +33,8 @@ public class ClaudeService : IClaudeService
         previous?.Cancel();
 
         var arguments = $"{baseArgs}--print --output-format stream-json --model {model}";
+        if (permissionMode == "plan")
+            arguments += " --permission-mode plan";
 
         var process = new Process
         {
