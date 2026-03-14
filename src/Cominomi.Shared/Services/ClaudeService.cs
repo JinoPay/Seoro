@@ -185,7 +185,7 @@ public class ClaudeService : IClaudeService
     {
         var sb = new StringBuilder(baseArgs);
         sb.Append("--print --output-format stream-json ");
-        if (caps.RequiresVerboseForStreamJson || caps.SupportsVerbose)
+        if (caps.RequiresVerboseForStreamJson)
             sb.Append("--verbose ");
         sb.Append($"--model {model}");
         if (permissionMode == "plan")
