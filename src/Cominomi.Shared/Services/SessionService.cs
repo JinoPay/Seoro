@@ -42,6 +42,7 @@ public class SessionService : ISessionService
                         Title = session.Title,
                         WorkingDirectory = session.WorkingDirectory,
                         Model = session.Model,
+                        PermissionMode = session.PermissionMode,
                         CreatedAt = session.CreatedAt,
                         UpdatedAt = session.UpdatedAt
                     });
