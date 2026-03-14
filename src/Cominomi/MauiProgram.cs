@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Cominomi.Shared.Services;
 using MudBlazor.Services;
 
-namespace Cominomi.App;
+namespace Cominomi;
 
 public static class MauiProgram
 {
