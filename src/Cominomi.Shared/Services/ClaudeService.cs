@@ -190,6 +190,8 @@ public class ClaudeService : IClaudeService
         sb.Append($"--model {model}");
         if (permissionMode == "plan")
             sb.Append(" --permission-mode plan");
+        else if (permissionMode == "bypassAll")
+            sb.Append(" --dangerously-skip-permissions");
         return sb.ToString();
     }
 

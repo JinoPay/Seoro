@@ -42,15 +42,12 @@
     }
 
     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.End">
-        <MudTooltip Text="@(IsPlanMode ? "Plan Mode (read-only)" : "Code Mode")">
-            <MudToggleIconButton Toggled="@_planToggled"
-                                 ToggledChanged="OnPlanToggled"
-                                 Icon="@Icons.Material.Filled.EditNote"
-                                 ToggledIcon="@Icons.Material.Filled.Description"
-                                 Color="Color.Default"
-                                 ToggledColor="Color.Warning"
-                                 Size="Size.Medium"
-                                 Disabled="Disabled || IsStreaming" />
+        <MudTooltip Text="@GetPermissionModeTooltip()">
+            <MudIconButton Icon="@GetPermissionModeIcon()"
+                           Color="@GetPermissionModeColor()"
+                           Size="Size.Medium"
+                           OnClick="CyclePermissionMode"
+                           Disabled="Disabled || IsStreaming" />
         </MudTooltip>
 
         <MudTooltip Text="Attach files">
@@ -98,14 +95,15 @@
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool IsStreaming { get; set; }
     [Parameter] public bool Disabled { get; set; }
-    [Parameter] public bool IsPlanMode { get; set; }
-    [Parameter] public EventCallback<bool> IsPlanModeChanged { get; set; }
+    [Parameter] public string PermissionMode { get; set; } = "default";
+    [Parameter] public EventCallback<string> PermissionModeChanged { get; set; }
     [Parameter] public string Model { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> OnModelChanged { get; set; }
     [Parameter] public string? ResolvedModel { get; set; }
 
+    private static readonly string[] PermissionModes = ["default", "plan", "bypassAll"];
+
     private string _inputText = string.Empty;
-    private bool _planToggled;
     private List<PendingAttachment> _pendingAttachments = [];
     private DotNetObjectReference<InputArea>? _dotNetRef;
     private bool _handlersRegistered;
@@ -113,24 +111,51 @@
     // Parameter tracking to prevent unnecessary re-renders (cursor jumping fix)
     private bool _prevIsStreaming;
     private bool _prevDisabled;
-    private bool _prevIsPlanMode;
+    private string _prevPermissionMode = "default";
     private string _prevModel = string.Empty;
     private string? _prevResolvedModel;
     private bool _forceRender;
 
+    private string GetPermissionModeTooltip() => PermissionMode switch
+    {
+        "plan" => "Plan Mode (read-only)",
+        "bypassAll" => "Full Access (auto-approve all)",
+        _ => "Code Mode (default)"
+    };
+
+    private string GetPermissionModeIcon() => PermissionMode switch
+    {
+        "plan" => Icons.Material.Filled.Description,
+        "bypassAll" => Icons.Material.Filled.Security,
+        _ => Icons.Material.Filled.EditNote
+    };
+
+    private Color GetPermissionModeColor() => PermissionMode switch
+    {
+        "plan" => Color.Warning,
+        "bypassAll" => Color.Success,
+        _ => Color.Default
+    };
+
+    private async Task CyclePermissionMode()
+    {
+        _forceRender = true;
+        var idx = Array.IndexOf(PermissionModes, PermissionMode);
+        var next = PermissionModes[(idx + 1) % PermissionModes.Length];
+        await PermissionModeChanged.InvokeAsync(next);
+    }
+
     protected override void OnParametersSet()
     {
-        _planToggled = IsPlanMode;
-
         if (_prevIsStreaming != IsStreaming ||
             _prevDisabled != Disabled ||
-            _prevIsPlanMode != IsPlanMode ||
+            _prevPermissionMode != PermissionMode ||
             _prevModel != Model ||
             _prevResolvedModel != ResolvedModel)
         {
             _prevIsStreaming = IsStreaming;
             _prevDisabled = Disabled;
-            _prevIsPlanMode = IsPlanMode;
+            _prevPermissionMode = PermissionMode;
             _prevModel = Model;
             _prevResolvedModel = ResolvedModel;
             _forceRender = true;
@@ -210,14 +235,12 @@
     {
         if (Disabled) return "Select or create a session first...";
         if (IsStreaming) return "Claude is responding...";
-        return IsPlanMode ? "Plan mode: Claude will read and research only..." : "Type a message...";
-    }
-
-    private async Task OnPlanToggled(bool toggled)
-    {
-        _forceRender = true;
-        _planToggled = toggled;
-        await IsPlanModeChanged.InvokeAsync(toggled);
+        return PermissionMode switch
+        {
+            "plan" => "Plan mode: Claude will read and research only...",
+            "bypassAll" => "Full access: Claude will auto-approve all actions...",
+            _ => "Type a message..."
+        };
     }
 
     private async Task HandleModelChanged(string value)
