@@ -23,9 +23,6 @@
                 <MudSelectItem T="string" Value="@("system")">System</MudSelectItem>
             </MudSelect>
 
-            <MudTextField @bind-Value="_settings.DefaultWorkingDirectory" Label="Default Working Directory"
-                          Variant="Variant.Outlined" />
-
             <MudTextField @bind-Value="_settings.ClaudePath" Label="Claude CLI Path"
                           Variant="Variant.Outlined" Placeholder="Auto-detect"
                           HelperText="Leave empty for auto-detection" />

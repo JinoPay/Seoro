@@ -23,6 +23,7 @@ public static class MauiProgram
 
         // App Services
         builder.Services.AddSingleton<ChatState>();
+        builder.Services.AddSingleton<IGitService, GitService>();
         builder.Services.AddSingleton<IClaudeService, ClaudeService>();
         builder.Services.AddSingleton<ISessionService, SessionService>();
         builder.Services.AddSingleton<IWorkspaceService, WorkspaceService>();

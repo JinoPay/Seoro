@@ -87,15 +87,6 @@ public class ChatState
         NotifyStateChanged();
     }
 
-    public void UpdateWorkingDirectory(string path)
-    {
-        if (CurrentSession != null)
-        {
-            CurrentSession.WorkingDirectory = path;
-            NotifyStateChanged();
-        }
-    }
-
     public void FinishMessage(ChatMessage message)
     {
         message.IsStreaming = false;

@@ -64,7 +64,7 @@ public class SessionService : ISessionService
         return all.Where(s => s.WorkspaceId == workspaceId).ToList();
     }
 
-    public Task<Session> CreateSessionAsync(string workingDir, string model, string workspaceId = "default")
+    public Task<Session> CreateSessionAsync(string workingDir, string model, string workspaceId)
     {
         var session = new Session
         {
