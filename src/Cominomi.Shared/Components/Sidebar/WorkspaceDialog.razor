@@ -98,8 +98,6 @@
                               Immediate="true" TextChanged="OnUrlChanged" />
                 <MudTextField @bind-Value="_editName" Label="Workspace Name" Variant="Variant.Outlined"
                               Margin="Margin.Dense" />
-                <MudTextField @bind-Value="_baseBranch" Label="Base Branch" Variant="Variant.Outlined"
-                              Margin="Margin.Dense" Placeholder="main" />
                 <MudSelect T="string" @bind-Value="_editModel" Label="Default Model"
                            Variant="Variant.Outlined" Margin="Margin.Dense">
                     @foreach (var model in ModelDefinitions.All)
@@ -133,8 +131,6 @@
                 }
                 <MudTextField @bind-Value="_editName" Label="Workspace Name" Variant="Variant.Outlined"
                               Margin="Margin.Dense" />
-                <MudTextField @bind-Value="_baseBranch" Label="Base Branch" Variant="Variant.Outlined"
-                              Margin="Margin.Dense" Placeholder="main" />
                 <MudSelect T="string" @bind-Value="_editModel" Label="Default Model"
                            Variant="Variant.Outlined" Margin="Margin.Dense">
                     @foreach (var model in ModelDefinitions.All)
@@ -186,7 +182,6 @@
     private string _editModel = ModelDefinitions.Default.Id;
     private string _repoUrl = "";
     private string _localPath = "";
-    private string _baseBranch = "main";
     private string _progressMessage = "";
     private string? _errorMessage;
     private string? _localPathValidation;
@@ -213,7 +208,6 @@
         _editName = "";
         _repoUrl = "";
         _localPath = "";
-        _baseBranch = "main";
         _editModel = ModelDefinitions.Default.Id;
         _errorMessage = null;
         _localPathValidation = null;
@@ -263,13 +257,6 @@
         {
             _editName = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) ?? "";
         }
-
-        // Auto-detect base branch
-        var detectedBranch = await GitService.DetectDefaultBranchAsync(path);
-        if (detectedBranch != null)
-        {
-            _baseBranch = detectedBranch;
-        }
     }
 
     private void OnUrlChanged(string url)
@@ -312,7 +299,7 @@
         {
             var ws = await WorkspaceService.CreateFromUrlAsync(
                 _repoUrl.Trim(), _editName.Trim(),
-                _baseBranch.Trim(), _editModel, progress);
+                _editModel, progress);
 
             if (ws.Status == WorkspaceStatus.Error)
             {
@@ -349,7 +336,7 @@
         {
             var ws = await WorkspaceService.CreateFromLocalAsync(
                 _localPath.Trim(), _editName.Trim(),
-                _baseBranch.Trim(), _editModel);
+                _editModel);
 
             if (ws.Status == WorkspaceStatus.Error)
             {

@@ -74,7 +74,7 @@ public partial class SessionService : ISessionService
         return all.Where(s => s.WorkspaceId == workspaceId).ToList();
     }
 
-    public async Task<Session> CreateSessionAsync(string model, string workspaceId)
+    public async Task<Session> CreateSessionAsync(string model, string workspaceId, string baseBranch)
     {
         var workspace = await _workspaceService.LoadWorkspaceAsync(workspaceId);
         if (workspace == null)
@@ -88,6 +88,7 @@ public partial class SessionService : ISessionService
             Model = model,
             WorkspaceId = workspaceId,
             BranchName = branchName,
+            BaseBranch = baseBranch,
             Status = SessionStatus.Initializing
         };
 
@@ -96,7 +97,7 @@ public partial class SessionService : ISessionService
         try
         {
             var result = await _gitService.AddWorktreeAsync(
-                workspace.RepoLocalPath, session.WorktreePath, branchName, workspace.BaseBranch);
+                workspace.RepoLocalPath, session.WorktreePath, branchName, baseBranch);
 
             if (!result.Success)
             {
@@ -213,8 +214,12 @@ public partial class SessionService : ISessionService
         if (workspace == null)
             return false;
 
+        var baseBranch = !string.IsNullOrEmpty(session.BaseBranch)
+            ? session.BaseBranch
+            : await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath) ?? "main";
+
         var isMerged = await _gitService.IsBranchMergedAsync(
-            workspace.RepoLocalPath, session.BranchName, workspace.BaseBranch);
+            workspace.RepoLocalPath, session.BranchName, baseBranch);
 
         if (isMerged)
         {

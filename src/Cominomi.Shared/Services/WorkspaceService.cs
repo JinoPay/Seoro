@@ -106,13 +106,12 @@ public partial class WorkspaceService : IWorkspaceService
         await Task.CompletedTask;
     }
 
-    public async Task<Workspace> CreateFromUrlAsync(string url, string name, string baseBranch, string model, IProgress<string>? progress = null, CancellationToken ct = default)
+    public async Task<Workspace> CreateFromUrlAsync(string url, string name, string model, IProgress<string>? progress = null, CancellationToken ct = default)
     {
         var workspace = new Workspace
         {
             Name = name,
             RepoUrl = url,
-            BaseBranch = baseBranch,
             DefaultModel = model,
             Status = WorkspaceStatus.Initializing
         };
@@ -171,14 +170,6 @@ public partial class WorkspaceService : IWorkspaceService
 
             workspace.RepoLocalPath = repoDir;
 
-            // Use detected default branch if baseBranch wasn't specified
-            if (string.IsNullOrEmpty(baseBranch) || baseBranch == "main")
-            {
-                var detected = repoInfo?.DefaultBranch ?? await _gitService.DetectDefaultBranchAsync(repoDir);
-                if (detected != null)
-                    workspace.BaseBranch = detected;
-            }
-
             workspace.Status = WorkspaceStatus.Ready;
             workspace.ErrorMessage = null;
             await SaveWorkspaceAsync(workspace);
@@ -199,13 +190,12 @@ public partial class WorkspaceService : IWorkspaceService
         }
     }
 
-    public async Task<Workspace> CreateFromLocalAsync(string localPath, string name, string baseBranch, string model, CancellationToken ct = default)
+    public async Task<Workspace> CreateFromLocalAsync(string localPath, string name, string model, CancellationToken ct = default)
     {
         var workspace = new Workspace
         {
             Name = name,
             RepoLocalPath = localPath,
-            BaseBranch = baseBranch,
             DefaultModel = model,
             Status = WorkspaceStatus.Initializing
         };
@@ -220,14 +210,6 @@ public partial class WorkspaceService : IWorkspaceService
                 workspace.ErrorMessage = "Not a valid git repository.";
                 await SaveWorkspaceAsync(workspace);
                 return workspace;
-            }
-
-            // Detect default branch if not specified
-            if (string.IsNullOrEmpty(baseBranch))
-            {
-                var detected = await _gitService.DetectDefaultBranchAsync(localPath);
-                if (detected != null)
-                    workspace.BaseBranch = detected;
             }
 
             workspace.Status = WorkspaceStatus.Ready;
