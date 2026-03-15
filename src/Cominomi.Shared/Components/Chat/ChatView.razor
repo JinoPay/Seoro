@@ -2,6 +2,7 @@
 @inject IClaudeService ClaudeService
 @inject ISessionService SessionService
 @inject ISettingsService SettingsService
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
 <MudStack Style="height: 100%; overflow: hidden;" Justify="Justify.SpaceBetween" Spacing="0">
@@ -99,6 +100,15 @@
         ChatState.OnChange += StateHasChanged;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldAutoScroll)
+        {
+            _shouldAutoScroll = false;
+            await JSRuntime.InvokeVoidAsync("scrollToBottom", "message-list");
+        }
+    }
+
     private void StartEditPath()
     {
         _editPath = ChatState.CurrentSession?.WorkingDirectory ?? "";
@@ -148,6 +158,8 @@
         await SessionService.SaveSessionAsync(ChatState.CurrentSession);
     }
 
+    private bool _shouldAutoScroll;
+
     private async Task HandleSend(string message)
     {
         if (ChatState.CurrentSession == null || string.IsNullOrWhiteSpace(message))
@@ -155,9 +167,11 @@
 
         ChatState.AddUserMessage(message);
         ChatState.SetStreaming(true);
+        ChatState.SetPhase(StreamingPhase.Sending);
 
         var assistantMsg = ChatState.StartAssistantMessage();
         ToolCall? currentToolCall = null;
+        bool firstEvent = true;
 
         try
         {
@@ -167,6 +181,12 @@
                 ChatState.CurrentSession.Model,
                 ChatState.CurrentSession.PermissionMode))
             {
+                if (firstEvent)
+                {
+                    ChatState.SetPhase(StreamingPhase.Thinking);
+                    firstEvent = false;
+                }
+
                 switch (evt.Type)
                 {
                     case "system" when evt.Subtype == "init" && evt.Model != null:
@@ -180,12 +200,14 @@
                             Name = evt.ContentBlock.Name ?? ""
                         };
                         ChatState.AddToolCall(assistantMsg, currentToolCall);
+                        ChatState.SetPhase(StreamingPhase.UsingTool, evt.ContentBlock.Name);
                         break;
 
                     case "content_block_delta":
                         if (evt.Delta?.Type == "text_delta" && evt.Delta.Text != null)
                         {
                             ChatState.AppendText(assistantMsg, evt.Delta.Text);
+                            ChatState.SetPhase(StreamingPhase.WritingText);
                         }
                         else if (evt.Delta?.Type == "input_json_delta" && evt.Delta.PartialJson != null && currentToolCall != null)
                         {
@@ -200,6 +222,7 @@
                             currentToolCall = null;
                             ChatState.NotifyStateChanged();
                         }
+                        ChatState.SetPhase(StreamingPhase.Thinking);
                         break;
 
                     case "result":
@@ -234,6 +257,7 @@
                         break;
                 }
 
+                _shouldAutoScroll = true;
                 StateHasChanged();
             }
         }
@@ -246,6 +270,8 @@
         {
             ChatState.FinishMessage(assistantMsg);
             ChatState.SetStreaming(false);
+            _shouldAutoScroll = true;
+            StateHasChanged();
             await SessionService.SaveSessionAsync(ChatState.CurrentSession);
         }
     }

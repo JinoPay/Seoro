@@ -42,6 +42,7 @@ public class SessionService : ISessionService
                         Title = session.Title,
                         WorkingDirectory = session.WorkingDirectory,
                         Model = ModelDefinitions.NormalizeModelId(session.Model),
+                        WorkspaceId = session.WorkspaceId,
                         PermissionMode = session.PermissionMode,
                         CreatedAt = session.CreatedAt,
                         UpdatedAt = session.UpdatedAt
@@ -57,12 +58,19 @@ public class SessionService : ISessionService
         return sessions.OrderByDescending(s => s.UpdatedAt).ToList();
     }
 
-    public Task<Session> CreateSessionAsync(string workingDir, string model)
+    public async Task<List<Session>> GetSessionsByWorkspaceAsync(string workspaceId)
+    {
+        var all = await GetSessionsAsync();
+        return all.Where(s => s.WorkspaceId == workspaceId).ToList();
+    }
+
+    public Task<Session> CreateSessionAsync(string workingDir, string model, string workspaceId = "default")
     {
         var session = new Session
         {
             WorkingDirectory = workingDir,
-            Model = model
+            Model = model,
+            WorkspaceId = workspaceId
         };
         return Task.FromResult(session);
     }

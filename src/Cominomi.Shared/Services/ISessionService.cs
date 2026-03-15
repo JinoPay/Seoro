@@ -5,7 +5,8 @@ namespace Cominomi.Shared.Services;
 public interface ISessionService
 {
     Task<List<Session>> GetSessionsAsync();
-    Task<Session> CreateSessionAsync(string workingDir, string model);
+    Task<List<Session>> GetSessionsByWorkspaceAsync(string workspaceId);
+    Task<Session> CreateSessionAsync(string workingDir, string model, string workspaceId = "default");
     Task<Session?> LoadSessionAsync(string sessionId);
     Task SaveSessionAsync(Session session);
     Task DeleteSessionAsync(string sessionId);

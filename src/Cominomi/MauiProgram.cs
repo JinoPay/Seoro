@@ -25,6 +25,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ChatState>();
         builder.Services.AddSingleton<IClaudeService, ClaudeService>();
         builder.Services.AddSingleton<ISessionService, SessionService>();
+        builder.Services.AddSingleton<IWorkspaceService, WorkspaceService>();
         builder.Services.AddSingleton<ISettingsService, SettingsService>();
 
 #if DEBUG
