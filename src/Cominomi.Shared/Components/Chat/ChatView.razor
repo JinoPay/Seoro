@@ -86,7 +86,8 @@
                IsPlanMode="@(ChatState.CurrentSession?.PermissionMode == "plan")"
                IsPlanModeChanged="HandlePlanModeChanged"
                Model="@(ChatState.CurrentSession?.Model ?? "")"
-               OnModelChanged="HandleModelChanged" />
+               OnModelChanged="HandleModelChanged"
+               ResolvedModel="@(ChatState.CurrentSession?.ResolvedModel)" />
 </MudStack>
 
 @code {
@@ -188,6 +189,10 @@
 
                 switch (evt.Type)
                 {
+                    case "system" when evt.Subtype == "init" && evt.Model != null:
+                        ChatState.CurrentSession!.ResolvedModel = evt.Model;
+                        break;
+
                     case "content_block_start" when evt.ContentBlock?.Type == "tool_use":
                         currentToolCall = new ToolCall
                         {

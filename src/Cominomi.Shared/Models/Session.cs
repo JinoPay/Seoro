@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Cominomi.Shared.Models;
 
 public class Session
@@ -11,4 +13,7 @@ public class Session
     public List<ChatMessage> Messages { get; set; } = [];
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    [JsonIgnore]
+    public string? ResolvedModel { get; set; }
 }

@@ -23,6 +23,9 @@ public class StreamEvent
     [JsonPropertyName("delta")]
     public ContentDelta? Delta { get; set; }
 
+    [JsonPropertyName("model")]
+    public string? Model { get; set; }
+
     [JsonPropertyName("error")]
     public string? Error { get; set; }
 

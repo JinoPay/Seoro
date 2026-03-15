@@ -36,6 +36,7 @@ public class SettingsService : ISettingsService
 
         var json = await File.ReadAllTextAsync(_settingsPath);
         _cached = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+        _cached.DefaultModel = ModelDefinitions.NormalizeModelId(_cached.DefaultModel);
         return _cached;
     }
 

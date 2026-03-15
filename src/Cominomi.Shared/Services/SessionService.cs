@@ -41,7 +41,7 @@ public class SessionService : ISessionService
                         Id = session.Id,
                         Title = session.Title,
                         WorkingDirectory = session.WorkingDirectory,
-                        Model = session.Model,
+                        Model = ModelDefinitions.NormalizeModelId(session.Model),
                         WorkspaceId = session.WorkspaceId,
                         PermissionMode = session.PermissionMode,
                         CreatedAt = session.CreatedAt,
@@ -82,7 +82,10 @@ public class SessionService : ISessionService
             return null;
 
         var json = await File.ReadAllTextAsync(path);
-        return JsonSerializer.Deserialize<Session>(json, JsonOptions);
+        var session = JsonSerializer.Deserialize<Session>(json, JsonOptions);
+        if (session != null)
+            session.Model = ModelDefinitions.NormalizeModelId(session.Model);
+        return session;
     }
 
     public async Task SaveSessionAsync(Session session)
