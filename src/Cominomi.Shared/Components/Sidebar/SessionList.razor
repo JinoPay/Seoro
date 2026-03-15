@@ -2,7 +2,6 @@
 @inject ISessionService SessionService
 @inject ISettingsService SettingsService
 @inject IWorkspaceService WorkspaceService
-@inject IGitService GitService
 @implements IDisposable
 
 <MudStack Class="pa-2" Spacing="1" Style="height: 100%; min-height: 0;">
@@ -47,42 +46,10 @@
                                            OnClick="@(() => _workspaceDialogOpen = true)"
                                            OnClickStopPropagation="true" />
                             <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
-                                           OnClick="@(() => ShowBranchPickerFor(ws))"
+                                           OnClick="@(() => CreateNewChat(ws))"
                                            OnClickStopPropagation="true"
-                                           Disabled="@(ws.Status != WorkspaceStatus.Ready)" />
+                                           Disabled="@(ws.Status != WorkspaceStatus.Ready || _isCreatingSession)" />
                         </MudStack>
-
-                        @* Branch picker *@
-                        @if (_branchPickerWorkspaceId == ws.Id)
-                        {
-                            <MudPaper Class="pa-2 mx-2 mb-2" Outlined="true" Style="border-radius: 8px;">
-                                <MudStack Spacing="1">
-                                    <MudSelect T="string" @bind-Value="_selectedBranch" Label="Base Branch"
-                                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
-                                        @foreach (var branch in _branches)
-                                        {
-                                            <MudSelectItem T="string" Value="@branch">@branch</MudSelectItem>
-                                        }
-                                    </MudSelect>
-                                    <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
-                                        <MudButton Size="Size.Small" OnClick="CancelBranchPicker">Cancel</MudButton>
-                                        <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled"
-                                                   OnClick="ConfirmCreateSession"
-                                                   Disabled="@(string.IsNullOrEmpty(_selectedBranch) || _isCreatingSession)">
-                                            @if (_isCreatingSession)
-                                            {
-                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
-                                                <span>Creating...</span>
-                                            }
-                                            else
-                                            {
-                                                <span>Create</span>
-                                            }
-                                        </MudButton>
-                                    </MudStack>
-                                </MudStack>
-                            </MudPaper>
-                        }
 
                         @* Sessions *@
                         @if (_sessionCache.TryGetValue(ws.Id, out var sessions))
@@ -196,12 +163,9 @@
 @code {
     private List<Workspace> _workspaces = [];
     private string? _expandedWorkspaceId;
-    private string? _branchPickerWorkspaceId;
     private Dictionary<string, List<Session>> _sessionCache = new();
     private bool _workspaceDialogOpen;
     private bool _isCreatingSession;
-    private List<string> _branches = [];
-    private string _selectedBranch = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -225,7 +189,6 @@
         if (_expandedWorkspaceId == ws.Id)
         {
             _expandedWorkspaceId = null;
-            _branchPickerWorkspaceId = null;
             return;
         }
 
@@ -235,7 +198,6 @@
     private async Task ExpandWorkspace(Workspace ws)
     {
         _expandedWorkspaceId = ws.Id;
-        _branchPickerWorkspaceId = null;
         ChatState.SetWorkspace(ws);
 
         // Lazy load sessions
@@ -298,54 +260,26 @@
         }
     }
 
-    private async Task ShowBranchPickerFor(Workspace ws)
+    private async Task CreateNewChat(Workspace ws)
     {
-        if (string.IsNullOrEmpty(ws.RepoLocalPath)) return;
-
-        _branches = await GitService.ListBranchesAsync(ws.RepoLocalPath);
-        var defaultBranch = await GitService.DetectDefaultBranchAsync(ws.RepoLocalPath);
-        _selectedBranch = defaultBranch ?? _branches.FirstOrDefault() ?? "";
-        _branchPickerWorkspaceId = ws.Id;
-    }
-
-    private void CancelBranchPicker()
-    {
-        _branchPickerWorkspaceId = null;
-        _selectedBranch = "";
-    }
-
-    private async Task ConfirmCreateSession()
-    {
-        if (_expandedWorkspaceId == null || string.IsNullOrEmpty(_selectedBranch)) return;
-        var ws = ChatState.CurrentWorkspace;
-        if (ws == null || ws.Status != WorkspaceStatus.Ready) return;
+        if (ws.Status != WorkspaceStatus.Ready) return;
 
         _isCreatingSession = true;
         StateHasChanged();
 
         try
         {
-            var model = ws.DefaultModel;
-            var session = await SessionService.CreateSessionAsync(model, _expandedWorkspaceId, _selectedBranch);
+            var session = await SessionService.CreatePendingSessionAsync(ws.DefaultModel, ws.Id);
+            ChatState.SetSession(session);
 
-            if (_sessionCache.TryGetValue(_expandedWorkspaceId, out var sessions))
+            if (_sessionCache.TryGetValue(ws.Id, out var sessions))
             {
-                if (session.Status == SessionStatus.Error)
-                {
-                    sessions.Insert(0, session);
-                    await SessionService.SaveSessionAsync(session);
-                }
-                else
-                {
-                    ChatState.SetSession(session);
-                    sessions.Insert(0, session);
-                }
+                sessions.Insert(0, session);
             }
         }
         finally
         {
             _isCreatingSession = false;
-            _branchPickerWorkspaceId = null;
             StateHasChanged();
         }
     }
