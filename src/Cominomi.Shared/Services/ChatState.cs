@@ -4,10 +4,18 @@ namespace Cominomi.Shared.Services;
 
 public class ChatState
 {
+    public Workspace? CurrentWorkspace { get; private set; }
     public Session? CurrentSession { get; private set; }
     public bool IsStreaming { get; private set; }
 
     public event Action? OnChange;
+
+    public void SetWorkspace(Workspace workspace)
+    {
+        CurrentWorkspace = workspace;
+        CurrentSession = null;
+        NotifyStateChanged();
+    }
 
     public void SetSession(Session session)
     {

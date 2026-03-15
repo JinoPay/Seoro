@@ -1,9 +1,23 @@
 @inject ChatState ChatState
 @inject ISessionService SessionService
 @inject ISettingsService SettingsService
+@inject IWorkspaceService WorkspaceService
 @implements IDisposable
 
 <MudStack Class="pa-2" Spacing="1" Style="height: 100%;">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+        <MudSelect T="string" Value="_selectedWorkspaceId" ValueChanged="OnWorkspaceChanged"
+                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
+                   Style="flex: 1;">
+            @foreach (var ws in _workspaces)
+            {
+                <MudSelectItem T="string" Value="@ws.Id">@ws.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
+                       OnClick="@(() => _workspaceDialogOpen = true)" />
+    </MudStack>
+
     <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                StartIcon="@Icons.Material.Filled.Add" OnClick="CreateNewSession">
         New Chat
@@ -48,23 +62,66 @@
     </MudStack>
 </MudStack>
 
+<WorkspaceDialog @bind-IsOpen="_workspaceDialogOpen" OnWorkspacesChanged="ReloadWorkspaces" />
+
 @code {
     private List<Session> _sessions = [];
+    private List<Workspace> _workspaces = [];
+    private string _selectedWorkspaceId = "default";
     private string _newChatPath = "";
     private List<string> _recentDirs = [];
+    private bool _workspaceDialogOpen;
 
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += async () => await InvokeAsync(StateHasChanged);
-        await LoadSessions();
+
+        await WorkspaceService.EnsureDefaultWorkspaceAsync();
+
         var settings = await SettingsService.LoadAsync();
         _recentDirs = settings.RecentDirectories;
-        _newChatPath = settings.DefaultWorkingDirectory;
+        _selectedWorkspaceId = settings.LastWorkspaceId;
+
+        _workspaces = await WorkspaceService.GetWorkspacesAsync();
+
+        var currentWs = _workspaces.FirstOrDefault(w => w.Id == _selectedWorkspaceId)
+                        ?? _workspaces.FirstOrDefault(w => w.Id == "default");
+        if (currentWs != null)
+        {
+            ChatState.SetWorkspace(currentWs);
+            _selectedWorkspaceId = currentWs.Id;
+            _newChatPath = currentWs.DefaultWorkingDirectory;
+        }
+
+        await LoadSessions();
     }
 
     private async Task LoadSessions()
     {
-        _sessions = await SessionService.GetSessionsAsync();
+        _sessions = await SessionService.GetSessionsByWorkspaceAsync(_selectedWorkspaceId);
+    }
+
+    private async Task OnWorkspaceChanged(string workspaceId)
+    {
+        _selectedWorkspaceId = workspaceId;
+        var ws = _workspaces.FirstOrDefault(w => w.Id == workspaceId);
+        if (ws != null)
+        {
+            ChatState.SetWorkspace(ws);
+            _newChatPath = ws.DefaultWorkingDirectory;
+        }
+
+        await LoadSessions();
+
+        var settings = await SettingsService.LoadAsync();
+        settings.LastWorkspaceId = workspaceId;
+        await SettingsService.SaveAsync(settings);
+    }
+
+    private async Task ReloadWorkspaces()
+    {
+        _workspaces = await WorkspaceService.GetWorkspacesAsync();
+        await LoadSessions();
     }
 
     private Task<IEnumerable<string>> SearchDirectories(string? value, CancellationToken ct)
@@ -76,7 +133,6 @@
             .Where(d => d.Contains(value, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        // Also include the typed value itself so user can enter a new path
         if (!filtered.Contains(value))
             filtered.Add(value);
 
@@ -86,14 +142,15 @@
     private async Task CreateNewSession()
     {
         var settings = await SettingsService.LoadAsync();
+        var ws = ChatState.CurrentWorkspace;
         var workDir = string.IsNullOrWhiteSpace(_newChatPath)
-            ? settings.DefaultWorkingDirectory
+            ? (ws?.DefaultWorkingDirectory ?? settings.DefaultWorkingDirectory)
             : _newChatPath.Trim();
-        var session = await SessionService.CreateSessionAsync(workDir, settings.DefaultModel);
+        var model = ws?.DefaultModel ?? settings.DefaultModel;
+        var session = await SessionService.CreateSessionAsync(workDir, model, _selectedWorkspaceId);
         ChatState.SetSession(session);
         _sessions.Insert(0, session);
 
-        // Track in recent directories
         if (!string.IsNullOrWhiteSpace(workDir))
         {
             settings.RecentDirectories.Remove(workDir);
