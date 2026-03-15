@@ -28,6 +28,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISessionService, SessionService>();
         builder.Services.AddSingleton<IWorkspaceService, WorkspaceService>();
         builder.Services.AddSingleton<ISettingsService, SettingsService>();
+        builder.Services.AddSingleton<IDependencyCheckService, DependencyCheckService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

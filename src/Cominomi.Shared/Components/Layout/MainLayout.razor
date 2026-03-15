@@ -28,11 +28,13 @@
 </MudLayout>
 
 <SettingsDialog @bind-IsOpen="_settingsOpen" />
+<SetupDialog @bind-IsOpen="_setupOpen" />
 
 @code {
     private bool _drawerOpen = true;
     private bool _isDarkMode = true;
     private bool _settingsOpen;
+    private bool _setupOpen;
 
     private readonly MudTheme _theme = new()
     {
@@ -59,11 +61,18 @@
     };
 
     [Inject] private ISettingsService SettingsService { get; set; } = default!;
+    [Inject] private IDependencyCheckService DependencyCheckService { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
         var settings = await SettingsService.LoadAsync();
         _isDarkMode = settings.Theme != "light";
+
+        var deps = await DependencyCheckService.CheckAllAsync();
+        if (deps.Any(d => !d.IsInstalled))
+        {
+            _setupOpen = true;
+        }
     }
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
