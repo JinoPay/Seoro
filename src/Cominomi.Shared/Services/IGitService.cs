@@ -12,4 +12,7 @@ public interface IGitService
     Task<string?> GetCurrentBranchAsync(string repoDir);
     Task<List<string>> ListBranchesAsync(string repoDir);
     Task<bool> BranchExistsAsync(string repoDir, string branchName);
+    Task<GitResult> RenameBranchAsync(string workingDir, string oldName, string newName, CancellationToken ct = default);
+    Task<GitResult> DeleteBranchAsync(string repoDir, string branchName, CancellationToken ct = default);
+    Task<bool> IsBranchMergedAsync(string repoDir, string branchName, string baseBranch, CancellationToken ct = default);
 }

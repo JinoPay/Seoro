@@ -1,11 +1,11 @@
 @inject ChatState ChatState
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mr-4">
-    @if (!string.IsNullOrEmpty(ChatState.CurrentWorkspace?.BranchName))
+    @if (!string.IsNullOrEmpty(ChatState.CurrentSession?.BranchName))
     {
         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary"
                  Icon="@Icons.Material.Filled.AccountTree">
-            @ChatState.CurrentWorkspace.BranchName
+            @ChatState.CurrentSession.BranchName
         </MudChip>
     }
     <SpotlightToggle />

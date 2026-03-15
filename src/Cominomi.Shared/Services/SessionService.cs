@@ -1,9 +1,10 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
 
-public class SessionService : ISessionService
+public partial class SessionService : ISessionService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -11,10 +12,16 @@ public class SessionService : ISessionService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    private readonly IGitService _gitService;
+    private readonly IWorkspaceService _workspaceService;
+    private readonly ISettingsService _settingsService;
     private readonly string _sessionsDir;
 
-    public SessionService()
+    public SessionService(IGitService gitService, IWorkspaceService workspaceService, ISettingsService settingsService)
     {
+        _gitService = gitService;
+        _workspaceService = workspaceService;
+        _settingsService = settingsService;
         _sessionsDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Cominomi", "sessions");
@@ -40,10 +47,13 @@ public class SessionService : ISessionService
                     {
                         Id = session.Id,
                         Title = session.Title,
-                        WorkingDirectory = session.WorkingDirectory,
+                        WorktreePath = session.WorktreePath,
+                        BranchName = session.BranchName,
                         Model = ModelDefinitions.NormalizeModelId(session.Model),
                         WorkspaceId = session.WorkspaceId,
                         PermissionMode = session.PermissionMode,
+                        Status = session.Status,
+                        ErrorMessage = session.ErrorMessage,
                         CreatedAt = session.CreatedAt,
                         UpdatedAt = session.UpdatedAt
                     });
@@ -64,15 +74,47 @@ public class SessionService : ISessionService
         return all.Where(s => s.WorkspaceId == workspaceId).ToList();
     }
 
-    public Task<Session> CreateSessionAsync(string workingDir, string model, string workspaceId)
+    public async Task<Session> CreateSessionAsync(string model, string workspaceId)
     {
+        var workspace = await _workspaceService.LoadWorkspaceAsync(workspaceId);
+        if (workspace == null)
+            throw new InvalidOperationException($"Workspace '{workspaceId}' not found.");
+
+        var branchName = $"cominomi/{DateTime.Now:yyyyMMdd-HHmmss}";
+        var worktreesDir = await _workspaceService.GetWorktreesDirAsync();
+
         var session = new Session
         {
-            WorkingDirectory = workingDir,
             Model = model,
-            WorkspaceId = workspaceId
+            WorkspaceId = workspaceId,
+            BranchName = branchName,
+            Status = SessionStatus.Initializing
         };
-        return Task.FromResult(session);
+
+        session.WorktreePath = Path.Combine(worktreesDir, session.Id);
+
+        try
+        {
+            var result = await _gitService.AddWorktreeAsync(
+                workspace.RepoLocalPath, session.WorktreePath, branchName, workspace.BaseBranch);
+
+            if (!result.Success)
+            {
+                session.Status = SessionStatus.Error;
+                session.ErrorMessage = result.Error;
+            }
+            else
+            {
+                session.Status = SessionStatus.Ready;
+            }
+        }
+        catch (Exception ex)
+        {
+            session.Status = SessionStatus.Error;
+            session.ErrorMessage = ex.Message;
+        }
+
+        return session;
     }
 
     public async Task<Session?> LoadSessionAsync(string sessionId)
@@ -109,11 +151,118 @@ public class SessionService : ISessionService
         await File.WriteAllTextAsync(path, json);
     }
 
-    public Task DeleteSessionAsync(string sessionId)
+    public async Task RenameBranchAsync(string sessionId, string newBranchName)
     {
+        var session = await LoadSessionAsync(sessionId);
+        if (session == null || session.Status != SessionStatus.Ready)
+            return;
+
+        var oldBranch = session.BranchName;
+        if (oldBranch == newBranchName)
+            return;
+
+        var result = await _gitService.RenameBranchAsync(session.WorktreePath, oldBranch, newBranchName);
+        if (result.Success)
+        {
+            session.BranchName = newBranchName;
+            await SaveSessionAsync(session);
+        }
+    }
+
+    public async Task CleanupSessionAsync(string sessionId)
+    {
+        var session = await LoadSessionAsync(sessionId);
+        if (session == null)
+            return;
+
+        var workspace = await _workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
+        if (workspace == null)
+            return;
+
+        // Remove worktree
+        if (!string.IsNullOrEmpty(session.WorktreePath))
+        {
+            try
+            {
+                await _gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, session.WorktreePath);
+            }
+            catch { }
+        }
+
+        // Delete branch
+        if (!string.IsNullOrEmpty(session.BranchName))
+        {
+            try
+            {
+                await _gitService.DeleteBranchAsync(workspace.RepoLocalPath, session.BranchName);
+            }
+            catch { }
+        }
+
+        session.Status = SessionStatus.Archived;
+        await SaveSessionAsync(session);
+    }
+
+    public async Task<bool> CheckMergeStatusAsync(string sessionId)
+    {
+        var session = await LoadSessionAsync(sessionId);
+        if (session == null || session.Status != SessionStatus.Ready)
+            return false;
+
+        var workspace = await _workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
+        if (workspace == null)
+            return false;
+
+        var isMerged = await _gitService.IsBranchMergedAsync(
+            workspace.RepoLocalPath, session.BranchName, workspace.BaseBranch);
+
+        if (isMerged)
+        {
+            session.Status = SessionStatus.Merged;
+            await SaveSessionAsync(session);
+        }
+
+        return isMerged;
+    }
+
+    public async Task DeleteSessionAsync(string sessionId)
+    {
+        // Clean up worktree/branch before deleting
+        var session = await LoadSessionAsync(sessionId);
+        if (session != null && session.Status is SessionStatus.Ready or SessionStatus.Merged)
+        {
+            try { await CleanupSessionAsync(sessionId); } catch { }
+        }
+
         var path = Path.Combine(_sessionsDir, $"{sessionId}.json");
         if (File.Exists(path))
             File.Delete(path);
-        return Task.CompletedTask;
     }
+
+    public static string GenerateBranchName(string message)
+    {
+        var slug = message.ToLowerInvariant().Trim();
+        // Replace whitespace with hyphens
+        slug = WhitespaceRegex().Replace(slug, "-");
+        // Remove non-alphanumeric except hyphens
+        slug = NonSlugRegex().Replace(slug, "");
+        // Collapse multiple hyphens
+        slug = MultiHyphenRegex().Replace(slug, "-");
+        // Trim hyphens
+        slug = slug.Trim('-');
+        // Truncate
+        if (slug.Length > 40)
+            slug = slug[..40].TrimEnd('-');
+
+        return $"cominomi/{(string.IsNullOrEmpty(slug) ? DateTime.Now.ToString("yyyyMMdd-HHmmss") : slug)}";
+    }
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceRegex();
+
+    [GeneratedRegex(@"[^a-z0-9\-]")]
+    private static partial Regex NonSlugRegex();
+
+    [GeneratedRegex(@"-{2,}")]
+    private static partial Regex MultiHyphenRegex();
 }

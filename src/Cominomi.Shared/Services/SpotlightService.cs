@@ -14,11 +14,11 @@ public class SpotlightService : ISpotlightService, IDisposable
         _gitService = gitService;
     }
 
-    public bool IsActive(string workspaceId) => _sessions.ContainsKey(workspaceId);
+    public bool IsActive(string sessionId) => _sessions.ContainsKey(sessionId);
 
-    public async Task StartAsync(Workspace workspace)
+    public async Task StartAsync(Workspace workspace, Session session)
     {
-        if (_sessions.ContainsKey(workspace.Id))
+        if (_sessions.ContainsKey(session.Id))
             return;
 
         var repoDir = workspace.RepoLocalPath;
@@ -33,8 +33,8 @@ public class SpotlightService : ISpotlightService, IDisposable
         // Stash any uncommitted changes in the repo root
         await RunGitAsync("stash push -m \"cominomi-spotlight-backup\"", repoDir);
 
-        // Checkout the workspace branch in the repo root
-        var checkoutResult = await RunGitAsync($"checkout \"{workspace.BranchName}\"", repoDir);
+        // Checkout the session branch in the repo root
+        var checkoutResult = await RunGitAsync($"checkout \"{session.BranchName}\"", repoDir);
         if (!checkoutResult.Success)
         {
             // Restore stash if checkout failed
@@ -43,22 +43,22 @@ public class SpotlightService : ISpotlightService, IDisposable
         }
 
         // Sync uncommitted changes from worktree to repo root
-        await SyncFilesAsync(workspace.WorktreePath, repoDir);
+        await SyncFilesAsync(session.WorktreePath, repoDir);
 
         // Start watching worktree for changes
-        var watcher = new FileSystemWatcher(workspace.WorktreePath)
+        var watcher = new FileSystemWatcher(session.WorktreePath)
         {
             IncludeSubdirectories = true,
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
             EnableRaisingEvents = true
         };
 
-        var session = new SpotlightSession
+        var spotlightSession = new SpotlightSession
         {
-            WorkspaceId = workspace.Id,
+            SessionId = session.Id,
             OriginalBranch = originalBranch,
             RepoDir = repoDir,
-            WorktreePath = workspace.WorktreePath,
+            WorktreePath = session.WorktreePath,
             Watcher = watcher
         };
 
@@ -68,14 +68,14 @@ public class SpotlightService : ISpotlightService, IDisposable
         {
             try
             {
-                await SyncFilesAsync(session.WorktreePath, session.RepoDir);
+                await SyncFilesAsync(spotlightSession.WorktreePath, spotlightSession.RepoDir);
             }
             catch
             {
                 // Best effort sync
             }
         };
-        session.DebounceTimer = debounceTimer;
+        spotlightSession.DebounceTimer = debounceTimer;
 
         void OnChange(object sender, FileSystemEventArgs e)
         {
@@ -93,12 +93,12 @@ public class SpotlightService : ISpotlightService, IDisposable
         watcher.Deleted += OnChange;
         watcher.Renamed += (s, e) => OnChange(s, e);
 
-        _sessions[workspace.Id] = session;
+        _sessions[session.Id] = spotlightSession;
     }
 
-    public async Task StopAsync(Workspace workspace)
+    public async Task StopAsync(string sessionId)
     {
-        if (!_sessions.TryRemove(workspace.Id, out var session))
+        if (!_sessions.TryRemove(sessionId, out var session))
             return;
 
         // Stop watching
@@ -221,7 +221,7 @@ public class SpotlightService : ISpotlightService, IDisposable
 
     private class SpotlightSession
     {
-        public required string WorkspaceId { get; init; }
+        public required string SessionId { get; init; }
         public required string OriginalBranch { get; init; }
         public required string RepoDir { get; init; }
         public required string WorktreePath { get; init; }

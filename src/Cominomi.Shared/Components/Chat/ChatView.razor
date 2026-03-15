@@ -48,18 +48,18 @@
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                 <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Secondary" />
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                    @(ChatState.CurrentWorkspace?.BranchName ?? "no branch")
+                    @(ChatState.CurrentSession?.BranchName ?? "no branch")
                 </MudText>
                 <MudSpacer />
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Style="opacity: 0.6;">
-                    @ShortenPath(ChatState.CurrentSession.WorkingDirectory)
+                    @ShortenPath(ChatState.CurrentSession.WorktreePath)
                 </MudText>
             </MudStack>
         </MudPaper>
     }
 
     <InputArea OnSend="HandleSend" OnCancel="HandleCancel" IsStreaming="ChatState.IsStreaming"
-               Disabled="ChatState.CurrentSession == null"
+               Disabled="@(ChatState.CurrentSession == null || ChatState.CurrentSession.Status == SessionStatus.Archived)"
                IsPlanMode="@(ChatState.CurrentSession?.PermissionMode == "plan")"
                IsPlanModeChanged="HandlePlanModeChanged"
                Model="@(ChatState.CurrentSession?.Model ?? "")"
@@ -108,6 +108,9 @@
         if (ChatState.CurrentSession == null || string.IsNullOrWhiteSpace(message))
             return;
 
+        var session = ChatState.CurrentSession;
+        var isFirstMessage = session.Messages.Count(m => m.Role == MessageRole.User) == 0;
+
         ChatState.AddUserMessage(message);
         ChatState.SetStreaming(true);
         ChatState.SetPhase(StreamingPhase.Sending);
@@ -120,9 +123,9 @@
         {
             await foreach (var evt in ClaudeService.SendMessageAsync(
                 message,
-                ChatState.CurrentSession.WorkingDirectory,
-                ChatState.CurrentSession.Model,
-                ChatState.CurrentSession.PermissionMode))
+                session.WorktreePath,
+                session.Model,
+                session.PermissionMode))
             {
                 if (firstEvent)
                 {
@@ -215,7 +218,20 @@
             ChatState.SetStreaming(false);
             _shouldAutoScroll = true;
             StateHasChanged();
-            await SessionService.SaveSessionAsync(ChatState.CurrentSession);
+            await SessionService.SaveSessionAsync(session);
+
+            // Auto-rename branch after first message
+            if (isFirstMessage && session.Status == SessionStatus.Ready)
+            {
+                try
+                {
+                    var newBranchName = Services.SessionService.GenerateBranchName(message);
+                    await SessionService.RenameBranchAsync(session.Id, newBranchName);
+                    session.BranchName = newBranchName;
+                    ChatState.NotifyStateChanged();
+                }
+                catch { }
+            }
         }
     }
 

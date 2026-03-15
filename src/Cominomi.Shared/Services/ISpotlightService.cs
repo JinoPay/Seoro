@@ -4,7 +4,7 @@ namespace Cominomi.Shared.Services;
 
 public interface ISpotlightService
 {
-    bool IsActive(string workspaceId);
-    Task StartAsync(Workspace workspace);
-    Task StopAsync(Workspace workspace);
+    bool IsActive(string sessionId);
+    Task StartAsync(Workspace workspace, Session session);
+    Task StopAsync(string sessionId);
 }

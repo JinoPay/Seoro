@@ -22,8 +22,6 @@ public class Workspace
     public WorkspaceStatus Status { get; set; } = WorkspaceStatus.Initializing;
     public string RepoUrl { get; set; } = "";
     public string RepoLocalPath { get; set; } = "";
-    public string WorktreePath { get; set; } = "";
-    public string BranchName { get; set; } = "";
     public string BaseBranch { get; set; } = "main";
     public string? ErrorMessage { get; set; }
 }

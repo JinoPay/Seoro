@@ -180,6 +180,22 @@ public class GitService : IGitService
         return result;
     }
 
+    public async Task<GitResult> RenameBranchAsync(string workingDir, string oldName, string newName, CancellationToken ct = default)
+    {
+        return await RunGitAsync($"branch -m \"{oldName}\" \"{newName}\"", workingDir, ct);
+    }
+
+    public async Task<GitResult> DeleteBranchAsync(string repoDir, string branchName, CancellationToken ct = default)
+    {
+        return await RunGitAsync($"branch -D \"{branchName}\"", repoDir, ct);
+    }
+
+    public async Task<bool> IsBranchMergedAsync(string repoDir, string branchName, string baseBranch, CancellationToken ct = default)
+    {
+        var result = await RunGitAsync($"merge-base --is-ancestor \"{branchName}\" \"{baseBranch}\"", repoDir, ct);
+        return result.Success;
+    }
+
     private static Process CreateGitProcess(string arguments, string workingDir)
     {
         return new Process

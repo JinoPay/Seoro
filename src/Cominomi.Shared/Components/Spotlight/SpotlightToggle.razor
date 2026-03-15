@@ -2,6 +2,7 @@
 @inject ChatState ChatState
 
 @if (ChatState.CurrentWorkspace?.Status == WorkspaceStatus.Ready &&
+     ChatState.CurrentSession?.Status == SessionStatus.Ready &&
      !string.IsNullOrEmpty(ChatState.CurrentWorkspace.RepoLocalPath))
 {
     <MudTooltip Text="@(_isActive ? $"Spotlight: syncing to {ShortenPath(ChatState.CurrentWorkspace.RepoLocalPath)}" : "Spotlight Testing")">
@@ -26,14 +27,15 @@
 
     protected override void OnParametersSet()
     {
-        _isActive = ChatState.CurrentWorkspace != null &&
-                    SpotlightService.IsActive(ChatState.CurrentWorkspace.Id);
+        _isActive = ChatState.CurrentSession != null &&
+                    SpotlightService.IsActive(ChatState.CurrentSession.Id);
     }
 
     private async Task ToggleSpotlight()
     {
         var ws = ChatState.CurrentWorkspace;
-        if (ws == null) return;
+        var session = ChatState.CurrentSession;
+        if (ws == null || session == null) return;
 
         _loading = true;
         StateHasChanged();
@@ -42,19 +44,18 @@
         {
             if (_isActive)
             {
-                await SpotlightService.StopAsync(ws);
+                await SpotlightService.StopAsync(session.Id);
                 _isActive = false;
             }
             else
             {
-                await SpotlightService.StartAsync(ws);
+                await SpotlightService.StartAsync(ws, session);
                 _isActive = true;
             }
             ChatState.SetSpotlightActive(_isActive);
         }
         catch (Exception ex)
         {
-            // TODO: Show error via Snackbar
             System.Diagnostics.Debug.WriteLine($"Spotlight error: {ex.Message}");
         }
         finally

@@ -14,7 +14,7 @@
                 @foreach (var ws in _workspaces)
                 {
                     <MudSelectItem T="string" Value="@ws.Id">
-                        @ws.Name @(string.IsNullOrEmpty(ws.BranchName) ? "" : $"({ws.BranchName})")
+                        @ws.Name
                     </MudSelectItem>
                 }
             </MudSelect>
@@ -24,8 +24,16 @@
 
         <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                    StartIcon="@Icons.Material.Filled.Add" OnClick="CreateNewSession"
-                   Disabled="@(ChatState.CurrentWorkspace?.Status != WorkspaceStatus.Ready)">
-            New Chat
+                   Disabled="@(_isCreatingSession || ChatState.CurrentWorkspace?.Status != WorkspaceStatus.Ready)">
+            @if (_isCreatingSession)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Creating...</span>
+            }
+            else
+            {
+                <span>New Chat</span>
+            }
         </MudButton>
 
         <MudDivider Class="my-2" />
@@ -34,8 +42,9 @@
             @foreach (var session in _sessions)
             {
                 var isActive = ChatState.CurrentSession?.Id == session.Id;
+                var isArchived = session.Status == SessionStatus.Archived;
                 <MudPaper Class="pa-2 mb-1" Outlined="true"
-                          Style="@($"cursor: pointer; border-radius: 8px; {(isActive ? "border-color: var(--mud-palette-primary);" : "")}")"
+                          Style="@($"cursor: pointer; border-radius: 8px; {(isActive ? "border-color: var(--mud-palette-primary);" : "")} {(isArchived ? "opacity: 0.5;" : "")}")"
                           @onclick="@(() => SelectSession(session))">
                     <MudStack Spacing="0">
                         <MudStack Row="true" AlignItems="AlignItems.Center">
@@ -43,13 +52,42 @@
                                      Style="@($"flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; {(isActive ? "font-weight: 600;" : "")}")">
                                 @session.Title
                             </MudText>
+                            @if (session.Status == SessionStatus.Merged)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.CleaningServices" Size="Size.Small"
+                                               Color="Color.Success" OnClick="@(() => CleanupSession(session))"
+                                               OnClickStopPropagation="true" />
+                            }
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                            Color="Color.Error" OnClick="@(() => DeleteSession(session))"
                                            OnClickStopPropagation="true" />
                         </MudStack>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @session.UpdatedAt.ToLocalTime().ToString("MM/dd HH:mm")
-                        </MudText>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            @if (!string.IsNullOrEmpty(session.BranchName))
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                         Color="@GetBranchChipColor(session.Status)"
+                                         Style="font-size: 0.65rem; height: 18px;">
+                                    @session.BranchName
+                                </MudChip>
+                            }
+                            @if (session.Status == SessionStatus.Merged)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                         Color="Color.Success"
+                                         Style="font-size: 0.6rem; height: 16px;">
+                                    Merged
+                                </MudChip>
+                            }
+                            else if (session.Status == SessionStatus.Error)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                            }
+                            <MudSpacer />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @session.UpdatedAt.ToLocalTime().ToString("MM/dd HH:mm")
+                            </MudText>
+                        </MudStack>
                     </MudStack>
                 </MudPaper>
             }
@@ -78,6 +116,7 @@
     private List<Workspace> _workspaces = [];
     private string _selectedWorkspaceId = "";
     private bool _workspaceDialogOpen;
+    private bool _isCreatingSession;
 
     protected override async Task OnInitializedAsync()
     {
@@ -102,9 +141,31 @@
     private async Task LoadSessions()
     {
         if (!string.IsNullOrEmpty(_selectedWorkspaceId))
+        {
             _sessions = await SessionService.GetSessionsByWorkspaceAsync(_selectedWorkspaceId);
+            // Check merge status for ready sessions
+            _ = CheckMergeStatuses();
+        }
         else
             _sessions = [];
+    }
+
+    private async Task CheckMergeStatuses()
+    {
+        var readySessions = _sessions.Where(s => s.Status == SessionStatus.Ready).ToList();
+        foreach (var session in readySessions)
+        {
+            try
+            {
+                var merged = await SessionService.CheckMergeStatusAsync(session.Id);
+                if (merged)
+                {
+                    session.Status = SessionStatus.Merged;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch { }
+        }
     }
 
     private async Task OnWorkspaceChanged(string workspaceId)
@@ -148,20 +209,56 @@
         var ws = ChatState.CurrentWorkspace;
         if (ws == null || ws.Status != WorkspaceStatus.Ready) return;
 
-        var workDir = ws.WorktreePath;
-        var model = ws.DefaultModel;
-        var session = await SessionService.CreateSessionAsync(workDir, model, _selectedWorkspaceId);
-        ChatState.SetSession(session);
-        _sessions.Insert(0, session);
+        _isCreatingSession = true;
+        StateHasChanged();
+
+        try
+        {
+            var model = ws.DefaultModel;
+            var session = await SessionService.CreateSessionAsync(model, _selectedWorkspaceId);
+
+            if (session.Status == SessionStatus.Error)
+            {
+                // Still show it so user can see the error
+                _sessions.Insert(0, session);
+                await SessionService.SaveSessionAsync(session);
+            }
+            else
+            {
+                ChatState.SetSession(session);
+                _sessions.Insert(0, session);
+            }
+        }
+        finally
+        {
+            _isCreatingSession = false;
+            StateHasChanged();
+        }
     }
 
     private async Task SelectSession(Session session)
     {
-        var fullSession = await SessionService.LoadSessionAsync(session.Id);
-        if (fullSession != null)
-            ChatState.SetSession(fullSession);
+        if (session.Status == SessionStatus.Archived)
+        {
+            // Load for viewing history only
+            var fullSession = await SessionService.LoadSessionAsync(session.Id);
+            if (fullSession != null)
+                ChatState.SetSession(fullSession);
+            return;
+        }
+
+        var fullSess = await SessionService.LoadSessionAsync(session.Id);
+        if (fullSess != null)
+            ChatState.SetSession(fullSess);
         else
             ChatState.SetSession(session);
+    }
+
+    private async Task CleanupSession(Session session)
+    {
+        await SessionService.CleanupSessionAsync(session.Id);
+        session.Status = SessionStatus.Archived;
+        StateHasChanged();
     }
 
     private async Task DeleteSession(Session session)
@@ -171,6 +268,14 @@
         if (ChatState.CurrentSession?.Id == session.Id)
             ChatState.SetSession(null!);
     }
+
+    private static Color GetBranchChipColor(SessionStatus status) => status switch
+    {
+        SessionStatus.Merged => Color.Success,
+        SessionStatus.Error => Color.Error,
+        SessionStatus.Archived => Color.Default,
+        _ => Color.Primary
+    };
 
     public void Dispose()
     {

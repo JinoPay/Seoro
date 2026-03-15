@@ -9,8 +9,9 @@ public interface IWorkspaceService
     Task SaveWorkspaceAsync(Workspace workspace);
     Task DeleteWorkspaceAsync(string workspaceId);
 
-    Task<Workspace> CreateFromUrlAsync(string url, string name, string branchName, string baseBranch, string model, IProgress<string>? progress = null, CancellationToken ct = default);
-    Task<Workspace> CreateFromLocalAsync(string localPath, string name, string branchName, string baseBranch, string model, CancellationToken ct = default);
+    Task<Workspace> CreateFromUrlAsync(string url, string name, string baseBranch, string model, IProgress<string>? progress = null, CancellationToken ct = default);
+    Task<Workspace> CreateFromLocalAsync(string localPath, string name, string baseBranch, string model, CancellationToken ct = default);
 
     Task<GitRepoInfo?> FindExistingRepoAsync(string remoteUrl);
+    Task<string> GetWorktreesDirAsync();
 }

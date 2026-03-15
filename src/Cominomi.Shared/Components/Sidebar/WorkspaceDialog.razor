@@ -23,13 +23,6 @@
                             <MudStack Spacing="0" Style="flex: 1; min-width: 0;">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudText Typo="Typo.body2" Style="font-weight: 600;">@ws.Name</MudText>
-                                    @if (!string.IsNullOrEmpty(ws.BranchName))
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                                 Color="Color.Primary" Style="font-size: 0.7rem;">
-                                            @ws.BranchName
-                                        </MudChip>
-                                    }
                                     @if (ws.Status == WorkspaceStatus.Initializing)
                                     {
                                         <MudProgressCircular Size="Size.Small" Indeterminate="true" />
@@ -104,8 +97,6 @@
                               Immediate="true" TextChanged="OnUrlChanged" />
                 <MudTextField @bind-Value="_editName" Label="Workspace Name" Variant="Variant.Outlined"
                               Margin="Margin.Dense" />
-                <MudTextField @bind-Value="_branchName" Label="Branch Name" Variant="Variant.Outlined"
-                              Margin="Margin.Dense" />
                 <MudTextField @bind-Value="_baseBranch" Label="Base Branch" Variant="Variant.Outlined"
                               Margin="Margin.Dense" Placeholder="main" />
                 <MudSelect T="string" @bind-Value="_editModel" Label="Default Model"
@@ -119,7 +110,7 @@
                     <MudButton Size="Size.Small" OnClick="BackToList">Cancel</MudButton>
                     <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled"
                                OnClick="CreateFromUrl"
-                               Disabled="@(string.IsNullOrWhiteSpace(_repoUrl) || string.IsNullOrWhiteSpace(_editName) || string.IsNullOrWhiteSpace(_branchName))">
+                               Disabled="@(string.IsNullOrWhiteSpace(_repoUrl) || string.IsNullOrWhiteSpace(_editName))">
                         Create
                     </MudButton>
                 </MudStack>
@@ -130,8 +121,6 @@
                 <MudTextField @bind-Value="_localPath" Label="Repository Path" Variant="Variant.Outlined"
                               Margin="Margin.Dense" Placeholder="/path/to/repo" />
                 <MudTextField @bind-Value="_editName" Label="Workspace Name" Variant="Variant.Outlined"
-                              Margin="Margin.Dense" />
-                <MudTextField @bind-Value="_branchName" Label="Branch Name" Variant="Variant.Outlined"
                               Margin="Margin.Dense" />
                 <MudTextField @bind-Value="_baseBranch" Label="Base Branch" Variant="Variant.Outlined"
                               Margin="Margin.Dense" Placeholder="main" />
@@ -146,7 +135,7 @@
                     <MudButton Size="Size.Small" OnClick="BackToList">Cancel</MudButton>
                     <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled"
                                OnClick="CreateFromLocal"
-                               Disabled="@(string.IsNullOrWhiteSpace(_localPath) || string.IsNullOrWhiteSpace(_editName) || string.IsNullOrWhiteSpace(_branchName))">
+                               Disabled="@(string.IsNullOrWhiteSpace(_localPath) || string.IsNullOrWhiteSpace(_editName))">
                         Create
                     </MudButton>
                 </MudStack>
@@ -186,7 +175,6 @@
     private string _editModel = ModelDefinitions.Default.Id;
     private string _repoUrl = "";
     private string _localPath = "";
-    private string _branchName = "";
     private string _baseBranch = "main";
     private string _progressMessage = "";
     private string? _errorMessage;
@@ -212,7 +200,6 @@
         _editName = "";
         _repoUrl = "";
         _localPath = "";
-        _branchName = $"cominomi/{DateTime.Now:yyyyMMdd-HHmm}";
         _baseBranch = "main";
         _editModel = ModelDefinitions.Default.Id;
         _errorMessage = null;
@@ -274,7 +261,7 @@
         try
         {
             var ws = await WorkspaceService.CreateFromUrlAsync(
-                _repoUrl.Trim(), _editName.Trim(), _branchName.Trim(),
+                _repoUrl.Trim(), _editName.Trim(),
                 _baseBranch.Trim(), _editModel, progress);
 
             if (ws.Status == WorkspaceStatus.Error)
@@ -311,7 +298,7 @@
         try
         {
             var ws = await WorkspaceService.CreateFromLocalAsync(
-                _localPath.Trim(), _editName.Trim(), _branchName.Trim(),
+                _localPath.Trim(), _editName.Trim(),
                 _baseBranch.Trim(), _editModel);
 
             if (ws.Status == WorkspaceStatus.Error)
@@ -335,7 +322,7 @@
 
     private async Task DeleteWorkspace(Workspace ws)
     {
-        // Move sessions to... nowhere. Just delete them since no default workspace.
+        // Delete all sessions (and their worktrees/branches)
         var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
         foreach (var session in sessions)
         {

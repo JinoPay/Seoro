@@ -49,7 +49,7 @@ public partial class WorkspaceService : IWorkspaceService
         return dir;
     }
 
-    private async Task<string> GetWorktreesDirAsync()
+    public async Task<string> GetWorktreesDirAsync()
     {
         var dir = Path.Combine(await GetBaseDirAsync(), "worktrees");
         Directory.CreateDirectory(dir);
@@ -100,40 +100,23 @@ public partial class WorkspaceService : IWorkspaceService
 
     public async Task DeleteWorkspaceAsync(string workspaceId)
     {
-        var workspace = await LoadWorkspaceAsync(workspaceId);
-
-        // Clean up worktree
-        if (workspace != null && !string.IsNullOrEmpty(workspace.WorktreePath) && !string.IsNullOrEmpty(workspace.RepoLocalPath))
-        {
-            try
-            {
-                await _gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, workspace.WorktreePath);
-            }
-            catch
-            {
-                // Best effort cleanup
-            }
-        }
-
         var path = Path.Combine(_workspacesDir, $"{workspaceId}.json");
         if (File.Exists(path))
             File.Delete(path);
+        await Task.CompletedTask;
     }
 
-    public async Task<Workspace> CreateFromUrlAsync(string url, string name, string branchName, string baseBranch, string model, IProgress<string>? progress = null, CancellationToken ct = default)
+    public async Task<Workspace> CreateFromUrlAsync(string url, string name, string baseBranch, string model, IProgress<string>? progress = null, CancellationToken ct = default)
     {
         var workspace = new Workspace
         {
             Name = name,
             RepoUrl = url,
-            BranchName = branchName,
             BaseBranch = baseBranch,
             DefaultModel = model,
             Status = WorkspaceStatus.Initializing
         };
 
-        var worktreesDir = await GetWorktreesDirAsync();
-        workspace.WorktreePath = Path.Combine(worktreesDir, workspace.Id);
         await SaveWorkspaceAsync(workspace);
 
         try
@@ -196,17 +179,6 @@ public partial class WorkspaceService : IWorkspaceService
                     workspace.BaseBranch = detected;
             }
 
-            // Create worktree
-            progress?.Report($"Creating worktree on branch '{branchName}'...");
-            var worktreeResult = await _gitService.AddWorktreeAsync(repoDir, workspace.WorktreePath, branchName, workspace.BaseBranch, ct);
-            if (!worktreeResult.Success)
-            {
-                workspace.Status = WorkspaceStatus.Error;
-                workspace.ErrorMessage = worktreeResult.Error;
-                await SaveWorkspaceAsync(workspace);
-                return workspace;
-            }
-
             workspace.Status = WorkspaceStatus.Ready;
             workspace.ErrorMessage = null;
             await SaveWorkspaceAsync(workspace);
@@ -227,20 +199,17 @@ public partial class WorkspaceService : IWorkspaceService
         }
     }
 
-    public async Task<Workspace> CreateFromLocalAsync(string localPath, string name, string branchName, string baseBranch, string model, CancellationToken ct = default)
+    public async Task<Workspace> CreateFromLocalAsync(string localPath, string name, string baseBranch, string model, CancellationToken ct = default)
     {
         var workspace = new Workspace
         {
             Name = name,
             RepoLocalPath = localPath,
-            BranchName = branchName,
             BaseBranch = baseBranch,
             DefaultModel = model,
             Status = WorkspaceStatus.Initializing
         };
 
-        var worktreesDirLocal = await GetWorktreesDirAsync();
-        workspace.WorktreePath = Path.Combine(worktreesDirLocal, workspace.Id);
         await SaveWorkspaceAsync(workspace);
 
         try
@@ -259,16 +228,6 @@ public partial class WorkspaceService : IWorkspaceService
                 var detected = await _gitService.DetectDefaultBranchAsync(localPath);
                 if (detected != null)
                     workspace.BaseBranch = detected;
-            }
-
-            // Create worktree
-            var result = await _gitService.AddWorktreeAsync(localPath, workspace.WorktreePath, branchName, workspace.BaseBranch, ct);
-            if (!result.Success)
-            {
-                workspace.Status = WorkspaceStatus.Error;
-                workspace.ErrorMessage = result.Error;
-                await SaveWorkspaceAsync(workspace);
-                return workspace;
             }
 
             workspace.Status = WorkspaceStatus.Ready;
