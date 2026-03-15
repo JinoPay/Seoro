@@ -17,6 +17,14 @@
             Plan Mode — Claude will only read and research, not make edits
         </MudAlert>
     }
+    else if (ChatState.CurrentSession?.PermissionMode == "bypassAll")
+    {
+        <MudAlert Severity="Severity.Success" Dense="true" NoIcon="false"
+                  Icon="@Icons.Material.Filled.Security"
+                  Style="border-radius: 0; flex-shrink: 0;">
+            Full Access — Claude will auto-approve all actions without asking
+        </MudAlert>
+    }
 
     <MudStack Style="flex: 1; overflow-y: auto; padding: 16px; min-height: 0;" id="message-list" @ref="_messageListRef">
         @if (ChatState.CurrentSession == null)
@@ -85,8 +93,8 @@
 
     <InputArea OnSend="HandleSend" OnCancel="HandleCancel" IsStreaming="ChatState.IsStreaming"
                Disabled="@(ChatState.CurrentSession == null || ChatState.CurrentSession.Status == SessionStatus.Archived || _isInitializingWorktree)"
-               IsPlanMode="@(ChatState.CurrentSession?.PermissionMode == "plan")"
-               IsPlanModeChanged="HandlePlanModeChanged"
+               PermissionMode="@(ChatState.CurrentSession?.PermissionMode ?? "default")"
+               PermissionModeChanged="HandlePermissionModeChanged"
                Model="@(ChatState.CurrentSession?.Model ?? "")"
                OnModelChanged="HandleModelChanged"
                ResolvedModel="@(ChatState.CurrentSession?.ResolvedModel)" />
@@ -154,10 +162,10 @@
         return path;
     }
 
-    private async Task HandlePlanModeChanged(bool isPlan)
+    private async Task HandlePermissionModeChanged(string mode)
     {
         if (ChatState.CurrentSession == null) return;
-        ChatState.CurrentSession.PermissionMode = isPlan ? "plan" : "default";
+        ChatState.CurrentSession.PermissionMode = mode;
         ChatState.NotifyStateChanged();
         await SessionService.SaveSessionAsync(ChatState.CurrentSession);
     }
