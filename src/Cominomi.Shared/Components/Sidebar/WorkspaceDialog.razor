@@ -1,6 +1,7 @@
 @inject IWorkspaceService WorkspaceService
 @inject ISessionService SessionService
 @inject IGitService GitService
+@inject IFolderPickerService FolderPickerService
 @inject ChatState ChatState
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
@@ -127,8 +128,18 @@
             else if (_step == WizardStep.LocalForm)
             {
                 <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">Local Repository</MudText>
-                <MudTextField @bind-Value="_localPath" Label="Repository Path" Variant="Variant.Outlined"
-                              Margin="Margin.Dense" Placeholder="/path/to/repo" />
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudTextField @bind-Value="_localPath" Label="Repository Path" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" Placeholder="/path/to/repo" Style="flex: 1;" />
+                    <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
+                                   OnClick="BrowseLocalFolder" Title="Browse..." />
+                </MudStack>
+                @if (_localPathValidation != null)
+                {
+                    <MudAlert Severity="@(_isLocalPathGitRepo ? Severity.Success : Severity.Warning)" Dense="true">
+                        @_localPathValidation
+                    </MudAlert>
+                }
                 <MudTextField @bind-Value="_editName" Label="Workspace Name" Variant="Variant.Outlined"
                               Margin="Margin.Dense" />
                 <MudTextField @bind-Value="_branchName" Label="Branch Name" Variant="Variant.Outlined"
@@ -190,6 +201,8 @@
     private string _baseBranch = "main";
     private string _progressMessage = "";
     private string? _errorMessage;
+    private string? _localPathValidation;
+    private bool _isLocalPathGitRepo;
 
     private readonly DialogOptions _dialogOptions = new()
     {
@@ -216,6 +229,8 @@
         _baseBranch = "main";
         _editModel = ModelDefinitions.Default.Id;
         _errorMessage = null;
+        _localPathValidation = null;
+        _isLocalPathGitRepo = false;
         _step = step;
     }
 
@@ -233,6 +248,41 @@
         _step = WizardStep.List;
         _editingWorkspace = null;
         _errorMessage = null;
+    }
+
+    private async Task BrowseLocalFolder()
+    {
+        var path = await FolderPickerService.PickFolderAsync();
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        _localPath = path;
+        _localPathValidation = null;
+        _isLocalPathGitRepo = false;
+
+        var isGitRepo = await GitService.IsGitRepoAsync(path);
+        if (!isGitRepo)
+        {
+            _localPathValidation = "This folder is not a git repository.";
+            _isLocalPathGitRepo = false;
+            return;
+        }
+
+        _isLocalPathGitRepo = true;
+        _localPathValidation = "Valid git repository";
+
+        // Auto-fill workspace name from folder name
+        if (string.IsNullOrEmpty(_editName))
+        {
+            _editName = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) ?? "";
+        }
+
+        // Auto-detect base branch
+        var detectedBranch = await GitService.DetectDefaultBranchAsync(path);
+        if (detectedBranch != null)
+        {
+            _baseBranch = detectedBranch;
+        }
     }
 
     private void OnUrlChanged(string url)

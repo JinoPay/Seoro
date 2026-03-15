@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Cominomi.Services;
 using Cominomi.Shared.Services;
 using MudBlazor.Services;
 
@@ -30,6 +31,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISettingsService, SettingsService>();
         builder.Services.AddSingleton<IDependencyCheckService, DependencyCheckService>();
         builder.Services.AddSingleton<ISpotlightService, SpotlightService>();
+        builder.Services.AddSingleton<IFolderPickerService, FolderPickerService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

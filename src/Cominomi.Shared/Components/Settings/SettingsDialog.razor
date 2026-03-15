@@ -1,4 +1,5 @@
 @inject ISettingsService SettingsService
+@inject IFolderPickerService FolderPickerService
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
@@ -27,9 +28,14 @@
                           Variant="Variant.Outlined" Placeholder="Auto-detect"
                           HelperText="Leave empty for auto-detection" />
 
-            <MudTextField @bind-Value="_settings.DefaultCloneDirectory" Label="Clone Directory"
-                          Variant="Variant.Outlined" Placeholder="~/Cominomi"
-                          HelperText="Where repositories are cloned. Leave empty for default." />
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudTextField @bind-Value="_settings.DefaultCloneDirectory" Label="Clone Directory"
+                              Variant="Variant.Outlined" Placeholder="~/Cominomi"
+                              HelperText="Where repositories are cloned. Leave empty for default."
+                              Style="flex: 1;" />
+                <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
+                               OnClick="BrowseCloneDirectory" Title="Browse..." />
+            </MudStack>
         </MudStack>
     </DialogContent>
     <DialogActions>
@@ -55,6 +61,15 @@
         if (IsOpen)
         {
             _settings = await SettingsService.LoadAsync();
+        }
+    }
+
+    private async Task BrowseCloneDirectory()
+    {
+        var path = await FolderPickerService.PickFolderAsync();
+        if (!string.IsNullOrEmpty(path))
+        {
+            _settings.DefaultCloneDirectory = path;
         }
     }
 
