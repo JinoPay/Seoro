@@ -2,7 +2,6 @@
 @inject ISessionService SessionService
 @inject ISettingsService SettingsService
 @inject IWorkspaceService WorkspaceService
-@inject IGitService GitService
 @implements IDisposable
 
 <MudStack Class="pa-2" Spacing="1" Style="height: 100%; min-height: 0;">
@@ -23,44 +22,11 @@
                            OnClick="@(() => _workspaceDialogOpen = true)" />
         </MudStack>
 
-        @if (_showBranchPicker)
-        {
-            <MudPaper Class="pa-2" Outlined="true" Style="border-radius: 8px;">
-                <MudStack Spacing="1">
-                    <MudSelect T="string" @bind-Value="_selectedBranch" Label="Base Branch"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
-                        @foreach (var branch in _branches)
-                        {
-                            <MudSelectItem T="string" Value="@branch">@branch</MudSelectItem>
-                        }
-                    </MudSelect>
-                    <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
-                        <MudButton Size="Size.Small" OnClick="CancelBranchPicker">Cancel</MudButton>
-                        <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled"
-                                   OnClick="ConfirmCreateSession"
-                                   Disabled="@(string.IsNullOrEmpty(_selectedBranch) || _isCreatingSession)">
-                            @if (_isCreatingSession)
-                            {
-                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
-                                <span>Creating...</span>
-                            }
-                            else
-                            {
-                                <span>Create</span>
-                            }
-                        </MudButton>
-                    </MudStack>
-                </MudStack>
-            </MudPaper>
-        }
-        else
-        {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                       StartIcon="@Icons.Material.Filled.Add" OnClick="ShowBranchPicker"
-                       Disabled="@(ChatState.CurrentWorkspace?.Status != WorkspaceStatus.Ready)">
-                New Chat
-            </MudButton>
-        }
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="CreateNewChat"
+                   Disabled="@(ChatState.CurrentWorkspace?.Status != WorkspaceStatus.Ready || _isCreatingSession)">
+            New Chat
+        </MudButton>
 
         <MudDivider Class="my-2" />
 
@@ -143,9 +109,6 @@
     private string _selectedWorkspaceId = "";
     private bool _workspaceDialogOpen;
     private bool _isCreatingSession;
-    private bool _showBranchPicker;
-    private List<string> _branches = [];
-    private string _selectedBranch = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -233,51 +196,23 @@
         await LoadSessions();
     }
 
-    private async Task ShowBranchPicker()
+    private async Task CreateNewChat()
     {
         var ws = ChatState.CurrentWorkspace;
-        if (ws == null || string.IsNullOrEmpty(ws.RepoLocalPath)) return;
-
-        _branches = await GitService.ListBranchesAsync(ws.RepoLocalPath);
-        var defaultBranch = await GitService.DetectDefaultBranchAsync(ws.RepoLocalPath);
-        _selectedBranch = defaultBranch ?? _branches.FirstOrDefault() ?? "";
-        _showBranchPicker = true;
-    }
-
-    private void CancelBranchPicker()
-    {
-        _showBranchPicker = false;
-        _selectedBranch = "";
-    }
-
-    private async Task ConfirmCreateSession()
-    {
-        var ws = ChatState.CurrentWorkspace;
-        if (ws == null || ws.Status != WorkspaceStatus.Ready || string.IsNullOrEmpty(_selectedBranch)) return;
+        if (ws == null || ws.Status != WorkspaceStatus.Ready) return;
 
         _isCreatingSession = true;
         StateHasChanged();
 
         try
         {
-            var model = ws.DefaultModel;
-            var session = await SessionService.CreateSessionAsync(model, _selectedWorkspaceId, _selectedBranch);
-
-            if (session.Status == SessionStatus.Error)
-            {
-                _sessions.Insert(0, session);
-                await SessionService.SaveSessionAsync(session);
-            }
-            else
-            {
-                ChatState.SetSession(session);
-                _sessions.Insert(0, session);
-            }
+            var session = await SessionService.CreatePendingSessionAsync(ws.DefaultModel, _selectedWorkspaceId);
+            ChatState.SetSession(session);
+            _sessions.Insert(0, session);
         }
         finally
         {
             _isCreatingSession = false;
-            _showBranchPicker = false;
             StateHasChanged();
         }
     }
