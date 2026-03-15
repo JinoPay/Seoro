@@ -20,6 +20,7 @@ public class ChatState
     public string? ActiveToolName { get; private set; }
     public bool IsSpotlightActive { get; private set; }
     public string? PendingMessage { get; private set; }
+    public bool IsDiffPanelOpen { get; private set; }
 
     public event Action? OnChange;
 
@@ -113,6 +114,13 @@ public class ChatState
         PendingMessage = null;
         return msg;
     }
+
+    public void ToggleDiffPanel()
+    {
+        IsDiffPanelOpen = !IsDiffPanelOpen;
+        NotifyStateChanged();
+    }
+
 
     public void NotifyStateChanged() => OnChange?.Invoke();
 }

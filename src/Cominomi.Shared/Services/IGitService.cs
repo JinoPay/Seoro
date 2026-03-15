@@ -18,4 +18,6 @@ public interface IGitService
     Task<GitResult> PushBranchAsync(string repoDir, string branchName, CancellationToken ct = default);
     Task<GitResult> PushForceBranchAsync(string repoDir, string branchName, CancellationToken ct = default);
     Task<GitResult> FetchAsync(string repoDir, CancellationToken ct = default);
+    Task<string> GetNameStatusAsync(string workingDir, string baseBranch, CancellationToken ct = default);
+    Task<string> GetUnifiedDiffAsync(string workingDir, string baseBranch, CancellationToken ct = default);
 }

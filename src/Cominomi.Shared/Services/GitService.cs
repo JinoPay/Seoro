@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
 
@@ -209,6 +210,93 @@ public class GitService : IGitService
     public async Task<GitResult> FetchAsync(string repoDir, CancellationToken ct = default)
     {
         return await RunGitAsync("fetch origin", repoDir, ct);
+    }
+
+    public async Task<string> GetNameStatusAsync(string workingDir, string baseBranch, CancellationToken ct = default)
+    {
+        var result = await RunGitAsync($"diff --name-status {baseBranch}...HEAD", workingDir, ct);
+        return result.Success ? result.Output : "";
+    }
+
+    public async Task<string> GetUnifiedDiffAsync(string workingDir, string baseBranch, CancellationToken ct = default)
+    {
+        var result = await RunGitAsync($"diff {baseBranch}...HEAD", workingDir, ct);
+        return result.Success ? result.Output : "";
+    }
+
+    public static DiffSummary ParseDiff(string nameStatus, string rawDiff)
+    {
+        var summary = new DiffSummary();
+        if (string.IsNullOrWhiteSpace(nameStatus))
+            return summary;
+
+        // Parse name-status lines: "M\tfile.cs", "A\tnewfile.cs", etc.
+        var fileMap = new Dictionary<string, FileDiff>();
+        foreach (var line in nameStatus.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = line.Split('\t', 2);
+            if (parts.Length < 2) continue;
+
+            var statusChar = parts[0].Trim();
+            var filePath = parts[1].Trim();
+            var changeType = statusChar switch
+            {
+                "A" => FileChangeType.Added,
+                "D" => FileChangeType.Deleted,
+                _ when statusChar.StartsWith("R") => FileChangeType.Renamed,
+                _ => FileChangeType.Modified
+            };
+
+            // For renames, the path may contain "old\tnew"
+            if (changeType == FileChangeType.Renamed)
+            {
+                var renameParts = filePath.Split('\t', 2);
+                filePath = renameParts.Length > 1 ? renameParts[1] : filePath;
+            }
+
+            var fileDiff = new FileDiff { FilePath = filePath, ChangeType = changeType };
+            fileMap[filePath] = fileDiff;
+            summary.Files.Add(fileDiff);
+        }
+
+        // Parse unified diff and assign to files
+        if (!string.IsNullOrWhiteSpace(rawDiff))
+        {
+            // Split by "diff --git" marker
+            var chunks = rawDiff.Split("diff --git ", StringSplitOptions.RemoveEmptyEntries);
+            foreach (var chunk in chunks)
+            {
+                // First line: "a/path b/path"
+                var firstNewline = chunk.IndexOf('\n');
+                if (firstNewline < 0) continue;
+
+                var header = chunk[..firstNewline];
+                var bIndex = header.LastIndexOf(" b/");
+                if (bIndex < 0) continue;
+
+                var filePath = header[(bIndex + 3)..].Trim();
+                var diffContent = chunk[(firstNewline + 1)..];
+
+                // Count additions and deletions
+                int additions = 0, deletions = 0;
+                foreach (var line in diffContent.Split('\n'))
+                {
+                    if (line.StartsWith('+') && !line.StartsWith("+++"))
+                        additions++;
+                    else if (line.StartsWith('-') && !line.StartsWith("---"))
+                        deletions++;
+                }
+
+                if (fileMap.TryGetValue(filePath, out var fileDiff))
+                {
+                    fileDiff.UnifiedDiff = diffContent;
+                    fileDiff.Additions = additions;
+                    fileDiff.Deletions = deletions;
+                }
+            }
+        }
+
+        return summary;
     }
 
     private static Process CreateGitProcess(string arguments, string workingDir)
