@@ -1,6 +1,8 @@
 @inject ChatState ChatState
 @inject IClaudeService ClaudeService
 @inject ISessionService SessionService
+@inject IGitService GitService
+@inject IWorkspaceService WorkspaceService
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
@@ -27,9 +29,20 @@
         }
         else if (ChatState.CurrentSession.Messages.Count == 0)
         {
-            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;" Spacing="3">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Color="Color.Primary" />
                 <MudText Typo="Typo.h6" Align="Align.Center">What can I help you with?</MudText>
+                @if (ChatState.CurrentSession.Status == SessionStatus.Pending && _branches.Count > 0)
+                {
+                    <MudSelect T="string" @bind-Value="_selectedBranch" Label="Base Branch"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
+                               Style="max-width: 300px;">
+                        @foreach (var branch in _branches)
+                        {
+                            <MudSelectItem T="string" Value="@branch">@branch</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
             </MudStack>
         }
         else
@@ -48,18 +61,28 @@
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                 <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Secondary" />
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                    @(ChatState.CurrentSession?.BranchName ?? "no branch")
+                    @if (ChatState.CurrentSession?.Status == SessionStatus.Pending)
+                    {
+                        @($"base: {_selectedBranch}")
+                    }
+                    else
+                    {
+                        @(ChatState.CurrentSession?.BranchName ?? "no branch")
+                    }
                 </MudText>
                 <MudSpacer />
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="opacity: 0.6;">
-                    @ShortenPath(ChatState.CurrentSession.WorktreePath)
-                </MudText>
+                @if (ChatState.CurrentSession?.Status != SessionStatus.Pending)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="opacity: 0.6;">
+                        @ShortenPath(ChatState.CurrentSession!.WorktreePath)
+                    </MudText>
+                }
             </MudStack>
         </MudPaper>
     }
 
     <InputArea OnSend="HandleSend" OnCancel="HandleCancel" IsStreaming="ChatState.IsStreaming"
-               Disabled="@(ChatState.CurrentSession == null || ChatState.CurrentSession.Status == SessionStatus.Archived)"
+               Disabled="@(ChatState.CurrentSession == null || ChatState.CurrentSession.Status == SessionStatus.Archived || _isInitializingWorktree)"
                IsPlanMode="@(ChatState.CurrentSession?.PermissionMode == "plan")"
                IsPlanModeChanged="HandlePlanModeChanged"
                Model="@(ChatState.CurrentSession?.Model ?? "")"
@@ -69,10 +92,36 @@
 
 @code {
     private MudStack? _messageListRef;
+    private List<string> _branches = [];
+    private string _selectedBranch = "";
+    private bool _isInitializingWorktree;
 
     protected override void OnInitialized()
     {
-        ChatState.OnChange += StateHasChanged;
+        ChatState.OnChange += HandleStateChanged;
+    }
+
+    private async void HandleStateChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            // Load branches when a Pending session is selected
+            if (ChatState.CurrentSession?.Status == SessionStatus.Pending && _branches.Count == 0)
+            {
+                await LoadBranches();
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadBranches()
+    {
+        var ws = ChatState.CurrentWorkspace;
+        if (ws == null || string.IsNullOrEmpty(ws.RepoLocalPath)) return;
+
+        _branches = await GitService.ListBranchesAsync(ws.RepoLocalPath);
+        var defaultBranch = await GitService.DetectDefaultBranchAsync(ws.RepoLocalPath);
+        _selectedBranch = defaultBranch ?? _branches.FirstOrDefault() ?? "";
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -109,6 +158,45 @@
             return;
 
         var session = ChatState.CurrentSession;
+
+        // Initialize worktree on first message if session is Pending
+        if (session.Status == SessionStatus.Pending)
+        {
+            if (string.IsNullOrEmpty(_selectedBranch))
+                return;
+
+            _isInitializingWorktree = true;
+            StateHasChanged();
+
+            try
+            {
+                var updated = await SessionService.InitializeWorktreeAsync(session.Id, _selectedBranch);
+                session.WorktreePath = updated.WorktreePath;
+                session.BranchName = updated.BranchName;
+                session.BaseBranch = updated.BaseBranch;
+                session.Status = updated.Status;
+                session.ErrorMessage = updated.ErrorMessage;
+
+                if (session.Status == SessionStatus.Error)
+                {
+                    ChatState.NotifyStateChanged();
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                session.Status = SessionStatus.Error;
+                session.ErrorMessage = ex.Message;
+                ChatState.NotifyStateChanged();
+                return;
+            }
+            finally
+            {
+                _isInitializingWorktree = false;
+                StateHasChanged();
+            }
+        }
+
         var isFirstMessage = session.Messages.Count(m => m.Role == MessageRole.User) == 0;
 
         ChatState.AddUserMessage(message);
@@ -251,6 +339,6 @@
 
     public void Dispose()
     {
-        ChatState.OnChange -= StateHasChanged;
+        ChatState.OnChange -= HandleStateChanged;
     }
 }

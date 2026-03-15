@@ -118,6 +118,66 @@ public partial class SessionService : ISessionService
         return session;
     }
 
+    public async Task<Session> CreatePendingSessionAsync(string model, string workspaceId)
+    {
+        var workspace = await _workspaceService.LoadWorkspaceAsync(workspaceId);
+        if (workspace == null)
+            throw new InvalidOperationException($"Workspace '{workspaceId}' not found.");
+
+        var session = new Session
+        {
+            Model = model,
+            WorkspaceId = workspaceId,
+            Status = SessionStatus.Pending
+        };
+
+        await SaveSessionAsync(session);
+        return session;
+    }
+
+    public async Task<Session> InitializeWorktreeAsync(string sessionId, string baseBranch)
+    {
+        var session = await LoadSessionAsync(sessionId);
+        if (session == null)
+            throw new InvalidOperationException($"Session '{sessionId}' not found.");
+
+        var workspace = await _workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
+        if (workspace == null)
+            throw new InvalidOperationException($"Workspace '{session.WorkspaceId}' not found.");
+
+        var branchName = $"cominomi/{DateTime.Now:yyyyMMdd-HHmmss}";
+        var worktreesDir = await _workspaceService.GetWorktreesDirAsync();
+
+        session.BranchName = branchName;
+        session.BaseBranch = baseBranch;
+        session.WorktreePath = Path.Combine(worktreesDir, session.Id);
+        session.Status = SessionStatus.Initializing;
+
+        try
+        {
+            var result = await _gitService.AddWorktreeAsync(
+                workspace.RepoLocalPath, session.WorktreePath, branchName, baseBranch);
+
+            if (!result.Success)
+            {
+                session.Status = SessionStatus.Error;
+                session.ErrorMessage = result.Error;
+            }
+            else
+            {
+                session.Status = SessionStatus.Ready;
+            }
+        }
+        catch (Exception ex)
+        {
+            session.Status = SessionStatus.Error;
+            session.ErrorMessage = ex.Message;
+        }
+
+        await SaveSessionAsync(session);
+        return session;
+    }
+
     public async Task<Session?> LoadSessionAsync(string sessionId)
     {
         var path = Path.Combine(_sessionsDir, $"{sessionId}.json");

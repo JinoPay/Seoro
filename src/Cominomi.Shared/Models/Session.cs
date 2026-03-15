@@ -6,6 +6,7 @@ namespace Cominomi.Shared.Models;
 public enum SessionStatus
 {
     Initializing,
+    Pending,
     Ready,
     Merged,
     Archived,
