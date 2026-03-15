@@ -1,7 +1,6 @@
 @inject ChatState ChatState
 @inject IClaudeService ClaudeService
 @inject ISessionService SessionService
-@inject ISettingsService SettingsService
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
@@ -46,38 +45,16 @@
     {
         <MudPaper Class="px-3 py-1" Elevation="0"
                   Style="border-top: 1px solid var(--mud-palette-lines-default); background: var(--mud-palette-surface);">
-            @if (_editingPath)
-            {
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                    <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Color="Color.Secondary" />
-                    <MudTextField @bind-Value="_editPath"
-                                  Variant="Variant.Text"
-                                  Margin="Margin.Dense"
-                                  Placeholder="Enter working directory path..."
-                                  Style="font-size: 0.8rem;"
-                                  Immediate="true"
-                                  OnKeyDown="HandlePathKeyDown"
-                                  Class="flex-grow-1" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small"
-                                   Color="Color.Success" OnClick="SavePath" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                                   Color="Color.Error" OnClick="CancelEditPath" />
-                </MudStack>
-            }
-            else
-            {
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1"
-                           Style="cursor: pointer;" @onclick="StartEditPath">
-                    <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Color="Color.Secondary" />
-                    <MudText Typo="Typo.caption" Color="Color.Secondary"
-                             Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        @ShortenPath(ChatState.CurrentSession.WorkingDirectory)
-                    </MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
-                                   Color="Color.Secondary" OnClick="StartEditPath"
-                                   OnClickStopPropagation="true" />
-                </MudStack>
-            }
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Secondary" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @(ChatState.CurrentWorkspace?.BranchName ?? "no branch")
+                </MudText>
+                <MudSpacer />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="opacity: 0.6;">
+                    @ShortenPath(ChatState.CurrentSession.WorkingDirectory)
+                </MudText>
+            </MudStack>
         </MudPaper>
     }
 
@@ -92,8 +69,6 @@
 
 @code {
     private MudStack? _messageListRef;
-    private bool _editingPath;
-    private string _editPath = "";
 
     protected override void OnInitialized()
     {
@@ -107,38 +82,6 @@
             _shouldAutoScroll = false;
             await JSRuntime.InvokeVoidAsync("scrollToBottom", "message-list");
         }
-    }
-
-    private void StartEditPath()
-    {
-        _editPath = ChatState.CurrentSession?.WorkingDirectory ?? "";
-        _editingPath = true;
-    }
-
-    private void CancelEditPath() => _editingPath = false;
-
-    private async Task HandlePathKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter") await SavePath();
-        else if (e.Key == "Escape") CancelEditPath();
-    }
-
-    private async Task SavePath()
-    {
-        if (!string.IsNullOrWhiteSpace(_editPath) && ChatState.CurrentSession != null)
-        {
-            ChatState.UpdateWorkingDirectory(_editPath.Trim());
-            await SessionService.SaveSessionAsync(ChatState.CurrentSession);
-
-            var settings = await SettingsService.LoadAsync();
-            var path = _editPath.Trim();
-            settings.RecentDirectories.Remove(path);
-            settings.RecentDirectories.Insert(0, path);
-            if (settings.RecentDirectories.Count > 10)
-                settings.RecentDirectories.RemoveRange(10, settings.RecentDirectories.Count - 10);
-            await SettingsService.SaveAsync(settings);
-        }
-        _editingPath = false;
     }
 
     private static string ShortenPath(string path)
