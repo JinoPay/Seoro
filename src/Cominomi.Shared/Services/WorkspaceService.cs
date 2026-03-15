@@ -13,18 +13,14 @@ public partial class WorkspaceService : IWorkspaceService
     };
 
     private readonly IGitService _gitService;
+    private readonly ISettingsService _settingsService;
     private readonly string _workspacesDir;
-    private readonly string _reposDir;
-    private readonly string _worktreesDir;
     private readonly string _repoInfoDir;
 
-    public WorkspaceService(IGitService gitService)
+    public WorkspaceService(IGitService gitService, ISettingsService settingsService)
     {
         _gitService = gitService;
-
-        var baseDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "Cominomi");
+        _settingsService = settingsService;
 
         _workspacesDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -32,13 +28,32 @@ public partial class WorkspaceService : IWorkspaceService
         _repoInfoDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Cominomi", "repos");
-        _reposDir = Path.Combine(baseDir, "repos");
-        _worktreesDir = Path.Combine(baseDir, "worktrees");
 
         Directory.CreateDirectory(_workspacesDir);
         Directory.CreateDirectory(_repoInfoDir);
-        Directory.CreateDirectory(_reposDir);
-        Directory.CreateDirectory(_worktreesDir);
+    }
+
+    private async Task<string> GetBaseDirAsync()
+    {
+        var settings = await _settingsService.LoadAsync();
+        var baseDir = !string.IsNullOrWhiteSpace(settings.DefaultCloneDirectory)
+            ? settings.DefaultCloneDirectory
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Cominomi");
+        return baseDir;
+    }
+
+    private async Task<string> GetReposDirAsync()
+    {
+        var dir = Path.Combine(await GetBaseDirAsync(), "repos");
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
+
+    private async Task<string> GetWorktreesDirAsync()
+    {
+        var dir = Path.Combine(await GetBaseDirAsync(), "worktrees");
+        Directory.CreateDirectory(dir);
+        return dir;
     }
 
     public async Task<List<Workspace>> GetWorkspacesAsync()
@@ -117,7 +132,8 @@ public partial class WorkspaceService : IWorkspaceService
             Status = WorkspaceStatus.Initializing
         };
 
-        workspace.WorktreePath = Path.Combine(_worktreesDir, workspace.Id);
+        var worktreesDir = await GetWorktreesDirAsync();
+        workspace.WorktreePath = Path.Combine(worktreesDir, workspace.Id);
         await SaveWorkspaceAsync(workspace);
 
         try
@@ -138,7 +154,8 @@ public partial class WorkspaceService : IWorkspaceService
             else
             {
                 var slug = ExtractRepoSlug(url);
-                repoDir = Path.Combine(_reposDir, slug);
+                var reposDir = await GetReposDirAsync();
+                repoDir = Path.Combine(reposDir, slug);
 
                 // Avoid directory name collision
                 var counter = 1;
@@ -222,7 +239,8 @@ public partial class WorkspaceService : IWorkspaceService
             Status = WorkspaceStatus.Initializing
         };
 
-        workspace.WorktreePath = Path.Combine(_worktreesDir, workspace.Id);
+        var worktreesDirLocal = await GetWorktreesDirAsync();
+        workspace.WorktreePath = Path.Combine(worktreesDirLocal, workspace.Id);
         await SaveWorkspaceAsync(workspace);
 
         try

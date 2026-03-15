@@ -1,0 +1,71 @@
+@inject ISpotlightService SpotlightService
+@inject ChatState ChatState
+
+@if (ChatState.CurrentWorkspace?.Status == WorkspaceStatus.Ready &&
+     !string.IsNullOrEmpty(ChatState.CurrentWorkspace.RepoLocalPath))
+{
+    <MudTooltip Text="@(_isActive ? $"Spotlight: syncing to {ShortenPath(ChatState.CurrentWorkspace.RepoLocalPath)}" : "Spotlight Testing")">
+        <MudIconButton Icon="@Icons.Material.Filled.Sync"
+                       Color="@(_isActive ? Color.Success : Color.Default)"
+                       Size="Size.Small"
+                       OnClick="ToggleSpotlight"
+                       Disabled="_loading" />
+    </MudTooltip>
+    @if (_isActive)
+    {
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
+                 Style="font-size: 0.65rem;">
+            Spotlight
+        </MudChip>
+    }
+}
+
+@code {
+    private bool _isActive;
+    private bool _loading;
+
+    protected override void OnParametersSet()
+    {
+        _isActive = ChatState.CurrentWorkspace != null &&
+                    SpotlightService.IsActive(ChatState.CurrentWorkspace.Id);
+    }
+
+    private async Task ToggleSpotlight()
+    {
+        var ws = ChatState.CurrentWorkspace;
+        if (ws == null) return;
+
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            if (_isActive)
+            {
+                await SpotlightService.StopAsync(ws);
+                _isActive = false;
+            }
+            else
+            {
+                await SpotlightService.StartAsync(ws);
+                _isActive = true;
+            }
+            ChatState.SetSpotlightActive(_isActive);
+        }
+        catch (Exception ex)
+        {
+            // TODO: Show error via Snackbar
+            System.Diagnostics.Debug.WriteLine($"Spotlight error: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string ShortenPath(string path)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return path.StartsWith(home) ? "~" + path[home.Length..] : path;
+    }
+}
