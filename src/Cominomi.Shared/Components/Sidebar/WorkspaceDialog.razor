@@ -3,7 +3,7 @@
 @inject IGitService GitService
 @inject ChatState ChatState
 
-<MudDialog @bind-Visible="IsOpen" Options="_dialogOptions">
+<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Workspaces" Class="mr-2" />
@@ -355,6 +355,15 @@
         }
 
         await OnWorkspacesChanged.InvokeAsync();
+    }
+
+    private async Task OnVisibleChanged(bool visible)
+    {
+        if (IsOpen != visible)
+        {
+            IsOpen = visible;
+            await IsOpenChanged.InvokeAsync(visible);
+        }
     }
 
     private async Task Close()

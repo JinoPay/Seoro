@@ -8,6 +8,7 @@
             @ChatState.CurrentWorkspace.BranchName
         </MudChip>
     }
+    <SpotlightToggle />
     @if (!string.IsNullOrEmpty(ChatState.CurrentSession?.Model))
     {
         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">

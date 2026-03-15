@@ -1,7 +1,7 @@
 @using System.Runtime.InteropServices
 @inject IDependencyCheckService DependencyCheckService
 
-<MudDialog @bind-Visible="IsOpen" Options="_dialogOptions">
+<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
@@ -132,6 +132,15 @@
     {
         _results = null;
         await RunCheck();
+    }
+
+    private async Task OnVisibleChanged(bool visible)
+    {
+        if (IsOpen != visible)
+        {
+            IsOpen = visible;
+            await IsOpenChanged.InvokeAsync(visible);
+        }
     }
 
     private async Task Close()

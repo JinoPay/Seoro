@@ -18,6 +18,7 @@ public class ChatState
     public bool IsStreaming { get; private set; }
     public StreamingPhase Phase { get; private set; }
     public string? ActiveToolName { get; private set; }
+    public bool IsSpotlightActive { get; private set; }
 
     public event Action? OnChange;
 
@@ -90,6 +91,12 @@ public class ChatState
     public void FinishMessage(ChatMessage message)
     {
         message.IsStreaming = false;
+        NotifyStateChanged();
+    }
+
+    public void SetSpotlightActive(bool active)
+    {
+        IsSpotlightActive = active;
         NotifyStateChanged();
     }
 
