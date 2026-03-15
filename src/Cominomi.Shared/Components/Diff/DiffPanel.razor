@@ -1,0 +1,202 @@
+@inject ChatState ChatState
+@inject IGitService GitService
+@implements IDisposable
+
+<MudDrawer Open="ChatState.IsDiffPanelOpen" OpenChanged="OnDrawerOpenChanged"
+           Anchor="Anchor.End" ClipMode="DrawerClipMode.Always"
+           Elevation="2" Variant="DrawerVariant.Temporary" Width="450px">
+    <MudStack Style="height: 100%; overflow: hidden;" Spacing="0">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="px-3 py-2" Style="flex-shrink: 0;">
+            <MudIcon Icon="@Icons.Material.Filled.Difference" Size="Size.Small" Color="Color.Primary" />
+            <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">Changes</MudText>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                           OnClick="LoadDiffAsync" Disabled="_isLoading" />
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                           OnClick="@(() => ChatState.ToggleDiffPanel())" />
+        </MudStack>
+
+        <MudDivider />
+
+        <div style="flex: 1; overflow-y: auto; padding: 8px;">
+            @if (_isLoading)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-4" />
+            }
+            else if (_error != null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="my-2">@_error</MudAlert>
+            }
+            else if (_diff == null || _diff.Files.Count == 0)
+            {
+                <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 200px;" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large"
+                             Style="opacity: 0.4;" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No changes detected</MudText>
+                </MudStack>
+            }
+            else
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="px-2 mb-2" Spacing="2">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @(_diff.Files.Count) file@(_diff.Files.Count != 1 ? "s" : "") changed
+                    </MudText>
+                    <MudSpacer />
+                    <MudText Typo="Typo.caption" Style="color: #4caf50; font-weight: 600;">
+                        +@(_diff.TotalAdditions)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color: #f44336; font-weight: 600;">
+                        -@(_diff.TotalDeletions)
+                    </MudText>
+                </MudStack>
+
+                <MudExpansionPanels MultiExpansion="true" Dense="true" Elevation="0">
+                    @foreach (var file in _diff.Files)
+                    {
+                        <MudExpansionPanel Style="margin-bottom: 4px;">
+                            <TitleContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@GetFileIcon(file.ChangeType)"
+                                             Size="Size.Small"
+                                             Style="@GetFileIconStyle(file.ChangeType)" />
+                                    <MudText Typo="Typo.body2" Style="font-family: monospace; font-size: 0.8rem; word-break: break-all;">
+                                        @file.FilePath
+                                    </MudText>
+                                    <MudSpacer />
+                                    @if (file.Additions > 0)
+                                    {
+                                        <MudText Typo="Typo.caption" Style="color: #4caf50; font-weight: 600;">
+                                            +@file.Additions
+                                        </MudText>
+                                    }
+                                    @if (file.Deletions > 0)
+                                    {
+                                        <MudText Typo="Typo.caption" Style="color: #f44336; font-weight: 600;">
+                                            -@file.Deletions
+                                        </MudText>
+                                    }
+                                </MudStack>
+                            </TitleContent>
+                            <ChildContent>
+                                @if (string.IsNullOrWhiteSpace(file.UnifiedDiff))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-2">
+                                        No diff available (binary or empty)
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <div style="overflow-x: auto; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 11px; line-height: 1.5;">
+                                        @foreach (var line in file.UnifiedDiff.Split('\n'))
+                                        {
+                                            <div style="@GetLineStyle(line) white-space: pre; padding: 0 8px;">@line</div>
+                                        }
+                                    </div>
+                                }
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    }
+                </MudExpansionPanels>
+            }
+        </div>
+    </MudStack>
+</MudDrawer>
+
+@code {
+    private void OnDrawerOpenChanged(bool open)
+    {
+        if (!open && ChatState.IsDiffPanelOpen)
+            ChatState.ToggleDiffPanel();
+    }
+
+    private DiffSummary? _diff;
+    private bool _isLoading;
+    private string? _error;
+    private string? _lastSessionId;
+
+    protected override void OnInitialized()
+    {
+        ChatState.OnChange += HandleStateChanged;
+    }
+
+    private async void HandleStateChanged()
+    {
+        await InvokeAsync(() =>
+        {
+            // Auto-load diff when panel opens or session changes
+            var sessionId = ChatState.CurrentSession?.Id;
+            if (ChatState.IsDiffPanelOpen && sessionId != _lastSessionId)
+            {
+                _lastSessionId = sessionId;
+                _ = LoadDiffAsync();
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadDiffAsync()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || session.Status == SessionStatus.Pending ||
+            string.IsNullOrEmpty(session.WorktreePath) || string.IsNullOrEmpty(session.BaseBranch))
+        {
+            _diff = null;
+            _error = null;
+            StateHasChanged();
+            return;
+        }
+
+        _isLoading = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var nameStatus = await GitService.GetNameStatusAsync(session.WorktreePath, session.BaseBranch);
+            var rawDiff = await GitService.GetUnifiedDiffAsync(session.WorktreePath, session.BaseBranch);
+            _diff = Services.GitService.ParseDiff(nameStatus, rawDiff);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _diff = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string GetFileIcon(FileChangeType type) => type switch
+    {
+        FileChangeType.Added => Icons.Material.Filled.NoteAdd,
+        FileChangeType.Deleted => Icons.Material.Filled.Delete,
+        FileChangeType.Renamed => Icons.Material.Filled.DriveFileRenameOutline,
+        _ => Icons.Material.Filled.EditNote
+    };
+
+    private static string GetFileIconStyle(FileChangeType type) => type switch
+    {
+        FileChangeType.Added => "color: #4caf50;",
+        FileChangeType.Deleted => "color: #f44336;",
+        FileChangeType.Renamed => "color: #ff9800;",
+        _ => "color: #2196f3;"
+    };
+
+    private static string GetLineStyle(string line)
+    {
+        if (line.StartsWith("@@"))
+            return "color: #00bcd4; opacity: 0.8;";
+        if (line.StartsWith('+') && !line.StartsWith("+++"))
+            return "background: rgba(76, 175, 80, 0.15); color: #81c784;";
+        if (line.StartsWith('-') && !line.StartsWith("---"))
+            return "background: rgba(244, 67, 54, 0.15); color: #e57373;";
+        return "";
+    }
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= HandleStateChanged;
+    }
+}

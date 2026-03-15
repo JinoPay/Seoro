@@ -19,6 +19,7 @@ public class ChatState
     public StreamingPhase Phase { get; private set; }
     public string? ActiveToolName { get; private set; }
     public bool IsSpotlightActive { get; private set; }
+    public bool IsDiffPanelOpen { get; private set; }
 
     public event Action? OnChange;
 
@@ -97,6 +98,12 @@ public class ChatState
     public void SetSpotlightActive(bool active)
     {
         IsSpotlightActive = active;
+        NotifyStateChanged();
+    }
+
+    public void ToggleDiffPanel()
+    {
+        IsDiffPanelOpen = !IsDiffPanelOpen;
         NotifyStateChanged();
     }
 

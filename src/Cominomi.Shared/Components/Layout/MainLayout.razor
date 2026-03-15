@@ -1,4 +1,6 @@
 @inherits LayoutComponentBase
+@inject ChatState ChatState
+@implements IDisposable
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
 <MudPopoverProvider />
@@ -12,6 +14,12 @@
         <MudText Typo="Typo.h6" Class="ml-3">Cominomi</MudText>
         <MudSpacer />
         <StatusBar />
+        @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status != SessionStatus.Pending)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Difference"
+                           Color="@(ChatState.IsDiffPanelOpen ? Color.Primary : Color.Inherit)"
+                           OnClick="@(() => ChatState.ToggleDiffPanel())" />
+        }
         <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                        Color="Color.Inherit" OnClick="@ToggleDarkMode" />
         <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit"
@@ -25,6 +33,8 @@
     <MudMainContent Class="pa-0" Style="height: calc(100vh - 48px);">
         @Body
     </MudMainContent>
+
+    <DiffPanel />
 </MudLayout>
 
 <SettingsDialog @bind-IsOpen="_settingsOpen" />
@@ -65,6 +75,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ChatState.OnChange += HandleStateChanged;
+
         var settings = await SettingsService.LoadAsync();
         _isDarkMode = settings.Theme != "light";
 
@@ -75,7 +87,14 @@
         }
     }
 
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
     private void ToggleDarkMode() => _isDarkMode = !_isDarkMode;
     private void OpenSettings() => _settingsOpen = true;
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= HandleStateChanged;
+    }
 }
