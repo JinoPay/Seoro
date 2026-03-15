@@ -7,81 +7,138 @@
 <MudStack Class="pa-2" Spacing="1" Style="height: 100%; min-height: 0;">
     @if (_workspaces.Count > 0)
     {
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-            <MudSelect T="string" Value="_selectedWorkspaceId" ValueChanged="OnWorkspaceChanged"
-                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
-                       Style="flex: 1;">
-                @foreach (var ws in _workspaces)
-                {
-                    <MudSelectItem T="string" Value="@ws.Id">
-                        @ws.Name
-                    </MudSelectItem>
-                }
-            </MudSelect>
-            <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
+        @* Header *@
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
+            <MudText Typo="Typo.subtitle2" Style="flex: 1; opacity: 0.7;">Workspaces</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
                            OnClick="@(() => _workspaceDialogOpen = true)" />
         </MudStack>
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                   StartIcon="@Icons.Material.Filled.Add" OnClick="CreateNewChat"
-                   Disabled="@(ChatState.CurrentWorkspace?.Status != WorkspaceStatus.Ready || _isCreatingSession)">
-            New Chat
-        </MudButton>
+        <MudDivider />
 
-        <MudDivider Class="my-2" />
-
-        <MudStack Style="overflow-y: auto; flex: 1; min-height: 0;">
-            @foreach (var session in _sessions)
+        @* Workspace list *@
+        <MudStack Style="overflow-y: auto; flex: 1; min-height: 0;" Spacing="0">
+            @foreach (var ws in _workspaces)
             {
-                var isActive = ChatState.CurrentSession?.Id == session.Id;
-                var isArchived = session.Status == SessionStatus.Archived;
-                <MudPaper Class="pa-2 mb-1" Outlined="true"
-                          Style="@($"cursor: pointer; border-radius: 8px; {(isActive ? "border-color: var(--mud-palette-primary);" : "")} {(isArchived ? "opacity: 0.5;" : "")}")"
-                          @onclick="@(() => SelectSession(session))">
-                    <MudStack Spacing="0">
-                        <MudStack Row="true" AlignItems="AlignItems.Center">
-                            <MudText Typo="Typo.body2"
-                                     Style="@($"flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; {(isActive ? "font-weight: 600;" : "")}")">
-                                @session.Title
-                            </MudText>
-                            @if (session.Status == SessionStatus.Merged)
-                            {
-                                <MudIconButton Icon="@Icons.Material.Filled.CleaningServices" Size="Size.Small"
-                                               Color="Color.Success" OnClick="@(() => CleanupSession(session))"
-                                               OnClickStopPropagation="true" />
-                            }
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                           Color="Color.Error" OnClick="@(() => DeleteSession(session))"
-                                           OnClickStopPropagation="true" />
-                        </MudStack>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                            @if (!string.IsNullOrEmpty(session.BranchName))
-                            {
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                         Color="@GetBranchChipColor(session.Status)"
-                                         Style="font-size: 0.65rem; height: 18px;">
-                                    @session.BranchName
-                                </MudChip>
-                            }
-                            @if (session.Status == SessionStatus.Merged)
-                            {
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
-                                         Color="Color.Success"
-                                         Style="font-size: 0.6rem; height: 16px;">
-                                    Merged
-                                </MudChip>
-                            }
-                            else if (session.Status == SessionStatus.Error)
+                var isExpanded = _expandedWorkspaceId == ws.Id;
+
+                @if (isExpanded)
+                {
+                    @* Expanded workspace *@
+                    <MudPaper Outlined="true" Class="mb-1"
+                              Style="border-radius: 8px; border-color: var(--mud-palette-primary);">
+                        @* Workspace header *@
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Class="pa-2"
+                                  Style="cursor: pointer;" @onclick="@(() => ToggleWorkspace(ws))">
+                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                            @if (ws.Status == WorkspaceStatus.Error)
                             {
                                 <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
                             }
-                            <MudSpacer />
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @session.UpdatedAt.ToLocalTime().ToString("MM/dd HH:mm")
+                            else if (ws.Status == WorkspaceStatus.Initializing)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 16px; height: 16px;" />
+                            }
+                            <MudText Typo="Typo.body2" Style="flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @ws.Name
                             </MudText>
+                            <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
+                                           OnClick="@(() => _workspaceDialogOpen = true)"
+                                           OnClickStopPropagation="true" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                                           OnClick="@(() => CreateNewChat(ws))"
+                                           OnClickStopPropagation="true"
+                                           Disabled="@(ws.Status != WorkspaceStatus.Ready || _isCreatingSession)" />
                         </MudStack>
+
+                        @* Sessions *@
+                        @if (_sessionCache.TryGetValue(ws.Id, out var sessions))
+                        {
+                            <MudStack Class="pl-3 pr-2 pb-2" Spacing="1">
+                                @foreach (var session in sessions)
+                                {
+                                    var isActive = ChatState.CurrentSession?.Id == session.Id;
+                                    var isArchived = session.Status == SessionStatus.Archived;
+                                    <MudPaper Class="pa-2" Outlined="true"
+                                              Style="@($"cursor: pointer; border-radius: 8px; {(isActive ? "border-color: var(--mud-palette-primary);" : "")} {(isArchived ? "opacity: 0.5;" : "")}")"
+                                              @onclick="@(() => SelectSession(session))">
+                                        <MudStack Spacing="0">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                                <MudText Typo="Typo.body2"
+                                                         Style="@($"flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; {(isActive ? "font-weight: 600;" : "")}")">
+                                                    @session.Title
+                                                </MudText>
+                                                @if (session.Status == SessionStatus.Merged)
+                                                {
+                                                    <MudIconButton Icon="@Icons.Material.Filled.CleaningServices" Size="Size.Small"
+                                                                   Color="Color.Success" OnClick="@(() => CleanupSession(session))"
+                                                                   OnClickStopPropagation="true" />
+                                                }
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                               Color="Color.Error" OnClick="@(() => DeleteSession(session))"
+                                                               OnClickStopPropagation="true" />
+                                            </MudStack>
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                @if (!string.IsNullOrEmpty(session.BranchName))
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                             Color="@GetBranchChipColor(session.Status)"
+                                                             Style="font-size: 0.65rem; height: 18px;">
+                                                        @session.BranchName
+                                                    </MudChip>
+                                                }
+                                                @if (session.Status == SessionStatus.Merged)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                                             Color="Color.Success"
+                                                             Style="font-size: 0.6rem; height: 16px;">
+                                                        Merged
+                                                    </MudChip>
+                                                }
+                                                else if (session.Status == SessionStatus.Error)
+                                                {
+                                                    <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                                                }
+                                                <MudSpacer />
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @session.UpdatedAt.ToLocalTime().ToString("MM/dd HH:mm")
+                                                </MudText>
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudPaper>
+                                }
+
+                                @if (sessions.Count == 0)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-2" Align="Align.Center">
+                                        No chats yet
+                                    </MudText>
+                                }
+                            </MudStack>
+                        }
+                    </MudPaper>
+                }
+                else
+                {
+                    @* Collapsed workspace *@
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="pa-2 mud-ripple mb-1"
+                              Style="cursor: pointer; border-radius: 8px;"
+                              @onclick="@(() => ToggleWorkspace(ws))">
+                        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowRight" Size="Size.Small" />
+                        @if (ws.Status == WorkspaceStatus.Error)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                        }
+                        else if (ws.Status == WorkspaceStatus.Initializing)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 16px; height: 16px;" />
+                        }
+                        <MudText Typo="Typo.body2"
+                                 Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            @ws.Name
+                        </MudText>
                     </MudStack>
-                </MudPaper>
+                }
             }
         </MudStack>
     }
@@ -104,47 +161,64 @@
 <WorkspaceDialog @bind-IsOpen="_workspaceDialogOpen" OnWorkspacesChanged="ReloadWorkspaces" />
 
 @code {
-    private List<Session> _sessions = [];
     private List<Workspace> _workspaces = [];
-    private string _selectedWorkspaceId = "";
+    private string? _expandedWorkspaceId;
+    private Dictionary<string, List<Session>> _sessionCache = new();
     private bool _workspaceDialogOpen;
     private bool _isCreatingSession;
 
     protected override async Task OnInitializedAsync()
     {
-        ChatState.OnChange += async () => await InvokeAsync(StateHasChanged);
-
-        var settings = await SettingsService.LoadAsync();
-        _selectedWorkspaceId = settings.LastWorkspaceId;
+        ChatState.OnChange += OnStateChanged;
 
         _workspaces = await WorkspaceService.GetWorkspacesAsync();
 
-        var currentWs = _workspaces.FirstOrDefault(w => w.Id == _selectedWorkspaceId)
+        var settings = await SettingsService.LoadAsync();
+        var lastId = settings.LastWorkspaceId;
+
+        var currentWs = _workspaces.FirstOrDefault(w => w.Id == lastId)
                         ?? _workspaces.FirstOrDefault();
         if (currentWs != null)
         {
-            ChatState.SetWorkspace(currentWs);
-            _selectedWorkspaceId = currentWs.Id;
+            await ExpandWorkspace(currentWs);
         }
-
-        await LoadSessions();
     }
 
-    private async Task LoadSessions()
+    private async Task ToggleWorkspace(Workspace ws)
     {
-        if (!string.IsNullOrEmpty(_selectedWorkspaceId))
+        if (_expandedWorkspaceId == ws.Id)
         {
-            _sessions = await SessionService.GetSessionsByWorkspaceAsync(_selectedWorkspaceId);
-            // Check merge status for ready sessions
-            _ = CheckMergeStatuses();
+            _expandedWorkspaceId = null;
+            return;
         }
-        else
-            _sessions = [];
+
+        await ExpandWorkspace(ws);
     }
 
-    private async Task CheckMergeStatuses()
+    private async Task ExpandWorkspace(Workspace ws)
     {
-        var readySessions = _sessions.Where(s => s.Status == SessionStatus.Ready).ToList();
+        _expandedWorkspaceId = ws.Id;
+        ChatState.SetWorkspace(ws);
+
+        // Lazy load sessions
+        if (!_sessionCache.ContainsKey(ws.Id))
+        {
+            var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
+            _sessionCache[ws.Id] = sessions;
+            _ = CheckMergeStatuses(ws.Id);
+        }
+
+        // Persist selection
+        var settings = await SettingsService.LoadAsync();
+        settings.LastWorkspaceId = ws.Id;
+        await SettingsService.SaveAsync(settings);
+    }
+
+    private async Task CheckMergeStatuses(string workspaceId)
+    {
+        if (!_sessionCache.TryGetValue(workspaceId, out var sessions)) return;
+
+        var readySessions = sessions.Where(s => s.Status == SessionStatus.Ready).ToList();
         foreach (var session in readySessions)
         {
             try
@@ -160,55 +234,48 @@
         }
     }
 
-    private async Task OnWorkspaceChanged(string workspaceId)
-    {
-        _selectedWorkspaceId = workspaceId;
-        var ws = _workspaces.FirstOrDefault(w => w.Id == workspaceId);
-        if (ws != null)
-            ChatState.SetWorkspace(ws);
-
-        await LoadSessions();
-
-        var settings = await SettingsService.LoadAsync();
-        settings.LastWorkspaceId = workspaceId;
-        await SettingsService.SaveAsync(settings);
-    }
-
     private async Task ReloadWorkspaces()
     {
         _workspaces = await WorkspaceService.GetWorkspacesAsync();
 
-        // If current workspace was deleted, select the first available
-        if (!_workspaces.Any(w => w.Id == _selectedWorkspaceId))
+        // If expanded workspace was deleted, select first available
+        if (_expandedWorkspaceId != null && !_workspaces.Any(w => w.Id == _expandedWorkspaceId))
         {
+            _sessionCache.Remove(_expandedWorkspaceId);
             var firstWs = _workspaces.FirstOrDefault();
             if (firstWs != null)
             {
-                _selectedWorkspaceId = firstWs.Id;
-                ChatState.SetWorkspace(firstWs);
+                await ExpandWorkspace(firstWs);
             }
             else
             {
-                _selectedWorkspaceId = "";
+                _expandedWorkspaceId = null;
             }
         }
-
-        await LoadSessions();
+        else if (_expandedWorkspaceId != null)
+        {
+            // Refresh sessions for expanded workspace
+            var sessions = await SessionService.GetSessionsByWorkspaceAsync(_expandedWorkspaceId);
+            _sessionCache[_expandedWorkspaceId] = sessions;
+        }
     }
 
-    private async Task CreateNewChat()
+    private async Task CreateNewChat(Workspace ws)
     {
-        var ws = ChatState.CurrentWorkspace;
-        if (ws == null || ws.Status != WorkspaceStatus.Ready) return;
+        if (ws.Status != WorkspaceStatus.Ready) return;
 
         _isCreatingSession = true;
         StateHasChanged();
 
         try
         {
-            var session = await SessionService.CreatePendingSessionAsync(ws.DefaultModel, _selectedWorkspaceId);
+            var session = await SessionService.CreatePendingSessionAsync(ws.DefaultModel, ws.Id);
             ChatState.SetSession(session);
-            _sessions.Insert(0, session);
+
+            if (_sessionCache.TryGetValue(ws.Id, out var sessions))
+            {
+                sessions.Insert(0, session);
+            }
         }
         finally
         {
@@ -219,15 +286,6 @@
 
     private async Task SelectSession(Session session)
     {
-        if (session.Status == SessionStatus.Archived)
-        {
-            // Load for viewing history only
-            var fullSession = await SessionService.LoadSessionAsync(session.Id);
-            if (fullSession != null)
-                ChatState.SetSession(fullSession);
-            return;
-        }
-
         var fullSess = await SessionService.LoadSessionAsync(session.Id);
         if (fullSess != null)
             ChatState.SetSession(fullSess);
@@ -245,7 +303,10 @@
     private async Task DeleteSession(Session session)
     {
         await SessionService.DeleteSessionAsync(session.Id);
-        _sessions.Remove(session);
+
+        if (_sessionCache.TryGetValue(session.WorkspaceId, out var sessions))
+            sessions.Remove(session);
+
         if (ChatState.CurrentSession?.Id == session.Id)
             ChatState.SetSession(null!);
     }
@@ -258,8 +319,13 @@
         _ => Color.Primary
     };
 
+    private async void OnStateChanged()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
     public void Dispose()
     {
-        ChatState.OnChange -= async () => await InvokeAsync(StateHasChanged);
+        ChatState.OnChange -= OnStateChanged;
     }
 }
