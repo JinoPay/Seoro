@@ -118,7 +118,7 @@
             if (pendingMsg != null && ChatState.CurrentSession != null && !ChatState.IsStreaming)
             {
                 StateHasChanged();
-                await HandleSend(pendingMsg);
+                await HandleSend(new ChatInputMessage { Text = pendingMsg });
                 return;
             }
 
