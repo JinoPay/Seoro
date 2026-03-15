@@ -1,0 +1,142 @@
+@using System.Runtime.InteropServices
+@inject IDependencyCheckService DependencyCheckService
+
+<MudDialog @bind-Visible="IsOpen" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
+            Setup
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3" Class="pa-2" Style="min-width: 440px;">
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Cominomi requires the following tools to be installed.
+            </MudText>
+
+            @if (_loading)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+            }
+            else if (_results != null)
+            {
+                @foreach (var dep in _results)
+                {
+                    <MudPaper Class="pa-3" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            @if (dep.IsInstalled)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                            }
+                            <MudStack Spacing="0" Style="flex: 1;">
+                                <MudText Typo="Typo.subtitle2">@dep.Name</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@dep.Description</MudText>
+                            </MudStack>
+                            @if (dep.IsInstalled)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
+                                    @(dep.Version ?? "installed")
+                                </MudChip>
+                            }
+                        </MudStack>
+
+                        @if (!dep.IsInstalled)
+                        {
+                            <MudDivider Class="my-2" />
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Install:</MudText>
+                                @if (_isMac)
+                                {
+                                    <MudText Typo="Typo.body2">
+                                        <code>@dep.MacInstallHint</code>
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2">
+                                        <code>@dep.WindowsInstallHint</code>
+                                    </MudText>
+                                }
+                                <MudLink Href="@dep.InstallUrl" Target="_blank" Typo="Typo.caption">
+                                    @dep.InstallUrl
+                                </MudLink>
+                            </MudStack>
+                        }
+                    </MudPaper>
+                }
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        @if (_allInstalled)
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close">
+                Start
+            </MudButton>
+        }
+        else
+        {
+            <MudButton OnClick="Close">Skip</MudButton>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Recheck"
+                       Disabled="_loading">
+                Recheck
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private List<DependencyResult>? _results;
+    private bool _loading;
+    private bool _allInstalled;
+    private bool _isMac = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        BackdropClick = false
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen && _results == null)
+        {
+            await RunCheck();
+        }
+    }
+
+    private async Task RunCheck()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        _results = await DependencyCheckService.CheckAllAsync();
+        _allInstalled = _results.All(r => r.IsInstalled);
+        _loading = false;
+
+        if (_allInstalled)
+        {
+            await Close();
+        }
+    }
+
+    private async Task Recheck()
+    {
+        _results = null;
+        await RunCheck();
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+}
