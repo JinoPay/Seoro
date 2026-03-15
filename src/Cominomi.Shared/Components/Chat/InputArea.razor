@@ -1,4 +1,10 @@
-<MudPaper Class="pa-3" Elevation="3" Style="border-top: 1px solid var(--mud-palette-lines-default);">
+@using Cominomi.Shared.Models
+@using Cominomi.Shared.Services
+@inject IFilePickerService FilePickerService
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<MudPaper Class="pa-3" Elevation="3" Style="border-top: 1px solid var(--mud-palette-lines-default);" id="input-area">
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="margin-bottom: 4px;">
         <MudSelect T="string" Value="Model" ValueChanged="HandleModelChanged"
                    Variant="Variant.Text" Dense="true" Margin="Margin.Dense"
@@ -15,6 +21,26 @@
             <MudText Typo="Typo.caption" Color="Color.Secondary">@ResolvedModel</MudText>
         }
     </MudStack>
+
+    @if (_pendingAttachments.Count > 0)
+    {
+        <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap; margin-bottom: 8px; max-height: 120px; overflow-y: auto;">
+            @foreach (var attachment in _pendingAttachments)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                         Icon="@(attachment.IsImage ? Icons.Material.Filled.Image : Icons.Material.Filled.InsertDriveFile)"
+                         OnClose="@(() => RemoveAttachment(attachment))">
+                    @if (attachment.IsImage && attachment.PreviewDataUrl != null)
+                    {
+                        <img src="@attachment.PreviewDataUrl" alt="@attachment.FileName"
+                             style="max-height: 32px; max-width: 48px; border-radius: 4px; margin-right: 4px; vertical-align: middle;" />
+                    }
+                    @TruncateFileName(attachment.FileName)
+                </MudChip>
+            }
+        </MudStack>
+    }
+
     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.End">
         <MudTooltip Text="@(IsPlanMode ? "Plan Mode (read-only)" : "Code Mode")">
             <MudToggleIconButton Toggled="@_planToggled"
@@ -25,6 +51,14 @@
                                  ToggledColor="Color.Warning"
                                  Size="Size.Medium"
                                  Disabled="Disabled || IsStreaming" />
+        </MudTooltip>
+
+        <MudTooltip Text="Attach files">
+            <MudIconButton Icon="@Icons.Material.Filled.AttachFile"
+                           Color="Color.Default"
+                           Size="Size.Medium"
+                           OnClick="PickFiles"
+                           Disabled="Disabled || IsStreaming" />
         </MudTooltip>
 
         <MudTextField @bind-Value="_inputText"
@@ -53,14 +87,14 @@
                            Color="Color.Primary"
                            Variant="Variant.Filled"
                            OnClick="Send"
-                           Disabled="Disabled || string.IsNullOrWhiteSpace(_inputText)"
+                           Disabled="@(Disabled || (string.IsNullOrWhiteSpace(_inputText) && _pendingAttachments.Count == 0))"
                            Size="Size.Medium" />
         }
     </MudStack>
 </MudPaper>
 
 @code {
-    [Parameter] public EventCallback<string> OnSend { get; set; }
+    [Parameter] public EventCallback<ChatInputMessage> OnSend { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool IsStreaming { get; set; }
     [Parameter] public bool Disabled { get; set; }
@@ -72,10 +106,69 @@
 
     private string _inputText = string.Empty;
     private bool _planToggled;
+    private List<PendingAttachment> _pendingAttachments = [];
+    private DotNetObjectReference<InputArea>? _dotNetRef;
+    private bool _handlersRegistered;
 
     protected override void OnParametersSet()
     {
         _planToggled = IsPlanMode;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("registerPasteHandler", "input-area", _dotNetRef);
+            await JSRuntime.InvokeVoidAsync("registerDropHandler", "input-area", _dotNetRef);
+            _handlersRegistered = true;
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnFilePasted(string fileName, string contentType, byte[] data)
+    {
+        await AddPendingAttachment(fileName, contentType, data);
+    }
+
+    [JSInvokable]
+    public async Task OnFileDropped(string fileName, string contentType, byte[] data)
+    {
+        await AddPendingAttachment(fileName, contentType, data);
+    }
+
+    private Task AddPendingAttachment(string fileName, string contentType, byte[] data)
+    {
+        var attachment = new PendingAttachment
+        {
+            FileName = fileName,
+            ContentType = contentType,
+            Data = data
+        };
+
+        if (attachment.IsImage)
+        {
+            attachment.PreviewDataUrl = $"data:{contentType};base64,{Convert.ToBase64String(data)}";
+        }
+
+        _pendingAttachments.Add(attachment);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task PickFiles()
+    {
+        var files = await FilePickerService.PickFilesAsync();
+        if (files == null || files.Count == 0) return;
+
+        _pendingAttachments.AddRange(files);
+        StateHasChanged();
+    }
+
+    private void RemoveAttachment(PendingAttachment attachment)
+    {
+        _pendingAttachments.Remove(attachment);
     }
 
     private string GetPlaceholder()
@@ -107,11 +200,32 @@
 
     private async Task Send()
     {
-        if (string.IsNullOrWhiteSpace(_inputText) || Disabled)
+        if (Disabled || (string.IsNullOrWhiteSpace(_inputText) && _pendingAttachments.Count == 0))
             return;
 
-        var text = _inputText.Trim();
+        var input = new ChatInputMessage
+        {
+            Text = _inputText.Trim(),
+            Attachments = new List<PendingAttachment>(_pendingAttachments)
+        };
+
         _inputText = string.Empty;
-        await OnSend.InvokeAsync(text);
+        _pendingAttachments.Clear();
+        await OnSend.InvokeAsync(input);
+    }
+
+    private static string TruncateFileName(string name)
+    {
+        return name.Length > 20 ? string.Concat(name.AsSpan(0, 17), "...") : name;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_handlersRegistered)
+        {
+            try { await JSRuntime.InvokeVoidAsync("unregisterFileHandlers", "input-area"); }
+            catch { }
+        }
+        _dotNetRef?.Dispose();
     }
 }

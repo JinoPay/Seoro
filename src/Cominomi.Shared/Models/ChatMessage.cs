@@ -6,6 +6,7 @@ public class ChatMessage
     public MessageRole Role { get; set; }
     public string Text { get; set; } = string.Empty;
     public List<ToolCall> ToolCalls { get; set; } = [];
+    public List<FileAttachment> Attachments { get; set; } = [];
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public bool IsStreaming { get; set; }
 }

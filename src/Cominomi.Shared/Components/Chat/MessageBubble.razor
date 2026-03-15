@@ -16,6 +16,31 @@
                 <span style="margin-left: 8px; opacity: 0.6;">@Message.Timestamp.ToLocalTime().ToString("HH:mm")</span>
             </MudText>
 
+            @if (Message.Attachments.Count > 0)
+            {
+                <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap;">
+                    @foreach (var attachment in Message.Attachments)
+                    {
+                        @if (attachment.IsImage)
+                        {
+                            <div style="margin: 4px 0;">
+                                <img src="@GetImageSrc(attachment)"
+                                     alt="@attachment.OriginalFileName"
+                                     style="max-width: 300px; max-height: 200px; border-radius: 8px; object-fit: contain;" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@attachment.OriginalFileName</MudText>
+                            </div>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Icon="@Icons.Material.Filled.InsertDriveFile"
+                                     Size="Size.Small" Variant="Variant.Outlined">
+                                @attachment.OriginalFileName @($"({FormatFileSize(attachment.SizeBytes)})")
+                            </MudChip>
+                        }
+                    }
+                </MudStack>
+            }
+
             @if (Message.ToolCalls.Count > 0)
             {
                 @foreach (var tool in Message.ToolCalls)
@@ -46,4 +71,34 @@
     private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
         .Build();
+
+    private readonly Dictionary<string, string> _imageCache = new();
+
+    private string GetImageSrc(FileAttachment attachment)
+    {
+        if (_imageCache.TryGetValue(attachment.Id, out var cached))
+            return cached;
+
+        var worktreePath = ChatState.CurrentSession?.WorktreePath;
+        if (string.IsNullOrEmpty(worktreePath))
+            return string.Empty;
+
+        var filePath = Path.Combine(worktreePath, ".cominomi-attachments", attachment.StoredFileName);
+        if (!File.Exists(filePath))
+            return string.Empty;
+
+        var bytes = File.ReadAllBytes(filePath);
+        var dataUrl = $"data:{attachment.ContentType};base64,{Convert.ToBase64String(bytes)}";
+        _imageCache[attachment.Id] = dataUrl;
+        return dataUrl;
+    }
+
+    private static string FormatFileSize(long sizeBytes)
+    {
+        if (sizeBytes >= 1024 * 1024)
+            return $"{sizeBytes / (1024.0 * 1024.0):F1} MB";
+        if (sizeBytes >= 1024)
+            return $"{sizeBytes / 1024.0:F1} KB";
+        return $"{sizeBytes} B";
+    }
 }
