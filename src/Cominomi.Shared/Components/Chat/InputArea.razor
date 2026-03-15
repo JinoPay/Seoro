@@ -110,9 +110,41 @@
     private DotNetObjectReference<InputArea>? _dotNetRef;
     private bool _handlersRegistered;
 
+    // Parameter tracking to prevent unnecessary re-renders (cursor jumping fix)
+    private bool _prevIsStreaming;
+    private bool _prevDisabled;
+    private bool _prevIsPlanMode;
+    private string _prevModel = string.Empty;
+    private string? _prevResolvedModel;
+    private bool _forceRender;
+
     protected override void OnParametersSet()
     {
         _planToggled = IsPlanMode;
+
+        if (_prevIsStreaming != IsStreaming ||
+            _prevDisabled != Disabled ||
+            _prevIsPlanMode != IsPlanMode ||
+            _prevModel != Model ||
+            _prevResolvedModel != ResolvedModel)
+        {
+            _prevIsStreaming = IsStreaming;
+            _prevDisabled = Disabled;
+            _prevIsPlanMode = IsPlanMode;
+            _prevModel = Model;
+            _prevResolvedModel = ResolvedModel;
+            _forceRender = true;
+        }
+    }
+
+    protected override bool ShouldRender()
+    {
+        if (_forceRender)
+        {
+            _forceRender = false;
+            return true;
+        }
+        return false;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -153,6 +185,7 @@
         }
 
         _pendingAttachments.Add(attachment);
+        _forceRender = true;
         StateHasChanged();
         return Task.CompletedTask;
     }
@@ -163,12 +196,14 @@
         if (files == null || files.Count == 0) return;
 
         _pendingAttachments.AddRange(files);
+        _forceRender = true;
         StateHasChanged();
     }
 
     private void RemoveAttachment(PendingAttachment attachment)
     {
         _pendingAttachments.Remove(attachment);
+        _forceRender = true;
     }
 
     private string GetPlaceholder()
@@ -180,12 +215,14 @@
 
     private async Task OnPlanToggled(bool toggled)
     {
+        _forceRender = true;
         _planToggled = toggled;
         await IsPlanModeChanged.InvokeAsync(toggled);
     }
 
     private async Task HandleModelChanged(string value)
     {
+        _forceRender = true;
         Model = value;
         await OnModelChanged.InvokeAsync(value);
     }
@@ -200,6 +237,7 @@
 
     private async Task Send()
     {
+        _forceRender = true;
         if (Disabled || (string.IsNullOrWhiteSpace(_inputText) && _pendingAttachments.Count == 0))
             return;
 
