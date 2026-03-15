@@ -29,6 +29,67 @@
             const el = document.getElementById(elementId);
             if (el) el.scrollTop = el.scrollHeight;
         };
+
+        window.registerPasteHandler = function(elementId, dotNetRef) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el._pasteHandler = async function(e) {
+                const items = e.clipboardData?.items;
+                if (!items) return;
+                for (const item of items) {
+                    if (item.kind === 'file') {
+                        e.preventDefault();
+                        const file = item.getAsFile();
+                        if (!file) continue;
+                        const buffer = await file.arrayBuffer();
+                        const bytes = new Uint8Array(buffer);
+                        await dotNetRef.invokeMethodAsync('OnFilePasted',
+                            file.name || 'pasted-image.png',
+                            file.type || 'application/octet-stream',
+                            Array.from(bytes));
+                    }
+                }
+            };
+            el.addEventListener('paste', el._pasteHandler);
+        };
+
+        window.registerDropHandler = function(elementId, dotNetRef) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el._dragOverHandler = function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                el.classList.add('drop-active');
+            };
+            el._dragLeaveHandler = function(e) {
+                el.classList.remove('drop-active');
+            };
+            el._dropHandler = async function(e) {
+                e.preventDefault();
+                el.classList.remove('drop-active');
+                const files = e.dataTransfer?.files;
+                if (!files) return;
+                for (const file of files) {
+                    const buffer = await file.arrayBuffer();
+                    const bytes = new Uint8Array(buffer);
+                    await dotNetRef.invokeMethodAsync('OnFileDropped',
+                        file.name, file.type || 'application/octet-stream',
+                        Array.from(bytes));
+                }
+            };
+            el.addEventListener('dragover', el._dragOverHandler);
+            el.addEventListener('dragleave', el._dragLeaveHandler);
+            el.addEventListener('drop', el._dropHandler);
+        };
+
+        window.unregisterFileHandlers = function(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            if (el._pasteHandler) el.removeEventListener('paste', el._pasteHandler);
+            if (el._dragOverHandler) el.removeEventListener('dragover', el._dragOverHandler);
+            if (el._dragLeaveHandler) el.removeEventListener('dragleave', el._dragLeaveHandler);
+            if (el._dropHandler) el.removeEventListener('drop', el._dropHandler);
+        };
     </script>
 
 </body>

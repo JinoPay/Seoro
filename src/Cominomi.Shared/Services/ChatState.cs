@@ -65,6 +65,17 @@ public class ChatState
         NotifyStateChanged();
     }
 
+    public void AddUserMessage(string text, List<FileAttachment> attachments)
+    {
+        CurrentSession?.Messages.Add(new ChatMessage
+        {
+            Role = MessageRole.User,
+            Text = text,
+            Attachments = attachments
+        });
+        NotifyStateChanged();
+    }
+
     public ChatMessage StartAssistantMessage()
     {
         var msg = new ChatMessage

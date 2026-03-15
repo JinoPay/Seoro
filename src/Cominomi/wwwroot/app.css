@@ -135,6 +135,13 @@ html, body {
     30% { opacity: 1; transform: translateY(-3px); }
 }
 
+/* Drop zone visual feedback */
+.drop-active {
+    outline: 2px dashed var(--mud-palette-primary) !important;
+    outline-offset: -2px;
+    background: rgba(var(--mud-palette-primary-rgb), 0.05) !important;
+}
+
 /* Error UI */
 #blazor-error-ui {
     background: lightyellow;

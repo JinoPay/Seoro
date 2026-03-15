@@ -1,8 +1,10 @@
+@using Cominomi.Shared.Models
 @inject ChatState ChatState
 @inject IClaudeService ClaudeService
 @inject ISessionService SessionService
 @inject IGitService GitService
 @inject IWorkspaceService WorkspaceService
+@inject IAttachmentService AttachmentService
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
@@ -152,9 +154,9 @@
 
     private bool _shouldAutoScroll;
 
-    private async Task HandleSend(string message)
+    private async Task HandleSend(ChatInputMessage input)
     {
-        if (ChatState.CurrentSession == null || string.IsNullOrWhiteSpace(message))
+        if (ChatState.CurrentSession == null || (string.IsNullOrWhiteSpace(input.Text) && input.Attachments.Count == 0))
             return;
 
         var session = ChatState.CurrentSession;
@@ -199,7 +201,31 @@
 
         var isFirstMessage = session.Messages.Count(m => m.Role == MessageRole.User) == 0;
 
-        ChatState.AddUserMessage(message);
+        // Process attachments
+        var fileAttachments = new List<FileAttachment>();
+        foreach (var pending in input.Attachments)
+        {
+            FileAttachment attachment;
+            if (pending.FilePath != null && pending.Data.Length == 0)
+            {
+                attachment = await AttachmentService.CopyFileToWorktreeAsync(pending.FilePath, session.WorktreePath);
+            }
+            else
+            {
+                attachment = await AttachmentService.SaveBytesToWorktreeAsync(
+                    pending.Data, pending.FileName, pending.ContentType, session.WorktreePath);
+            }
+            fileAttachments.Add(attachment);
+        }
+
+        // Build the message to send to Claude (with file references)
+        var messageForClaude = AttachmentService.BuildMessageWithAttachments(input.Text, fileAttachments);
+
+        if (fileAttachments.Count > 0)
+            ChatState.AddUserMessage(input.Text, fileAttachments);
+        else
+            ChatState.AddUserMessage(input.Text);
+
         ChatState.SetStreaming(true);
         ChatState.SetPhase(StreamingPhase.Sending);
 
@@ -210,7 +236,7 @@
         try
         {
             await foreach (var evt in ClaudeService.SendMessageAsync(
-                message,
+                messageForClaude,
                 session.WorktreePath,
                 session.Model,
                 session.PermissionMode))
@@ -313,7 +339,7 @@
             {
                 try
                 {
-                    var newBranchName = Services.SessionService.GenerateBranchName(message);
+                    var newBranchName = Services.SessionService.GenerateBranchName(input.Text);
                     await SessionService.RenameBranchAsync(session.Id, newBranchName);
                     session.BranchName = newBranchName;
                     ChatState.NotifyStateChanged();
