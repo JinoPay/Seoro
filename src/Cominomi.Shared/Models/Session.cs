@@ -18,6 +18,7 @@ public class Session
     public string Title { get; set; } = "New Chat";
     public string WorktreePath { get; set; } = string.Empty;
     public string BranchName { get; set; } = "";
+    public string BaseBranch { get; set; } = "";
     public string Model { get; set; } = ModelDefinitions.Default.Id;
     public string WorkspaceId { get; set; } = "default";
     public string PermissionMode { get; set; } = "default";
