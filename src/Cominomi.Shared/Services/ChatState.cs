@@ -2,10 +2,21 @@ using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
 
+public enum StreamingPhase
+{
+    None,
+    Sending,
+    Thinking,
+    WritingText,
+    UsingTool
+}
+
 public class ChatState
 {
     public Session? CurrentSession { get; private set; }
     public bool IsStreaming { get; private set; }
+    public StreamingPhase Phase { get; private set; }
+    public string? ActiveToolName { get; private set; }
 
     public event Action? OnChange;
 
@@ -18,6 +29,19 @@ public class ChatState
     public void SetStreaming(bool streaming)
     {
         IsStreaming = streaming;
+        if (!streaming)
+        {
+            Phase = StreamingPhase.None;
+            ActiveToolName = null;
+        }
+        NotifyStateChanged();
+    }
+
+    public void SetPhase(StreamingPhase phase, string? toolName = null)
+    {
+        if (Phase == phase && ActiveToolName == toolName) return;
+        Phase = phase;
+        ActiveToolName = toolName;
         NotifyStateChanged();
     }
 

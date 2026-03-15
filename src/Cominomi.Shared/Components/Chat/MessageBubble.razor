@@ -1,4 +1,6 @@
 @using Markdig
+@using Cominomi.Shared.Services
+@inject ChatState ChatState
 
 <div class="message-bubble @(Message.Role == MessageRole.User ? "user-message" : "assistant-message")">
     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start">
@@ -29,9 +31,9 @@
                 </div>
             }
 
-            @if (Message.IsStreaming && string.IsNullOrEmpty(Message.Text) && Message.ToolCalls.Count == 0)
+            @if (Message.IsStreaming)
             {
-                <StreamingIndicator />
+                <StreamingIndicator Phase="ChatState.Phase" ActiveToolName="ChatState.ActiveToolName" />
             }
         </MudStack>
     </MudStack>
