@@ -1,4 +1,60 @@
-<MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="pa-2">
-    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
-    <MudText Typo="Typo.body2" Color="Color.Secondary">Thinking...</MudText>
-</MudStack>
+@using Cominomi.Shared.Services
+
+<div class="streaming-status">
+    @switch (Phase)
+    {
+        case StreamingPhase.Sending:
+            <span class="pulse-dot"></span>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Sending...</MudText>
+            break;
+
+        case StreamingPhase.Thinking:
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" Style="width: 16px; height: 16px;" />
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Thinking...</MudText>
+            break;
+
+        case StreamingPhase.UsingTool:
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Warning" Style="width: 16px; height: 16px;" />
+            <MudIcon Icon="@GetToolIcon()" Size="Size.Small" Color="Color.Secondary" />
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@GetToolLabel()</MudText>
+            break;
+
+        case StreamingPhase.WritingText:
+            <span class="typing-dots">
+                <span></span><span></span><span></span>
+            </span>
+            break;
+
+        default:
+            break;
+    }
+</div>
+
+@code {
+    [Parameter] public StreamingPhase Phase { get; set; }
+    [Parameter] public string? ActiveToolName { get; set; }
+
+    private string GetToolIcon() => (ActiveToolName?.ToLowerInvariant()) switch
+    {
+        "bash" or "execute_bash" => Icons.Material.Filled.Terminal,
+        "read" or "read_file" => Icons.Material.Filled.Description,
+        "write" or "write_file" => Icons.Material.Filled.Edit,
+        "edit" or "edit_file" => Icons.Material.Filled.EditNote,
+        "glob" => Icons.Material.Filled.Search,
+        "grep" => Icons.Material.Filled.FindInPage,
+        "agent" => Icons.Material.Filled.SmartToy,
+        _ => Icons.Material.Filled.Extension
+    };
+
+    private string GetToolLabel() => (ActiveToolName?.ToLowerInvariant()) switch
+    {
+        "bash" or "execute_bash" => "Running command...",
+        "read" or "read_file" => "Reading file...",
+        "write" or "write_file" => "Writing file...",
+        "edit" or "edit_file" => "Editing file...",
+        "glob" => "Searching files...",
+        "grep" => "Searching content...",
+        "agent" => "Running agent...",
+        _ => $"Using {ActiveToolName}..."
+    };
+}

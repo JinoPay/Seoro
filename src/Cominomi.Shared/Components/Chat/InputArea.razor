@@ -28,7 +28,8 @@
                       AutoGrow="true"
                       MaxLines="8"
                       Immediate="true"
-                      Disabled="Disabled || IsStreaming"
+                      Disabled="Disabled"
+                      ReadOnly="IsStreaming"
                       OnKeyDown="HandleKeyDown"
                       Class="flex-grow-1" />
 
@@ -73,6 +74,7 @@
     private string GetPlaceholder()
     {
         if (Disabled) return "Select or create a session first...";
+        if (IsStreaming) return "Claude is responding...";
         return IsPlanMode ? "Plan mode: Claude will read and research only..." : "Type a message...";
     }
 
