@@ -2,6 +2,7 @@
 @inject ISessionService SessionService
 @inject ISettingsService SettingsService
 @inject IWorkspaceService WorkspaceService
+@inject IDialogService DialogService
 @implements IDisposable
 
 <MudStack Class="pa-2" Spacing="1" Style="height: 100%; min-height: 0;">
@@ -95,6 +96,30 @@
                                                         Merged
                                                     </MudChip>
                                                 }
+                                                else if (session.Status == SessionStatus.Pushed)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                                             Color="Color.Tertiary"
+                                                             Style="font-size: 0.6rem; height: 16px;">
+                                                        Pushed
+                                                    </MudChip>
+                                                }
+                                                else if (session.Status == SessionStatus.PrOpen)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                                             Color="Color.Info"
+                                                             Style="font-size: 0.6rem; height: 16px;">
+                                                        PR Open
+                                                    </MudChip>
+                                                }
+                                                else if (session.Status == SessionStatus.ConflictDetected)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                                             Color="Color.Error"
+                                                             Style="font-size: 0.6rem; height: 16px;">
+                                                        Conflict
+                                                    </MudChip>
+                                                }
                                                 else if (session.Status == SessionStatus.Error)
                                                 {
                                                     <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
@@ -104,6 +129,83 @@
                                                     @session.UpdatedAt.ToLocalTime().ToString("MM/dd HH:mm")
                                                 </MudText>
                                             </MudStack>
+                                            @* Workflow actions *@
+                                            @if (session.Status is SessionStatus.Ready or SessionStatus.Pushed or SessionStatus.PrOpen or SessionStatus.ConflictDetected)
+                                            {
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
+                                                    @if (_operatingSessionId == session.Id)
+                                                    {
+                                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 14px; height: 14px;" />
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Processing...</MudText>
+                                                    }
+                                                    else
+                                                    {
+                                                        @switch (session.Status)
+                                                        {
+                                                            case SessionStatus.Ready:
+                                                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                                                                           StartIcon="@Icons.Material.Filled.CloudUpload"
+                                                                           OnClick="@(() => PushBranch(session))"
+                                                                           OnClickStopPropagation="true"
+                                                                           Style="text-transform: none; font-size: 0.7rem; min-width: 0; padding: 2px 8px;">
+                                                                    Push
+                                                                </MudButton>
+                                                                break;
+                                                            case SessionStatus.Pushed:
+                                                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                                                                           StartIcon="@Icons.Material.Filled.RateReview"
+                                                                           OnClick="@(() => OpenCreatePrDialog(session))"
+                                                                           OnClickStopPropagation="true"
+                                                                           Style="text-transform: none; font-size: 0.7rem; min-width: 0; padding: 2px 8px;">
+                                                                    Create PR
+                                                                </MudButton>
+                                                                break;
+                                                            case SessionStatus.PrOpen:
+                                                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
+                                                                           StartIcon="@Icons.Material.Filled.MergeType"
+                                                                           OnClick="@(() => MergePr(session))"
+                                                                           OnClickStopPropagation="true"
+                                                                           Style="text-transform: none; font-size: 0.7rem; min-width: 0; padding: 2px 8px;">
+                                                                    Merge
+                                                                </MudButton>
+                                                                @if (!string.IsNullOrEmpty(session.PrUrl))
+                                                                {
+                                                                    <MudLink Href="@session.PrUrl" Target="_blank" Typo="Typo.caption">
+                                                                        #@session.PrNumber
+                                                                    </MudLink>
+                                                                }
+                                                                break;
+                                                            case SessionStatus.ConflictDetected:
+                                                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled"
+                                                                         Style="font-size: 0.6rem; height: 16px;">
+                                                                    Conflict
+                                                                </MudChip>
+                                                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error"
+                                                                           OnClick="@(() => ResolveConflicts(session))"
+                                                                           OnClickStopPropagation="true"
+                                                                           Style="text-transform: none; font-size: 0.7rem; min-width: 0; padding: 2px 8px;">
+                                                                    Resolve
+                                                                </MudButton>
+                                                                break;
+                                                        }
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(session.ErrorMessage) && _operatingSessionId != session.Id)
+                                                    {
+                                                        <MudTooltip Text="@session.ErrorMessage">
+                                                            <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Error" />
+                                                        </MudTooltip>
+                                                        @if (session.ErrorMessage.Contains("rejected", StringComparison.OrdinalIgnoreCase))
+                                                        {
+                                                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
+                                                                       OnClick="@(() => ForcePushBranch(session))"
+                                                                       OnClickStopPropagation="true"
+                                                                       Style="text-transform: none; font-size: 0.7rem; min-width: 0; padding: 2px 8px;">
+                                                                Force Push
+                                                            </MudButton>
+                                                        }
+                                                    }
+                                                </MudStack>
+                                            }
                                         </MudStack>
                                     </MudPaper>
                                 }
@@ -166,6 +268,7 @@
     private Dictionary<string, List<Session>> _sessionCache = new();
     private bool _workspaceDialogOpen;
     private bool _isCreatingSession;
+    private string? _operatingSessionId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -311,9 +414,101 @@
             ChatState.SetSession(null!);
     }
 
+    private async Task PushBranch(Session session)
+    {
+        _operatingSessionId = session.Id;
+        StateHasChanged();
+        try
+        {
+            var updated = await SessionService.PushBranchAsync(session.Id);
+            session.Status = updated.Status;
+            session.ErrorMessage = updated.ErrorMessage;
+        }
+        catch (Exception ex) { session.ErrorMessage = ex.Message; }
+        finally { _operatingSessionId = null; StateHasChanged(); }
+    }
+
+    private async Task ForcePushBranch(Session session)
+    {
+        _operatingSessionId = session.Id;
+        StateHasChanged();
+        try
+        {
+            var updated = await SessionService.PushBranchAsync(session.Id, force: true);
+            session.Status = updated.Status;
+            session.ErrorMessage = updated.ErrorMessage;
+        }
+        catch (Exception ex) { session.ErrorMessage = ex.Message; }
+        finally { _operatingSessionId = null; StateHasChanged(); }
+    }
+
+    private async Task OpenCreatePrDialog(Session session)
+    {
+        var parameters = new DialogParameters<CreatePrDialog>
+        {
+            { x => x.SessionId, session.Id },
+            { x => x.DefaultTitle, session.Title }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CreatePrDialog>("Create PR", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            // Reload session to get updated status
+            var updated = await SessionService.LoadSessionAsync(session.Id);
+            if (updated != null)
+            {
+                session.Status = updated.Status;
+                session.PrUrl = updated.PrUrl;
+                session.PrNumber = updated.PrNumber;
+                session.ErrorMessage = updated.ErrorMessage;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task MergePr(Session session)
+    {
+        _operatingSessionId = session.Id;
+        StateHasChanged();
+        try
+        {
+            var updated = await SessionService.MergePrAsync(session.Id);
+            session.Status = updated.Status;
+            session.ErrorMessage = updated.ErrorMessage;
+        }
+        catch (Exception ex) { session.ErrorMessage = ex.Message; }
+        finally { _operatingSessionId = null; StateHasChanged(); }
+    }
+
+    private async Task ResolveConflicts(Session session)
+    {
+        // Reset status so user can work with Claude to resolve
+        await SessionService.RetryAfterConflictResolveAsync(session.Id);
+        session.Status = SessionStatus.Ready;
+        session.ErrorMessage = null;
+        session.ConflictFiles = null;
+
+        // Select session and send conflict resolution message to Claude
+        var fullSession = await SessionService.LoadSessionAsync(session.Id);
+        if (fullSession != null)
+        {
+            var baseBranch = !string.IsNullOrEmpty(fullSession.BaseBranch) ? fullSession.BaseBranch : "main";
+            ChatState.SetPendingMessage(
+                $"PR merge failed due to conflicts with {baseBranch}. Please rebase this branch onto origin/{baseBranch} and resolve any conflicts, then commit the result.");
+            ChatState.SetSession(fullSession);
+        }
+
+        StateHasChanged();
+    }
+
     private static Color GetBranchChipColor(SessionStatus status) => status switch
     {
         SessionStatus.Merged => Color.Success,
+        SessionStatus.PrOpen => Color.Info,
+        SessionStatus.Pushed => Color.Tertiary,
+        SessionStatus.ConflictDetected => Color.Error,
         SessionStatus.Error => Color.Error,
         SessionStatus.Archived => Color.Default,
         _ => Color.Primary

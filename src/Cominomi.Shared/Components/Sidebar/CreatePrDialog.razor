@@ -1,0 +1,96 @@
+@inject ISessionService SessionService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Create Pull Request</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_title" Label="Title" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+            <MudTextField @bind-Value="_body" Label="Description" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Lines="4" />
+            <MudSelect T="string" @bind-Value="_mergeMethod" Label="Merge Method"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                <MudSelectItem T="string" Value="@("squash")">Squash and merge</MudSelectItem>
+                <MudSelectItem T="string" Value="@("merge")">Create a merge commit</MudSelectItem>
+                <MudSelectItem T="string" Value="@("rebase")">Rebase and merge</MudSelectItem>
+            </MudSelect>
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isCreating">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="Create" Disabled="_isCreating">
+            @if (_isCreating)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 16px; height: 16px;" Class="mr-2" />
+            }
+            Create PR
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string SessionId { get; set; } = "";
+
+    [Parameter]
+    public string DefaultTitle { get; set; } = "";
+
+    private string _title = "";
+    private string _body = "";
+    private string _mergeMethod = "squash";
+    private string? _error;
+    private bool _isCreating;
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(_title))
+            _title = DefaultTitle;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Create()
+    {
+        if (string.IsNullOrWhiteSpace(_title))
+        {
+            _error = "Title is required.";
+            return;
+        }
+
+        _isCreating = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var session = await SessionService.CreatePrAsync(SessionId, _title.Trim(), _body.Trim());
+            if (!string.IsNullOrEmpty(session.ErrorMessage))
+            {
+                _error = session.ErrorMessage;
+            }
+            else
+            {
+                MudDialog.Close(DialogResult.Ok(_mergeMethod));
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isCreating = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -13,13 +13,15 @@ public partial class SessionService : ISessionService
     };
 
     private readonly IGitService _gitService;
+    private readonly IGhService _ghService;
     private readonly IWorkspaceService _workspaceService;
     private readonly ISettingsService _settingsService;
     private readonly string _sessionsDir;
 
-    public SessionService(IGitService gitService, IWorkspaceService workspaceService, ISettingsService settingsService)
+    public SessionService(IGitService gitService, IGhService ghService, IWorkspaceService workspaceService, ISettingsService settingsService)
     {
         _gitService = gitService;
+        _ghService = ghService;
         _workspaceService = workspaceService;
         _settingsService = settingsService;
         _sessionsDir = Path.Combine(
@@ -49,11 +51,15 @@ public partial class SessionService : ISessionService
                         Title = session.Title,
                         WorktreePath = session.WorktreePath,
                         BranchName = session.BranchName,
+                        BaseBranch = session.BaseBranch,
                         Model = ModelDefinitions.NormalizeModelId(session.Model),
                         WorkspaceId = session.WorkspaceId,
                         PermissionMode = session.PermissionMode,
                         Status = session.Status,
                         ErrorMessage = session.ErrorMessage,
+                        PrUrl = session.PrUrl,
+                        PrNumber = session.PrNumber,
+                        ConflictFiles = session.ConflictFiles,
                         CreatedAt = session.CreatedAt,
                         UpdatedAt = session.UpdatedAt
                     });
@@ -302,6 +308,131 @@ public partial class SessionService : ISessionService
         var path = Path.Combine(_sessionsDir, $"{sessionId}.json");
         if (File.Exists(path))
             File.Delete(path);
+    }
+
+    public async Task<Session> PushBranchAsync(string sessionId, bool force = false, CancellationToken ct = default)
+    {
+        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
+
+        GitResult result;
+        if (force)
+            result = await _gitService.PushForceBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
+        else
+            result = await _gitService.PushBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
+
+        if (result.Success)
+        {
+            session.Status = SessionStatus.Pushed;
+            session.ErrorMessage = null;
+        }
+        else
+        {
+            session.ErrorMessage = result.Error;
+        }
+
+        await SaveSessionAsync(session);
+        return session;
+    }
+
+    public async Task<Session> CreatePrAsync(string sessionId, string title, string body, CancellationToken ct = default)
+    {
+        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
+
+        var baseBranch = !string.IsNullOrEmpty(session.BaseBranch)
+            ? session.BaseBranch
+            : await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath) ?? "main";
+
+        var result = await _ghService.CreatePrAsync(
+            workspace.RepoLocalPath, session.BranchName, baseBranch, title, body, ct);
+
+        if (result.Success)
+        {
+            session.Status = SessionStatus.PrOpen;
+            session.ErrorMessage = null;
+
+            // Parse PR URL from output (gh pr create prints the URL)
+            session.PrUrl = result.Output.Trim();
+
+            // Try to get PR number
+            var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
+            if (prInfo != null)
+            {
+                session.PrNumber = prInfo.Number;
+                session.PrUrl = prInfo.Url;
+            }
+        }
+        else
+        {
+            session.ErrorMessage = result.Error;
+        }
+
+        await SaveSessionAsync(session);
+        return session;
+    }
+
+    public async Task<Session> MergePrAsync(string sessionId, string mergeMethod = "squash", CancellationToken ct = default)
+    {
+        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
+
+        if (session.PrNumber == null)
+        {
+            // Try to find PR by branch name
+            var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
+            if (prInfo == null)
+            {
+                session.ErrorMessage = "PR not found for this branch.";
+                await SaveSessionAsync(session);
+                return session;
+            }
+            session.PrNumber = prInfo.Number;
+            session.PrUrl = prInfo.Url;
+        }
+
+        var result = await _ghService.MergePrAsync(workspace.RepoLocalPath, session.PrNumber.Value, mergeMethod, ct);
+
+        if (result.Success)
+        {
+            session.Status = SessionStatus.Merged;
+            session.ErrorMessage = null;
+        }
+        else
+        {
+            // Check if it's a conflict error
+            var errorLower = (result.Error + result.Output).ToLowerInvariant();
+            if (errorLower.Contains("conflict") || errorLower.Contains("merge") || errorLower.Contains("not mergeable"))
+            {
+                session.Status = SessionStatus.ConflictDetected;
+                session.ErrorMessage = result.Error;
+            }
+            else
+            {
+                session.ErrorMessage = result.Error;
+            }
+        }
+
+        await SaveSessionAsync(session);
+        return session;
+    }
+
+    public async Task RetryAfterConflictResolveAsync(string sessionId)
+    {
+        var session = await LoadSessionAsync(sessionId);
+        if (session == null)
+            throw new InvalidOperationException($"Session '{sessionId}' not found.");
+
+        session.Status = SessionStatus.Ready;
+        session.ErrorMessage = null;
+        session.ConflictFiles = null;
+        await SaveSessionAsync(session);
+    }
+
+    private async Task<(Session session, Workspace workspace)> LoadSessionAndWorkspaceAsync(string sessionId)
+    {
+        var session = await LoadSessionAsync(sessionId)
+            ?? throw new InvalidOperationException($"Session '{sessionId}' not found.");
+        var workspace = await _workspaceService.LoadWorkspaceAsync(session.WorkspaceId)
+            ?? throw new InvalidOperationException($"Workspace '{session.WorkspaceId}' not found.");
+        return (session, workspace);
     }
 
     public static string GenerateBranchName(string message)

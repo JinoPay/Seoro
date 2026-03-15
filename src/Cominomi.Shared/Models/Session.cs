@@ -8,6 +8,9 @@ public enum SessionStatus
     Initializing,
     Pending,
     Ready,
+    Pushed,
+    PrOpen,
+    ConflictDetected,
     Merged,
     Archived,
     Error
@@ -26,6 +29,9 @@ public class Session
     public SessionStatus Status { get; set; } = SessionStatus.Initializing;
     public string? ErrorMessage { get; set; }
     public List<ChatMessage> Messages { get; set; } = [];
+    public string? PrUrl { get; set; }
+    public int? PrNumber { get; set; }
+    public List<string>? ConflictFiles { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

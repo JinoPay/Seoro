@@ -19,6 +19,7 @@ public class ChatState
     public StreamingPhase Phase { get; private set; }
     public string? ActiveToolName { get; private set; }
     public bool IsSpotlightActive { get; private set; }
+    public string? PendingMessage { get; private set; }
     public bool IsDiffPanelOpen { get; private set; }
 
     public event Action? OnChange;
@@ -112,11 +113,25 @@ public class ChatState
         NotifyStateChanged();
     }
 
+    public void SetPendingMessage(string? message)
+    {
+        PendingMessage = message;
+        NotifyStateChanged();
+    }
+
+    public string? ConsumePendingMessage()
+    {
+        var msg = PendingMessage;
+        PendingMessage = null;
+        return msg;
+    }
+
     public void ToggleDiffPanel()
     {
         IsDiffPanelOpen = !IsDiffPanelOpen;
         NotifyStateChanged();
     }
+
 
     public void NotifyStateChanged() => OnChange?.Invoke();
 }

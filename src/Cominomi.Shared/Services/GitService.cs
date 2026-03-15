@@ -197,6 +197,21 @@ public class GitService : IGitService
         return result.Success;
     }
 
+    public async Task<GitResult> PushBranchAsync(string repoDir, string branchName, CancellationToken ct = default)
+    {
+        return await RunGitAsync($"push -u origin \"{branchName}\"", repoDir, ct);
+    }
+
+    public async Task<GitResult> PushForceBranchAsync(string repoDir, string branchName, CancellationToken ct = default)
+    {
+        return await RunGitAsync($"push --force-with-lease origin \"{branchName}\"", repoDir, ct);
+    }
+
+    public async Task<GitResult> FetchAsync(string repoDir, CancellationToken ct = default)
+    {
+        return await RunGitAsync("fetch origin", repoDir, ct);
+    }
+
     public async Task<string> GetNameStatusAsync(string workingDir, string baseBranch, CancellationToken ct = default)
     {
         var result = await RunGitAsync($"diff --name-status {baseBranch}...HEAD", workingDir, ct);

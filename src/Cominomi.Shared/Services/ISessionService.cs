@@ -15,4 +15,8 @@ public interface ISessionService
     Task RenameBranchAsync(string sessionId, string newBranchName);
     Task CleanupSessionAsync(string sessionId);
     Task<bool> CheckMergeStatusAsync(string sessionId);
+    Task<Session> PushBranchAsync(string sessionId, bool force = false, CancellationToken ct = default);
+    Task<Session> CreatePrAsync(string sessionId, string title, string body, CancellationToken ct = default);
+    Task<Session> MergePrAsync(string sessionId, string mergeMethod = "squash", CancellationToken ct = default);
+    Task RetryAfterConflictResolveAsync(string sessionId);
 }

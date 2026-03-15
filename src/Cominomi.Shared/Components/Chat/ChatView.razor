@@ -112,6 +112,16 @@
             {
                 await LoadBranches();
             }
+
+            // Auto-send pending message (e.g., conflict resolution prompt)
+            var pendingMsg = ChatState.ConsumePendingMessage();
+            if (pendingMsg != null && ChatState.CurrentSession != null && !ChatState.IsStreaming)
+            {
+                StateHasChanged();
+                await HandleSend(pendingMsg);
+                return;
+            }
+
             StateHasChanged();
         });
     }
