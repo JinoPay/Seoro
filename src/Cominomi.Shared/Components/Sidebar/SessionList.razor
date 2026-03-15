@@ -4,7 +4,7 @@
 @inject IWorkspaceService WorkspaceService
 @implements IDisposable
 
-<MudStack Class="pa-2" Spacing="1" Style="height: 100%;">
+<MudStack Class="pa-2" Spacing="1" Style="height: 100%; min-height: 0;">
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
         <MudSelect T="string" Value="_selectedWorkspaceId" ValueChanged="OnWorkspaceChanged"
                    Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
@@ -36,7 +36,7 @@
 
     <MudDivider Class="my-2" />
 
-    <MudStack Style="overflow-y: auto; flex: 1;">
+    <MudStack Style="overflow-y: auto; flex: 1; min-height: 0;">
         @foreach (var session in _sessions)
         {
             var isActive = ChatState.CurrentSession?.Id == session.Id;

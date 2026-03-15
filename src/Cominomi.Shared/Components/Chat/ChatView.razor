@@ -15,7 +15,7 @@
         </MudAlert>
     }
 
-    <MudStack Style="flex: 1; overflow-y: auto; padding: 16px;" id="message-list" @ref="_messageListRef">
+    <MudStack Style="flex: 1; overflow-y: auto; padding: 16px; min-height: 0;" id="message-list" @ref="_messageListRef">
         @if (ChatState.CurrentSession == null)
         {
             <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
