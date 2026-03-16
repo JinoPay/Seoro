@@ -249,11 +249,21 @@
 
     private async Task SelectSession(Session session)
     {
-        var fullSess = await SessionService.LoadSessionAsync(session.Id);
-        if (fullSess != null)
-            ChatState.SetSession(fullSess);
+        // If the session is actively streaming, use the live in-memory object
+        // instead of loading a stale copy from disk
+        var activeSession = ChatState.GetActiveSession(session.Id);
+        if (activeSession != null)
+        {
+            ChatState.SetSession(activeSession);
+        }
         else
-            ChatState.SetSession(session);
+        {
+            var fullSess = await SessionService.LoadSessionAsync(session.Id);
+            if (fullSess != null)
+                ChatState.SetSession(fullSess);
+            else
+                ChatState.SetSession(session);
+        }
 
         var settings = await SettingsService.LoadAsync();
         settings.LastSessionId = session.Id;
