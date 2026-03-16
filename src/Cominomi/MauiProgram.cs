@@ -1,7 +1,8 @@
-using Microsoft.Extensions.Logging;
 using Cominomi.Services;
 using Cominomi.Shared.Services;
+using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
+using Serilog;
 
 namespace Cominomi;
 
@@ -9,6 +10,21 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
+        var logPath = Path.Combine(FileSystem.AppDataDirectory, "logs", "cominomi-.log");
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+#if DEBUG
+            .MinimumLevel.Debug()
+            .WriteTo.Debug()
+#endif
+            .WriteTo.File(
+                logPath,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 14,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
+
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
@@ -18,6 +34,10 @@ public static class MauiProgram
             });
 
         builder.Services.AddMauiBlazorWebView();
+
+        // Logging
+        builder.Logging.ClearProviders();
+        builder.Logging.AddSerilog(Log.Logger);
 
         // MudBlazor
         builder.Services.AddMudServices();
@@ -43,7 +63,6 @@ public static class MauiProgram
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
-        builder.Logging.AddDebug();
 #endif
 
         return builder.Build();

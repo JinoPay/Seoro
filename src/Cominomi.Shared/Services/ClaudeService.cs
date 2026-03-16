@@ -5,12 +5,14 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
 public class ClaudeService : IClaudeService
 {
     private readonly ISettingsService _settingsService;
+    private readonly ILogger<ClaudeService> _logger;
     private readonly ConcurrentDictionary<string, AgentProcess> _agents = new();
     private CliCapabilities? _capabilities;
     private readonly SemaphoreSlim _capLock = new(1, 1);
@@ -21,9 +23,10 @@ public class ClaudeService : IClaudeService
 
     private const string DefaultAgentKey = "__default__";
 
-    public ClaudeService(ISettingsService settingsService)
+    public ClaudeService(ISettingsService settingsService, ILogger<ClaudeService> logger)
     {
         _settingsService = settingsService;
+        _logger = logger;
     }
 
     public async IAsyncEnumerable<StreamEvent> SendMessageAsync(
@@ -37,6 +40,7 @@ public class ClaudeService : IClaudeService
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var agentKey = sessionId ?? DefaultAgentKey;
+        _logger.LogInformation("Starting Claude process for session {AgentKey} with model {Model}", agentKey, model);
 
         var settings = await _settingsService.LoadAsync();
         var (fileName, baseArgs) = await ResolveClaudeCommandCachedAsync(settings.ClaudePath);
@@ -76,7 +80,7 @@ public class ClaudeService : IClaudeService
 
             StreamEvent? evt = null;
             try { evt = JsonSerializer.Deserialize<StreamEvent>(line); }
-            catch (JsonException) { }
+            catch (JsonException) { _logger.LogDebug("Skipping non-JSON line from Claude CLI"); }
 
             if (evt != null)
             {
@@ -86,7 +90,7 @@ public class ClaudeService : IClaudeService
         }
 
         await FinishProcess(process, token);
-        try { await stderrTask; } catch { }
+        try { await stderrTask; } catch (Exception ex) { _logger.LogDebug(ex, "Stderr collection task ended"); }
 
         var stderr = stderrBuilder.ToString().Trim();
 
@@ -95,6 +99,7 @@ public class ClaudeService : IClaudeService
             && stderr.Contains("requires --verbose", StringComparison.OrdinalIgnoreCase)
             && !caps.RequiresVerboseForStreamJson)
         {
+            _logger.LogInformation("Retrying Claude process with --verbose flag");
             caps.RequiresVerboseForStreamJson = true;
             caps.SupportsVerbose = true;
             process.Dispose();
@@ -121,19 +126,20 @@ public class ClaudeService : IClaudeService
 
                 StreamEvent? evt = null;
                 try { evt = JsonSerializer.Deserialize<StreamEvent>(line); }
-                catch (JsonException) { }
+                catch (JsonException) { _logger.LogDebug("Skipping non-JSON line from Claude CLI (retry)"); }
 
                 if (evt != null)
                     yield return evt;
             }
 
             await FinishProcess(process, token);
-            try { await stderrTask; } catch { }
+            try { await stderrTask; } catch (Exception ex) { _logger.LogDebug(ex, "Stderr collection task ended (retry)"); }
             stderr = stderrBuilder.ToString().Trim();
         }
 
         if (!string.IsNullOrEmpty(stderr) && process.ExitCode != 0)
         {
+            _logger.LogWarning("Claude process exited with code {ExitCode}: {Stderr}", process.ExitCode, stderr);
             yield return new StreamEvent
             {
                 Type = "error",
@@ -252,6 +258,7 @@ public class ClaudeService : IClaudeService
                 caps.SupportsVerbose = help.Contains("--verbose", StringComparison.OrdinalIgnoreCase);
             }
 
+            _logger.LogInformation("Claude CLI detected: version={Version}, verbose={SupportsVerbose}", caps.Version, caps.SupportsVerbose);
             _capabilities = caps;
             return caps;
         }
@@ -261,7 +268,7 @@ public class ClaudeService : IClaudeService
         }
     }
 
-    private static async Task<string?> RunSimpleCommand(string fileName, string arguments)
+    private async Task<string?> RunSimpleCommand(string fileName, string arguments)
     {
         try
         {
@@ -284,8 +291,9 @@ public class ClaudeService : IClaudeService
             proc.Dispose();
             return output;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Failed to run simple command: {FileName} {Args}", fileName, arguments);
             return null;
         }
     }
@@ -293,6 +301,7 @@ public class ClaudeService : IClaudeService
     public void Cancel(string? sessionId = null)
     {
         var key = sessionId ?? DefaultAgentKey;
+        _logger.LogInformation("Cancelling Claude process for session {AgentKey}", key);
         if (_agents.TryRemove(key, out var agent))
         {
             agent.Cancel();

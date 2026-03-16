@@ -1,10 +1,18 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
 public class DependencyCheckService : IDependencyCheckService
 {
+    private readonly ILogger<DependencyCheckService> _logger;
+
+    public DependencyCheckService(ILogger<DependencyCheckService> logger)
+    {
+        _logger = logger;
+    }
+
     public async Task<List<DependencyResult>> CheckAllAsync()
     {
         var tasks = new[]
@@ -24,7 +32,7 @@ public class DependencyCheckService : IDependencyCheckService
         return results.ToList();
     }
 
-    private static async Task<DependencyResult> CheckToolAsync(
+    private async Task<DependencyResult> CheckToolAsync(
         string command, string description,
         string installUrl, string windowsHint, string macHint)
     {
@@ -36,7 +44,7 @@ public class DependencyCheckService : IDependencyCheckService
         return new DependencyResult(command, description, true, version, installUrl, windowsHint, macHint);
     }
 
-    private static async Task<DependencyResult> CheckClaudeAsync()
+    private async Task<DependencyResult> CheckClaudeAsync()
     {
         const string description = "Claude CLI";
         const string installUrl = "https://docs.anthropic.com/en/docs/claude-code/overview";
@@ -70,7 +78,7 @@ public class DependencyCheckService : IDependencyCheckService
         return new DependencyResult("claude", description, true, version, installUrl, installHint, installHint);
     }
 
-    private static string? FindExecutable(string command)
+    private string? FindExecutable(string command)
     {
         try
         {
@@ -92,12 +100,12 @@ public class DependencyCheckService : IDependencyCheckService
             if (proc.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
                 return output;
         }
-        catch { }
+        catch (Exception ex) { _logger.LogDebug(ex, "Failed to find executable: {Command}", command); }
 
         return null;
     }
 
-    private static async Task<string?> GetVersionAsync(string executablePath)
+    private async Task<string?> GetVersionAsync(string executablePath)
     {
         try
         {
@@ -117,8 +125,9 @@ public class DependencyCheckService : IDependencyCheckService
             await proc.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
             return output?.Trim();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogDebug(ex, "Failed to get version for: {Path}", executablePath);
             return null;
         }
     }
