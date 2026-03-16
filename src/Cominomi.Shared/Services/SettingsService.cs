@@ -5,6 +5,7 @@ namespace Cominomi.Shared.Services;
 
 public class SettingsService : ISettingsService
 {
+    public event Action<AppSettings>? OnSettingsChanged;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -45,5 +46,6 @@ public class SettingsService : ISettingsService
         _cached = settings;
         var json = JsonSerializer.Serialize(settings, JsonOptions);
         await File.WriteAllTextAsync(_settingsPath, json);
+        OnSettingsChanged?.Invoke(settings);
     }
 }

@@ -48,6 +48,30 @@
     --transition: 150ms ease;
 }
 
+/* Light mode overrides */
+[data-theme="light"] {
+    --bg-base: #ffffff;
+    --bg-sidebar: #f8f9fa;
+    --bg-surface: #f0f0f5;
+    --bg-elevated: #e8e8f0;
+    --bg-input: #f5f5fa;
+
+    --border-default: rgba(0, 0, 0, 0.12);
+    --border-active: rgba(124, 58, 237, 0.4);
+    --border-subtle: rgba(0, 0, 0, 0.06);
+
+    --text-primary: #1a1a2e;
+    --text-secondary: #555570;
+    --text-muted: rgba(0, 0, 0, 0.4);
+
+    --accent: #7c3aed;
+    --accent-dim: rgba(124, 58, 237, 0.08);
+    --accent-hover: rgba(124, 58, 237, 0.12);
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
 html, body {
     font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     margin: 0;
