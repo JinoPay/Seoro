@@ -303,6 +303,21 @@ public class ClaudeService : IClaudeService
         }
     }
 
+    public async Task<(bool found, string resolvedPath)> DetectCliAsync()
+    {
+        try
+        {
+            var settings = await _settingsService.LoadAsync();
+            var (fileName, _) = await ResolveClaudeCommandCachedAsync(settings.ClaudePath);
+            return (true, fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to detect Claude CLI");
+            return (false, "");
+        }
+    }
+
     public void Cancel(string? sessionId = null)
     {
         var key = sessionId ?? DefaultAgentKey;
