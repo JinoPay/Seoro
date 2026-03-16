@@ -33,3 +33,5 @@ bld/
 
 ## User-specific
 *.rsuser
+
+.context/
