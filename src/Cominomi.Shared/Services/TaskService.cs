@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
@@ -11,10 +12,12 @@ public class TaskService : ITaskService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    private readonly ILogger<TaskService> _logger;
     private readonly string _tasksDir;
 
-    public TaskService()
+    public TaskService(ILogger<TaskService> logger)
     {
+        _logger = logger;
         _tasksDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Cominomi", "tasks");
@@ -101,7 +104,7 @@ public class TaskService : ITaskService
         return all.OrderByDescending(t => t.UpdatedAt).ToList();
     }
 
-    private static Task<List<TaskItem>> LoadTasksFromDirAsync(string dir)
+    private Task<List<TaskItem>> LoadTasksFromDirAsync(string dir)
     {
         var tasks = new List<TaskItem>();
         if (!Directory.Exists(dir)) return Task.FromResult(tasks);
@@ -115,7 +118,7 @@ public class TaskService : ITaskService
                 if (task != null)
                     tasks.Add(task);
             }
-            catch { }
+            catch (Exception ex) { _logger.LogWarning(ex, "Skipping corrupted task file: {File}", file); }
         }
 
         return Task.FromResult(tasks.OrderBy(t => t.CreatedAt).ToList());

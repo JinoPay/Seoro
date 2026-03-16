@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
@@ -14,13 +15,15 @@ public partial class WorkspaceService : IWorkspaceService
 
     private readonly IGitService _gitService;
     private readonly ISettingsService _settingsService;
+    private readonly ILogger<WorkspaceService> _logger;
     private readonly string _workspacesDir;
     private readonly string _repoInfoDir;
 
-    public WorkspaceService(IGitService gitService, ISettingsService settingsService)
+    public WorkspaceService(IGitService gitService, ISettingsService settingsService, ILogger<WorkspaceService> logger)
     {
         _gitService = gitService;
         _settingsService = settingsService;
+        _logger = logger;
 
         _workspacesDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -71,9 +74,9 @@ public partial class WorkspaceService : IWorkspaceService
                 if (workspace != null)
                     workspaces.Add(workspace);
             }
-            catch
+            catch (Exception ex)
             {
-                // skip corrupted files
+                _logger.LogWarning(ex, "Skipping corrupted workspace file: {File}", file);
             }
         }
 
@@ -174,6 +177,7 @@ public partial class WorkspaceService : IWorkspaceService
             workspace.ErrorMessage = null;
             await SaveWorkspaceAsync(workspace);
             progress?.Report("Workspace ready!");
+            _logger.LogInformation("Workspace {Name} created from {Url}", name, url);
             return workspace;
         }
         catch (OperationCanceledException)
@@ -183,6 +187,7 @@ public partial class WorkspaceService : IWorkspaceService
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create workspace from URL: {Url}", url);
             workspace.Status = WorkspaceStatus.Error;
             workspace.ErrorMessage = ex.Message;
             await SaveWorkspaceAsync(workspace);
@@ -215,10 +220,12 @@ public partial class WorkspaceService : IWorkspaceService
             workspace.Status = WorkspaceStatus.Ready;
             workspace.ErrorMessage = null;
             await SaveWorkspaceAsync(workspace);
+            _logger.LogInformation("Workspace {Name} created from local path {Path}", name, localPath);
             return workspace;
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create workspace from local path: {Path}", localPath);
             workspace.Status = WorkspaceStatus.Error;
             workspace.ErrorMessage = ex.Message;
             await SaveWorkspaceAsync(workspace);
@@ -242,7 +249,7 @@ public partial class WorkspaceService : IWorkspaceService
                 if (info != null && NormalizeUrl(info.RemoteUrl) == normalizedUrl && Directory.Exists(info.LocalPath))
                     return info;
             }
-            catch { }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to read repo info file: {File}", file); }
         }
 
         return null;

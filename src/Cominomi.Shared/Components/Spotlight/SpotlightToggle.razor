@@ -1,5 +1,7 @@
+@using Microsoft.Extensions.Logging
 @inject ISpotlightService SpotlightService
 @inject ChatState ChatState
+@inject ILogger<SpotlightToggle> Logger
 
 @if (ChatState.CurrentWorkspace?.Status == WorkspaceStatus.Ready &&
      ChatState.CurrentSession?.Status == SessionStatus.Ready &&
@@ -56,7 +58,7 @@
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Spotlight error: {ex.Message}");
+            Logger.LogWarning(ex, "Spotlight toggle failed");
         }
         finally
         {

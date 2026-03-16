@@ -1,10 +1,18 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
 public class GhService : IGhService
 {
+    private readonly ILogger<GhService> _logger;
+
+    public GhService(ILogger<GhService> logger)
+    {
+        _logger = logger;
+    }
+
     public async Task<GitResult> CreatePrAsync(string repoDir, string head, string baseBranch, string title, string body, CancellationToken ct = default)
     {
         var escapedTitle = title.Replace("\"", "\\\"");
@@ -39,8 +47,9 @@ public class GhService : IGhService
                 root.GetProperty("url").GetString() ?? "",
                 root.GetProperty("state").GetString() ?? "");
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Failed to parse PR info JSON for branch {Branch}", branchName);
             return null;
         }
     }

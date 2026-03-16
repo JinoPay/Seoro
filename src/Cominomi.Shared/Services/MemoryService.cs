@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
@@ -12,10 +13,12 @@ public class MemoryService : IMemoryService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    private readonly ILogger<MemoryService> _logger;
     private readonly string _memoryDir;
 
-    public MemoryService()
+    public MemoryService(ILogger<MemoryService> logger)
     {
+        _logger = logger;
         _memoryDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Cominomi", "memory");
@@ -35,7 +38,7 @@ public class MemoryService : IMemoryService
                 if (entry != null)
                     entries.Add(entry);
             }
-            catch { }
+            catch (Exception ex) { _logger.LogWarning(ex, "Skipping corrupted memory file: {File}", file); }
         }
 
         return Task.FromResult(entries.OrderByDescending(e => e.UpdatedAt).ToList());
