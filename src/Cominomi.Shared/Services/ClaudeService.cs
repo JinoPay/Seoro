@@ -155,6 +155,7 @@ public class ClaudeService : IClaudeService
                 RedirectStandardError = true,
                 RedirectStandardInput = true,
                 CreateNoWindow = true,
+                StandardInputEncoding = new UTF8Encoding(false),
                 StandardOutputEncoding = Encoding.UTF8,
                 StandardErrorEncoding = Encoding.UTF8,
                 Environment = { ["NO_COLOR"] = "1" }

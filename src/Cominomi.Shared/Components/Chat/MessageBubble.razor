@@ -1,6 +1,7 @@
 @using Markdig
 @using Cominomi.Shared.Models
 @using Cominomi.Shared.Services
+@using Cominomi.Shared.Components.Tools
 @inject ChatState ChatState
 
 <div class="message-bubble @(Message.Role == MessageRole.User ? "user-message" : "assistant-message")">
@@ -38,17 +39,48 @@
 
         @if (Message.Parts.Count > 0)
         {
-            @foreach (var part in Message.Parts)
+            var groups = ContentGrouper.Group(Message.Parts, Message.IsStreaming);
+            var lastToolGroupIndex = groups.FindLastIndex(g => g.Type == ContentGroupType.ToolGroup);
+
+            @foreach (var (group, idx) in groups.Select((g, i) => (g, i)))
             {
-                @if (part.Type == ContentPartType.ToolCall && part.ToolCall != null)
+                @if (group.Type == ContentGroupType.ToolGroup)
                 {
-                    <ToolCallCard Tool="part.ToolCall" />
+                    bool isLastToolGroup = idx == lastToolGroupIndex;
+                    <ToolGroupCard Group="group" IsActive="@(Message.IsStreaming && isLastToolGroup)" />
                 }
-                else if (part.Type == ContentPartType.Text && !string.IsNullOrEmpty(part.Text))
+                else if (group.Type == ContentGroupType.FinalText)
                 {
+                    var text = group.Parts[0].Text ?? "";
                     <div class="markdown-body">
-                        @((MarkupString)Markdown.ToHtml(part.Text, _pipeline))
+                        @((MarkupString)Markdown.ToHtml(text, _pipeline))
                     </div>
+                }
+                else if (group.Type == ContentGroupType.Text)
+                {
+                    var text = group.Parts[0].Text ?? "";
+                    @if (group.IsIntermediate)
+                    {
+                        <div class="intermediate-text @(_intermediateExpanded.Contains(idx) ? "expanded" : "")"
+                             @onclick="@(() => ToggleIntermediate(idx))">
+                            <span class="intermediate-text-content">
+                                @if (_intermediateExpanded.Contains(idx))
+                                {
+                                    @((MarkupString)Markdown.ToHtml(text, _pipeline))
+                                }
+                                else
+                                {
+                                    @TruncateText(text, 60)
+                                }
+                            </span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="markdown-body">
+                            @((MarkupString)Markdown.ToHtml(text, _pipeline))
+                        </div>
+                    }
                 }
             }
         }
@@ -86,6 +118,19 @@
         .Build();
 
     private readonly Dictionary<string, string> _imageCache = new();
+    private readonly HashSet<int> _intermediateExpanded = [];
+
+    private void ToggleIntermediate(int index)
+    {
+        if (!_intermediateExpanded.Remove(index))
+            _intermediateExpanded.Add(index);
+    }
+
+    private static string TruncateText(string text, int maxLength)
+    {
+        var trimmed = text.Trim().ReplaceLineEndings(" ");
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength] + "…";
+    }
 
     private string GetImageSrc(FileAttachment attachment)
     {

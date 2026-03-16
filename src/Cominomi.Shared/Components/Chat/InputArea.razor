@@ -299,6 +299,7 @@
 
         _inputText = string.Empty;
         _pendingAttachments.Clear();
+        StateHasChanged();
         await OnSend.InvokeAsync(input);
     }
 

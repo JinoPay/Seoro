@@ -543,6 +543,95 @@ html, body {
     line-height: 1.5;
 }
 
+/* ===== Tool Group (Collapsed) ===== */
+.tool-group {
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    margin: 4px 0;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+
+.tool-group.running {
+    border-left: 2px solid rgba(251, 191, 36, 0.6);
+    animation: tool-border-pulse 2s ease-in-out infinite;
+}
+
+.tool-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.tool-group-header:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.tool-group-icons {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+}
+
+.tool-group-summary {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tool-group-body {
+    padding: 2px 8px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tool-group-body .tool-card {
+    margin: 0;
+}
+
+/* ===== Intermediate Text (Filler) ===== */
+.intermediate-text {
+    padding: 4px 10px;
+    margin: 2px 0;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.intermediate-text:hover {
+    color: rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.intermediate-text.expanded {
+    white-space: normal;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.intermediate-text.expanded .markdown-body {
+    font-size: 0.82rem;
+    opacity: 0.7;
+}
+
+.intermediate-text-content {
+    display: block;
+}
+
 /* ===== Streaming Indicator ===== */
 .streaming-pill {
     display: inline-flex;

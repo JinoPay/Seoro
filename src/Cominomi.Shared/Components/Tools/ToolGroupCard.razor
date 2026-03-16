@@ -1,0 +1,92 @@
+@using Cominomi.Shared.Models
+
+<div class="tool-group @(_expanded ? "expanded" : "") @(IsActive ? "running" : "")">
+    <div class="tool-group-header" @onclick="Toggle">
+        @if (IsActive)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                 Style="width: 14px; height: 14px;" Color="Color.Warning" />
+        }
+        else if (HasError)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
+                     Style="width: 16px; height: 16px;" />
+        }
+        else
+        {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
+                     Style="width: 16px; height: 16px;" />
+        }
+
+        <div class="tool-group-icons">
+            @foreach (var icon in GetUniqueIcons())
+            {
+                <MudIcon Icon="@icon" Size="Size.Small" Style="width: 14px; height: 14px; opacity: 0.5;" />
+            }
+        </div>
+
+        <span class="tool-group-summary">@Group.Summary</span>
+
+        <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                 Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px; margin-left: auto;" />
+    </div>
+
+    @if (_expanded)
+    {
+        <div class="tool-group-body">
+            @foreach (var part in Group.Parts)
+            {
+                @if (part.ToolCall != null)
+                {
+                    <ToolCallCard Tool="part.ToolCall" />
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ContentGroup Group { get; set; } = default!;
+
+    [Parameter]
+    public bool IsActive { get; set; }
+
+    private bool _expanded;
+    private bool _wasActive;
+
+    private bool HasError => Group.Parts.Any(p => p.ToolCall?.IsError == true);
+
+    protected override void OnParametersSet()
+    {
+        // Auto-expand when active (streaming), auto-collapse when done
+        if (IsActive && !_wasActive)
+            _expanded = true;
+        else if (!IsActive && _wasActive)
+            _expanded = false;
+
+        _wasActive = IsActive;
+    }
+
+    private void Toggle() => _expanded = !_expanded;
+
+    private List<string> GetUniqueIcons()
+    {
+        return Group.Parts
+            .Where(p => p.ToolCall != null)
+            .Select(p => GetToolIcon(p.ToolCall!.Name))
+            .Distinct()
+            .ToList();
+    }
+
+    private static string GetToolIcon(string name) => name.ToLowerInvariant() switch
+    {
+        "bash" or "execute_bash" => Icons.Material.Filled.Terminal,
+        "read" or "read_file" => Icons.Material.Filled.Description,
+        "write" or "write_file" => Icons.Material.Filled.Edit,
+        "edit" or "edit_file" => Icons.Material.Filled.EditNote,
+        "glob" => Icons.Material.Filled.Search,
+        "grep" => Icons.Material.Filled.FindInPage,
+        _ => Icons.Material.Filled.Extension
+    };
+}
