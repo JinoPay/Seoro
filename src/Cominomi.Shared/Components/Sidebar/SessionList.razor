@@ -48,7 +48,7 @@
                     var isActive = ChatState.CurrentSession?.Id == session.Id;
                     var isArchived = session.Status == SessionStatus.Archived;
 
-                    <div class="session-item @(isActive ? "active" : "") @(isArchived ? "archived" : "")"
+                    <div @key="session.Id" class="session-item @(isActive ? "active" : "") @(isArchived ? "archived" : "")"
                          style="@(isArchived ? "opacity: 0.35;" : "")"
                          @onclick="@(() => SelectSession(session))">
 
@@ -170,6 +170,15 @@
         var settings = await SettingsService.LoadAsync();
         settings.LastWorkspaceId = ws.Id;
         await SettingsService.SaveAsync(settings);
+
+        // Auto-restore last active session
+        if (!string.IsNullOrEmpty(settings.LastSessionId)
+            && _sessionCache.TryGetValue(ws.Id, out var cached))
+        {
+            var lastSession = cached.FirstOrDefault(s => s.Id == settings.LastSessionId);
+            if (lastSession != null)
+                await SelectSession(lastSession);
+        }
     }
 
     private async Task CheckMergeStatuses(string workspaceId)
@@ -226,6 +235,10 @@
 
             if (_sessionCache.TryGetValue(ws.Id, out var sessions))
                 sessions.Insert(0, session);
+
+            var settings = await SettingsService.LoadAsync();
+            settings.LastSessionId = session.Id;
+            await SettingsService.SaveAsync(settings);
         }
         finally
         {
@@ -241,6 +254,10 @@
             ChatState.SetSession(fullSess);
         else
             ChatState.SetSession(session);
+
+        var settings = await SettingsService.LoadAsync();
+        settings.LastSessionId = session.Id;
+        await SettingsService.SaveAsync(settings);
     }
 
     private async Task CleanupSession(Session session)

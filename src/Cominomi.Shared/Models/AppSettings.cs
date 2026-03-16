@@ -9,4 +9,5 @@ public class AppSettings
     public bool DefaultThinkingEnabled { get; set; }
     public string DefaultPermissionMode { get; set; } = "bypassAll";
     public string LastWorkspaceId { get; set; } = "";
+    public string LastSessionId { get; set; } = "";
 }

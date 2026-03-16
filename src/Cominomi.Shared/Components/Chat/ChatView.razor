@@ -354,6 +354,9 @@
         else
             ChatState.AddUserMessage(input.Text);
 
+        // Save immediately so user message persists even if navigation occurs mid-stream
+        await SessionService.SaveSessionAsync(session);
+
         ChatState.SetStreaming(true, session.Id);
         ChatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
 
