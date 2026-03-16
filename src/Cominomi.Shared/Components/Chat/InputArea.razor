@@ -37,6 +37,14 @@
                                    Disabled="Disabled || IsStreaming" />
                 </MudTooltip>
 
+                <MudTooltip Text="@(ThinkingEnabled ? "Thinking 모드 (켜짐)" : "Thinking 모드 (꺼짐)")">
+                    <MudIconButton Icon="@Icons.Material.Filled.Psychology"
+                                   Color="@(ThinkingEnabled ? Color.Secondary : Color.Default)"
+                                   Size="Size.Small"
+                                   OnClick="ToggleThinking"
+                                   Disabled="Disabled || IsStreaming" />
+                </MudTooltip>
+
                 <MudTooltip Text="파일 첨부">
                     <MudIconButton Icon="@Icons.Material.Filled.AttachFile"
                                    Color="Color.Default"
@@ -107,13 +115,15 @@
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool IsStreaming { get; set; }
     [Parameter] public bool Disabled { get; set; }
-    [Parameter] public string PermissionMode { get; set; } = "default";
+    [Parameter] public string PermissionMode { get; set; } = "bypassAll";
     [Parameter] public EventCallback<string> PermissionModeChanged { get; set; }
     [Parameter] public string Model { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> OnModelChanged { get; set; }
     [Parameter] public string? ResolvedModel { get; set; }
+    [Parameter] public bool ThinkingEnabled { get; set; }
+    [Parameter] public EventCallback<bool> ThinkingEnabledChanged { get; set; }
 
-    private static readonly string[] PermissionModes = ["default", "plan", "bypassAll"];
+    private static readonly string[] PermissionModes = ["bypassAll", "plan"];
 
     private string _inputText = string.Empty;
     private List<PendingAttachment> _pendingAttachments = [];
@@ -124,29 +134,27 @@
     // Parameter tracking to prevent unnecessary re-renders (cursor jumping fix)
     private bool _prevIsStreaming;
     private bool _prevDisabled;
-    private string _prevPermissionMode = "default";
+    private string _prevPermissionMode = "bypassAll";
     private string _prevModel = string.Empty;
     private string? _prevResolvedModel;
+    private bool _prevThinkingEnabled;
     private bool _forceRender;
 
     private string GetPermissionModeTooltip() => PermissionMode switch
     {
         "plan" => "플랜 모드 (읽기 전용)",
-        "bypassAll" => "풀 액세스 (전체 자동 승인)",
-        _ => "코드 모드 (기본)"
+        _ => "일반 모드"
     };
 
     private string GetPermissionModeIcon() => PermissionMode switch
     {
         "plan" => Icons.Material.Filled.Description,
-        "bypassAll" => Icons.Material.Filled.Security,
         _ => Icons.Material.Filled.EditNote
     };
 
     private Color GetPermissionModeColor() => PermissionMode switch
     {
         "plan" => Color.Warning,
-        "bypassAll" => Color.Success,
         _ => Color.Default
     };
 
@@ -158,19 +166,27 @@
         await PermissionModeChanged.InvokeAsync(next);
     }
 
+    private async Task ToggleThinking()
+    {
+        _forceRender = true;
+        await ThinkingEnabledChanged.InvokeAsync(!ThinkingEnabled);
+    }
+
     protected override void OnParametersSet()
     {
         if (_prevIsStreaming != IsStreaming ||
             _prevDisabled != Disabled ||
             _prevPermissionMode != PermissionMode ||
             _prevModel != Model ||
-            _prevResolvedModel != ResolvedModel)
+            _prevResolvedModel != ResolvedModel ||
+            _prevThinkingEnabled != ThinkingEnabled)
         {
             _prevIsStreaming = IsStreaming;
             _prevDisabled = Disabled;
             _prevPermissionMode = PermissionMode;
             _prevModel = Model;
             _prevResolvedModel = ResolvedModel;
+            _prevThinkingEnabled = ThinkingEnabled;
             _forceRender = true;
         }
     }
@@ -267,7 +283,6 @@
         return PermissionMode switch
         {
             "plan" => "플랜 모드: Claude가 읽기와 조사만 합니다...",
-            "bypassAll" => "풀 액세스: Claude가 모든 작업을 자동 승인합니다...",
             _ => "메시지를 입력하세요..."
         };
     }

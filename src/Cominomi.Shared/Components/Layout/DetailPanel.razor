@@ -226,7 +226,7 @@
     {
         var session = ChatState.CurrentSession;
         if (session == null || session.Status == SessionStatus.Pending ||
-            string.IsNullOrEmpty(session.WorktreePath) || string.IsNullOrEmpty(session.BaseBranch))
+            string.IsNullOrEmpty(session.WorktreePath))
         {
             _diff = null;
             _diffError = null;
@@ -240,8 +240,10 @@
 
         try
         {
-            var nameStatus = await GitService.GetNameStatusAsync(session.WorktreePath, session.BaseBranch);
-            var rawDiff = await GitService.GetUnifiedDiffAsync(session.WorktreePath, session.BaseBranch);
+            // Use baseBranch if available, fallback to HEAD for uncommitted changes
+            var diffBase = !string.IsNullOrEmpty(session.BaseBranch) ? session.BaseBranch : "HEAD";
+            var nameStatus = await GitService.GetNameStatusAsync(session.WorktreePath, diffBase);
+            var rawDiff = await GitService.GetUnifiedDiffAsync(session.WorktreePath, diffBase);
             _diff = Services.GitService.ParseDiff(nameStatus, rawDiff);
         }
         catch (Exception ex)

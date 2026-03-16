@@ -44,7 +44,27 @@
 
             @foreach (var (group, idx) in groups.Select((g, i) => (g, i)))
             {
-                @if (group.Type == ContentGroupType.ToolGroup)
+                @if (group.Type == ContentGroupType.Thinking)
+                {
+                    var thinkingText = group.Parts[0].Text ?? "";
+                    <div class="thinking-block @(_thinkingExpanded.Contains(idx) ? "expanded" : "")"
+                         @onclick="@(() => ToggleThinkingBlock(idx))">
+                        <div class="thinking-header">
+                            <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
+                                     Style="width: 14px; height: 14px; opacity: 0.6;" />
+                            <span>생각 중...</span>
+                            <MudIcon Icon="@(_thinkingExpanded.Contains(idx) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                     Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;" />
+                        </div>
+                        @if (_thinkingExpanded.Contains(idx))
+                        {
+                            <div class="thinking-content">
+                                @((MarkupString)Markdown.ToHtml(thinkingText, _pipeline))
+                            </div>
+                        }
+                    </div>
+                }
+                else if (group.Type == ContentGroupType.ToolGroup)
                 {
                     bool isLastToolGroup = idx == lastToolGroupIndex;
                     <ToolGroupCard Group="group" IsActive="@(Message.IsStreaming && isLastToolGroup)" />
@@ -119,6 +139,13 @@
 
     private readonly Dictionary<string, string> _imageCache = new();
     private readonly HashSet<int> _intermediateExpanded = [];
+    private readonly HashSet<int> _thinkingExpanded = [];
+
+    private void ToggleThinkingBlock(int index)
+    {
+        if (!_thinkingExpanded.Remove(index))
+            _thinkingExpanded.Add(index);
+    }
 
     private void ToggleIntermediate(int index)
     {
