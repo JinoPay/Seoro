@@ -131,12 +131,34 @@ public class ChatState : IDisposable
     public void AppendText(ChatMessage message, string text)
     {
         message.Text += text;
+
+        var lastPart = message.Parts.Count > 0 ? message.Parts[^1] : null;
+        if (lastPart?.Type == ContentPartType.Text)
+        {
+            lastPart.Text += text;
+        }
+        else
+        {
+            message.Parts.Add(new ContentPart
+            {
+                Type = ContentPartType.Text,
+                Text = text
+            });
+        }
+
         NotifyStateChanged();
     }
 
     public void AddToolCall(ChatMessage message, ToolCall toolCall)
     {
         message.ToolCalls.Add(toolCall);
+
+        message.Parts.Add(new ContentPart
+        {
+            Type = ContentPartType.ToolCall,
+            ToolCall = toolCall
+        });
+
         NotifyStateChanged();
     }
 

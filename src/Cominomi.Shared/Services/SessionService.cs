@@ -218,7 +218,12 @@ public partial class SessionService : ISessionService
         var json = await File.ReadAllTextAsync(path);
         var session = JsonSerializer.Deserialize<Session>(json, JsonOptions);
         if (session != null)
+        {
             session.Model = ModelDefinitions.NormalizeModelId(session.Model);
+            // Migrate old messages that only have Text/ToolCalls to Parts
+            foreach (var msg in session.Messages)
+                msg.MigrateToParts();
+        }
         return session;
     }
 
