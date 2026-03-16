@@ -874,6 +874,17 @@ html, body {
     opacity: 0.7;
 }
 
+.intermediate-text.streaming-compact {
+    max-height: 32px;
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-xs);
+    opacity: 0.5;
+}
+
+.intermediate-text.streaming-compact::after {
+    height: 16px;
+}
+
 .intermediate-text-content {
     display: block;
 }

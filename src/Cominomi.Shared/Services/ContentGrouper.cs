@@ -8,9 +8,17 @@ public static partial class ContentGrouper
     private static readonly string[] IntermediatePatterns =
     [
         "확인", "살펴보", "읽어보", "검색", "찾아보", "분석",
+        "조사", "탐색", "코드베이스", "파일을", "디렉토리",
         "let me", "i'll", "i will", "let's", "looking at",
-        "checking", "reading", "searching", "examining"
+        "checking", "reading", "searching", "examining",
+        "explore", "investigate", "review", "understand"
     ];
+
+    [GeneratedRegex(@"^\d+\.", RegexOptions.Multiline)]
+    private static partial Regex NumberedListRegex();
+
+    [GeneratedRegex(@"^[-*]\s", RegexOptions.Multiline)]
+    private static partial Regex BulletListRegex();
 
     public static List<ContentGroup> Group(List<ContentPart> parts, bool isStreaming)
     {
@@ -95,21 +103,34 @@ public static partial class ContentGrouper
             if (group.Type != ContentGroupType.Text)
                 continue;
 
-            // Last text group is always FinalText
-            if (i == lastTextIndex)
-            {
-                group.Type = ContentGroupType.FinalText;
-                continue;
-            }
-
-            // Check if this text is intermediate (between tool groups or short/filler)
             var text = group.Parts[0].Text?.Trim() ?? "";
             bool hasPrevTool = i > 0 && groups[i - 1].Type == ContentGroupType.ToolGroup;
             bool hasNextTool = i < groups.Count - 1 && groups[i + 1].Type == ContentGroupType.ToolGroup;
 
+            if (i == lastTextIndex)
+            {
+                // During streaming: if this looks like verbose pre-tool text, collapse it
+                if (isStreaming && hasPrevTool && IsLikelyVerboseText(text))
+                {
+                    group.IsIntermediate = true;
+                }
+                // After streaming: also collapse if adjacent to tools and verbose
+                else if (!isStreaming && (hasPrevTool || hasNextTool) &&
+                         (text.Length <= 150 || IsIntermediateText(text) || IsLikelyVerboseText(text)))
+                {
+                    group.IsIntermediate = true;
+                }
+                else
+                {
+                    group.Type = ContentGroupType.FinalText;
+                }
+                continue;
+            }
+
+            // Non-last text: check if intermediate (between tool groups or short/filler)
             if (hasPrevTool || hasNextTool)
             {
-                if (text.Length <= 150 || IsIntermediateText(text))
+                if (text.Length <= 150 || IsIntermediateText(text) || IsLikelyVerboseText(text))
                 {
                     group.IsIntermediate = true;
                 }
@@ -122,9 +143,26 @@ public static partial class ContentGrouper
         var lower = text.ToLowerInvariant();
         foreach (var pattern in IntermediatePatterns)
         {
-            if (lower.StartsWith(pattern) || lower.Contains(pattern))
+            if (lower.Contains(pattern))
                 return true;
         }
+        return false;
+    }
+
+    private static bool IsLikelyVerboseText(string text)
+    {
+        // Very long text is likely verbose planning/description
+        if (text.Length > 400) return true;
+
+        // Numbered lists with 3+ items
+        if (NumberedListRegex().Count(text) >= 3) return true;
+
+        // Bullet lists with 3+ items
+        if (BulletListRegex().Count(text) >= 3) return true;
+
+        // Many lines suggest planning/instruction text
+        if (text.Split('\n').Length >= 6) return true;
+
         return false;
     }
 
