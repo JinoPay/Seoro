@@ -3,6 +3,9 @@ using Cominomi.Shared.Services;
 #if MACCATALYST
 using UIKit;
 using UniformTypeIdentifiers;
+#elif WINDOWS
+using Microsoft.UI.Xaml;
+using WinRT.Interop;
 #endif
 
 namespace Cominomi.Services;
@@ -46,6 +49,16 @@ public class FolderPickerService : IFolderPickerService
         });
 
         return await tcs.Task;
+#elif WINDOWS
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add("*");
+
+        var window = (MauiWinUIWindow)Microsoft.Maui.Controls.Application.Current!.Windows[0].Handler.PlatformView!;
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(window));
+
+        var folder = await picker.PickSingleFolderAsync();
+        return folder?.Path;
 #else
         await Task.CompletedTask;
         return null;
