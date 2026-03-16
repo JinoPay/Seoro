@@ -38,6 +38,11 @@
             </MudStack>
             <MudSwitch T="bool" @bind-Value="_settings.DefaultThinkingEnabled"
                        Label="Thinking 모드 기본값" Color="Color.Secondary" />
+            <MudSelect T="string" @bind-Value="_settings.DefaultPermissionMode" Label="기본 권한 모드"
+                       Variant="Variant.Outlined">
+                <MudSelectItem T="string" Value="@("bypassAll")">일반 모드</MudSelectItem>
+                <MudSelectItem T="string" Value="@("plan")">플랜 모드</MudSelectItem>
+            </MudSelect>
         </MudStack>
     </DialogContent>
     <DialogActions>

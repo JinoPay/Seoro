@@ -156,7 +156,8 @@ public partial class SessionService : ISessionService
             CityName = cityName,
             Title = cityName,
             Status = SessionStatus.Pending,
-            ThinkingEnabled = settings.DefaultThinkingEnabled
+            ThinkingEnabled = settings.DefaultThinkingEnabled,
+            PermissionMode = settings.DefaultPermissionMode
         };
 
         await SaveSessionAsync(session);
