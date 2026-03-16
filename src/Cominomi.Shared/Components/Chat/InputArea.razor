@@ -27,8 +27,21 @@
             </div>
         }
 
-        <div class="input-row">
-            <div class="input-actions">
+        <MudTextField T="string" Value="@_inputText" ValueChanged="@HandleInputValueChanged"
+                      Placeholder="@GetPlaceholder()"
+                      Variant="Variant.Text"
+                      Lines="1"
+                      AutoGrow="true"
+                      MaxLines="8"
+                      Immediate="true"
+                      Disabled="Disabled"
+                      ReadOnly="IsStreaming"
+                      OnKeyDown="HandleKeyDown"
+                      Class="input-textarea-full"
+                      Style="font-size: var(--text-base);" />
+
+        <div class="input-toolbar">
+            <div class="input-toolbar-left">
                 <MudTooltip Text="@GetPermissionModeTooltip()">
                     <MudIconButton Icon="@GetPermissionModeIcon()"
                                    Color="@GetPermissionModeColor()"
@@ -54,58 +67,58 @@
                 </MudTooltip>
             </div>
 
-            <MudTextField T="string" Value="@_inputText" ValueChanged="@HandleInputValueChanged"
-                          Placeholder="@GetPlaceholder()"
-                          Variant="Variant.Text"
-                          Lines="1"
-                          AutoGrow="true"
-                          MaxLines="8"
-                          Immediate="true"
-                          Disabled="Disabled"
-                          ReadOnly="IsStreaming"
-                          OnKeyDown="HandleKeyDown"
-                          Class="flex-grow-1"
-                          Style="font-size: var(--text-base);" />
+            <div class="input-toolbar-right">
+                <MudTooltip Text="@(ResolvedModel ?? GetModelDisplayName())">
+                    <button class="model-selector-pill" type="button"
+                            @onclick="ToggleModelMenu"
+                            disabled="@(Disabled || IsStreaming)">
+                        <span class="model-selector-label">@GetModelDisplayName()</span>
+                        <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" />
+                    </button>
+                </MudTooltip>
 
-            @if (IsStreaming)
-            {
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Error"
-                           Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Stop"
-                           OnClick="@(() => OnCancel.InvokeAsync())"
-                           Class="stop-button-glow"
-                           Style="border-radius: 20px; text-transform: none; min-width: 80px;">
-                    중지
-                </MudButton>
-            }
-            else
-            {
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward"
-                               Color="Color.Primary"
-                               Variant="Variant.Filled"
-                               OnClick="Send"
-                               Disabled="@(Disabled || (string.IsNullOrWhiteSpace(_inputText) && _pendingAttachments.Count == 0))"
-                               Size="Size.Small"
-                               Style="border-radius: 50%;" />
-            }
-        </div>
+                <MudPopover Open="@_modelMenuOpen" AnchorOrigin="Origin.TopRight"
+                            TransformOrigin="Origin.BottomRight" Class="model-popover">
+                    <MudList T="string" Dense="true" Class="model-list">
+                        @foreach (var model in ModelDefinitions.All)
+                        {
+                            <MudListItem T="string" OnClick="@(() => SelectModel(model.Id))"
+                                         Class="@(Model == model.Id ? "model-item-active" : "")">
+                                @model.DisplayName
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudPopover>
 
-        <div class="input-meta">
-            <MudSelect T="string" Value="Model" ValueChanged="HandleModelChanged"
-                       Variant="Variant.Text" Dense="true" Margin="Margin.Dense"
-                       Disabled="Disabled || IsStreaming"
-                       Style="max-width: 160px; font-size: var(--text-xs);"
-                       AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft">
-                @foreach (var model in ModelDefinitions.All)
+                @if (_modelMenuOpen)
                 {
-                    <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                    <MudOverlay Visible="true" OnClick="CloseModelMenu"
+                                DarkBackground="false" ZIndex="1" />
                 }
-            </MudSelect>
-            @if (!string.IsNullOrEmpty(ResolvedModel))
-            {
-                <span style="font-size: var(--text-xs); opacity: 0.4;">@ResolvedModel</span>
-            }
+
+                @if (IsStreaming)
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Error"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Stop"
+                               OnClick="@(() => OnCancel.InvokeAsync())"
+                               Class="stop-button-glow"
+                               Style="border-radius: 20px; text-transform: none; min-width: 72px;">
+                        중지
+                    </MudButton>
+                }
+                else
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward"
+                                   Color="Color.Primary"
+                                   Variant="Variant.Filled"
+                                   OnClick="Send"
+                                   Disabled="@(Disabled || (string.IsNullOrWhiteSpace(_inputText) && _pendingAttachments.Count == 0))"
+                                   Size="Size.Small"
+                                   Style="border-radius: 50%;" />
+                }
+            </div>
         </div>
     </div>
 </div>
@@ -130,6 +143,7 @@
     private DotNetObjectReference<InputArea>? _dotNetRef;
     private bool _handlersRegistered;
     private bool _suppressInputUpdates;
+    private bool _modelMenuOpen;
 
     // Parameter tracking to prevent unnecessary re-renders (cursor jumping fix)
     private bool _prevIsStreaming;
@@ -287,11 +301,32 @@
         };
     }
 
-    private async Task HandleModelChanged(string value)
+    private string GetModelDisplayName()
     {
+        var model = ModelDefinitions.All.FirstOrDefault(m => m.Id == Model);
+        return model?.DisplayName ?? Model;
+    }
+
+    private void ToggleModelMenu()
+    {
+        _modelMenuOpen = !_modelMenuOpen;
         _forceRender = true;
-        Model = value;
-        await OnModelChanged.InvokeAsync(value);
+        StateHasChanged();
+    }
+
+    private void CloseModelMenu()
+    {
+        _modelMenuOpen = false;
+        _forceRender = true;
+        StateHasChanged();
+    }
+
+    private async Task SelectModel(string modelId)
+    {
+        _modelMenuOpen = false;
+        _forceRender = true;
+        Model = modelId;
+        await OnModelChanged.InvokeAsync(modelId);
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
