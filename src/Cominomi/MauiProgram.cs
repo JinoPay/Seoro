@@ -18,6 +18,8 @@ public static class MauiProgram
             .MinimumLevel.Debug()
             .WriteTo.Debug()
 #endif
+            .WriteTo.Console(
+                outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
             .WriteTo.File(
                 logPath,
                 rollingInterval: RollingInterval.Day,
