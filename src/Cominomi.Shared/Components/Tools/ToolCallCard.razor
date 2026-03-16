@@ -26,11 +26,20 @@
         <div class="tool-card-body">
             @if (!string.IsNullOrEmpty(Tool.Input))
             {
+                var isAgent = Tool.Name.Equals("agent", StringComparison.OrdinalIgnoreCase);
+                var inputLineCount = Tool.Input.Split('\n').Length;
                 <div class="tool-card-section">
-                    <div class="tool-card-section-label">입력</div>
-                    <div class="tool-card-content">
+                    <div class="tool-card-section-label">입력 @(inputLineCount > 1 ? $"({inputLineCount}줄)" : "")</div>
+                    <div class="tool-card-content @(isAgent && inputLineCount > 5 && !_inputExpanded ? "tool-output-collapsed" : "")">
                         <pre>@Tool.Input</pre>
                     </div>
+                    @if (isAgent && inputLineCount > 5)
+                    {
+                        <div class="tool-output-toggle" @onclick="@(() => _inputExpanded = !_inputExpanded)"
+                             @onclick:stopPropagation="true">
+                            @(_inputExpanded ? "접기" : "전체 보기")
+                        </div>
+                    }
                 </div>
             }
 
@@ -60,6 +69,7 @@
     public ToolCall Tool { get; set; } = default!;
 
     private bool _expanded;
+    private bool _inputExpanded;
     private bool _outputExpanded;
 
     private string GetToolIcon() => Tool.Name.ToLowerInvariant() switch

@@ -118,7 +118,7 @@
                         var text = group.Parts[0].Text ?? "";
                         @if (group.IsIntermediate)
                         {
-                            <div class="intermediate-text @(_intermediateExpanded.Contains(idx) ? "expanded" : "")"
+                            <div class="intermediate-text @(Message.IsStreaming ? "streaming-compact" : "") @(_intermediateExpanded.Contains(idx) ? "expanded" : "")"
                                  @onclick="@(() => ToggleIntermediate(idx))">
                                 <span class="intermediate-text-content">
                                     @((MarkupString)Markdown.ToHtml(text, _pipeline))
