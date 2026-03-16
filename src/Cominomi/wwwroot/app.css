@@ -931,6 +931,91 @@ html, body {
     margin: 0;
 }
 
+/* ===== Activity Summary ===== */
+.activity-summary {
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-default);
+    margin: var(--space-1) 0;
+    overflow: hidden;
+}
+
+.activity-summary-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    opacity: 0.6;
+    transition: opacity var(--transition), background var(--transition);
+}
+
+.activity-summary-header:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.activity-summary-text {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.activity-summary-files {
+    display: flex;
+    gap: var(--space-1);
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.activity-summary-duration {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    opacity: 0.6;
+    margin-left: auto;
+    margin-right: var(--space-1);
+    white-space: nowrap;
+}
+
+.activity-summary-body {
+    padding: var(--space-2);
+    border-top: 1px solid var(--border-default);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+/* ===== File Change Badges ===== */
+.file-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 9999px;
+    font-size: 0.65rem;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    border: 1px solid;
+    white-space: nowrap;
+}
+
+.file-badge-created {
+    color: #a6e3a1;
+    border-color: rgba(166, 227, 161, 0.3);
+    background: rgba(166, 227, 161, 0.08);
+}
+
+.file-badge-modified {
+    color: #f9e2af;
+    border-color: rgba(249, 226, 175, 0.3);
+    background: rgba(249, 226, 175, 0.08);
+}
+
+.file-badge-read {
+    color: #89b4fa;
+    border-color: rgba(137, 180, 250, 0.3);
+    background: rgba(137, 180, 250, 0.08);
+}
+
 /* ===== Intermediate Text ===== */
 .intermediate-text {
     padding: var(--space-2) var(--space-3);
