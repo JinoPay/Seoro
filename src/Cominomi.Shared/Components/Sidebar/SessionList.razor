@@ -14,7 +14,7 @@
             <div class="tree-header-actions">
                 <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
                                Style="width: 24px; height: 24px; opacity: 0.5;"
-                               OnClick="@(() => _workspaceDialogOpen = true)" />
+                               OnClick="@(() => _createDialogOpen = true)" />
             </div>
         </div>
 
@@ -44,6 +44,16 @@
                                                    OnClick="@(() => CreateNewChat(readyWs))"
                                                    OnClickStopPropagation="true" />
                                 }
+                                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                         Dense="true"
+                                         AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                                         Style="width: 20px; height: 20px; opacity: 0.5;"
+                                         ActivationEvent="@MouseEvent.LeftClick">
+                                    <MudMenuItem OnClick="@(() => _manageDialogOpen = true)"
+                                                 Icon="@Icons.Material.Filled.Settings">
+                                        워크스페이스 관리
+                                    </MudMenuItem>
+                                </MudMenu>
                             </div>
                         }
                     </div>
@@ -131,7 +141,7 @@
             </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="@(() => _workspaceDialogOpen = true)"
+                       OnClick="@(() => _createDialogOpen = true)"
                        Style="text-transform: none; border-radius: var(--radius-full);">
                 새 워크스페이스
             </MudButton>
@@ -139,13 +149,15 @@
     }
 </div>
 
-<WorkspaceDialog @bind-IsOpen="_workspaceDialogOpen" OnWorkspacesChanged="ReloadWorkspaces" />
+<CreateWorkspaceDialog @bind-IsOpen="_createDialogOpen" OnWorkspaceCreated="ReloadWorkspaces" />
+<ManageWorkspacesDialog @bind-IsOpen="_manageDialogOpen" OnWorkspacesChanged="ReloadWorkspaces" />
 
 @code {
     private List<Workspace> _workspaces = [];
     private HashSet<string> _expandedProjects = new();
     private Dictionary<string, List<Session>> _sessionCache = new();
-    private bool _workspaceDialogOpen;
+    private bool _createDialogOpen;
+    private bool _manageDialogOpen;
     private bool _isCreatingSession;
 
     protected override async Task OnInitializedAsync()
