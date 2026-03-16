@@ -1,0 +1,279 @@
+@inject IWorkspaceService WorkspaceService
+@inject IGitService GitService
+@inject IFolderPickerService FolderPickerService
+
+<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" Style="vertical-align: middle;" />
+            새 워크스페이스
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div style="min-width: 420px; position: relative;">
+            @if (_isCreating)
+            {
+                <div class="create-ws-progress-overlay">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@_progressMessage</MudText>
+                </div>
+            }
+
+            <MudTabs @bind-ActivePanelIndex="_activeTab" Rounded="true" ApplyEffectsToContainer="true"
+                     Class="create-ws-tabs" PanelClass="pa-3">
+                <MudTabPanel Text="URL에서 클론" Icon="@Icons.Material.Filled.Cloud">
+                    <MudStack Spacing="3">
+                        <MudTextField @bind-Value="_repoUrl" Label="저장소 URL" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" Placeholder="https://github.com/org/repo"
+                                      Immediate="true" TextChanged="OnUrlChanged" />
+                        <MudTextField @bind-Value="_editName" Label="워크스페이스 이름" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" />
+                        <MudSelect T="string" @bind-Value="_editModel" Label="기본 모델"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var model in ModelDefinitions.All)
+                            {
+                                <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudStack>
+                </MudTabPanel>
+                <MudTabPanel Text="로컬 저장소" Icon="@Icons.Material.Filled.Folder">
+                    <MudStack Spacing="3">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudTextField @bind-Value="_localPath" Label="저장소 경로" Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" Placeholder="/경로/저장소" Style="flex: 1;" />
+                            <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
+                                           OnClick="BrowseLocalFolder" Title="찾아보기..." />
+                        </MudStack>
+                        @if (_localPathValidation != null)
+                        {
+                            <MudAlert Severity="@(_isLocalPathGitRepo ? Severity.Success : Severity.Warning)" Dense="true">
+                                @_localPathValidation
+                            </MudAlert>
+                        }
+                        <MudTextField @bind-Value="_editName" Label="워크스페이스 이름" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" />
+                        <MudSelect T="string" @bind-Value="_editModel" Label="기본 모델"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var model in ModelDefinitions.All)
+                            {
+                                <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudStack>
+                </MudTabPanel>
+            </MudTabs>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@_errorMessage</MudAlert>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Disabled="_isCreating">취소</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="Create" Disabled="@(!CanCreate)">
+            @if (_isCreating)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            만들기
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public EventCallback OnWorkspaceCreated { get; set; }
+
+    private int _activeTab;
+    private bool _isCreating;
+    private string _editName = "";
+    private string _editModel = ModelDefinitions.Default.Id;
+    private string _repoUrl = "";
+    private string _localPath = "";
+    private string _progressMessage = "";
+    private string? _errorMessage;
+    private string? _localPathValidation;
+    private bool _isLocalPathGitRepo;
+    private bool _nameAutoFilled;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true
+    };
+
+    private bool CanCreate => !_isCreating && _activeTab switch
+    {
+        0 => !string.IsNullOrWhiteSpace(_repoUrl) && !string.IsNullOrWhiteSpace(_editName),
+        1 => !string.IsNullOrWhiteSpace(_localPath) && !string.IsNullOrWhiteSpace(_editName),
+        _ => false
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen)
+        {
+            ResetForm();
+        }
+    }
+
+    private void ResetForm()
+    {
+        _activeTab = 0;
+        _editName = "";
+        _editModel = ModelDefinitions.Default.Id;
+        _repoUrl = "";
+        _localPath = "";
+        _errorMessage = null;
+        _localPathValidation = null;
+        _isLocalPathGitRepo = false;
+        _isCreating = false;
+        _nameAutoFilled = false;
+    }
+
+    private async Task Create()
+    {
+        if (_activeTab == 0)
+            await CreateFromUrl();
+        else
+            await CreateFromLocal();
+    }
+
+    private async Task CreateFromUrl()
+    {
+        _errorMessage = null;
+        _isCreating = true;
+        _progressMessage = "저장소 클론 중...";
+        StateHasChanged();
+
+        var progress = new Progress<string>(msg =>
+        {
+            _progressMessage = msg;
+            InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            var ws = await WorkspaceService.CreateFromUrlAsync(
+                _repoUrl.Trim(), _editName.Trim(), _editModel, progress);
+
+            if (ws.Status == WorkspaceStatus.Error)
+            {
+                _errorMessage = ws.ErrorMessage ?? "워크스페이스 생성에 실패했습니다.";
+                _isCreating = false;
+            }
+            else
+            {
+                await OnWorkspaceCreated.InvokeAsync();
+                await Close();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _errorMessage = "작업이 취소되었습니다.";
+            _isCreating = false;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _isCreating = false;
+        }
+    }
+
+    private async Task CreateFromLocal()
+    {
+        _errorMessage = null;
+        _isCreating = true;
+        _progressMessage = "워크스페이스 설정 중...";
+        StateHasChanged();
+
+        try
+        {
+            var ws = await WorkspaceService.CreateFromLocalAsync(
+                _localPath.Trim(), _editName.Trim(), _editModel);
+
+            if (ws.Status == WorkspaceStatus.Error)
+            {
+                _errorMessage = ws.ErrorMessage ?? "워크스페이스 생성에 실패했습니다.";
+                _isCreating = false;
+            }
+            else
+            {
+                await OnWorkspaceCreated.InvokeAsync();
+                await Close();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _isCreating = false;
+        }
+    }
+
+    private async Task BrowseLocalFolder()
+    {
+        var path = await FolderPickerService.PickFolderAsync();
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        _localPath = path;
+        _localPathValidation = null;
+        _isLocalPathGitRepo = false;
+
+        var isGitRepo = await GitService.IsGitRepoAsync(path);
+        if (!isGitRepo)
+        {
+            _localPathValidation = "이 폴더는 git 저장소가 아닙니다.";
+            _isLocalPathGitRepo = false;
+            return;
+        }
+
+        _isLocalPathGitRepo = true;
+        _localPathValidation = "유효한 git 저장소";
+
+        if (string.IsNullOrEmpty(_editName) || _nameAutoFilled)
+        {
+            _editName = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) ?? "";
+            _nameAutoFilled = true;
+        }
+    }
+
+    private void OnUrlChanged(string url)
+    {
+        _repoUrl = url;
+        if (!string.IsNullOrWhiteSpace(url) && (string.IsNullOrEmpty(_editName) || _nameAutoFilled))
+        {
+            _editName = ExtractRepoName(url);
+            _nameAutoFilled = true;
+        }
+    }
+
+    private async Task OnVisibleChanged(bool visible)
+    {
+        if (IsOpen != visible)
+        {
+            IsOpen = visible;
+            await IsOpenChanged.InvokeAsync(visible);
+        }
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        _isCreating = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private static string ExtractRepoName(string url)
+    {
+        var cleaned = url.Trim().TrimEnd('/');
+        if (cleaned.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+            cleaned = cleaned[..^4];
+        var lastSlash = cleaned.LastIndexOfAny(['/', ':']);
+        return lastSlash >= 0 ? cleaned[(lastSlash + 1)..] : cleaned;
+    }
+}

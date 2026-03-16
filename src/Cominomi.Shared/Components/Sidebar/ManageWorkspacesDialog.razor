@@ -1,0 +1,193 @@
+@inject IWorkspaceService WorkspaceService
+@inject ISessionService SessionService
+@inject ChatState ChatState
+
+<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" Style="vertical-align: middle;" />
+            워크스페이스 관리
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="2" Class="pa-2" Style="min-width: 420px; max-height: 500px; overflow-y: auto;">
+            @if (_isEditing && _editingWorkspace != null)
+            {
+                <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">워크스페이스 편집</MudText>
+                <MudTextField @bind-Value="_editName" Label="이름" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+                <MudSelect T="string" @bind-Value="_editModel" Label="기본 모델"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var model in ModelDefinitions.All)
+                    {
+                        <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
+                    <MudButton Size="Size.Small" OnClick="CancelEdit">취소</MudButton>
+                    <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled"
+                               OnClick="SaveEdit">저장</MudButton>
+                </MudStack>
+            }
+            else
+            {
+                @if (_workspaces.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="pa-4">
+                        워크스페이스가 없습니다.
+                    </MudText>
+                }
+                @foreach (var ws in _workspaces)
+                {
+                    var isActive = ChatState.CurrentWorkspace?.Id == ws.Id;
+                    <MudPaper Class="pa-2" Outlined="true"
+                              Style="@($"border-radius: 8px; {(isActive ? "border-color: var(--mud-palette-primary);" : "")}")">
+                        <MudStack Row="true" AlignItems="AlignItems.Center">
+                            <MudStack Spacing="0" Style="flex: 1; min-width: 0;">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.body2" Style="font-weight: 600;">@ws.Name</MudText>
+                                    @if (ws.Status == WorkspaceStatus.Initializing)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                    }
+                                    else if (ws.Status == WorkspaceStatus.Error)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                                    }
+                                </MudStack>
+                                @if (!string.IsNullOrEmpty(ws.RepoUrl))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                             Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        @ws.RepoUrl
+                                    </MudText>
+                                }
+                                else if (!string.IsNullOrEmpty(ws.RepoLocalPath))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                             Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        @ShortenPath(ws.RepoLocalPath)
+                                    </MudText>
+                                }
+                                @if (ws.Status == WorkspaceStatus.Error && !string.IsNullOrEmpty(ws.ErrorMessage))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Error">@ws.ErrorMessage</MudText>
+                                }
+                            </MudStack>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                           OnClick="@(() => StartEdit(ws))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                           Color="Color.Error"
+                                           OnClick="@(() => DeleteWorkspace(ws))" />
+                        </MudStack>
+                    </MudPaper>
+                }
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">닫기</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public EventCallback OnWorkspacesChanged { get; set; }
+
+    private List<Workspace> _workspaces = [];
+    private bool _isEditing;
+    private Workspace? _editingWorkspace;
+    private string _editName = "";
+    private string _editModel = ModelDefinitions.Default.Id;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen)
+        {
+            _workspaces = await WorkspaceService.GetWorkspacesAsync();
+            _isEditing = false;
+            _editingWorkspace = null;
+        }
+    }
+
+    private void StartEdit(Workspace ws)
+    {
+        _editingWorkspace = ws;
+        _editName = ws.Name;
+        _editModel = ws.DefaultModel;
+        _isEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        _isEditing = false;
+        _editingWorkspace = null;
+    }
+
+    private async Task SaveEdit()
+    {
+        if (string.IsNullOrWhiteSpace(_editName) || _editingWorkspace == null)
+            return;
+
+        _editingWorkspace.Name = _editName.Trim();
+        _editingWorkspace.DefaultModel = _editModel;
+        await WorkspaceService.SaveWorkspaceAsync(_editingWorkspace);
+
+        _workspaces = await WorkspaceService.GetWorkspacesAsync();
+        await OnWorkspacesChanged.InvokeAsync();
+        CancelEdit();
+    }
+
+    private async Task DeleteWorkspace(Workspace ws)
+    {
+        var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
+        foreach (var session in sessions)
+        {
+            await SessionService.DeleteSessionAsync(session.Id);
+        }
+
+        await WorkspaceService.DeleteWorkspaceAsync(ws.Id);
+        _workspaces.Remove(ws);
+
+        if (ChatState.CurrentWorkspace?.Id == ws.Id)
+        {
+            var firstWs = _workspaces.FirstOrDefault();
+            if (firstWs != null)
+                ChatState.SetWorkspace(firstWs);
+            else
+                ChatState.SetWorkspace(null!);
+        }
+
+        await OnWorkspacesChanged.InvokeAsync();
+    }
+
+    private async Task OnVisibleChanged(bool visible)
+    {
+        if (IsOpen != visible)
+        {
+            IsOpen = visible;
+            await IsOpenChanged.InvokeAsync(visible);
+        }
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private static string ShortenPath(string path)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (path.StartsWith(home))
+            return "~" + path[home.Length..];
+        return path;
+    }
+}
