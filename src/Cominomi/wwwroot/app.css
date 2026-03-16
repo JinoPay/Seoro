@@ -819,6 +819,25 @@ html, body {
     flex-wrap: wrap;
 }
 
+/* ===== Plan Review Bar ===== */
+.plan-review-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    background: rgba(249, 226, 175, 0.06);
+    border-top: 2px solid rgba(249, 226, 175, 0.3);
+    flex-wrap: wrap;
+}
+
+.plan-review-label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: rgba(249, 226, 175, 0.8);
+    margin-right: var(--space-2);
+}
+
 /* ===== Thinking Block ===== */
 .thinking-block {
     margin: 6px 0;

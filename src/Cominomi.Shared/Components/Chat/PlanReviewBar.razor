@@ -1,0 +1,31 @@
+@using Cominomi.Shared.Models
+
+@if (IsVisible)
+{
+    <div class="plan-review-bar">
+        <span class="plan-review-label">플랜 검토</span>
+        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
+                   StartIcon="@Icons.Material.Filled.CheckCircle"
+                   OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Approve))"
+                   Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
+            승인
+        </MudButton>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Edit"
+                   OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Advice))"
+                   Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
+            조언하기
+        </MudButton>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
+                   StartIcon="@Icons.Material.Filled.Cancel"
+                   OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Reject))"
+                   Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
+            거절
+        </MudButton>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<PlanReviewAction> OnAction { get; set; }
+}

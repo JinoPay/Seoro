@@ -130,9 +130,13 @@
     </div>
 
     @* Quick response bar *@
-    <QuickResponseBar IsVisible="_quickResponseVisible"
+    <QuickResponseBar IsVisible="@(_quickResponseVisible && !_planReviewVisible)"
                       Options="_quickResponseOptions"
                       OnResponse="HandleQuickResponse" />
+
+    @* Plan review bar *@
+    <PlanReviewBar IsVisible="_planReviewVisible"
+                   OnAction="HandlePlanReviewAction" />
 
     @* Input area *@
     <InputArea OnSend="HandleSend" OnCancel="HandleCancel" IsStreaming="ChatState.IsStreaming"
@@ -154,6 +158,7 @@
     private string? _operatingSessionId;
     private bool _quickResponseVisible;
     private List<string> _quickResponseOptions = [];
+    private bool _planReviewVisible;
 
     protected override void OnInitialized()
     {
@@ -237,6 +242,33 @@
         return HandleSend(new ChatInputMessage { Text = response });
     }
 
+    private async Task HandlePlanReviewAction(PlanReviewAction action)
+    {
+        _planReviewVisible = false;
+
+        switch (action)
+        {
+            case PlanReviewAction.Approve:
+                await HandlePermissionModeChanged("bypassAll");
+                await HandleSend(new ChatInputMessage
+                {
+                    Text = "플랜을 승인합니다. 구현을 진행해주세요."
+                });
+                break;
+
+            case PlanReviewAction.Advice:
+                StateHasChanged();
+                break;
+
+            case PlanReviewAction.Reject:
+                await HandleSend(new ChatInputMessage
+                {
+                    Text = "플랜을 거절합니다. 다른 접근 방식을 제안해주세요."
+                });
+                break;
+        }
+    }
+
     private Task HandleSend(ChatInputMessage input)
     {
         if (ChatState.CurrentSession == null || (string.IsNullOrWhiteSpace(input.Text) && input.Attachments.Count == 0))
@@ -244,6 +276,7 @@
 
         _quickResponseVisible = false;
         _quickResponseOptions = [];
+        _planReviewVisible = false;
 
         _ = Task.Run(() => ProcessMessageAsync(input));
         return Task.CompletedTask;
@@ -440,10 +473,22 @@
             ChatState.SetStreaming(false, session.Id);
             _shouldAutoScroll = true;
 
-            // Detect if the assistant is asking a question
-            var (isQuestion, options) = QuestionDetector.Detect(assistantMsg);
-            _quickResponseVisible = isQuestion;
-            _quickResponseOptions = options;
+            // Detect plan completion
+            if (session.PermissionMode == "plan")
+            {
+                _planReviewVisible = true;
+                _quickResponseVisible = false;
+                _quickResponseOptions = [];
+            }
+            else
+            {
+                _planReviewVisible = false;
+
+                // Detect if the assistant is asking a question
+                var (isQuestion, options) = QuestionDetector.Detect(assistantMsg);
+                _quickResponseVisible = isQuestion;
+                _quickResponseOptions = options;
+            }
 
             await InvokeAsync(StateHasChanged);
             await SessionService.SaveSessionAsync(session);
