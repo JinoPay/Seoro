@@ -1,0 +1,141 @@
+@using Markdig
+@using Cominomi.Shared.Models
+@using Cominomi.Shared.Services
+@using Cominomi.Shared.Components.Tools
+
+<div class="activity-summary @(_expanded ? "expanded" : "")">
+    <div class="activity-summary-header" @onclick="Toggle">
+        @if (SummaryInfo.HasErrors)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
+                     Style="width: 16px; height: 16px;" />
+        }
+        else
+        {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
+                     Style="width: 16px; height: 16px;" />
+        }
+
+        <span class="activity-summary-text">@SummaryInfo.SummaryText</span>
+
+        @if (SummaryInfo.FileChanges.Count > 0)
+        {
+            <div class="activity-summary-files">
+                @foreach (var file in SummaryInfo.FileChanges)
+                {
+                    <span class="file-badge @GetBadgeClass(file.ToolAction)">
+                        @file.FileName
+                    </span>
+                }
+            </div>
+        }
+
+        @if (Duration.HasValue)
+        {
+            <span class="activity-summary-duration">@FormatDuration(Duration.Value)</span>
+        }
+
+        <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                 Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px;" />
+    </div>
+
+    @if (_expanded)
+    {
+        <div class="activity-summary-body">
+            @foreach (var (group, idx) in ActivityGroups.Select((g, i) => (g, i)))
+            {
+                @if (group.Type == ContentGroupType.Thinking)
+                {
+                    var thinkingText = group.Parts[0].Text ?? "";
+                    <div class="thinking-block @(_thinkingExpanded.Contains(idx) ? "expanded" : "")"
+                         @onclick:stopPropagation="true"
+                         @onclick="@(() => ToggleThinking(idx))">
+                        <div class="thinking-header">
+                            <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
+                                     Style="width: 14px; height: 14px; opacity: 0.6;" />
+                            <span>@GetThinkingPreview(thinkingText, _thinkingExpanded.Contains(idx))</span>
+                            <MudIcon Icon="@(_thinkingExpanded.Contains(idx) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                     Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;" />
+                        </div>
+                        @if (_thinkingExpanded.Contains(idx))
+                        {
+                            <div class="thinking-content">
+                                @((MarkupString)Markdown.ToHtml(thinkingText, _pipeline))
+                            </div>
+                        }
+                    </div>
+                }
+                else if (group.Type == ContentGroupType.ToolGroup)
+                {
+                    <ToolGroupCard Group="group" IsActive="false" />
+                }
+                else if (group.Type == ContentGroupType.Text)
+                {
+                    var text = group.Parts[0].Text ?? "";
+                    <div class="intermediate-text @(_intermediateExpanded.Contains(idx) ? "expanded" : "")"
+                         @onclick:stopPropagation="true"
+                         @onclick="@(() => ToggleIntermediate(idx))">
+                        <span class="intermediate-text-content">
+                            @((MarkupString)Markdown.ToHtml(text, _pipeline))
+                        </span>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<ContentGroup> ActivityGroups { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public ActivitySummaryInfo SummaryInfo { get; set; } = default!;
+
+    [Parameter]
+    public TimeSpan? Duration { get; set; }
+
+    private bool _expanded;
+    private readonly HashSet<int> _thinkingExpanded = [];
+    private readonly HashSet<int> _intermediateExpanded = [];
+
+    private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
+    private void Toggle() => _expanded = !_expanded;
+
+    private void ToggleThinking(int index)
+    {
+        if (!_thinkingExpanded.Remove(index))
+            _thinkingExpanded.Add(index);
+    }
+
+    private void ToggleIntermediate(int index)
+    {
+        if (!_intermediateExpanded.Remove(index))
+            _intermediateExpanded.Add(index);
+    }
+
+    private static string GetThinkingPreview(string text, bool isExpanded)
+    {
+        if (isExpanded || string.IsNullOrWhiteSpace(text))
+            return "생각 중...";
+        var preview = text.Trim().ReplaceLineEndings(" ");
+        return preview.Length <= 80 ? preview : preview[..80] + "...";
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalSeconds < 60)
+            return $"{(int)duration.TotalSeconds}초";
+        return $"{(int)duration.TotalMinutes}분 {duration.Seconds}초";
+    }
+
+    private static string GetBadgeClass(string action) => action switch
+    {
+        "Write" => "file-badge-created",
+        "Edit" => "file-badge-modified",
+        _ => "file-badge-read"
+    };
+}
