@@ -12,6 +12,13 @@ public enum StreamingPhase
     UsingTool
 }
 
+public enum RightPanelMode
+{
+    None,
+    Diff,
+    Context
+}
+
 public class SessionStreamingState
 {
     public bool IsStreaming { get; set; }
@@ -25,7 +32,7 @@ public class ChatState : IDisposable
     public Session? CurrentSession { get; private set; }
     public bool IsSpotlightActive { get; private set; }
     public string? PendingMessage { get; private set; }
-    public bool IsDiffPanelOpen { get; private set; }
+    public RightPanelMode RightPanel { get; private set; }
 
     private readonly ConcurrentDictionary<string, SessionStreamingState> _streamingStates = new();
     private Timer? _debounceTimer;
@@ -187,9 +194,15 @@ public class ChatState : IDisposable
         return msg;
     }
 
-    public void ToggleDiffPanel()
+    public void SetRightPanel(RightPanelMode mode)
     {
-        IsDiffPanelOpen = !IsDiffPanelOpen;
+        RightPanel = mode;
+        NotifyStateChanged();
+    }
+
+    public void ToggleRightPanel(RightPanelMode mode)
+    {
+        RightPanel = RightPanel == mode ? RightPanelMode.None : mode;
         NotifyStateChanged();
     }
 

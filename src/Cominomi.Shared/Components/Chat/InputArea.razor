@@ -57,7 +57,7 @@
                           ReadOnly="IsStreaming"
                           OnKeyDown="HandleKeyDown"
                           Class="flex-grow-1"
-                          Style="font-size: 0.9rem;" />
+                          Style="font-size: var(--text-base);" />
 
             @if (IsStreaming)
             {
@@ -87,7 +87,7 @@
             <MudSelect T="string" Value="Model" ValueChanged="HandleModelChanged"
                        Variant="Variant.Text" Dense="true" Margin="Margin.Dense"
                        Disabled="Disabled || IsStreaming"
-                       Style="max-width: 160px; font-size: 0.72rem;"
+                       Style="max-width: 160px; font-size: var(--text-xs);"
                        AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft">
                 @foreach (var model in ModelDefinitions.All)
                 {
@@ -96,7 +96,7 @@
             </MudSelect>
             @if (!string.IsNullOrEmpty(ResolvedModel))
             {
-                <span style="font-size: 0.68rem; opacity: 0.4;">@ResolvedModel</span>
+                <span style="font-size: var(--text-xs); opacity: 0.4;">@ResolvedModel</span>
             }
         </div>
     </div>
