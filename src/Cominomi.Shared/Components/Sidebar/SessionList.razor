@@ -5,104 +5,121 @@
 @inject IDialogService DialogService
 @implements IDisposable
 
-<div style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
+<div class="sidebar-tree">
     @if (_workspaces.Count > 0)
     {
-        @* Workspace selector *@
-        <div class="workspace-selector">
-            @foreach (var ws in _workspaces)
+        @* Header *@
+        <div class="tree-header">
+            <span class="tree-header-label">Workspaces</span>
+            <div class="tree-header-actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                               Style="width: 24px; height: 24px; opacity: 0.5;"
+                               OnClick="@(() => _workspaceDialogOpen = true)" />
+            </div>
+        </div>
+
+        @* Tree body *@
+        <div class="tree-body">
+            @foreach (var group in _workspaces.GroupBy(GetProjectName))
             {
-                var isActive = _expandedWorkspaceId == ws.Id;
-                <div class="workspace-item @(isActive ? "active" : "")"
-                     @onclick="@(() => OnWorkspaceSelected(ws.Id))">
-                    <span class="workspace-name">@ws.Name</span>
-                    @if (ws.Status == WorkspaceStatus.Error)
+                var projectName = group.Key;
+                var isExpanded = _expandedProjects.Contains(projectName);
+                var workspacesInGroup = group.OrderByDescending(w => w.UpdatedAt).ToList();
+
+                <div @key="projectName">
+                    @* Project header *@
+                    <div class="project-header" @onclick="@(() => ToggleProject(projectName))">
+                        <span class="project-letter">@projectName[0]</span>
+                        <span class="project-name">@projectName</span>
+                        @if (isExpanded)
+                        {
+                            <div class="project-actions">
+                                @{
+                                    var readyWs = workspacesInGroup.FirstOrDefault(w => w.Status == WorkspaceStatus.Ready);
+                                }
+                                @if (readyWs != null)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                                                   Style="width: 20px; height: 20px; opacity: 0.5;"
+                                                   OnClick="@(() => CreateNewChat(readyWs))"
+                                                   OnClickStopPropagation="true" />
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    @* Expanded content *@
+                    @if (isExpanded)
                     {
-                        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
-                                 Style="width: 12px; height: 12px;" />
+                        var showSubheaders = workspacesInGroup.Count > 1;
+
+                        @foreach (var ws in workspacesInGroup)
+                        {
+                            @if (showSubheaders)
+                            {
+                                <div class="workspace-subheader">
+                                    <span>@ws.Name</span>
+                                    @if (ws.Status == WorkspaceStatus.Error)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
+                                                 Style="width: 12px; height: 12px;" />
+                                    }
+                                    @if (ws.Status == WorkspaceStatus.Ready && !_isCreatingSession)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                                                       Style="width: 16px; height: 16px; opacity: 0.4;"
+                                                       OnClick="@(() => CreateNewChat(ws))"
+                                                       OnClickStopPropagation="true" />
+                                    }
+                                </div>
+                            }
+
+                            @if (_sessionCache.TryGetValue(ws.Id, out var sessions))
+                            {
+                                @foreach (var session in sessions)
+                                {
+                                    var isActive = ChatState.CurrentSession?.Id == session.Id;
+                                    var isArchived = session.Status == SessionStatus.Archived;
+
+                                    <div @key="session.Id"
+                                         class="tree-session @(isActive ? "active" : "") @(isArchived ? "archived" : "")"
+                                         @onclick="@(() => SelectSession(session, ws))">
+
+                                        <div class="tree-session-actions">
+                                            @if (session.Status == SessionStatus.Merged)
+                                            {
+                                                <MudIconButton Icon="@Icons.Material.Filled.CleaningServices" Size="Size.Small"
+                                                               Color="Color.Success" Style="width: 20px; height: 20px;"
+                                                               OnClick="@(() => CleanupSession(session))"
+                                                               OnClickStopPropagation="true" />
+                                            }
+                                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                                           Style="width: 20px; height: 20px; opacity: 0.4;"
+                                                           OnClick="@(() => DeleteSession(session))"
+                                                           OnClickStopPropagation="true" />
+                                        </div>
+
+                                        <span class="status-dot @GetStatusDotClass(session.Status)"></span>
+                                        @if (ChatState.IsSessionStreaming(session.Id))
+                                        {
+                                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                                 Style="width: 10px; height: 10px; flex-shrink: 0; margin-top: 5px;" Color="Color.Primary" />
+                                        }
+
+                                        <div class="tree-session-info">
+                                            <span class="tree-session-title">@session.Title</span>
+                                            @if (!string.IsNullOrEmpty(session.BranchName))
+                                            {
+                                                <span class="tree-session-branch">@session.BranchName</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        }
                     }
                 </div>
             }
-        </div>
-
-        @* New chat button *@
-        @if (_expandedWorkspaceId != null)
-        {
-            var ws = _workspaces.FirstOrDefault(w => w.Id == _expandedWorkspaceId);
-            @if (ws != null)
-            {
-                <div class="new-chat-btn" @onclick="@(() => CreateNewChat(ws))"
-                     style="@(ws.Status != WorkspaceStatus.Ready || _isCreatingSession ? "opacity: 0.4; pointer-events: none;" : "")">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Style="width: 14px; height: 14px;" />
-                    <span>새 대화</span>
-                </div>
-            }
-        }
-
-        @* Session list *@
-        <div style="overflow-y: auto; flex: 1; min-height: 0; padding: var(--space-1) 0;">
-            @if (_expandedWorkspaceId != null && _sessionCache.TryGetValue(_expandedWorkspaceId, out var sessions))
-            {
-                @foreach (var session in sessions)
-                {
-                    var isActive = ChatState.CurrentSession?.Id == session.Id;
-                    var isArchived = session.Status == SessionStatus.Archived;
-
-                    <div @key="session.Id" class="session-item @(isActive ? "active" : "") @(isArchived ? "archived" : "")"
-                         style="@(isArchived ? "opacity: 0.35;" : "")"
-                         @onclick="@(() => SelectSession(session))">
-
-                        <div class="session-actions">
-                            @if (session.Status == SessionStatus.Merged)
-                            {
-                                <MudIconButton Icon="@Icons.Material.Filled.CleaningServices" Size="Size.Small"
-                                               Color="Color.Success" Style="width: 20px; height: 20px;"
-                                               OnClick="@(() => CleanupSession(session))"
-                                               OnClickStopPropagation="true" />
-                            }
-                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                                           Style="width: 20px; height: 20px; opacity: 0.4;"
-                                           OnClick="@(() => DeleteSession(session))"
-                                           OnClickStopPropagation="true" />
-                        </div>
-
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span class="status-dot @GetStatusDotClass(session.Status)"></span>
-                            @if (ChatState.IsSessionStreaming(session.Id))
-                            {
-                                <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                     Style="width: 10px; height: 10px;" Color="Color.Primary" />
-                            }
-                            <span class="session-title">@session.Title</span>
-                        </div>
-
-                        <div class="session-meta">
-                            @if (!string.IsNullOrEmpty(session.BranchName))
-                            {
-                                <span class="session-branch">@session.BranchName</span>
-                            }
-                            <span style="margin-left: auto;">@session.UpdatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
-                        </div>
-                    </div>
-                }
-
-                @if (sessions.Count == 0)
-                {
-                    <div style="padding: var(--space-4); font-size: var(--text-sm); opacity: 0.3; text-align: center;">
-                        대화가 없습니다
-                    </div>
-                }
-            }
-        </div>
-
-        @* Bottom actions *@
-        <div style="padding: var(--space-2); flex-shrink: 0; border-top: 1px solid var(--border-subtle);">
-            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" FullWidth="true"
-                       StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="@(() => _workspaceDialogOpen = true)"
-                       Style="text-transform: none; font-size: var(--text-sm); border-radius: var(--radius-sm);">
-                워크스페이스 추가
-            </MudButton>
         </div>
     }
     else
@@ -126,7 +143,7 @@
 
 @code {
     private List<Workspace> _workspaces = [];
-    private string? _expandedWorkspaceId;
+    private HashSet<string> _expandedProjects = new();
     private Dictionary<string, List<Session>> _sessionCache = new();
     private bool _workspaceDialogOpen;
     private bool _isCreatingSession;
@@ -144,40 +161,72 @@
                         ?? _workspaces.FirstOrDefault();
         if (currentWs != null)
         {
-            await ExpandWorkspace(currentWs);
+            var projectName = GetProjectName(currentWs);
+            _expandedProjects.Add(projectName);
+            await LoadSessionsForProject(projectName);
+
+            ChatState.SetWorkspace(currentWs);
+
+            // Auto-restore last active session
+            if (!string.IsNullOrEmpty(settings.LastSessionId)
+                && _sessionCache.TryGetValue(currentWs.Id, out var cached))
+            {
+                var lastSession = cached.FirstOrDefault(s => s.Id == settings.LastSessionId);
+                if (lastSession != null)
+                    await SelectSession(lastSession, currentWs);
+            }
         }
     }
 
-    private async Task OnWorkspaceSelected(string wsId)
+    private static string GetProjectName(Workspace ws)
     {
-        var ws = _workspaces.FirstOrDefault(w => w.Id == wsId);
-        if (ws != null)
-            await ExpandWorkspace(ws);
-    }
-
-    private async Task ExpandWorkspace(Workspace ws)
-    {
-        _expandedWorkspaceId = ws.Id;
-        ChatState.SetWorkspace(ws);
-
-        if (!_sessionCache.ContainsKey(ws.Id))
+        if (!string.IsNullOrEmpty(ws.RepoUrl))
         {
-            var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
-            _sessionCache[ws.Id] = sessions;
-            _ = CheckMergeStatuses(ws.Id);
+            var url = ws.RepoUrl.TrimEnd('/');
+            if (url.EndsWith(".git"))
+                url = url[..^4];
+
+            // SSH: git@github.com:org/repo
+            var colonIdx = url.LastIndexOf(':');
+            var slashIdx = url.LastIndexOf('/');
+            if (slashIdx >= 0)
+                return url[(slashIdx + 1)..];
+            if (colonIdx >= 0)
+                return url[(colonIdx + 1)..];
         }
 
-        var settings = await SettingsService.LoadAsync();
-        settings.LastWorkspaceId = ws.Id;
-        await SettingsService.SaveAsync(settings);
-
-        // Auto-restore last active session
-        if (!string.IsNullOrEmpty(settings.LastSessionId)
-            && _sessionCache.TryGetValue(ws.Id, out var cached))
+        if (!string.IsNullOrEmpty(ws.RepoLocalPath))
         {
-            var lastSession = cached.FirstOrDefault(s => s.Id == settings.LastSessionId);
-            if (lastSession != null)
-                await SelectSession(lastSession);
+            return Path.GetFileName(ws.RepoLocalPath.TrimEnd(Path.DirectorySeparatorChar, '/'));
+        }
+
+        return ws.Name;
+    }
+
+    private async Task ToggleProject(string projectName)
+    {
+        if (_expandedProjects.Contains(projectName))
+        {
+            _expandedProjects.Remove(projectName);
+        }
+        else
+        {
+            _expandedProjects.Add(projectName);
+            await LoadSessionsForProject(projectName);
+        }
+    }
+
+    private async Task LoadSessionsForProject(string projectName)
+    {
+        var workspacesInGroup = _workspaces.Where(w => GetProjectName(w) == projectName);
+        foreach (var ws in workspacesInGroup)
+        {
+            if (!_sessionCache.ContainsKey(ws.Id))
+            {
+                var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
+                _sessionCache[ws.Id] = sessions;
+                _ = CheckMergeStatuses(ws.Id);
+            }
         }
     }
 
@@ -205,19 +254,20 @@
     {
         _workspaces = await WorkspaceService.GetWorkspacesAsync();
 
-        if (_expandedWorkspaceId != null && !_workspaces.Any(w => w.Id == _expandedWorkspaceId))
+        // Reload sessions for expanded projects
+        foreach (var projectName in _expandedProjects.ToList())
         {
-            _sessionCache.Remove(_expandedWorkspaceId);
-            var firstWs = _workspaces.FirstOrDefault();
-            if (firstWs != null)
-                await ExpandWorkspace(firstWs);
-            else
-                _expandedWorkspaceId = null;
-        }
-        else if (_expandedWorkspaceId != null)
-        {
-            var sessions = await SessionService.GetSessionsByWorkspaceAsync(_expandedWorkspaceId);
-            _sessionCache[_expandedWorkspaceId] = sessions;
+            var workspacesInGroup = _workspaces.Where(w => GetProjectName(w) == projectName).ToList();
+            if (workspacesInGroup.Count == 0)
+            {
+                _expandedProjects.Remove(projectName);
+                continue;
+            }
+            foreach (var ws in workspacesInGroup)
+            {
+                var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
+                _sessionCache[ws.Id] = sessions;
+            }
         }
     }
 
@@ -231,12 +281,14 @@
         try
         {
             var session = await SessionService.CreatePendingSessionAsync(ws.DefaultModel, ws.Id);
+            ChatState.SetWorkspace(ws);
             ChatState.SetSession(session);
 
             if (_sessionCache.TryGetValue(ws.Id, out var sessions))
                 sessions.Insert(0, session);
 
             var settings = await SettingsService.LoadAsync();
+            settings.LastWorkspaceId = ws.Id;
             settings.LastSessionId = session.Id;
             await SettingsService.SaveAsync(settings);
         }
@@ -247,10 +299,12 @@
         }
     }
 
-    private async Task SelectSession(Session session)
+    private async Task SelectSession(Session session, Workspace? ws = null)
     {
-        // If the session is actively streaming, use the live in-memory object
-        // instead of loading a stale copy from disk
+        ws ??= _workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);
+        if (ws != null)
+            ChatState.SetWorkspace(ws);
+
         var activeSession = ChatState.GetActiveSession(session.Id);
         if (activeSession != null)
         {
@@ -266,6 +320,7 @@
         }
 
         var settings = await SettingsService.LoadAsync();
+        settings.LastWorkspaceId = session.WorkspaceId;
         settings.LastSessionId = session.Id;
         await SettingsService.SaveAsync(settings);
     }

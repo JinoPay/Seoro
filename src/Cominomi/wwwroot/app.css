@@ -126,48 +126,83 @@ html, body {
     font-weight: 600;
 }
 
-/* ===== Workspace & Session Items ===== */
-.workspace-selector {
-    padding: var(--space-2) var(--space-3);
-    border-bottom: 1px solid var(--border-subtle);
-    flex-shrink: 0;
-    overflow-y: auto;
-    max-height: 120px;
+/* ===== Tree Sidebar ===== */
+.sidebar-tree {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
 }
 
-.workspace-item {
+.tree-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-2) var(--space-3);
+    flex-shrink: 0;
+}
+
+.tree-header-label {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.45;
+    font-weight: 600;
+}
+
+.tree-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.tree-body {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    padding-bottom: var(--space-2);
+}
+
+/* Project group */
+.project-header {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: background var(--transition);
     user-select: none;
+    transition: background var(--transition);
 }
 
-.workspace-item:hover {
+.project-header:hover {
     background: rgba(255, 255, 255, 0.04);
 }
 
-.workspace-item.active {
-    background: var(--accent-dim);
+.project-letter {
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-xs);
+    font-weight: 700;
+    flex-shrink: 0;
+    text-transform: uppercase;
 }
 
-.workspace-item .workspace-name {
+.project-name {
     flex: 1;
+    font-size: var(--text-sm);
+    font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: var(--text-sm);
-    font-weight: 500;
 }
 
-.workspace-item.active .workspace-name {
-    font-weight: 600;
-}
-
-.workspace-actions {
+.project-actions {
     display: flex;
     align-items: center;
     gap: 2px;
@@ -175,61 +210,77 @@ html, body {
     transition: opacity var(--transition);
 }
 
-.workspace-item:hover .workspace-actions {
+.project-header:hover .project-actions {
     opacity: 1;
 }
 
-.session-item {
+/* Workspace sub-header (when multiple workspaces share a repo) */
+.workspace-subheader {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
-    margin: 1px var(--space-2);
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3) var(--space-1) 42px;
+    font-size: var(--text-xs);
+    opacity: 0.4;
+    font-weight: 500;
+}
+
+/* Tree session items */
+.tree-session {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3) var(--space-2) 42px;
+    margin: 1px var(--space-1);
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: background var(--transition);
     position: relative;
 }
 
-.session-item:hover {
+.tree-session:hover {
     background: rgba(255, 255, 255, 0.04);
 }
 
-.session-item.active {
+.tree-session.active {
     background: var(--accent-dim);
-    border-left: 2px solid var(--accent);
-    padding-left: calc(var(--space-4) - 2px);
 }
 
-.session-item .session-title {
+.tree-session.archived {
+    opacity: 0.35;
+}
+
+.tree-session-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.tree-session-title {
     font-size: var(--text-sm);
+    font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     line-height: 1.4;
 }
 
-.session-item.active .session-title {
+.tree-session.active .tree-session-title {
     font-weight: 600;
 }
 
-.session-item .session-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--text-xs);
-    opacity: 0.4;
-}
-
-.session-item .session-branch {
+.tree-session-branch {
     font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
     font-size: 0.65rem;
+    opacity: 0.4;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.session-actions {
+.tree-session-actions {
     position: absolute;
     right: var(--space-1);
     top: var(--space-1);
@@ -240,15 +291,17 @@ html, body {
     transition: opacity var(--transition);
 }
 
-.session-item:hover .session-actions {
+.tree-session:hover .tree-session-actions {
     opacity: 1;
 }
 
+/* Status dots */
 .status-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
     flex-shrink: 0;
+    margin-top: 6px;
 }
 
 .status-dot.ready { background: var(--accent); }
@@ -259,28 +312,6 @@ html, body {
 .status-dot.error { background: #f38ba8; }
 .status-dot.pending { background: #a6adc8; opacity: 0.5; }
 .status-dot.archived { background: #585b70; }
-
-.new-chat-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-4);
-    margin: var(--space-1) var(--space-2) var(--space-2);
-    border-radius: var(--radius-full);
-    border: 1px dashed rgba(167, 139, 250, 0.3);
-    background: rgba(167, 139, 250, 0.04);
-    color: var(--accent);
-    cursor: pointer;
-    font-size: var(--text-sm);
-    font-weight: 500;
-    transition: all var(--transition);
-}
-
-.new-chat-btn:hover {
-    background: var(--accent-dim);
-    border-color: var(--border-active);
-}
 
 /* ===== Main Panel ===== */
 .cominomi-main {
