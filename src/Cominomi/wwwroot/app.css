@@ -377,6 +377,200 @@ html, body {
     overflow: hidden;
 }
 
+/* ===== Main Tab Bar ===== */
+.main-tab-bar {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    height: 36px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-default);
+    background: var(--bg-base);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.main-tab-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.main-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0 var(--space-3);
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-family: inherit;
+    white-space: nowrap;
+    position: relative;
+    transition: all var(--transition);
+    border-right: 1px solid var(--border-subtle);
+    min-width: 0;
+}
+
+.main-tab:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+}
+
+.main-tab.active {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.main-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent);
+}
+
+.main-tab-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+}
+
+.main-tab-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    transition: all var(--transition);
+    padding: 0;
+    margin-left: 2px;
+}
+
+.main-tab:hover .main-tab-close {
+    opacity: 0.6;
+}
+
+.main-tab-close:hover {
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ===== All Files View ===== */
+.allfiles-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.allfiles-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-2) var(--space-4);
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.allfiles-title {
+    font-size: var(--text-base);
+    font-weight: 600;
+}
+
+.allfiles-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-2) 0;
+}
+
+.allfiles-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-4);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    transition: background var(--transition);
+    min-height: 28px;
+}
+
+.allfiles-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.allfiles-item.modified .allfiles-name {
+    color: #89b4fa;
+}
+
+.allfiles-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.allfiles-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    gap: var(--space-3);
+    opacity: 0.5;
+    font-size: var(--text-sm);
+}
+
+/* ===== File Diff View ===== */
+.filediff-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.filediff-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.filediff-path {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: var(--text-sm);
+    font-weight: 500;
+}
+
+.filediff-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: var(--text-xs);
+    line-height: 1.6;
+}
+
+.filediff-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-8);
+    opacity: 0.5;
+    font-size: var(--text-sm);
+}
+
 /* ===== Detail Panel (Right) ===== */
 .cominomi-detail {
     background: var(--bg-sidebar);

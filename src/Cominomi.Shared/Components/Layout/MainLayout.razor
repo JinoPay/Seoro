@@ -56,6 +56,13 @@
 
             @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status != SessionStatus.Pending)
             {
+                <MudTooltip Text="All Files">
+                    <MudIconButton Icon="@Icons.Material.Filled.FolderOpen"
+                                   Color="@(ChatState.ActiveTab?.Type == MainTabType.AllFiles ? Color.Primary : Color.Inherit)"
+                                   Size="Size.Small"
+                                   Style="width: 28px; height: 28px;"
+                                   OnClick="@(() => ChatState.OpenAllFilesTab())" />
+                </MudTooltip>
                 <MudTooltip Text="변경사항">
                     <MudIconButton Icon="@Icons.Material.Filled.Difference"
                                    Color="@(ChatState.RightPanel == RightPanelMode.Diff ? Color.Primary : Color.Inherit)"
@@ -73,8 +80,24 @@
             }
         </div>
 
+        @if (ChatState.OpenTabs.Count > 1)
+        {
+            <MainTabBar />
+        }
+
         <div class="main-content">
-            @Body
+            @if (ChatState.ActiveTab?.Type == MainTabType.AllFiles)
+            {
+                <AllFilesView />
+            }
+            else if (ChatState.ActiveTab?.Type == MainTabType.FileDiff && ChatState.ActiveTab.DiffData != null)
+            {
+                <FileDiffView Diff="ChatState.ActiveTab.DiffData" />
+            }
+            else
+            {
+                @Body
+            }
         </div>
     </main>
 

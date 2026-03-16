@@ -1,0 +1,29 @@
+@using Cominomi.Shared.Models
+@inject ChatState ChatState
+
+<div class="main-tab-bar">
+    @foreach (var tab in ChatState.OpenTabs)
+    {
+        <div class="main-tab @(ChatState.ActiveTab?.Id == tab.Id ? "active" : "")"
+             @onclick="@(() => ChatState.SetActiveTab(tab.Id))">
+            <MudIcon Icon="@GetTabIcon(tab)" Size="Size.Small" Style="width: 14px; height: 14px;" />
+            <span class="main-tab-title">@tab.Title</span>
+            @if (tab.Type != MainTabType.Chat)
+            {
+                <button class="main-tab-close" @onclick="@(() => ChatState.CloseTab(tab.Id))" @onclick:stopPropagation="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" Style="width: 12px; height: 12px;" />
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private static string GetTabIcon(MainTab tab) => tab.Type switch
+    {
+        MainTabType.Chat => Icons.Material.Filled.Chat,
+        MainTabType.AllFiles => Icons.Material.Filled.FolderOpen,
+        MainTabType.FileDiff => Icons.Material.Filled.Description,
+        _ => Icons.Material.Filled.Tab
+    };
+}
