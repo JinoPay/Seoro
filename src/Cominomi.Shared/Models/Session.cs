@@ -25,7 +25,8 @@ public class Session
     public string BaseBranch { get; set; } = "";
     public string Model { get; set; } = ModelDefinitions.Default.Id;
     public string WorkspaceId { get; set; } = "default";
-    public string PermissionMode { get; set; } = "default";
+    public string PermissionMode { get; set; } = "bypassAll";
+    public bool ThinkingEnabled { get; set; }
     public AgentType AgentType { get; set; } = AgentType.Code;
     public string CityName { get; set; } = "";
     public SessionStatus Status { get; set; } = SessionStatus.Initializing;

@@ -127,11 +127,18 @@
         }
     </div>
 
+    @* Quick response bar *@
+    <QuickResponseBar IsVisible="_quickResponseVisible"
+                      Options="_quickResponseOptions"
+                      OnResponse="HandleQuickResponse" />
+
     @* Input area *@
     <InputArea OnSend="HandleSend" OnCancel="HandleCancel" IsStreaming="ChatState.IsStreaming"
                Disabled="@(ChatState.CurrentSession == null || ChatState.CurrentSession.Status == SessionStatus.Archived || _isInitializingWorktree)"
-               PermissionMode="@(ChatState.CurrentSession?.PermissionMode ?? "default")"
+               PermissionMode="@(ChatState.CurrentSession?.PermissionMode ?? "bypassAll")"
                PermissionModeChanged="HandlePermissionModeChanged"
+               ThinkingEnabled="@(ChatState.CurrentSession?.ThinkingEnabled ?? false)"
+               ThinkingEnabledChanged="HandleThinkingToggled"
                Model="@(ChatState.CurrentSession?.Model ?? "")"
                OnModelChanged="HandleModelChanged"
                ResolvedModel="@(ChatState.CurrentSession?.ResolvedModel)"
@@ -143,6 +150,8 @@
     private string _selectedBranch = "";
     private bool _isInitializingWorktree;
     private string? _operatingSessionId;
+    private bool _quickResponseVisible;
+    private List<string> _quickResponseOptions = [];
 
     protected override void OnInitialized()
     {
@@ -219,10 +228,20 @@
 
     private bool _shouldAutoScroll;
 
+    private Task HandleQuickResponse(string response)
+    {
+        _quickResponseVisible = false;
+        _quickResponseOptions = [];
+        return HandleSend(new ChatInputMessage { Text = response });
+    }
+
     private Task HandleSend(ChatInputMessage input)
     {
         if (ChatState.CurrentSession == null || (string.IsNullOrWhiteSpace(input.Text) && input.Attachments.Count == 0))
             return Task.CompletedTask;
+
+        _quickResponseVisible = false;
+        _quickResponseOptions = [];
 
         _ = Task.Run(() => ProcessMessageAsync(input));
         return Task.CompletedTask;
@@ -311,6 +330,7 @@
                 session.WorktreePath,
                 session.Model,
                 session.PermissionMode,
+                thinkingEnabled: session.ThinkingEnabled,
                 sessionId: session.Id,
                 conversationId: conversationId,
                 systemPrompt: systemPrompt))
@@ -330,6 +350,10 @@
                             session.ConversationId = evt.SessionId;
                         break;
 
+                    case "content_block_start" when evt.ContentBlock?.Type == "thinking":
+                        ChatState.SetPhase(StreamingPhase.Thinking, sessionId: session.Id);
+                        break;
+
                     case "content_block_start" when evt.ContentBlock?.Type == "tool_use":
                         currentToolCall = new ToolCall
                         {
@@ -345,6 +369,11 @@
                         {
                             ChatState.AppendText(assistantMsg, evt.Delta.Text);
                             ChatState.SetPhase(StreamingPhase.WritingText, sessionId: session.Id);
+                        }
+                        else if (evt.Delta?.Type == "thinking_delta" && evt.Delta.Thinking != null)
+                        {
+                            ChatState.AppendThinking(assistantMsg, evt.Delta.Thinking);
+                            ChatState.SetPhase(StreamingPhase.Thinking, sessionId: session.Id);
                         }
                         else if (evt.Delta?.Type == "input_json_delta" && evt.Delta.PartialJson != null && currentToolCall != null)
                         {
@@ -407,6 +436,12 @@
             ChatState.FinishMessage(assistantMsg);
             ChatState.SetStreaming(false, session.Id);
             _shouldAutoScroll = true;
+
+            // Detect if the assistant is asking a question
+            var (isQuestion, options) = QuestionDetector.Detect(assistantMsg);
+            _quickResponseVisible = isQuestion;
+            _quickResponseOptions = options;
+
             await InvokeAsync(StateHasChanged);
             await SessionService.SaveSessionAsync(session);
 
@@ -428,6 +463,14 @@
                 catch { }
             }
         }
+    }
+
+    private async Task HandleThinkingToggled(bool enabled)
+    {
+        if (ChatState.CurrentSession == null) return;
+        ChatState.CurrentSession.ThinkingEnabled = enabled;
+        ChatState.NotifyStateChanged();
+        await SessionService.SaveSessionAsync(ChatState.CurrentSession);
     }
 
     private async Task HandleModelChanged(string model)

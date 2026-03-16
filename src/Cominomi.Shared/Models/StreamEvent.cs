@@ -88,6 +88,9 @@ public class ContentDelta
 
     [JsonPropertyName("partial_json")]
     public string? PartialJson { get; set; }
+
+    [JsonPropertyName("thinking")]
+    public string? Thinking { get; set; }
 }
 
 public class UsageInfo

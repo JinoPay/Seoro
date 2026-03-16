@@ -156,6 +156,25 @@ public class ChatState : IDisposable
         NotifyStateChanged();
     }
 
+    public void AppendThinking(ChatMessage message, string text)
+    {
+        var lastPart = message.Parts.Count > 0 ? message.Parts[^1] : null;
+        if (lastPart?.Type == ContentPartType.Thinking)
+        {
+            lastPart.Text += text;
+        }
+        else
+        {
+            message.Parts.Add(new ContentPart
+            {
+                Type = ContentPartType.Thinking,
+                Text = text
+            });
+        }
+
+        NotifyStateChanged();
+    }
+
     public void AddToolCall(ChatMessage message, ToolCall toolCall)
     {
         message.ToolCalls.Add(toolCall);

@@ -4,7 +4,8 @@ public enum ContentGroupType
 {
     Text,
     ToolGroup,
-    FinalText
+    FinalText,
+    Thinking
 }
 
 public class ContentGroup

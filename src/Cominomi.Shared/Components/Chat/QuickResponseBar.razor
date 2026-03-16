@@ -1,0 +1,19 @@
+@if (IsVisible && Options.Count > 0)
+{
+    <div class="quick-response-bar">
+        @foreach (var option in Options)
+        {
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                       OnClick="@(() => OnResponse.InvokeAsync(option))"
+                       Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
+                @option
+            </MudButton>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public List<string> Options { get; set; } = [];
+    [Parameter] public EventCallback<string> OnResponse { get; set; }
+}

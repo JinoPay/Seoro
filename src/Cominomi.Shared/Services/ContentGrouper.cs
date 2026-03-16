@@ -29,6 +29,22 @@ public static partial class ContentGrouper
                 currentToolGroup ??= new ContentGroup { Type = ContentGroupType.ToolGroup };
                 currentToolGroup.Parts.Add(part);
             }
+            else if (part.Type == ContentPartType.Thinking && !string.IsNullOrEmpty(part.Text))
+            {
+                // Flush any pending tool group
+                if (currentToolGroup != null)
+                {
+                    currentToolGroup.Summary = BuildToolSummary(currentToolGroup.Parts);
+                    groups.Add(currentToolGroup);
+                    currentToolGroup = null;
+                }
+
+                groups.Add(new ContentGroup
+                {
+                    Type = ContentGroupType.Thinking,
+                    Parts = [part]
+                });
+            }
             else if (part.Type == ContentPartType.Text && !string.IsNullOrEmpty(part.Text))
             {
                 // Flush any pending tool group

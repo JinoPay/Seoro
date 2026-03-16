@@ -214,13 +214,15 @@ public class GitService : IGitService
 
     public async Task<string> GetNameStatusAsync(string workingDir, string baseBranch, CancellationToken ct = default)
     {
-        var result = await RunGitAsync($"diff --name-status {baseBranch}...HEAD", workingDir, ct);
+        // Use baseBranch (not baseBranch...HEAD) to include uncommitted working tree changes
+        var result = await RunGitAsync($"diff --name-status {baseBranch}", workingDir, ct);
         return result.Success ? result.Output : "";
     }
 
     public async Task<string> GetUnifiedDiffAsync(string workingDir, string baseBranch, CancellationToken ct = default)
     {
-        var result = await RunGitAsync($"diff {baseBranch}...HEAD", workingDir, ct);
+        // Use baseBranch (not baseBranch...HEAD) to include uncommitted working tree changes
+        var result = await RunGitAsync($"diff {baseBranch}", workingDir, ct);
         return result.Success ? result.Output : "";
     }
 
