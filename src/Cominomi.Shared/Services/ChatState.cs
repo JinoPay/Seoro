@@ -35,6 +35,7 @@ public class ChatState : IDisposable
     public RightPanelMode RightPanel { get; private set; }
 
     private readonly ConcurrentDictionary<string, SessionStreamingState> _streamingStates = new();
+    private readonly ConcurrentDictionary<string, Session> _activeSessions = new();
     private Timer? _debounceTimer;
     private volatile bool _pendingNotification;
     private const int DebounceMs = 50;
@@ -61,6 +62,16 @@ public class ChatState : IDisposable
 
     public IReadOnlyList<string> GetStreamingSessionIds()
         => _streamingStates.Where(kv => kv.Value.IsStreaming).Select(kv => kv.Key).ToList();
+
+    // Active session registry: holds live in-memory session objects during streaming
+    public void RegisterActiveSession(Session session)
+        => _activeSessions[session.Id] = session;
+
+    public void UnregisterActiveSession(string sessionId)
+        => _activeSessions.TryRemove(sessionId, out _);
+
+    public Session? GetActiveSession(string sessionId)
+        => _activeSessions.TryGetValue(sessionId, out var session) ? session : null;
 
     public void SetWorkspace(Workspace workspace)
     {
