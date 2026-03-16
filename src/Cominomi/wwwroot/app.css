@@ -225,6 +225,7 @@ html, body {
     box-shadow: var(--cominomi-shadow-float);
     padding: 12px 16px;
     transition: border-color var(--cominomi-transition);
+    will-change: transform;
 }
 
 .input-area-float:focus-within {
@@ -473,6 +474,7 @@ html, body {
     margin: 4px 0;
     overflow: hidden;
     transition: border-color var(--cominomi-transition);
+    will-change: transform;
 }
 
 .tool-card.running {

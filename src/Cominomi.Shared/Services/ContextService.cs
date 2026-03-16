@@ -63,28 +63,28 @@ public class ContextService : IContextService
         return Task.CompletedTask;
     }
 
-    public Task<List<PlanFile>> GetPlansAsync(string worktreePath)
+    public async Task<List<PlanFile>> GetPlansAsync(string worktreePath)
     {
         var plans = new List<PlanFile>();
         var plansPath = Path.Combine(worktreePath, ContextDir, PlansDir);
 
         if (!Directory.Exists(plansPath))
-            return Task.FromResult(plans);
+            return plans;
 
         foreach (var file in Directory.GetFiles(plansPath, "*.md"))
         {
             plans.Add(new PlanFile
             {
                 Name = Path.GetFileNameWithoutExtension(file),
-                Content = File.ReadAllText(file),
+                Content = await File.ReadAllTextAsync(file),
                 LastModified = File.GetLastWriteTimeUtc(file)
             });
         }
 
-        return Task.FromResult(plans.OrderByDescending(p => p.LastModified).ToList());
+        return plans.OrderByDescending(p => p.LastModified).ToList();
     }
 
-    public Task EnsureContextDirectoryAsync(string worktreePath)
+    public async Task EnsureContextDirectoryAsync(string worktreePath)
     {
         var contextPath = Path.Combine(worktreePath, ContextDir);
         Directory.CreateDirectory(contextPath);
@@ -94,24 +94,22 @@ public class ContextService : IContextService
         // Create empty files if they don't exist
         var notesPath = Path.Combine(contextPath, NotesFile);
         if (!File.Exists(notesPath))
-            File.WriteAllText(notesPath, "");
+            await File.WriteAllTextAsync(notesPath, "");
 
         var todosPath = Path.Combine(contextPath, TodosFile);
         if (!File.Exists(todosPath))
-            File.WriteAllText(todosPath, "");
+            await File.WriteAllTextAsync(todosPath, "");
 
         // Add .context to .gitignore if not already there
         var gitignorePath = Path.Combine(worktreePath, ".gitignore");
         if (File.Exists(gitignorePath))
         {
-            var content = File.ReadAllText(gitignorePath);
+            var content = await File.ReadAllTextAsync(gitignorePath);
             if (!content.Contains(".context/"))
             {
-                File.AppendAllText(gitignorePath, "\n.context/\n");
+                await File.AppendAllTextAsync(gitignorePath, "\n.context/\n");
             }
         }
-
-        return Task.CompletedTask;
     }
 
     public async Task ArchiveContextAsync(string worktreePath, string archivePath)

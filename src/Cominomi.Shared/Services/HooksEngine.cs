@@ -80,7 +80,15 @@ public class HooksEngine : IHooksEngine
                 using var process = Process.Start(psi);
                 if (process != null)
                 {
-                    await process.WaitForExitAsync();
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    try
+                    {
+                        await process.WaitForExitAsync(cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        try { process.Kill(); } catch { }
+                    }
                 }
             }
             catch

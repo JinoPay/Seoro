@@ -109,37 +109,57 @@
         ChatState.OnChange += HandleStateChanged;
     }
 
+    private bool _isLoadingBranches;
+
     private async void HandleStateChanged()
     {
-        await InvokeAsync(async () =>
+        await InvokeAsync(() =>
         {
-            // Load branches when a Pending session is selected
-            if (ChatState.CurrentSession?.Status == SessionStatus.Pending && _branches.Count == 0)
-            {
-                await LoadBranches();
-            }
+            // Check if we need branches but don't block render on it
+            bool needsBranches = ChatState.CurrentSession?.Status == SessionStatus.Pending
+                                 && _branches.Count == 0 && !_isLoadingBranches;
 
             // Auto-send pending message (e.g., conflict resolution prompt)
             var pendingMsg = ChatState.ConsumePendingMessage();
             if (pendingMsg != null && ChatState.CurrentSession != null && !ChatState.IsStreaming)
             {
                 StateHasChanged();
-                await HandleSend(new ChatInputMessage { Text = pendingMsg });
+                _ = HandleSend(new ChatInputMessage { Text = pendingMsg });
                 return;
             }
 
-            StateHasChanged();
+            StateHasChanged(); // Render immediately without waiting for branches
+
+            if (needsBranches)
+            {
+                _ = LoadBranchesInBackground(); // Fire-and-forget
+            }
         });
     }
 
-    private async Task LoadBranches()
+    private async Task LoadBranchesInBackground()
     {
-        var ws = ChatState.CurrentWorkspace;
-        if (ws == null || string.IsNullOrEmpty(ws.RepoLocalPath)) return;
+        _isLoadingBranches = true;
+        try
+        {
+            var ws = ChatState.CurrentWorkspace;
+            if (ws == null || string.IsNullOrEmpty(ws.RepoLocalPath)) return;
 
-        _branches = await GitService.ListBranchesAsync(ws.RepoLocalPath);
-        var defaultBranch = await GitService.DetectDefaultBranchAsync(ws.RepoLocalPath);
-        _selectedBranch = defaultBranch ?? _branches.FirstOrDefault() ?? "";
+            // Run both git commands in parallel instead of sequentially
+            var branchesTask = GitService.ListBranchesAsync(ws.RepoLocalPath);
+            var defaultBranchTask = GitService.DetectDefaultBranchAsync(ws.RepoLocalPath);
+            await Task.WhenAll(branchesTask, defaultBranchTask);
+
+            _branches = branchesTask.Result;
+            var defaultBranch = defaultBranchTask.Result;
+            _selectedBranch = defaultBranch ?? _branches.FirstOrDefault() ?? "";
+
+            await InvokeAsync(StateHasChanged); // Re-render with branches loaded
+        }
+        finally
+        {
+            _isLoadingBranches = false;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -19,7 +19,7 @@ public class SessionStreamingState
     public string? ActiveToolName { get; set; }
 }
 
-public class ChatState
+public class ChatState : IDisposable
 {
     public Workspace? CurrentWorkspace { get; private set; }
     public Session? CurrentSession { get; private set; }
@@ -28,6 +28,9 @@ public class ChatState
     public bool IsDiffPanelOpen { get; private set; }
 
     private readonly ConcurrentDictionary<string, SessionStreamingState> _streamingStates = new();
+    private Timer? _debounceTimer;
+    private volatile bool _pendingNotification;
+    private const int DebounceMs = 50;
 
     public event Action? OnChange;
 
@@ -168,5 +171,37 @@ public class ChatState
         NotifyStateChanged();
     }
 
-    public void NotifyStateChanged() => OnChange?.Invoke();
+    public void NotifyStateChanged()
+    {
+        if (HasAnyStreaming())
+        {
+            // During streaming, debounce to reduce re-render flood
+            _pendingNotification = true;
+            _debounceTimer ??= new Timer(_ =>
+            {
+                if (_pendingNotification)
+                {
+                    _pendingNotification = false;
+                    OnChange?.Invoke();
+                }
+            }, null, DebounceMs, DebounceMs);
+        }
+        else
+        {
+            // Not streaming: fire immediately, stop timer
+            if (_debounceTimer != null)
+            {
+                _debounceTimer.Dispose();
+                _debounceTimer = null;
+            }
+            _pendingNotification = false;
+            OnChange?.Invoke();
+        }
+    }
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
+        _debounceTimer = null;
+    }
 }

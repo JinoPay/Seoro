@@ -464,8 +464,18 @@
         _ => "pending"
     };
 
+    private string? _lastSessionId;
+    private bool _lastHasStreaming;
+
     private async void OnStateChanged()
     {
+        // Only re-render when relevant state changes (session selection or streaming status)
+        var currentId = ChatState.CurrentSession?.Id;
+        var hasStreaming = ChatState.HasAnyStreaming();
+        if (currentId == _lastSessionId && hasStreaming == _lastHasStreaming)
+            return;
+        _lastSessionId = currentId;
+        _lastHasStreaming = hasStreaming;
         await InvokeAsync(StateHasChanged);
     }
 
