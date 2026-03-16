@@ -188,7 +188,14 @@
     private void HandleInputValueChanged(string value)
     {
         if (_suppressInputUpdates) return;
+        var wasEmpty = string.IsNullOrWhiteSpace(_inputText);
         _inputText = value;
+        var isEmpty = string.IsNullOrWhiteSpace(_inputText);
+        if (wasEmpty != isEmpty)
+        {
+            _forceRender = true;
+            StateHasChanged();
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -201,7 +208,7 @@
             _handlersRegistered = true;
         }
         // Re-register enter handler every render (textarea DOM recreation guard)
-        try { await JSRuntime.InvokeVoidAsync("registerEnterHandler", "input-area"); }
+        try { await JSRuntime.InvokeVoidAsync("registerEnterHandler", "input-area", _dotNetRef); }
         catch { }
     }
 
@@ -278,6 +285,12 @@
         {
             await Send();
         }
+    }
+
+    [JSInvokable]
+    public async Task SendFromJs()
+    {
+        await Send();
     }
 
     [Parameter] public Session? CurrentSession { get; set; }

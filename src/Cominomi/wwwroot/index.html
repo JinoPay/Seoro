@@ -91,14 +91,15 @@
             if (el._dropHandler) el.removeEventListener('drop', el._dropHandler);
         };
 
-        window.registerEnterHandler = function(elementId) {
+        window.registerEnterHandler = function(elementId, dotNetRef) {
             var container = document.getElementById(elementId);
             if (!container) return;
             var textarea = container.querySelector('textarea');
             if (!textarea || textarea._enterHandler) return; // Already registered → skip
             textarea._enterHandler = function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
                     e.preventDefault();
+                    dotNetRef.invokeMethodAsync('SendFromJs');
                 }
             };
             textarea.addEventListener('keydown', textarea._enterHandler);
