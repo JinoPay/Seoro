@@ -1,4 +1,5 @@
 @using Markdig
+@using Cominomi.Shared.Models
 @using Cominomi.Shared.Services
 @inject ChatState ChatState
 
@@ -35,19 +36,38 @@
             </MudStack>
         }
 
-        @if (Message.ToolCalls.Count > 0)
+        @if (Message.Parts.Count > 0)
         {
-            @foreach (var tool in Message.ToolCalls)
+            @foreach (var part in Message.Parts)
             {
-                <ToolCallCard Tool="tool" />
+                @if (part.Type == ContentPartType.ToolCall && part.ToolCall != null)
+                {
+                    <ToolCallCard Tool="part.ToolCall" />
+                }
+                else if (part.Type == ContentPartType.Text && !string.IsNullOrEmpty(part.Text))
+                {
+                    <div class="markdown-body">
+                        @((MarkupString)Markdown.ToHtml(part.Text, _pipeline))
+                    </div>
+                }
             }
         }
-
-        @if (!string.IsNullOrEmpty(Message.Text))
+        else
         {
-            <div class="markdown-body">
-                @((MarkupString)Markdown.ToHtml(Message.Text, _pipeline))
-            </div>
+            @* Fallback for old messages without Parts *@
+            @if (Message.ToolCalls.Count > 0)
+            {
+                @foreach (var tool in Message.ToolCalls)
+                {
+                    <ToolCallCard Tool="tool" />
+                }
+            }
+            @if (!string.IsNullOrEmpty(Message.Text))
+            {
+                <div class="markdown-body">
+                    @((MarkupString)Markdown.ToHtml(Message.Text, _pipeline))
+                </div>
+            }
         }
 
         @if (Message.IsStreaming)
