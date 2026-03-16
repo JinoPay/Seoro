@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Cominomi.Shared.Models;
 
@@ -190,4 +191,60 @@ public static partial class ContentGrouper
         "agent" => "Agent",
         _ => name
     };
+
+    public static ActivitySummaryInfo BuildActivitySummary(List<ContentGroup> activityGroups)
+    {
+        var info = new ActivitySummaryInfo();
+        var fileChanges = new Dictionary<string, string>();
+
+        foreach (var group in activityGroups)
+        {
+            switch (group.Type)
+            {
+                case ContentGroupType.ToolGroup:
+                    foreach (var part in group.Parts)
+                    {
+                        info.TotalToolCalls++;
+                        if (part.ToolCall?.IsError == true) info.HasErrors = true;
+                        ExtractFilePath(part.ToolCall, fileChanges);
+                    }
+                    break;
+                case ContentGroupType.Thinking:
+                    info.ThinkingBlocks++;
+                    break;
+                case ContentGroupType.Text:
+                    info.TextSegments++;
+                    break;
+            }
+        }
+
+        info.FileChanges = fileChanges
+            .Select(kv => new FileChangeInfo { FilePath = kv.Key, ToolAction = kv.Value })
+            .ToList();
+
+        return info;
+    }
+
+    private static void ExtractFilePath(ToolCall? tool, Dictionary<string, string> fileChanges)
+    {
+        if (tool == null || string.IsNullOrEmpty(tool.Input)) return;
+        var name = NormalizeToolName(tool.Name);
+        if (name is not ("Edit" or "Write")) return;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(tool.Input);
+            var root = doc.RootElement;
+
+            string? path = null;
+            if (root.TryGetProperty("file_path", out var fp))
+                path = fp.GetString();
+            else if (root.TryGetProperty("path", out var p))
+                path = p.GetString();
+
+            if (!string.IsNullOrEmpty(path))
+                fileChanges.TryAdd(path, name);
+        }
+        catch { /* input may not be valid JSON */ }
+    }
 }

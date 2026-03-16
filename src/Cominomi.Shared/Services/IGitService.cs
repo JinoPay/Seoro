@@ -20,4 +20,5 @@ public interface IGitService
     Task<GitResult> FetchAsync(string repoDir, CancellationToken ct = default);
     Task<string> GetNameStatusAsync(string workingDir, string baseBranch, CancellationToken ct = default);
     Task<string> GetUnifiedDiffAsync(string workingDir, string baseBranch, CancellationToken ct = default);
+    Task<List<string>> ListTrackedFilesAsync(string workingDir, CancellationToken ct = default);
 }

@@ -235,6 +235,13 @@ public class GitService : IGitService
         return result.Success ? result.Output : "";
     }
 
+    public async Task<List<string>> ListTrackedFilesAsync(string workingDir, CancellationToken ct = default)
+    {
+        var result = await RunGitAsync("ls-files", workingDir, ct);
+        if (!result.Success) return new List<string>();
+        return result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
+    }
+
     public static DiffSummary ParseDiff(string nameStatus, string rawDiff)
     {
         var summary = new DiffSummary();

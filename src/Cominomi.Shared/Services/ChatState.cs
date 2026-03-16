@@ -34,6 +34,10 @@ public class ChatState : IDisposable
     public string? PendingMessage { get; private set; }
     public RightPanelMode RightPanel { get; private set; }
 
+    // Main tab system
+    public List<MainTab> OpenTabs { get; private set; } = new();
+    public MainTab? ActiveTab { get; private set; }
+
     private readonly ConcurrentDictionary<string, SessionStreamingState> _streamingStates = new();
     private readonly ConcurrentDictionary<string, Session> _activeSessions = new();
     private Timer? _debounceTimer;
@@ -83,6 +87,13 @@ public class ChatState : IDisposable
     public void SetSession(Session session)
     {
         CurrentSession = session;
+        // Reset tabs for new session
+        OpenTabs.Clear();
+        ActiveTab = null;
+        EnsureChatTab();
+        // Update chat tab title
+        var chatTab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.Chat);
+        if (chatTab != null) chatTab.Title = session.Title ?? "Chat";
         NotifyStateChanged();
     }
 
@@ -224,6 +235,96 @@ public class ChatState : IDisposable
         var msg = PendingMessage;
         PendingMessage = null;
         return msg;
+    }
+
+    // Tab management
+    public void EnsureChatTab()
+    {
+        if (!OpenTabs.Any(t => t.Type == MainTabType.Chat))
+        {
+            var chatTab = new MainTab
+            {
+                Id = "chat",
+                Type = MainTabType.Chat,
+                Title = CurrentSession?.Title ?? "Chat"
+            };
+            OpenTabs.Insert(0, chatTab);
+        }
+        if (ActiveTab == null)
+        {
+            ActiveTab = OpenTabs.First(t => t.Type == MainTabType.Chat);
+        }
+    }
+
+    public void SetActiveTab(string tabId)
+    {
+        var tab = OpenTabs.FirstOrDefault(t => t.Id == tabId);
+        if (tab != null)
+        {
+            ActiveTab = tab;
+            NotifyStateChanged();
+        }
+    }
+
+    public void CloseTab(string tabId)
+    {
+        var tab = OpenTabs.FirstOrDefault(t => t.Id == tabId);
+        if (tab == null || tab.Type == MainTabType.Chat) return;
+
+        var idx = OpenTabs.IndexOf(tab);
+        OpenTabs.Remove(tab);
+
+        if (ActiveTab?.Id == tabId)
+        {
+            ActiveTab = OpenTabs.ElementAtOrDefault(Math.Min(idx, OpenTabs.Count - 1))
+                        ?? OpenTabs.FirstOrDefault();
+        }
+        NotifyStateChanged();
+    }
+
+    public void OpenAllFilesTab()
+    {
+        var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.AllFiles);
+        if (existing != null)
+        {
+            ActiveTab = existing;
+        }
+        else
+        {
+            var tab = new MainTab
+            {
+                Id = "allfiles",
+                Type = MainTabType.AllFiles,
+                Title = "All Files"
+            };
+            OpenTabs.Add(tab);
+            ActiveTab = tab;
+        }
+        NotifyStateChanged();
+    }
+
+    public void OpenFileDiffTab(string filePath, FileDiff diff)
+    {
+        var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileDiff && t.FilePath == filePath);
+        if (existing != null)
+        {
+            existing.DiffData = diff;
+            ActiveTab = existing;
+        }
+        else
+        {
+            var fileName = Path.GetFileName(filePath);
+            var tab = new MainTab
+            {
+                Type = MainTabType.FileDiff,
+                Title = fileName,
+                FilePath = filePath,
+                DiffData = diff
+            };
+            OpenTabs.Add(tab);
+            ActiveTab = tab;
+        }
+        NotifyStateChanged();
     }
 
     public void SetRightPanel(RightPanelMode mode)

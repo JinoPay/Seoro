@@ -1,5 +1,7 @@
 @inject ISettingsService SettingsService
 @inject IFolderPickerService FolderPickerService
+@inject IGhService GhService
+@inject IClaudeService ClaudeService
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
@@ -9,41 +11,154 @@
         </MudText>
     </TitleContent>
     <DialogContent>
-        <MudStack Spacing="3" Class="pa-2" Style="min-width: 400px;">
-            <MudSelect T="string" @bind-Value="_settings.DefaultModel" Label="기본 모델"
-                       Variant="Variant.Outlined">
-                @foreach (var model in ModelDefinitions.All)
+        <div class="settings-layout">
+            <div class="settings-nav">
+                <button class="settings-nav-item @(_activeSection == "general" ? "active" : "")"
+                        @onclick="@(() => SetSection("general"))">
+                    <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small" />
+                    일반
+                </button>
+                <button class="settings-nav-item @(_activeSection == "ai" ? "active" : "")"
+                        @onclick="@(() => SetSection("ai"))">
+                    <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                    AI 모델
+                </button>
+                <button class="settings-nav-item @(_activeSection == "integrations" ? "active" : "")"
+                        @onclick="@(() => SetSection("integrations"))">
+                    <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small" />
+                    연동
+                </button>
+            </div>
+
+            <div class="settings-content">
+                @if (_activeSection == "general")
                 {
-                    <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                    <div class="settings-section-title">일반</div>
+                    <div class="settings-section-desc">앱의 기본 동작을 설정합니다.</div>
+
+                    <MudStack Spacing="3">
+                        <MudSelect T="string" @bind-Value="_settings.Theme" Label="테마"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem T="string" Value="@("dark")">다크</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("light")">라이트</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("system")">시스템</MudSelectItem>
+                        </MudSelect>
+
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudTextField @bind-Value="_settings.DefaultCloneDirectory" Label="클론 디렉토리"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                                          Placeholder="~/Cominomi"
+                                          HelperText="저장소가 클론되는 위치입니다. 비워두면 기본값을 사용합니다."
+                                          Style="flex: 1;" />
+                            <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
+                                           OnClick="BrowseCloneDirectory" Title="찾아보기..." />
+                        </MudStack>
+                    </MudStack>
                 }
-            </MudSelect>
+                else if (_activeSection == "ai")
+                {
+                    <div class="settings-section-title">AI 모델</div>
+                    <div class="settings-section-desc">AI 모델 및 동작 방식을 설정합니다.</div>
 
-            <MudSelect T="string" @bind-Value="_settings.Theme" Label="테마" Variant="Variant.Outlined">
-                <MudSelectItem T="string" Value="@("dark")">다크</MudSelectItem>
-                <MudSelectItem T="string" Value="@("light")">라이트</MudSelectItem>
-                <MudSelectItem T="string" Value="@("system")">시스템</MudSelectItem>
-            </MudSelect>
+                    <MudStack Spacing="3">
+                        <MudSelect T="string" @bind-Value="_settings.DefaultModel" Label="기본 모델"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var model in ModelDefinitions.All)
+                            {
+                                <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                            }
+                        </MudSelect>
 
-            <MudTextField @bind-Value="_settings.ClaudePath" Label="Claude CLI 경로"
-                          Variant="Variant.Outlined" Placeholder="자동 감지"
-                          HelperText="비워두면 자동으로 감지합니다" />
+                        <MudSwitch T="bool" @bind-Value="_settings.DefaultThinkingEnabled"
+                                   Label="Thinking 모드 기본값" Color="Color.Secondary" />
 
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                <MudTextField @bind-Value="_settings.DefaultCloneDirectory" Label="클론 디렉토리"
-                              Variant="Variant.Outlined" Placeholder="~/Cominomi"
-                              HelperText="저장소가 클론되는 위치입니다. 비워두면 기본값을 사용합니다."
-                              Style="flex: 1;" />
-                <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
-                               OnClick="BrowseCloneDirectory" Title="찾아보기..." />
-            </MudStack>
-            <MudSwitch T="bool" @bind-Value="_settings.DefaultThinkingEnabled"
-                       Label="Thinking 모드 기본값" Color="Color.Secondary" />
-            <MudSelect T="string" @bind-Value="_settings.DefaultPermissionMode" Label="기본 권한 모드"
-                       Variant="Variant.Outlined">
-                <MudSelectItem T="string" Value="@("bypassAll")">일반 모드</MudSelectItem>
-                <MudSelectItem T="string" Value="@("plan")">플랜 모드</MudSelectItem>
-            </MudSelect>
-        </MudStack>
+                        <MudSelect T="string" @bind-Value="_settings.DefaultPermissionMode" Label="기본 권한 모드"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem T="string" Value="@("bypassAll")">일반 모드</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("plan")">플랜 모드</MudSelectItem>
+                        </MudSelect>
+                    </MudStack>
+                }
+                else if (_activeSection == "integrations")
+                {
+                    <div class="settings-section-title">연동</div>
+                    <div class="settings-section-desc">외부 서비스 연결 상태를 확인합니다.</div>
+
+                    <div class="settings-group">
+                        <div class="settings-group-title">GitHub</div>
+                        <div class="integration-status">
+                            @if (_ghAuthChecking)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                     Style="width: 18px; height: 18px;" />
+                                <span class="status-text">확인 중...</span>
+                            }
+                            else if (_ghAuthenticated == true)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                         Class="status-ok" />
+                                <span class="status-text">인증됨</span>
+                            }
+                            else if (_ghAuthenticated == false)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
+                                         Class="status-warn" />
+                                <span class="status-text">인증되지 않음</span>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small"
+                                         Class="status-warn" />
+                                <span class="status-text">상태 미확인</span>
+                            }
+                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                                           OnClick="CheckGhAuth" Title="다시 확인" />
+                        </div>
+                        @if (_ghAuthenticated == false)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                터미널에서 <code>gh auth login</code> 명령어로 인증하세요.
+                            </MudText>
+                        }
+                    </div>
+
+                    <div class="settings-group">
+                        <div class="settings-group-title">Claude CLI</div>
+                        <div class="integration-status">
+                            @if (_claudeCliChecking)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                     Style="width: 18px; height: 18px;" />
+                                <span class="status-text">감지 중...</span>
+                            }
+                            else if (_claudeCliFound)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                         Class="status-ok" />
+                                <span class="status-text">감지됨</span>
+                                @if (!string.IsNullOrEmpty(_claudeCliResolvedPath))
+                                {
+                                    <span class="status-path">@_claudeCliResolvedPath</span>
+                                }
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
+                                         Class="status-warn" />
+                                <span class="status-text">감지되지 않음</span>
+                            }
+                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                                           OnClick="CheckClaudeCli" Title="다시 확인" />
+                        </div>
+
+                        <MudTextField @bind-Value="_settings.ClaudePath" Label="Claude CLI 경로"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Placeholder="자동 감지" Class="mt-3"
+                                      HelperText="비워두면 자동으로 감지합니다" />
+                    </div>
+                }
+            </div>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Close">취소</MudButton>
@@ -56,10 +171,17 @@
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
 
     private AppSettings _settings = new();
+    private string _activeSection = "general";
+
+    private bool _ghAuthChecking;
+    private bool? _ghAuthenticated;
+    private bool _claudeCliChecking;
+    private bool _claudeCliFound;
+    private string? _claudeCliResolvedPath;
 
     private readonly DialogOptions _dialogOptions = new()
     {
-        MaxWidth = MaxWidth.Small,
+        MaxWidth = MaxWidth.Medium,
         FullWidth = true
     };
 
@@ -69,6 +191,49 @@
         {
             _settings = await SettingsService.LoadAsync();
         }
+    }
+
+    private void SetSection(string section)
+    {
+        _activeSection = section;
+        if (section == "integrations")
+        {
+            _ = CheckIntegrations();
+        }
+    }
+
+    private async Task CheckIntegrations()
+    {
+        var ghTask = CheckGhAuth();
+        var cliTask = CheckClaudeCli();
+        await Task.WhenAll(ghTask, cliTask);
+    }
+
+    private async Task CheckGhAuth()
+    {
+        _ghAuthChecking = true;
+        StateHasChanged();
+        try
+        {
+            _ghAuthenticated = await GhService.IsAuthenticatedAsync();
+        }
+        catch
+        {
+            _ghAuthenticated = false;
+        }
+        _ghAuthChecking = false;
+        StateHasChanged();
+    }
+
+    private async Task CheckClaudeCli()
+    {
+        _claudeCliChecking = true;
+        StateHasChanged();
+        var (found, path) = await ClaudeService.DetectCliAsync();
+        _claudeCliFound = found;
+        _claudeCliResolvedPath = path;
+        _claudeCliChecking = false;
+        StateHasChanged();
     }
 
     private async Task BrowseCloneDirectory()

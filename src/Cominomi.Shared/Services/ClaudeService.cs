@@ -215,7 +215,7 @@ public class ClaudeService : IClaudeService
     {
         var sb = new StringBuilder(baseArgs);
         sb.Append("--print --output-format stream-json ");
-        if (caps.RequiresVerboseForStreamJson)
+        if (caps.SupportsVerbose)
             sb.Append("--verbose ");
         sb.Append($"--model {model}");
 
@@ -300,6 +300,21 @@ public class ClaudeService : IClaudeService
         {
             _logger.LogWarning(ex, "Failed to run simple command: {FileName} {Args}", fileName, arguments);
             return null;
+        }
+    }
+
+    public async Task<(bool found, string resolvedPath)> DetectCliAsync()
+    {
+        try
+        {
+            var settings = await _settingsService.LoadAsync();
+            var (fileName, _) = await ResolveClaudeCommandCachedAsync(settings.ClaudePath);
+            return (true, fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to detect Claude CLI");
+            return (false, "");
         }
     }
 

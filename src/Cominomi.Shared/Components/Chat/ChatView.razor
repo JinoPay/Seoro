@@ -444,6 +444,7 @@
 
         var assistantMsg = ChatState.StartAssistantMessage();
         ToolCall? currentToolCall = null;
+        var toolResultBlockMap = new Dictionary<int, string>(); // content block index → tool_use_id
         bool firstEvent = true;
 
         try
@@ -490,8 +491,32 @@
                         ChatState.SetPhase(StreamingPhase.UsingTool, evt.ContentBlock.Name, session.Id);
                         break;
 
+                    case "content_block_start" when evt.ContentBlock?.Type == "tool_result":
+                        if (evt.Index.HasValue && !string.IsNullOrEmpty(evt.ContentBlock.ToolUseId))
+                        {
+                            toolResultBlockMap[evt.Index.Value] = evt.ContentBlock.ToolUseId;
+                            var matchingTool = assistantMsg.ToolCalls.FirstOrDefault(t => t.Id == evt.ContentBlock.ToolUseId);
+                            if (matchingTool != null)
+                            {
+                                matchingTool.IsError = evt.ContentBlock.IsError ?? false;
+                                if (evt.ContentBlock.Content != null)
+                                    matchingTool.Output = ExtractToolResultContent(evt.ContentBlock.Content.Value);
+                                ChatState.NotifyStateChanged();
+                            }
+                        }
+                        break;
+
                     case "content_block_delta":
-                        if (evt.Delta?.Type == "text_delta" && evt.Delta.Text != null)
+                        if (evt.Index.HasValue && toolResultBlockMap.TryGetValue(evt.Index.Value, out var resultToolId))
+                        {
+                            var tool = assistantMsg.ToolCalls.FirstOrDefault(t => t.Id == resultToolId);
+                            if (tool != null && evt.Delta?.Text != null)
+                            {
+                                tool.Output += evt.Delta.Text;
+                                ChatState.NotifyStateChanged();
+                            }
+                        }
+                        else if (evt.Delta?.Type == "text_delta" && evt.Delta.Text != null)
                         {
                             ChatState.AppendText(assistantMsg, evt.Delta.Text);
                             ChatState.SetPhase(StreamingPhase.WritingText, sessionId: session.Id);
@@ -508,7 +533,11 @@
                         break;
 
                     case "content_block_stop":
-                        if (currentToolCall != null)
+                        if (evt.Index.HasValue && toolResultBlockMap.Remove(evt.Index.Value))
+                        {
+                            // tool_result block finished — no need to update tool state further
+                        }
+                        else if (currentToolCall != null)
                         {
                             currentToolCall.IsComplete = true;
                             currentToolCall = null;
@@ -692,6 +721,25 @@
             ChatState.CurrentSession.Model = model;
             await SessionService.SaveSessionAsync(ChatState.CurrentSession);
         }
+    }
+
+    private static string ExtractToolResultContent(System.Text.Json.JsonElement content)
+    {
+        if (content.ValueKind == System.Text.Json.JsonValueKind.String)
+            return content.GetString() ?? "";
+
+        if (content.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            var parts = new List<string>();
+            foreach (var item in content.EnumerateArray())
+            {
+                if (item.TryGetProperty("text", out var textProp) && textProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                    parts.Add(textProp.GetString() ?? "");
+            }
+            return string.Join("\n", parts);
+        }
+
+        return content.ToString();
     }
 
     private async Task<string?> BuildSystemPromptAsync(Session session)

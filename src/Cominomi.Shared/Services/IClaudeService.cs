@@ -16,4 +16,6 @@ public interface IClaudeService
         CancellationToken ct = default);
 
     void Cancel(string? sessionId = null);
+
+    Task<(bool found, string resolvedPath)> DetectCliAsync();
 }

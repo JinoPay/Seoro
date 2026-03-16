@@ -59,7 +59,8 @@
                 @foreach (var file in _diff.Files)
                 {
                     <div style="margin-bottom: 2px;">
-                        <div class="diff-file-item" @onclick="@(() => ToggleFile(file.FilePath))">
+                        <div class="diff-file-item" @onclick="@(() => ToggleFile(file.FilePath))"
+                             @ondblclick="@(() => OpenFileInTab(file))" @ondblclick:stopPropagation="true">
                             <MudIcon Icon="@GetFileIcon(file.ChangeType)" Size="Size.Small"
                                      Style="@($"width: 14px; height: 14px; {GetFileIconStyle(file.ChangeType)}")" />
                             <span class="diff-file-path">@file.FilePath</span>
@@ -293,6 +294,11 @@
     {
         if (!_expandedFiles.Remove(filePath))
             _expandedFiles.Add(filePath);
+    }
+
+    private void OpenFileInTab(FileDiff file)
+    {
+        ChatState.OpenFileDiffTab(file.FilePath, file);
     }
 
     private async void HandleStateChanged()

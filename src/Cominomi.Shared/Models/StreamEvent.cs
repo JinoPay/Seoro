@@ -76,6 +76,15 @@ public class ContentBlock
 
     [JsonPropertyName("input")]
     public JsonElement? Input { get; set; }
+
+    [JsonPropertyName("tool_use_id")]
+    public string? ToolUseId { get; set; }
+
+    [JsonPropertyName("content")]
+    public JsonElement? Content { get; set; }
+
+    [JsonPropertyName("is_error")]
+    public bool? IsError { get; set; }
 }
 
 public class ContentDelta

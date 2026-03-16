@@ -1,0 +1,59 @@
+@using Cominomi.Shared.Models
+
+<div class="filediff-view">
+    <div class="filediff-header">
+        <MudIcon Icon="@GetFileIcon(Diff.ChangeType)" Size="Size.Small"
+                 Style="@($"width: 16px; height: 16px; {GetFileIconStyle(Diff.ChangeType)}")" />
+        <span class="filediff-path">@Diff.FilePath</span>
+        <div class="diff-stats" style="margin-left: auto;">
+            @if (Diff.Additions > 0) { <span class="additions">+@Diff.Additions</span> }
+            @if (Diff.Deletions > 0) { <span class="deletions">-@Diff.Deletions</span> }
+        </div>
+    </div>
+
+    <div class="filediff-content">
+        @if (string.IsNullOrWhiteSpace(Diff.UnifiedDiff))
+        {
+            <div class="filediff-empty">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Style="opacity: 0.3;" />
+                <span>No diff available</span>
+            </div>
+        }
+        else
+        {
+            @foreach (var line in Diff.UnifiedDiff.Split('\n'))
+            {
+                <div class="diff-line @GetLineClass(line)">@line</div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public FileDiff Diff { get; set; } = default!;
+
+    private static string GetFileIcon(FileChangeType type) => type switch
+    {
+        FileChangeType.Added => Icons.Material.Filled.NoteAdd,
+        FileChangeType.Deleted => Icons.Material.Filled.Delete,
+        FileChangeType.Renamed => Icons.Material.Filled.DriveFileRenameOutline,
+        _ => Icons.Material.Filled.EditNote
+    };
+
+    private static string GetFileIconStyle(FileChangeType type) => type switch
+    {
+        FileChangeType.Added => "color: #a6e3a1;",
+        FileChangeType.Deleted => "color: #f38ba8;",
+        FileChangeType.Renamed => "color: #fab387;",
+        _ => "color: #89b4fa;"
+    };
+
+    private static string GetLineClass(string line)
+    {
+        if (line.StartsWith("@@")) return "hunk";
+        if (line.StartsWith('+') && !line.StartsWith("+++")) return "addition";
+        if (line.StartsWith('-') && !line.StartsWith("---")) return "deletion";
+        return "";
+    }
+}
