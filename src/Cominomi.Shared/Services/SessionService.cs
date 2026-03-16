@@ -147,6 +147,7 @@ public partial class SessionService : ISessionService
         if (workspace == null)
             throw new InvalidOperationException($"Workspace '{workspaceId}' not found.");
 
+        var settings = await _settingsService.LoadAsync();
         var cityName = CityNames.GetRandom();
         var session = new Session
         {
@@ -154,7 +155,8 @@ public partial class SessionService : ISessionService
             WorkspaceId = workspaceId,
             CityName = cityName,
             Title = cityName,
-            Status = SessionStatus.Pending
+            Status = SessionStatus.Pending,
+            ThinkingEnabled = settings.DefaultThinkingEnabled
         };
 
         await SaveSessionAsync(session);
