@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
@@ -12,11 +13,13 @@ public class HooksEngine : IHooksEngine
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    private readonly ILogger<HooksEngine> _logger;
     private readonly string _hooksFile;
     private List<HookDefinition> _hooks = [];
 
-    public HooksEngine()
+    public HooksEngine(ILogger<HooksEngine> logger)
     {
+        _logger = logger;
         _hooksFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Cominomi", "hooks.json");
@@ -35,8 +38,9 @@ public class HooksEngine : IHooksEngine
             var json = await File.ReadAllTextAsync(_hooksFile);
             _hooks = JsonSerializer.Deserialize<List<HookDefinition>>(json, JsonOptions) ?? [];
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Failed to load hooks configuration");
             _hooks = [];
         }
     }
@@ -51,6 +55,8 @@ public class HooksEngine : IHooksEngine
     public async Task FireAsync(HookEvent hookEvent, Dictionary<string, string>? env = null)
     {
         var hooks = _hooks.Where(h => h.Event == hookEvent && h.Enabled).ToList();
+        if (hooks.Count > 0)
+            _logger.LogInformation("Firing hook event {Event} ({Count} hooks)", hookEvent, hooks.Count);
 
         foreach (var hook in hooks)
         {
@@ -91,9 +97,9 @@ public class HooksEngine : IHooksEngine
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Hooks should not crash the app
+                _logger.LogWarning(ex, "Hook '{Command}' for event {Event} failed", hook.Command, hookEvent);
             }
         }
     }

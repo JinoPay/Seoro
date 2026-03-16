@@ -1,11 +1,19 @@
 using System.Diagnostics;
 using System.Text;
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
 public class GitService : IGitService
 {
+    private readonly ILogger<GitService> _logger;
+
+    public GitService(ILogger<GitService> logger)
+    {
+        _logger = logger;
+    }
+
     public async Task<GitResult> CloneAsync(string url, string targetDir, IProgress<string>? progress = null, CancellationToken ct = default)
     {
         var parentDir = Path.GetDirectoryName(targetDir);
@@ -62,7 +70,7 @@ public class GitService : IGitService
         {
             if (!process.HasExited)
             {
-                try { process.Kill(entireProcessTree: true); } catch { }
+                try { process.Kill(entireProcessTree: true); } catch (Exception ex) { _logger.LogDebug(ex, "Failed to kill git clone process"); }
             }
             throw;
         }
@@ -97,7 +105,8 @@ public class GitService : IGitService
         // Clean up directory if it still exists
         if (Directory.Exists(worktreePath))
         {
-            try { Directory.Delete(worktreePath, recursive: true); } catch { }
+            try { Directory.Delete(worktreePath, recursive: true); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to clean up worktree directory: {Path}", worktreePath); }
         }
 
         // Prune stale worktree entries

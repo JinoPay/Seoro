@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
@@ -18,11 +19,13 @@ public partial class SessionService : ISessionService
     private readonly ISettingsService _settingsService;
     private readonly IContextService _contextService;
     private readonly IHooksEngine _hooksEngine;
+    private readonly ILogger<SessionService> _logger;
     private readonly string _sessionsDir;
     private readonly string _archiveDir;
 
     public SessionService(IGitService gitService, IGhService ghService, IWorkspaceService workspaceService,
-        ISettingsService settingsService, IContextService contextService, IHooksEngine hooksEngine)
+        ISettingsService settingsService, IContextService contextService, IHooksEngine hooksEngine,
+        ILogger<SessionService> logger)
     {
         _gitService = gitService;
         _ghService = ghService;
@@ -30,6 +33,7 @@ public partial class SessionService : ISessionService
         _settingsService = settingsService;
         _contextService = contextService;
         _hooksEngine = hooksEngine;
+        _logger = logger;
         _sessionsDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Cominomi", "sessions");
@@ -77,9 +81,9 @@ public partial class SessionService : ISessionService
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // skip corrupted files
+                _logger.LogWarning(ex, "Skipping corrupted session file: {File}", file);
             }
         }
 
@@ -129,6 +133,7 @@ public partial class SessionService : ISessionService
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create session worktree for workspace {WorkspaceId}", workspaceId);
             session.Status = SessionStatus.Error;
             session.ErrorMessage = ex.Message;
         }
@@ -153,6 +158,7 @@ public partial class SessionService : ISessionService
         };
 
         await SaveSessionAsync(session);
+        _logger.LogInformation("Created session {SessionId} ({CityName}) in workspace {WorkspaceId}", session.Id, cityName, workspaceId);
 
         await _hooksEngine.FireAsync(HookEvent.OnSessionCreate, new Dictionary<string, string>
         {
@@ -197,10 +203,12 @@ public partial class SessionService : ISessionService
                 session.Status = SessionStatus.Ready;
                 // Initialize .context/ directory for collaboration
                 await _contextService.EnsureContextDirectoryAsync(session.WorktreePath);
+                _logger.LogInformation("Worktree initialized for session {SessionId} on branch {Branch}", sessionId, branchName);
             }
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to initialize worktree for session {SessionId}", sessionId);
             session.Status = SessionStatus.Error;
             session.ErrorMessage = ex.Message;
         }
@@ -285,7 +293,7 @@ public partial class SessionService : ISessionService
                 var archivePath = Path.Combine(_archiveDir, workspace.Name, archiveName);
                 await _contextService.ArchiveContextAsync(session.WorktreePath, archivePath);
             }
-            catch { }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to archive context for session {SessionId}", sessionId); }
         }
 
         // Remove worktree
@@ -295,7 +303,7 @@ public partial class SessionService : ISessionService
             {
                 await _gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, session.WorktreePath);
             }
-            catch { }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to remove worktree for session {SessionId}", sessionId); }
         }
 
         // Delete branch
@@ -305,11 +313,12 @@ public partial class SessionService : ISessionService
             {
                 await _gitService.DeleteBranchAsync(workspace.RepoLocalPath, session.BranchName);
             }
-            catch { }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete branch {Branch} for session {SessionId}", session.BranchName, sessionId); }
         }
 
         session.Status = SessionStatus.Archived;
         await SaveSessionAsync(session);
+        _logger.LogInformation("Session {SessionId} archived", sessionId);
 
         await _hooksEngine.FireAsync(HookEvent.OnSessionArchive, new Dictionary<string, string>
         {
@@ -350,12 +359,15 @@ public partial class SessionService : ISessionService
         var session = await LoadSessionAsync(sessionId);
         if (session != null && session.Status is SessionStatus.Ready or SessionStatus.Merged)
         {
-            try { await CleanupSessionAsync(sessionId); } catch { }
+            try { await CleanupSessionAsync(sessionId); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Cleanup failed during session delete: {SessionId}", sessionId); }
         }
 
         var path = Path.Combine(_sessionsDir, $"{sessionId}.json");
         if (File.Exists(path))
             File.Delete(path);
+
+        _logger.LogInformation("Session {SessionId} deleted", sessionId);
     }
 
     public async Task<Session> PushBranchAsync(string sessionId, bool force = false, CancellationToken ct = default)

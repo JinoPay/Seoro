@@ -1,17 +1,20 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
 public class SpotlightService : ISpotlightService, IDisposable
 {
     private readonly IGitService _gitService;
+    private readonly ILogger<SpotlightService> _logger;
     private readonly ConcurrentDictionary<string, SpotlightSession> _sessions = new();
 
-    public SpotlightService(IGitService gitService)
+    public SpotlightService(IGitService gitService, ILogger<SpotlightService> logger)
     {
         _gitService = gitService;
+        _logger = logger;
     }
 
     public bool IsActive(string sessionId) => _sessions.ContainsKey(sessionId);
@@ -70,9 +73,9 @@ public class SpotlightService : ISpotlightService, IDisposable
             {
                 await SyncFilesAsync(spotlightSession.WorktreePath, spotlightSession.RepoDir);
             }
-            catch
+            catch (Exception ex)
             {
-                // Best effort sync
+                _logger.LogWarning(ex, "Spotlight sync failed for session {SessionId}", session.Id);
             }
         };
         spotlightSession.DebounceTimer = debounceTimer;
@@ -94,6 +97,7 @@ public class SpotlightService : ISpotlightService, IDisposable
         watcher.Renamed += (s, e) => OnChange(s, e);
 
         _sessions[session.Id] = spotlightSession;
+        _logger.LogInformation("Spotlight started for session {SessionId}", session.Id);
     }
 
     public async Task StopAsync(string sessionId)
@@ -117,6 +121,8 @@ public class SpotlightService : ISpotlightService, IDisposable
         {
             await RunGitAsync("stash pop", session.RepoDir);
         }
+
+        _logger.LogInformation("Spotlight stopped for session {SessionId}", sessionId);
     }
 
     private async Task SyncFilesAsync(string worktreePath, string repoDir)
@@ -167,15 +173,16 @@ public class SpotlightService : ISpotlightService, IDisposable
                 {
                     File.Copy(sourcePath, destPath, overwrite: true);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Skip files that can't be copied (locked, etc.)
+                    _logger.LogDebug(ex, "Failed to copy spotlight file: {Path}", relativePath);
                 }
             }
             else if (File.Exists(destPath))
             {
                 // File was deleted in worktree, delete from repo root too
-                try { File.Delete(destPath); } catch { }
+                try { File.Delete(destPath); }
+                catch (Exception ex) { _logger.LogDebug(ex, "Failed to delete spotlight file: {Path}", destPath); }
             }
         }
     }
