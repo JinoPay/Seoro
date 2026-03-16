@@ -7,5 +7,6 @@ public class AppSettings
     public string? ClaudePath { get; set; }
     public string? DefaultCloneDirectory { get; set; }
     public bool DefaultThinkingEnabled { get; set; }
+    public string DefaultPermissionMode { get; set; } = "bypassAll";
     public string LastWorkspaceId { get; set; } = "";
 }
