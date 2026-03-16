@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject ChatState ChatState
+@inject IJSRuntime JS
 @implements IDisposable
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
@@ -150,6 +151,7 @@
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += HandleStateChanged;
+        SettingsService.OnSettingsChanged += HandleSettingsChanged;
 
         var settings = await SettingsService.LoadAsync();
         _isDarkMode = settings.Theme != "light";
@@ -161,14 +163,49 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var settings = await SettingsService.LoadAsync();
+            await ApplyTheme(settings.Theme);
+        }
+    }
+
+    private async Task ApplyTheme(string theme)
+    {
+        var effectiveTheme = theme == "light" ? "light" : "dark";
+        _isDarkMode = effectiveTheme == "dark";
+        await JS.InvokeVoidAsync("setTheme", effectiveTheme);
+    }
+
+    private async void HandleSettingsChanged(AppSettings settings)
+    {
+        await InvokeAsync(async () =>
+        {
+            await ApplyTheme(settings.Theme);
+            StateHasChanged();
+        });
+    }
+
     private void HandleStateChanged() => InvokeAsync(StateHasChanged);
 
     private void ToggleSidebar() => _sidebarOpen = !_sidebarOpen;
-    private void ToggleDarkMode() => _isDarkMode = !_isDarkMode;
+
+    private async Task ToggleDarkMode()
+    {
+        _isDarkMode = !_isDarkMode;
+        var settings = await SettingsService.LoadAsync();
+        settings.Theme = _isDarkMode ? "dark" : "light";
+        await SettingsService.SaveAsync(settings);
+        await ApplyTheme(settings.Theme);
+    }
+
     private void OpenSettings() => _settingsOpen = true;
 
     public void Dispose()
     {
         ChatState.OnChange -= HandleStateChanged;
+        SettingsService.OnSettingsChanged -= HandleSettingsChanged;
     }
 }
