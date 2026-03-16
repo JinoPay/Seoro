@@ -4,6 +4,7 @@
 @inject IClaudeService ClaudeService
 @inject ISessionService SessionService
 @inject IGitService GitService
+@inject IGhService GhService
 @inject IWorkspaceService WorkspaceService
 @inject IAttachmentService AttachmentService
 @inject IContextService ContextService
@@ -159,6 +160,11 @@
     private bool _quickResponseVisible;
     private List<string> _quickResponseOptions = [];
     private bool _planReviewVisible;
+
+    private enum WorkflowAction { None, Push, CreatePr }
+    private WorkflowAction _pendingWorkflowAction = WorkflowAction.None;
+    private string? _savedModel;
+    private string? _savedPermissionMode;
 
     protected override void OnInitialized()
     {
@@ -473,33 +479,41 @@
             ChatState.SetStreaming(false, session.Id);
             _shouldAutoScroll = true;
 
-            // Detect plan completion
-            if (session.PermissionMode == "plan")
-            {
-                _planReviewVisible = true;
-                _quickResponseVisible = false;
-                _quickResponseOptions = [];
-            }
-            else
-            {
-                _planReviewVisible = false;
+            var isWorkflow = _pendingWorkflowAction != WorkflowAction.None;
 
-                // Detect if the assistant is asking a question
-                var (isQuestion, options) = QuestionDetector.Detect(assistantMsg);
-                _quickResponseVisible = isQuestion;
-                _quickResponseOptions = options;
+            // Detect plan completion (skip for workflow actions)
+            if (!isWorkflow)
+            {
+                if (session.PermissionMode == "plan")
+                {
+                    _planReviewVisible = true;
+                    _quickResponseVisible = false;
+                    _quickResponseOptions = [];
+                }
+                else
+                {
+                    _planReviewVisible = false;
+
+                    // Detect if the assistant is asking a question
+                    var (isQuestion, options) = QuestionDetector.Detect(assistantMsg);
+                    _quickResponseVisible = isQuestion;
+                    _quickResponseOptions = options;
+                }
             }
 
             await InvokeAsync(StateHasChanged);
             await SessionService.SaveSessionAsync(session);
 
-            _ = HooksEngine.FireAsync(HookEvent.OnMessageComplete, new Dictionary<string, string>
+            if (!isWorkflow)
             {
-                ["COMINOMI_SESSION_ID"] = session.Id,
-                ["COMINOMI_CITY_NAME"] = session.CityName
-            });
+                _ = HooksEngine.FireAsync(HookEvent.OnMessageComplete, new Dictionary<string, string>
+                {
+                    ["COMINOMI_SESSION_ID"] = session.Id,
+                    ["COMINOMI_CITY_NAME"] = session.CityName
+                });
+            }
 
-            if (isFirstMessage && session.Status == SessionStatus.Ready)
+            if (!isWorkflow && isFirstMessage && session.Status == SessionStatus.Ready)
             {
                 try
                 {
@@ -509,6 +523,68 @@
                     ChatState.NotifyStateChanged();
                 }
                 catch (Exception ex) { Logger.LogDebug(ex, "Failed to rename branch after first message"); }
+            }
+
+            // Workflow completion: restore model/permission, verify result, update status
+            if (isWorkflow)
+            {
+                var completedAction = _pendingWorkflowAction;
+                _pendingWorkflowAction = WorkflowAction.None;
+
+                if (_savedModel != null)
+                {
+                    session.Model = _savedModel;
+                    _savedModel = null;
+                }
+                if (_savedPermissionMode != null)
+                {
+                    session.PermissionMode = _savedPermissionMode;
+                    _savedPermissionMode = null;
+                }
+
+                try
+                {
+                    var workspace = ChatState.CurrentWorkspace;
+                    if (completedAction == WorkflowAction.Push && workspace != null)
+                    {
+                        session.Status = SessionStatus.Pushed;
+                        session.ErrorMessage = null;
+
+                        _ = HooksEngine.FireAsync(HookEvent.OnBranchPush, new Dictionary<string, string>
+                        {
+                            ["COMINOMI_SESSION_ID"] = session.Id,
+                            ["COMINOMI_BRANCH"] = session.BranchName
+                        });
+                    }
+                    else if (completedAction == WorkflowAction.CreatePr && workspace != null)
+                    {
+                        var prInfo = await GhService.GetPrForBranchAsync(
+                            workspace.RepoLocalPath, session.BranchName);
+                        if (prInfo != null)
+                        {
+                            session.Status = SessionStatus.PrOpen;
+                            session.PrUrl = prInfo.Url;
+                            session.PrNumber = prInfo.Number;
+                            session.ErrorMessage = null;
+
+                            _ = HooksEngine.FireAsync(HookEvent.OnPrCreate, new Dictionary<string, string>
+                            {
+                                ["COMINOMI_SESSION_ID"] = session.Id,
+                                ["COMINOMI_BRANCH"] = session.BranchName,
+                                ["COMINOMI_PR_URL"] = prInfo.Url
+                            });
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to verify workflow action result");
+                }
+
+                await SessionService.SaveSessionAsync(session);
+                _operatingSessionId = null;
+                ChatState.NotifyStateChanged();
+                await InvokeAsync(StateHasChanged);
             }
         }
     }
@@ -575,59 +651,79 @@
     }
 
     // Workflow actions (moved from SessionList)
-    private async Task PushBranch(Session session)
+    private Task PushBranch(Session session)
     {
         _operatingSessionId = session.Id;
         StateHasChanged();
-        try
-        {
-            var updated = await SessionService.PushBranchAsync(session.Id);
-            session.Status = updated.Status;
-            session.ErrorMessage = updated.ErrorMessage;
-        }
-        catch (Exception ex) { Logger.LogError(ex, "Workflow action failed for session {SessionId}", session.Id); session.ErrorMessage = ex.Message; }
-        finally { _operatingSessionId = null; StateHasChanged(); }
+
+        _savedModel = session.Model;
+        _savedPermissionMode = session.PermissionMode;
+        session.Model = "haiku";
+        session.PermissionMode = "bypassAll";
+        _pendingWorkflowAction = WorkflowAction.Push;
+
+        var prompt = $"""
+            다음 규칙에 따라 이 브랜치를 push해주세요:
+
+            ## 규칙
+            1. `git status`와 `git log --oneline -5`로 현재 상태를 확인하세요
+            2. 커밋되지 않은 변경사항이 있으면 적절한 메시지로 커밋하세요
+            3. `git push -u origin {session.BranchName}` 명령으로 push하세요
+            4. 결과를 간단히 보고해주세요
+            """;
+
+        return HandleSend(new ChatInputMessage { Text = prompt });
     }
 
-    private async Task ForcePushBranch(Session session)
+    private Task ForcePushBranch(Session session)
     {
         _operatingSessionId = session.Id;
         StateHasChanged();
-        try
-        {
-            var updated = await SessionService.PushBranchAsync(session.Id, force: true);
-            session.Status = updated.Status;
-            session.ErrorMessage = updated.ErrorMessage;
-        }
-        catch (Exception ex) { Logger.LogError(ex, "Workflow action failed for session {SessionId}", session.Id); session.ErrorMessage = ex.Message; }
-        finally { _operatingSessionId = null; StateHasChanged(); }
+
+        _savedModel = session.Model;
+        _savedPermissionMode = session.PermissionMode;
+        session.Model = "haiku";
+        session.PermissionMode = "bypassAll";
+        _pendingWorkflowAction = WorkflowAction.Push;
+
+        var prompt = $"""
+            다음 규칙에 따라 이 브랜치를 강제 push해주세요:
+
+            ## 규칙
+            1. `git status`로 현재 상태를 확인하세요
+            2. `git push --force-with-lease origin {session.BranchName}` 명령으로 push하세요
+            3. 결과를 간단히 보고해주세요
+            """;
+
+        return HandleSend(new ChatInputMessage { Text = prompt });
     }
 
     @inject IDialogService DialogService
 
-    private async Task OpenCreatePrDialog(Session session)
+    private Task OpenCreatePrDialog(Session session)
     {
-        var parameters = new DialogParameters<CreatePrDialog>
-        {
-            { x => x.SessionId, session.Id },
-            { x => x.DefaultTitle, session.Title }
-        };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<CreatePrDialog>("PR 생성", parameters, options);
-        var result = await dialog.Result;
+        _operatingSessionId = session.Id;
+        StateHasChanged();
 
-        if (result is { Canceled: false })
-        {
-            var updated = await SessionService.LoadSessionAsync(session.Id);
-            if (updated != null)
-            {
-                session.Status = updated.Status;
-                session.PrUrl = updated.PrUrl;
-                session.PrNumber = updated.PrNumber;
-                session.ErrorMessage = updated.ErrorMessage;
-            }
-            StateHasChanged();
-        }
+        _savedModel = session.Model;
+        _savedPermissionMode = session.PermissionMode;
+        session.Model = "haiku";
+        session.PermissionMode = "bypassAll";
+        _pendingWorkflowAction = WorkflowAction.CreatePr;
+
+        var baseBranch = !string.IsNullOrEmpty(session.BaseBranch) ? session.BaseBranch : "main";
+
+        var prompt = $"""
+            다음 규칙에 따라 PR을 생성해주세요:
+
+            ## 규칙
+            1. `git log {baseBranch}..HEAD --oneline`으로 이 브랜치의 모든 커밋을 확인하세요
+            2. 커밋 내용을 분석하여 설명적인 PR 제목과 본문을 작성하세요
+            3. `gh pr create --base {baseBranch} --title "제목" --body "본문"` 명령으로 PR을 생성하세요
+            4. PR URL을 보고해주세요
+            """;
+
+        return HandleSend(new ChatInputMessage { Text = prompt });
     }
 
     private async Task MergePr(Session session)
