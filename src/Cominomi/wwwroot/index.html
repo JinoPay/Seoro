@@ -92,16 +92,24 @@
         };
 
         window.registerEnterHandler = function(elementId) {
-            const container = document.getElementById(elementId);
+            var container = document.getElementById(elementId);
             if (!container) return;
-            const textarea = container.querySelector('textarea');
-            if (!textarea) return;
+            var textarea = container.querySelector('textarea');
+            if (!textarea || textarea._enterHandler) return; // Already registered → skip
             textarea._enterHandler = function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                 }
             };
             textarea.addEventListener('keydown', textarea._enterHandler);
+        };
+
+        window.clearInputArea = function(elementId) {
+            var textarea = document.getElementById(elementId)?.querySelector('textarea');
+            if (textarea && textarea.value !== '') {
+                textarea.value = '';
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            }
         };
 
         window.unregisterEnterHandler = function(elementId) {

@@ -46,7 +46,7 @@
                 </MudTooltip>
             </div>
 
-            <MudTextField @bind-Value="_inputText"
+            <MudTextField T="string" Value="@_inputText" ValueChanged="@HandleInputValueChanged"
                           Placeholder="@GetPlaceholder()"
                           Variant="Variant.Text"
                           Lines="1"
@@ -119,6 +119,7 @@
     private List<PendingAttachment> _pendingAttachments = [];
     private DotNetObjectReference<InputArea>? _dotNetRef;
     private bool _handlersRegistered;
+    private bool _suppressInputUpdates;
 
     // Parameter tracking to prevent unnecessary re-renders (cursor jumping fix)
     private bool _prevIsStreaming;
@@ -184,6 +185,12 @@
         return false;
     }
 
+    private void HandleInputValueChanged(string value)
+    {
+        if (_suppressInputUpdates) return;
+        _inputText = value;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -191,9 +198,11 @@
             _dotNetRef = DotNetObjectReference.Create(this);
             await JSRuntime.InvokeVoidAsync("registerPasteHandler", "input-area", _dotNetRef);
             await JSRuntime.InvokeVoidAsync("registerDropHandler", "input-area", _dotNetRef);
-            await JSRuntime.InvokeVoidAsync("registerEnterHandler", "input-area");
             _handlersRegistered = true;
         }
+        // Re-register enter handler every render (textarea DOM recreation guard)
+        try { await JSRuntime.InvokeVoidAsync("registerEnterHandler", "input-area"); }
+        catch { }
     }
 
     [JSInvokable]
@@ -298,17 +307,17 @@
             Attachments = new List<PendingAttachment>(_pendingAttachments)
         };
 
+        _suppressInputUpdates = true;   // Block oninput from reinserting newline
         _inputText = string.Empty;
         _pendingAttachments.Clear();
         StateHasChanged();
         await OnSend.InvokeAsync(input);
-        // Double-clear: guard against oninput re-binding a newline after Enter
-        if (!string.IsNullOrEmpty(_inputText))
-        {
-            _inputText = string.Empty;
-            _forceRender = true;
-            StateHasChanged();
-        }
+
+        // JS safety net: clear textarea DOM directly
+        try { await JSRuntime.InvokeVoidAsync("clearInputArea", "input-area"); }
+        catch { }
+
+        _suppressInputUpdates = false;  // Unblock
     }
 
     private static string TruncateFileName(string name)

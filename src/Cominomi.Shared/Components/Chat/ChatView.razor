@@ -128,6 +128,10 @@
                 return;
             }
 
+            // Auto-scroll during streaming (debounced via ChatState timer)
+            if (ChatState.IsStreaming)
+                _shouldAutoScroll = true;
+
             StateHasChanged(); // Render immediately without waiting for branches
 
             if (needsBranches)
@@ -373,8 +377,6 @@
                         break;
                 }
 
-                _shouldAutoScroll = true;
-                StateHasChanged();
             }
         }
         catch (Exception ex)
@@ -387,7 +389,7 @@
             ChatState.FinishMessage(assistantMsg);
             ChatState.SetStreaming(false, session.Id);
             _shouldAutoScroll = true;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
             await SessionService.SaveSessionAsync(session);
 
             // Fire hooks
