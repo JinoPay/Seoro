@@ -3,7 +3,8 @@ namespace Cominomi.Shared.Models;
 public enum ContentPartType
 {
     Text,
-    ToolCall
+    ToolCall,
+    Thinking
 }
 
 public class ContentPart

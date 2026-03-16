@@ -33,7 +33,8 @@ public class ClaudeService : IClaudeService
         string message,
         string workingDir,
         string model,
-        string permissionMode = "default",
+        string permissionMode = "bypassAll",
+        bool thinkingEnabled = false,
         string? sessionId = null,
         string? conversationId = null,
         string? systemPrompt = null,
@@ -54,7 +55,7 @@ public class ClaudeService : IClaudeService
             previous.Cancel();
         }
 
-        var arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt);
+        var arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, thinkingEnabled);
         var token = cts.Token;
 
         var process = StartProcess(fileName, arguments, workingDir);
@@ -104,7 +105,7 @@ public class ClaudeService : IClaudeService
             caps.SupportsVerbose = true;
             process.Dispose();
 
-            arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt);
+            arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, thinkingEnabled);
             process = StartProcess(fileName, arguments, workingDir);
             agent = new AgentProcess(process, cts);
             _agents[agentKey] = agent;
@@ -209,7 +210,8 @@ public class ClaudeService : IClaudeService
         string permissionMode,
         CliCapabilities caps,
         string? conversationId = null,
-        string? systemPrompt = null)
+        string? systemPrompt = null,
+        bool thinkingEnabled = false)
     {
         var sb = new StringBuilder(baseArgs);
         sb.Append("--print --output-format stream-json ");
@@ -221,6 +223,9 @@ public class ClaudeService : IClaudeService
             sb.Append(" --permission-mode plan");
         else if (permissionMode == "bypassAll")
             sb.Append(" --dangerously-skip-permissions");
+
+        if (thinkingEnabled)
+            sb.Append(" --effort max");
 
         // Resume existing conversation
         if (!string.IsNullOrEmpty(conversationId))
