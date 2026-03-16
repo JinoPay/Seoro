@@ -36,6 +36,8 @@
                 <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
                                OnClick="BrowseCloneDirectory" Title="찾아보기..." />
             </MudStack>
+            <MudSwitch T="bool" @bind-Value="_settings.DefaultThinkingEnabled"
+                       Label="Thinking 모드 기본값" Color="Color.Secondary" />
         </MudStack>
     </DialogContent>
     <DialogActions>

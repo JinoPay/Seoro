@@ -6,5 +6,6 @@ public class AppSettings
     public string Theme { get; set; } = "dark";
     public string? ClaudePath { get; set; }
     public string? DefaultCloneDirectory { get; set; }
+    public bool DefaultThinkingEnabled { get; set; }
     public string LastWorkspaceId { get; set; } = "";
 }
