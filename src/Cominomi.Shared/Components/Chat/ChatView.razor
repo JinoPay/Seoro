@@ -237,11 +237,11 @@
             if (string.IsNullOrEmpty(_selectedBranch))
                 return;
 
-            _isInitializingWorktree = true;
-            StateHasChanged();
-
             try
             {
+                _isInitializingWorktree = true;
+                await InvokeAsync(StateHasChanged);
+
                 var updated = await SessionService.InitializeWorktreeAsync(session.Id, _selectedBranch);
                 session.WorktreePath = updated.WorktreePath;
                 session.BranchName = updated.BranchName;
@@ -265,7 +265,7 @@
             finally
             {
                 _isInitializingWorktree = false;
-                StateHasChanged();
+                await InvokeAsync(StateHasChanged);
             }
         }
 
