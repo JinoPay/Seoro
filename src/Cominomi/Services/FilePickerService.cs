@@ -4,6 +4,9 @@ using Cominomi.Shared.Services;
 #if MACCATALYST
 using UIKit;
 using UniformTypeIdentifiers;
+#elif WINDOWS
+using Microsoft.UI.Xaml;
+using WinRT.Interop;
 #endif
 
 namespace Cominomi.Services;
@@ -76,6 +79,45 @@ public class FilePickerService : IFilePickerService
         });
 
         return await tcs.Task;
+#elif WINDOWS
+        var picker = new Windows.Storage.Pickers.FileOpenPicker();
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add("*");
+
+        var window = (MauiWinUIWindow)Microsoft.Maui.Controls.Application.Current!.Windows[0].Handler.PlatformView!;
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(window));
+
+        var files = await picker.PickMultipleFilesAsync();
+        if (files == null || files.Count == 0)
+            return null;
+
+        var results = new List<PendingAttachment>();
+        foreach (var file in files)
+        {
+            var path = file.Path;
+            if (File.Exists(path))
+            {
+                var fileName = Path.GetFileName(path);
+                var data = File.ReadAllBytes(path);
+                var contentType = GetContentType(Path.GetExtension(fileName));
+
+                var attachment = new PendingAttachment
+                {
+                    FileName = fileName,
+                    ContentType = contentType,
+                    Data = data,
+                    FilePath = path
+                };
+
+                if (attachment.IsImage)
+                {
+                    attachment.PreviewDataUrl = $"data:{contentType};base64,{Convert.ToBase64String(data)}";
+                }
+
+                results.Add(attachment);
+            }
+        }
+        return results.Count > 0 ? results : null;
 #else
         await Task.CompletedTask;
         return null;
