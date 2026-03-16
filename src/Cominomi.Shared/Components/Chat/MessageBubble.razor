@@ -5,127 +5,159 @@
 @inject ChatState ChatState
 
 <div class="message-bubble @(Message.Role == MessageRole.User ? "user-message" : "assistant-message")">
-    <div style="max-width: 780px; margin: 0 auto;">
-        <div class="message-role">
-            <span class="role-name">@(Message.Role == MessageRole.User ? "나" : "Claude")</span>
-            <span class="message-time">@Message.Timestamp.ToLocalTime().ToString("HH:mm")</span>
-        </div>
-
-        @if (Message.Attachments.Count > 0)
-        {
-            <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap; margin-bottom: 8px;">
-                @foreach (var attachment in Message.Attachments)
-                {
-                    @if (attachment.IsImage)
-                    {
-                        <div style="margin: 4px 0;">
-                            <img src="@GetImageSrc(attachment)"
-                                 alt="@attachment.OriginalFileName"
-                                 style="max-width: 300px; max-height: 200px; border-radius: 8px; object-fit: contain;" />
-                            <div style="font-size: 0.7rem; opacity: 0.4; margin-top: 2px;">@attachment.OriginalFileName</div>
-                        </div>
-                    }
-                    else
-                    {
-                        <MudChip T="string" Icon="@Icons.Material.Filled.InsertDriveFile"
-                                 Size="Size.Small" Variant="Variant.Outlined"
-                                 Style="font-size: 0.75rem;">
-                            @attachment.OriginalFileName @($"({FormatFileSize(attachment.SizeBytes)})")
-                        </MudChip>
-                    }
-                }
-            </MudStack>
-        }
-
-        @if (Message.Parts.Count > 0)
-        {
-            var groups = ContentGrouper.Group(Message.Parts, Message.IsStreaming);
-            var lastToolGroupIndex = groups.FindLastIndex(g => g.Type == ContentGroupType.ToolGroup);
-
-            @foreach (var (group, idx) in groups.Select((g, i) => (g, i)))
+    <div class="message-layout">
+        <div class="message-avatar">
+            @if (Message.Role == MessageRole.User)
             {
-                @if (group.Type == ContentGroupType.Thinking)
+                <MudAvatar Color="Color.Primary" Variant="Variant.Filled"
+                           Style="width: 28px; height: 28px; font-size: 14px; background: rgba(167, 139, 250, 0.2); color: var(--accent);">
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Style="width: 16px; height: 16px;" />
+                </MudAvatar>
+            }
+            else
+            {
+                <MudAvatar Variant="Variant.Filled"
+                           Style="width: 28px; height: 28px; font-size: 14px; background: rgba(96, 165, 250, 0.15); color: #89b4fa;">
+                    <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="width: 16px; height: 16px;" />
+                </MudAvatar>
+            }
+        </div>
+        <div class="message-content">
+            <div class="message-header">
+                <span class="role-name">@(Message.Role == MessageRole.User ? "나" : "Claude")</span>
+                <span class="message-time">@Message.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+                @if (Message.Role == MessageRole.Assistant && Message.Duration.HasValue)
                 {
-                    var thinkingText = group.Parts[0].Text ?? "";
-                    <div class="thinking-block @(_thinkingExpanded.Contains(idx) ? "expanded" : "")"
-                         @onclick="@(() => ToggleThinkingBlock(idx))">
-                        <div class="thinking-header">
-                            <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
-                                     Style="width: 14px; height: 14px; opacity: 0.6;" />
-                            <span>생각 중...</span>
-                            <MudIcon Icon="@(_thinkingExpanded.Contains(idx) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                                     Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;" />
-                        </div>
-                        @if (_thinkingExpanded.Contains(idx))
+                    <span class="message-duration">@FormatDuration(Message.Duration.Value)</span>
+                }
+            </div>
+
+            @if (Message.Attachments.Count > 0)
+            {
+                <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap; margin-bottom: 8px;">
+                    @foreach (var attachment in Message.Attachments)
+                    {
+                        @if (attachment.IsImage)
                         {
-                            <div class="thinking-content">
-                                @((MarkupString)Markdown.ToHtml(thinkingText, _pipeline))
+                            <div style="margin: 4px 0;">
+                                <img src="@GetImageSrc(attachment)"
+                                     alt="@attachment.OriginalFileName"
+                                     style="max-width: 300px; max-height: 200px; border-radius: 8px; object-fit: contain;" />
+                                <div style="font-size: 0.7rem; opacity: 0.4; margin-top: 2px;">@attachment.OriginalFileName</div>
                             </div>
                         }
-                    </div>
-                }
-                else if (group.Type == ContentGroupType.ToolGroup)
+                        else
+                        {
+                            <MudChip T="string" Icon="@Icons.Material.Filled.InsertDriveFile"
+                                     Size="Size.Small" Variant="Variant.Outlined"
+                                     Style="font-size: 0.75rem;">
+                                @attachment.OriginalFileName @($"({FormatFileSize(attachment.SizeBytes)})")
+                            </MudChip>
+                        }
+                    }
+                </MudStack>
+            }
+
+            @if (Message.Parts.Count > 0)
+            {
+                var groups = ContentGrouper.Group(Message.Parts, Message.IsStreaming);
+                var lastToolGroupIndex = groups.FindLastIndex(g => g.Type == ContentGroupType.ToolGroup);
+
+                @foreach (var (group, idx) in groups.Select((g, i) => (g, i)))
                 {
-                    bool isLastToolGroup = idx == lastToolGroupIndex;
-                    <ToolGroupCard Group="group" IsActive="@(Message.IsStreaming && isLastToolGroup)" />
-                }
-                else if (group.Type == ContentGroupType.FinalText)
-                {
-                    var text = group.Parts[0].Text ?? "";
-                    <div class="markdown-body">
-                        @((MarkupString)Markdown.ToHtml(text, _pipeline))
-                    </div>
-                }
-                else if (group.Type == ContentGroupType.Text)
-                {
-                    var text = group.Parts[0].Text ?? "";
-                    @if (group.IsIntermediate)
+                    @if (group.Type == ContentGroupType.Thinking)
                     {
-                        <div class="intermediate-text @(_intermediateExpanded.Contains(idx) ? "expanded" : "")"
-                             @onclick="@(() => ToggleIntermediate(idx))">
-                            <span class="intermediate-text-content">
-                                @if (_intermediateExpanded.Contains(idx))
-                                {
-                                    @((MarkupString)Markdown.ToHtml(text, _pipeline))
-                                }
-                                else
-                                {
-                                    @TruncateText(text, 60)
-                                }
-                            </span>
+                        var thinkingText = group.Parts[0].Text ?? "";
+                        var isStreamingThinking = Message.IsStreaming;
+
+                        @* Auto-expand during streaming *@
+                        if (isStreamingThinking && !_autoExpandedThinking.Contains(idx))
+                        {
+                            _autoExpandedThinking.Add(idx);
+                            _thinkingExpanded.Add(idx);
+                        }
+
+                        @* Auto-collapse when streaming ends *@
+                        if (!Message.IsStreaming && _autoExpandedThinking.Contains(idx))
+                        {
+                            _autoExpandedThinking.Remove(idx);
+                            _thinkingExpanded.Remove(idx);
+                        }
+
+                        <div class="thinking-block @(_thinkingExpanded.Contains(idx) ? "expanded" : "") @(isStreamingThinking ? "streaming" : "")"
+                             @onclick="@(() => ToggleThinkingBlock(idx))">
+                            <div class="thinking-header">
+                                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
+                                         Style="width: 14px; height: 14px; opacity: 0.6;" />
+                                <span>@GetThinkingHeaderText(thinkingText, _thinkingExpanded.Contains(idx))</span>
+                                <MudIcon Icon="@(_thinkingExpanded.Contains(idx) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                         Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;" />
+                            </div>
+                            @if (_thinkingExpanded.Contains(idx))
+                            {
+                                <div class="thinking-content">
+                                    @((MarkupString)Markdown.ToHtml(thinkingText, _pipeline))
+                                </div>
+                            }
                         </div>
                     }
-                    else
+                    else if (group.Type == ContentGroupType.ToolGroup)
                     {
+                        bool isLastToolGroup = idx == lastToolGroupIndex;
+                        <ToolGroupCard Group="group" IsActive="@(Message.IsStreaming && isLastToolGroup)" />
+                    }
+                    else if (group.Type == ContentGroupType.FinalText)
+                    {
+                        var text = group.Parts[0].Text ?? "";
                         <div class="markdown-body">
                             @((MarkupString)Markdown.ToHtml(text, _pipeline))
                         </div>
                     }
+                    else if (group.Type == ContentGroupType.Text)
+                    {
+                        var text = group.Parts[0].Text ?? "";
+                        @if (group.IsIntermediate)
+                        {
+                            <div class="intermediate-text @(_intermediateExpanded.Contains(idx) ? "expanded" : "")"
+                                 @onclick="@(() => ToggleIntermediate(idx))">
+                                <span class="intermediate-text-content">
+                                    @((MarkupString)Markdown.ToHtml(text, _pipeline))
+                                </span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="markdown-body">
+                                @((MarkupString)Markdown.ToHtml(text, _pipeline))
+                            </div>
+                        }
+                    }
                 }
             }
-        }
-        else
-        {
-            @* Fallback for old messages without Parts *@
-            @if (Message.ToolCalls.Count > 0)
+            else
             {
-                @foreach (var tool in Message.ToolCalls)
+                @* Fallback for old messages without Parts *@
+                @if (Message.ToolCalls.Count > 0)
                 {
-                    <ToolCallCard Tool="tool" />
+                    @foreach (var tool in Message.ToolCalls)
+                    {
+                        <ToolCallCard Tool="tool" />
+                    }
+                }
+                @if (!string.IsNullOrEmpty(Message.Text))
+                {
+                    <div class="markdown-body">
+                        @((MarkupString)Markdown.ToHtml(Message.Text, _pipeline))
+                    </div>
                 }
             }
-            @if (!string.IsNullOrEmpty(Message.Text))
-            {
-                <div class="markdown-body">
-                    @((MarkupString)Markdown.ToHtml(Message.Text, _pipeline))
-                </div>
-            }
-        }
 
-        @if (Message.IsStreaming)
-        {
-            <StreamingIndicator Phase="ChatState.Phase" ActiveToolName="ChatState.ActiveToolName" />
-        }
+            @if (Message.IsStreaming)
+            {
+                <StreamingIndicator Phase="ChatState.Phase" ActiveToolName="ChatState.ActiveToolName"
+                                    StartedAt="Message.StreamingStartedAt" />
+            }
+        </div>
     </div>
 </div>
 
@@ -140,11 +172,14 @@
     private readonly Dictionary<string, string> _imageCache = new();
     private readonly HashSet<int> _intermediateExpanded = [];
     private readonly HashSet<int> _thinkingExpanded = [];
+    private readonly HashSet<int> _autoExpandedThinking = [];
 
     private void ToggleThinkingBlock(int index)
     {
         if (!_thinkingExpanded.Remove(index))
             _thinkingExpanded.Add(index);
+        // If manually toggled, remove from auto-expanded tracking
+        _autoExpandedThinking.Remove(index);
     }
 
     private void ToggleIntermediate(int index)
@@ -153,10 +188,20 @@
             _intermediateExpanded.Add(index);
     }
 
-    private static string TruncateText(string text, int maxLength)
+    private static string GetThinkingHeaderText(string thinkingText, bool isExpanded)
     {
-        var trimmed = text.Trim().ReplaceLineEndings(" ");
-        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength] + "…";
+        if (isExpanded || string.IsNullOrWhiteSpace(thinkingText))
+            return "생각 중...";
+
+        var preview = thinkingText.Trim().ReplaceLineEndings(" ");
+        return preview.Length <= 80 ? preview : preview[..80] + "...";
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalSeconds < 60)
+            return $"{(int)duration.TotalSeconds}초";
+        return $"{(int)duration.TotalMinutes}분 {duration.Seconds}초";
     }
 
     private string GetImageSrc(FileAttachment attachment)

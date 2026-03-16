@@ -36,11 +36,19 @@
 
             @if (!string.IsNullOrEmpty(Tool.Output))
             {
+                var lineCount = Tool.Output.Split('\n').Length;
                 <div class="tool-card-section">
-                    <div class="tool-card-section-label">출력</div>
-                    <div class="tool-card-content">
+                    <div class="tool-card-section-label">출력 @(lineCount > 1 ? $"({lineCount}줄)" : "")</div>
+                    <div class="tool-card-content @(lineCount > 15 && !_outputExpanded ? "tool-output-collapsed" : "")">
                         <pre>@Tool.Output</pre>
                     </div>
+                    @if (lineCount > 15)
+                    {
+                        <div class="tool-output-toggle" @onclick="@(() => _outputExpanded = !_outputExpanded)"
+                             @onclick:stopPropagation="true">
+                            @(_outputExpanded ? "접기" : "전체 보기")
+                        </div>
+                    }
                 </div>
             }
         </div>
@@ -52,6 +60,7 @@
     public ToolCall Tool { get; set; } = default!;
 
     private bool _expanded;
+    private bool _outputExpanded;
 
     private string GetToolIcon() => Tool.Name.ToLowerInvariant() switch
     {

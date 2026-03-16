@@ -63,7 +63,7 @@
         if (IsActive && !_wasActive)
             _expanded = true;
         else if (!IsActive && _wasActive)
-            _expanded = false;
+            _expanded = HasError;
 
         _wasActive = IsActive;
     }

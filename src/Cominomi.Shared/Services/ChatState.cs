@@ -128,7 +128,8 @@ public class ChatState : IDisposable
         var msg = new ChatMessage
         {
             Role = MessageRole.Assistant,
-            IsStreaming = true
+            IsStreaming = true,
+            StreamingStartedAt = DateTime.UtcNow
         };
         CurrentSession?.Messages.Add(msg);
         NotifyStateChanged();
@@ -191,6 +192,7 @@ public class ChatState : IDisposable
     public void FinishMessage(ChatMessage message)
     {
         message.IsStreaming = false;
+        message.StreamingFinishedAt = DateTime.UtcNow;
         NotifyStateChanged();
     }
 

@@ -24,6 +24,11 @@ public class ChatMessage
     public List<FileAttachment> Attachments { get; set; } = [];
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public bool IsStreaming { get; set; }
+    public DateTime? StreamingStartedAt { get; set; }
+    public DateTime? StreamingFinishedAt { get; set; }
+    public TimeSpan? Duration => StreamingStartedAt.HasValue && StreamingFinishedAt.HasValue
+        ? StreamingFinishedAt.Value - StreamingStartedAt.Value
+        : null;
 
     /// <summary>
     /// Migrates old messages (Text + ToolCalls) to the Parts list for interleaved rendering.
