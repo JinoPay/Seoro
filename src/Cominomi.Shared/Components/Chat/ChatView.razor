@@ -11,29 +11,89 @@
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
-<MudStack Style="height: 100%; overflow: hidden;" Justify="Justify.SpaceBetween" Spacing="0">
-    @if (ChatState.CurrentSession?.PermissionMode == "plan")
+<div class="chat-container">
+    @* Workflow actions bar (Push/PR/Merge) *@
+    @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status is SessionStatus.Ready
+         or SessionStatus.Pushed or SessionStatus.PrOpen or SessionStatus.ConflictDetected)
     {
-        <div class="mode-bar plan">
-            <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
-            <span>플랜 모드 — Claude가 읽기와 조사만 하고 수정하지 않습니다</span>
-        </div>
-    }
-    else if (ChatState.CurrentSession?.PermissionMode == "bypassAll")
-    {
-        <div class="mode-bar full-access">
-            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" />
-            <span>풀 액세스 — Claude가 모든 작업을 묻지 않고 자동 승인합니다</span>
+        <div class="session-workflow" style="padding: var(--space-1) var(--space-4); border-bottom: 1px solid var(--border-subtle); justify-content: flex-end;">
+            @if (_operatingSessionId == ChatState.CurrentSession.Id)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 12px; height: 12px;" />
+                <span style="font-size: var(--text-xs); opacity: 0.6;">처리 중...</span>
+            }
+            else
+            {
+                @switch (ChatState.CurrentSession.Status)
+                {
+                    case SessionStatus.Ready:
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.CloudUpload"
+                                   OnClick="@(() => PushBranch(ChatState.CurrentSession))"
+                                   Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
+                            푸시
+                        </MudButton>
+                        break;
+                    case SessionStatus.Pushed:
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.RateReview"
+                                   OnClick="@(() => OpenCreatePrDialog(ChatState.CurrentSession))"
+                                   Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
+                            PR 생성
+                        </MudButton>
+                        break;
+                    case SessionStatus.PrOpen:
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
+                                   StartIcon="@Icons.Material.Filled.MergeType"
+                                   OnClick="@(() => MergePr(ChatState.CurrentSession))"
+                                   Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
+                            병합
+                        </MudButton>
+                        @if (!string.IsNullOrEmpty(ChatState.CurrentSession.PrUrl))
+                        {
+                            <MudLink Href="@ChatState.CurrentSession.PrUrl" Target="_blank" Typo="Typo.caption"
+                                     Style="font-size: var(--text-xs);">
+                                #@ChatState.CurrentSession.PrNumber
+                            </MudLink>
+                        }
+                        break;
+                    case SessionStatus.ConflictDetected:
+                        <span style="font-size: var(--text-xs); color: #f38ba8; font-weight: 600;">충돌</span>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error"
+                                   OnClick="@(() => ResolveConflicts(ChatState.CurrentSession))"
+                                   Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
+                            해결
+                        </MudButton>
+                        break;
+                }
+
+                @if (!string.IsNullOrEmpty(ChatState.CurrentSession.ErrorMessage))
+                {
+                    <MudTooltip Text="@ChatState.CurrentSession.ErrorMessage">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Error"
+                                 Style="width: 14px; height: 14px;" />
+                    </MudTooltip>
+                    @if (ChatState.CurrentSession.ErrorMessage.Contains("rejected", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
+                                   OnClick="@(() => ForcePushBranch(ChatState.CurrentSession))"
+                                   Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-1); height: 24px;">
+                            강제 푸시
+                        </MudButton>
+                    }
+                }
+            }
         </div>
     }
 
-    <MudStack Style="flex: 1; overflow-y: auto; padding: 16px; min-height: 0;" id="message-list" @ref="_messageListRef">
+    @* Message area *@
+    <div class="message-area" id="message-list">
         @if (ChatState.CurrentSession == null)
         {
             <div class="welcome-container">
-                <MudIcon Icon="@Icons.Material.Filled.Chat" Size="Size.Large" Color="Color.Primary" Style="opacity: 0.6;" />
-                <span class="welcome-title" style="color: var(--mud-palette-primary);">Cominomi</span>
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Style="opacity: 0.6;">
+                <MudIcon Icon="@Icons.Material.Filled.Chat" Size="Size.Large" Color="Color.Primary" Style="opacity: 0.5;" />
+                <span class="welcome-title" style="color: var(--accent);">Cominomi</span>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Style="opacity: 0.5;">
                     새 대화를 시작하거나 사이드바에서 선택하세요
                 </MudText>
             </div>
@@ -41,7 +101,7 @@
         else if (ChatState.CurrentSession.Messages.Count == 0)
         {
             <div class="welcome-container">
-                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Color="Color.Primary" Style="opacity: 0.5;" />
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Color="Color.Primary" Style="opacity: 0.4;" />
                 <span class="welcome-title">무엇을 도와드릴까요?</span>
                 @if (ChatState.CurrentSession.Status == SessionStatus.Pending && _branches.Count > 0)
                 {
@@ -58,36 +118,16 @@
         }
         else
         {
-            <div class="message-list-inner">
+            <div class="message-container">
                 @foreach (var message in ChatState.CurrentSession.Messages)
                 {
                     <MessageBubble Message="message" />
                 }
             </div>
         }
-    </MudStack>
+    </div>
 
-    @if (ChatState.CurrentSession != null)
-    {
-        <div class="branch-bar">
-            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Style="width: 14px; height: 14px;" />
-            <span class="branch-name">
-                @if (ChatState.CurrentSession.Status == SessionStatus.Pending)
-                {
-                    @($"base: {_selectedBranch}")
-                }
-                else
-                {
-                    @(ChatState.CurrentSession.BranchName ?? "브랜치 없음")
-                }
-            </span>
-            @if (ChatState.CurrentSession.Status != SessionStatus.Pending)
-            {
-                <span class="worktree-path">@ShortenPath(ChatState.CurrentSession.WorktreePath)</span>
-            }
-        </div>
-    }
-
+    @* Input area *@
     <InputArea OnSend="HandleSend" OnCancel="HandleCancel" IsStreaming="ChatState.IsStreaming"
                Disabled="@(ChatState.CurrentSession == null || ChatState.CurrentSession.Status == SessionStatus.Archived || _isInitializingWorktree)"
                PermissionMode="@(ChatState.CurrentSession?.PermissionMode ?? "default")"
@@ -96,13 +136,13 @@
                OnModelChanged="HandleModelChanged"
                ResolvedModel="@(ChatState.CurrentSession?.ResolvedModel)"
                CurrentSession="@ChatState.CurrentSession" />
-</MudStack>
+</div>
 
 @code {
-    private MudStack? _messageListRef;
     private List<string> _branches = [];
     private string _selectedBranch = "";
     private bool _isInitializingWorktree;
+    private string? _operatingSessionId;
 
     protected override void OnInitialized()
     {
@@ -115,11 +155,9 @@
     {
         await InvokeAsync(() =>
         {
-            // Check if we need branches but don't block render on it
             bool needsBranches = ChatState.CurrentSession?.Status == SessionStatus.Pending
                                  && _branches.Count == 0 && !_isLoadingBranches;
 
-            // Auto-send pending message (e.g., conflict resolution prompt)
             var pendingMsg = ChatState.ConsumePendingMessage();
             if (pendingMsg != null && ChatState.CurrentSession != null && !ChatState.IsStreaming)
             {
@@ -128,16 +166,13 @@
                 return;
             }
 
-            // Auto-scroll during streaming (debounced via ChatState timer)
             if (ChatState.IsStreaming)
                 _shouldAutoScroll = true;
 
-            StateHasChanged(); // Render immediately without waiting for branches
+            StateHasChanged();
 
             if (needsBranches)
-            {
-                _ = LoadBranchesInBackground(); // Fire-and-forget
-            }
+                _ = LoadBranchesInBackground();
         });
     }
 
@@ -149,7 +184,6 @@
             var ws = ChatState.CurrentWorkspace;
             if (ws == null || string.IsNullOrEmpty(ws.RepoLocalPath)) return;
 
-            // Run both git commands in parallel instead of sequentially
             var branchesTask = GitService.ListBranchesAsync(ws.RepoLocalPath);
             var defaultBranchTask = GitService.DetectDefaultBranchAsync(ws.RepoLocalPath);
             await Task.WhenAll(branchesTask, defaultBranchTask);
@@ -158,7 +192,7 @@
             var defaultBranch = defaultBranchTask.Result;
             _selectedBranch = defaultBranch ?? _branches.FirstOrDefault() ?? "";
 
-            await InvokeAsync(StateHasChanged); // Re-render with branches loaded
+            await InvokeAsync(StateHasChanged);
         }
         finally
         {
@@ -173,15 +207,6 @@
             _shouldAutoScroll = false;
             await JSRuntime.InvokeVoidAsync("scrollToBottom", "message-list");
         }
-    }
-
-    private static string ShortenPath(string path)
-    {
-        if (string.IsNullOrEmpty(path)) return "(디렉토리 미설정)";
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (path.StartsWith(home))
-            return "~" + path[home.Length..];
-        return path;
     }
 
     private async Task HandlePermissionModeChanged(string mode)
@@ -207,7 +232,6 @@
     {
         var session = ChatState.CurrentSession!;
 
-        // Initialize worktree on first message if session is Pending
         if (session.Status == SessionStatus.Pending)
         {
             if (string.IsNullOrEmpty(_selectedBranch))
@@ -247,7 +271,6 @@
 
         var isFirstMessage = session.Messages.Count(m => m.Role == MessageRole.User) == 0;
 
-        // Process attachments
         var fileAttachments = new List<FileAttachment>();
         foreach (var pending in input.Attachments)
         {
@@ -264,7 +287,6 @@
             fileAttachments.Add(attachment);
         }
 
-        // Build the message to send to Claude (with file references)
         var messageForClaude = AttachmentService.BuildMessageWithAttachments(input.Text, fileAttachments);
 
         if (fileAttachments.Count > 0)
@@ -281,7 +303,6 @@
 
         try
         {
-            // Build full system prompt: workspace prompt + context + memory
             var conversationId = session.ConversationId;
             var systemPrompt = await BuildSystemPromptAsync(session);
 
@@ -305,7 +326,6 @@
                     case "system" when evt.Subtype == "init":
                         if (evt.Model != null)
                             ChatState.CurrentSession!.ResolvedModel = evt.Model;
-                        // Capture conversation ID for resume
                         if (!string.IsNullOrEmpty(evt.SessionId))
                             session.ConversationId = evt.SessionId;
                         break;
@@ -343,7 +363,6 @@
                         break;
 
                     case "result":
-                        // Capture conversation ID from result if not already set
                         if (string.IsNullOrEmpty(session.ConversationId) && !string.IsNullOrEmpty(evt.SessionId))
                             session.ConversationId = evt.SessionId;
                         if (string.IsNullOrEmpty(assistantMsg.Text) && evt.Message?.Content != null)
@@ -376,7 +395,6 @@
                         }
                         break;
                 }
-
             }
         }
         catch (Exception ex)
@@ -392,14 +410,12 @@
             await InvokeAsync(StateHasChanged);
             await SessionService.SaveSessionAsync(session);
 
-            // Fire hooks
             _ = HooksEngine.FireAsync(HookEvent.OnMessageComplete, new Dictionary<string, string>
             {
                 ["COMINOMI_SESSION_ID"] = session.Id,
                 ["COMINOMI_CITY_NAME"] = session.CityName
             });
 
-            // Auto-rename branch after first message
             if (isFirstMessage && session.Status == SessionStatus.Ready)
             {
                 try
@@ -427,18 +443,15 @@
     {
         var parts = new List<string>();
 
-        // Workspace system prompt
         var wsPrompt = ChatState.CurrentWorkspace?.SystemPrompt;
         if (!string.IsNullOrWhiteSpace(wsPrompt))
             parts.Add(wsPrompt);
 
-        // Agent type context
         if (session.AgentType == AgentType.Explore)
             parts.Add("You are in Explore mode. Only read and search — do not modify any files.");
         else if (session.AgentType == AgentType.Plan)
             parts.Add("You are in Plan mode. Create a detailed implementation plan and save it to .context/plans/.");
 
-        // Workspace context (.context/ notes, todos, plans)
         if (!string.IsNullOrEmpty(session.WorktreePath) && Directory.Exists(session.WorktreePath))
         {
             try
@@ -451,7 +464,6 @@
             catch { }
         }
 
-        // Persistent memory
         try
         {
             var memories = await MemoryService.GetAllAsync();
@@ -469,6 +481,95 @@
     private void HandleCancel()
     {
         ClaudeService.Cancel(ChatState.CurrentSession?.Id);
+    }
+
+    // Workflow actions (moved from SessionList)
+    private async Task PushBranch(Session session)
+    {
+        _operatingSessionId = session.Id;
+        StateHasChanged();
+        try
+        {
+            var updated = await SessionService.PushBranchAsync(session.Id);
+            session.Status = updated.Status;
+            session.ErrorMessage = updated.ErrorMessage;
+        }
+        catch (Exception ex) { session.ErrorMessage = ex.Message; }
+        finally { _operatingSessionId = null; StateHasChanged(); }
+    }
+
+    private async Task ForcePushBranch(Session session)
+    {
+        _operatingSessionId = session.Id;
+        StateHasChanged();
+        try
+        {
+            var updated = await SessionService.PushBranchAsync(session.Id, force: true);
+            session.Status = updated.Status;
+            session.ErrorMessage = updated.ErrorMessage;
+        }
+        catch (Exception ex) { session.ErrorMessage = ex.Message; }
+        finally { _operatingSessionId = null; StateHasChanged(); }
+    }
+
+    @inject IDialogService DialogService
+
+    private async Task OpenCreatePrDialog(Session session)
+    {
+        var parameters = new DialogParameters<CreatePrDialog>
+        {
+            { x => x.SessionId, session.Id },
+            { x => x.DefaultTitle, session.Title }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CreatePrDialog>("PR 생성", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            var updated = await SessionService.LoadSessionAsync(session.Id);
+            if (updated != null)
+            {
+                session.Status = updated.Status;
+                session.PrUrl = updated.PrUrl;
+                session.PrNumber = updated.PrNumber;
+                session.ErrorMessage = updated.ErrorMessage;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task MergePr(Session session)
+    {
+        _operatingSessionId = session.Id;
+        StateHasChanged();
+        try
+        {
+            var updated = await SessionService.MergePrAsync(session.Id);
+            session.Status = updated.Status;
+            session.ErrorMessage = updated.ErrorMessage;
+        }
+        catch (Exception ex) { session.ErrorMessage = ex.Message; }
+        finally { _operatingSessionId = null; StateHasChanged(); }
+    }
+
+    private async Task ResolveConflicts(Session session)
+    {
+        await SessionService.RetryAfterConflictResolveAsync(session.Id);
+        session.Status = SessionStatus.Ready;
+        session.ErrorMessage = null;
+        session.ConflictFiles = null;
+
+        var fullSession = await SessionService.LoadSessionAsync(session.Id);
+        if (fullSession != null)
+        {
+            var baseBranch = !string.IsNullOrEmpty(fullSession.BaseBranch) ? fullSession.BaseBranch : "main";
+            ChatState.SetPendingMessage(
+                $"{baseBranch} 브랜치와의 충돌로 PR 병합에 실패했습니다. 이 브랜치를 origin/{baseBranch}에 리베이스하고 충돌을 해결한 후 결과를 커밋해 주세요.");
+            ChatState.SetSession(fullSession);
+        }
+
+        StateHasChanged();
     }
 
     public void Dispose()

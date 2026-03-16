@@ -1,0 +1,354 @@
+@using Cominomi.Shared.Models
+@inject ChatState ChatState
+@inject IGitService GitService
+@inject IContextService ContextService
+@inject ITaskService TaskService
+@implements IDisposable
+
+<div class="detail-panel">
+    <div class="detail-toolbar">
+        <div class="detail-tabs">
+            <button class="detail-tab @(ChatState.RightPanel == RightPanelMode.Diff ? "active" : "")"
+                    @onclick="@(() => ChatState.SetRightPanel(RightPanelMode.Diff))">
+                <MudIcon Icon="@Icons.Material.Filled.Difference" Size="Size.Small" Style="width: 14px; height: 14px;" />
+                변경사항
+            </button>
+            <button class="detail-tab @(ChatState.RightPanel == RightPanelMode.Context ? "active" : "")"
+                    @onclick="@(() => ChatState.SetRightPanel(RightPanelMode.Context))">
+                <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Style="width: 14px; height: 14px;" />
+                컨텍스트
+            </button>
+        </div>
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                       Style="width: 26px; height: 26px; opacity: 0.5;"
+                       OnClick="@(() => ChatState.SetRightPanel(RightPanelMode.None))" />
+    </div>
+
+    <div class="detail-content">
+        @if (ChatState.RightPanel == RightPanelMode.Diff)
+        {
+            @* === Diff Content === *@
+            @if (_diffLoading)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-4" />
+            }
+            else if (_diffError != null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="my-2">@_diffError</MudAlert>
+            }
+            else if (_diff == null || _diff.Files.Count == 0)
+            {
+                <div class="detail-empty">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large" Style="opacity: 0.15;" />
+                    <span>변경사항이 없습니다</span>
+                </div>
+            }
+            else
+            {
+                <div class="diff-summary">
+                    <span>@(_diff.Files.Count)개 파일</span>
+                    <div class="diff-stats">
+                        <span class="additions">+@(_diff.TotalAdditions)</span>
+                        <span class="deletions">-@(_diff.TotalDeletions)</span>
+                    </div>
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                                   Style="width: 22px; height: 22px; opacity: 0.5;"
+                                   OnClick="LoadDiffAsync" Disabled="_diffLoading" />
+                </div>
+
+                @foreach (var file in _diff.Files)
+                {
+                    <div style="margin-bottom: 2px;">
+                        <div class="diff-file-item" @onclick="@(() => ToggleFile(file.FilePath))">
+                            <MudIcon Icon="@GetFileIcon(file.ChangeType)" Size="Size.Small"
+                                     Style="@($"width: 14px; height: 14px; {GetFileIconStyle(file.ChangeType)}")" />
+                            <span class="diff-file-path">@file.FilePath</span>
+                            <div class="diff-stats">
+                                @if (file.Additions > 0) { <span class="additions">+@file.Additions</span> }
+                                @if (file.Deletions > 0) { <span class="deletions">-@file.Deletions</span> }
+                            </div>
+                            <MudIcon Icon="@(_expandedFiles.Contains(file.FilePath) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                     Size="Size.Small" Style="width: 14px; height: 14px; opacity: 0.3;" />
+                        </div>
+
+                        @if (_expandedFiles.Contains(file.FilePath))
+                        {
+                            <div class="diff-content">
+                                @if (string.IsNullOrWhiteSpace(file.UnifiedDiff))
+                                {
+                                    <div style="padding: 12px; font-size: var(--text-sm); opacity: 0.35;">
+                                        비교할 수 없음 (바이너리 또는 빈 파일)
+                                    </div>
+                                }
+                                else
+                                {
+                                    @foreach (var line in file.UnifiedDiff.Split('\n'))
+                                    {
+                                        <div class="diff-line @GetLineClass(line)">@line</div>
+                                    }
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        }
+        else if (ChatState.RightPanel == RightPanelMode.Context)
+        {
+            @* === Context Content === *@
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2"
+                     Style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                <MudTabPanel Text="메모" Icon="@Icons.Material.Filled.Notes" Style="flex: 1; overflow-y: auto;">
+                    <MudTextField @bind-Value="_notes" Lines="12" Variant="Variant.Outlined"
+                                  Placeholder="이 워크스페이스의 공유 메모..." FullWidth="true"
+                                  Style="font-size: var(--text-sm);" Immediate="true" />
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                               OnClick="SaveNotes" Style="margin-top: 8px; text-transform: none;">
+                        저장
+                    </MudButton>
+                </MudTabPanel>
+
+                <MudTabPanel Text="할 일" Icon="@Icons.Material.Filled.Checklist" Style="flex: 1; overflow-y: auto;">
+                    <MudTextField @bind-Value="_todos" Lines="12" Variant="Variant.Outlined"
+                                  Placeholder="작업 목록 (마크다운 형식)..." FullWidth="true"
+                                  Style="font-size: var(--text-sm);" Immediate="true" />
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                               OnClick="SaveTodos" Style="margin-top: 8px; text-transform: none;">
+                        저장
+                    </MudButton>
+                </MudTabPanel>
+
+                <MudTabPanel Text="계획" Icon="@Icons.Material.Filled.Map" Style="flex: 1; overflow-y: auto;">
+                    @if (_plans.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Style="opacity: 0.5; padding: 16px; text-align: center;">
+                            아직 계획이 없습니다
+                        </MudText>
+                    }
+                    else
+                    {
+                        @foreach (var plan in _plans)
+                        {
+                            <MudExpansionPanels Style="margin-bottom: 4px;">
+                                <MudExpansionPanel Text="@plan.Name" Dense="true"
+                                                   Style="font-size: var(--text-sm); background: var(--bg-surface);">
+                                    <pre style="font-size: var(--text-xs); white-space: pre-wrap; word-wrap: break-word; max-height: 300px; overflow-y: auto;">@plan.Content</pre>
+                                    <MudText Typo="Typo.caption" Style="opacity: 0.4;">
+                                        @plan.LastModified.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                    </MudText>
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
+                        }
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="작업" Icon="@Icons.Material.Filled.Task" Style="flex: 1; overflow-y: auto;">
+                    @if (_tasks.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Style="opacity: 0.5; padding: 16px; text-align: center;">
+                            아직 작업이 없습니다
+                        </MudText>
+                    }
+                    else
+                    {
+                        @foreach (var task in _tasks)
+                        {
+                            <div style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-subtle);">
+                                <MudIcon Icon="@GetTaskIcon(task.Status)" Size="Size.Small"
+                                         Color="@GetTaskColor(task.Status)"
+                                         Style="width: 14px; height: 14px;" />
+                                <div style="flex: 1; min-width: 0;">
+                                    <MudText Typo="Typo.body2" Style="@GetTaskTextStyle(task.Status)">
+                                        @task.Subject
+                                    </MudText>
+                                    @if (!string.IsNullOrEmpty(task.Description))
+                                    {
+                                        <MudText Typo="Typo.caption" Style="opacity: 0.5;">@task.Description</MudText>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                </MudTabPanel>
+            </MudTabs>
+        }
+    </div>
+</div>
+
+@code {
+    // Diff state
+    private DiffSummary? _diff;
+    private bool _diffLoading;
+    private string? _diffError;
+    private string? _lastDiffSessionId;
+    private HashSet<string> _expandedFiles = new();
+
+    // Context state
+    private string _notes = "";
+    private string _todos = "";
+    private List<PlanFile> _plans = [];
+    private List<TaskItem> _tasks = [];
+    private RightPanelMode _lastMode = RightPanelMode.None;
+
+    protected override void OnInitialized()
+    {
+        ChatState.OnChange += HandleStateChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadContentIfNeeded();
+    }
+
+    private async Task LoadContentIfNeeded()
+    {
+        if (ChatState.RightPanel == RightPanelMode.Diff)
+        {
+            var sessionId = ChatState.CurrentSession?.Id;
+            if (sessionId != _lastDiffSessionId)
+            {
+                _lastDiffSessionId = sessionId;
+                _expandedFiles.Clear();
+                await LoadDiffAsync();
+            }
+        }
+        else if (ChatState.RightPanel == RightPanelMode.Context)
+        {
+            if (_lastMode != RightPanelMode.Context)
+            {
+                await LoadContext();
+            }
+        }
+        _lastMode = ChatState.RightPanel;
+    }
+
+    private async Task LoadDiffAsync()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || session.Status == SessionStatus.Pending ||
+            string.IsNullOrEmpty(session.WorktreePath) || string.IsNullOrEmpty(session.BaseBranch))
+        {
+            _diff = null;
+            _diffError = null;
+            StateHasChanged();
+            return;
+        }
+
+        _diffLoading = true;
+        _diffError = null;
+        StateHasChanged();
+
+        try
+        {
+            var nameStatus = await GitService.GetNameStatusAsync(session.WorktreePath, session.BaseBranch);
+            var rawDiff = await GitService.GetUnifiedDiffAsync(session.WorktreePath, session.BaseBranch);
+            _diff = Services.GitService.ParseDiff(nameStatus, rawDiff);
+        }
+        catch (Exception ex)
+        {
+            _diffError = ex.Message;
+            _diff = null;
+        }
+        finally
+        {
+            _diffLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadContext()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || string.IsNullOrEmpty(session.WorktreePath))
+            return;
+
+        try
+        {
+            var context = await ContextService.LoadContextAsync(session.WorktreePath);
+            _notes = context.Notes;
+            _todos = context.Todos;
+            _plans = context.Plans;
+            _tasks = await TaskService.GetBySessionAsync(session.Id);
+        }
+        catch { }
+    }
+
+    private async Task SaveNotes()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || string.IsNullOrEmpty(session.WorktreePath)) return;
+        await ContextService.SaveNotesAsync(session.WorktreePath, _notes);
+    }
+
+    private async Task SaveTodos()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || string.IsNullOrEmpty(session.WorktreePath)) return;
+        await ContextService.SaveTodosAsync(session.WorktreePath, _todos);
+    }
+
+    private void ToggleFile(string filePath)
+    {
+        if (!_expandedFiles.Remove(filePath))
+            _expandedFiles.Add(filePath);
+    }
+
+    private async void HandleStateChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadContentIfNeeded();
+            StateHasChanged();
+        });
+    }
+
+    private static string GetFileIcon(FileChangeType type) => type switch
+    {
+        FileChangeType.Added => Icons.Material.Filled.NoteAdd,
+        FileChangeType.Deleted => Icons.Material.Filled.Delete,
+        FileChangeType.Renamed => Icons.Material.Filled.DriveFileRenameOutline,
+        _ => Icons.Material.Filled.EditNote
+    };
+
+    private static string GetFileIconStyle(FileChangeType type) => type switch
+    {
+        FileChangeType.Added => "color: #a6e3a1;",
+        FileChangeType.Deleted => "color: #f38ba8;",
+        FileChangeType.Renamed => "color: #fab387;",
+        _ => "color: #89b4fa;"
+    };
+
+    private static string GetLineClass(string line)
+    {
+        if (line.StartsWith("@@")) return "hunk";
+        if (line.StartsWith('+') && !line.StartsWith("+++")) return "addition";
+        if (line.StartsWith('-') && !line.StartsWith("---")) return "deletion";
+        return "";
+    }
+
+    private static string GetTaskIcon(Models.TaskStatus status) => status switch
+    {
+        Models.TaskStatus.Completed => Icons.Material.Filled.CheckCircle,
+        Models.TaskStatus.InProgress => Icons.Material.Filled.PlayCircle,
+        Models.TaskStatus.Blocked => Icons.Material.Filled.Block,
+        _ => Icons.Material.Filled.RadioButtonUnchecked
+    };
+
+    private static Color GetTaskColor(Models.TaskStatus status) => status switch
+    {
+        Models.TaskStatus.Completed => Color.Success,
+        Models.TaskStatus.InProgress => Color.Info,
+        Models.TaskStatus.Blocked => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string GetTaskTextStyle(Models.TaskStatus status) =>
+        status == Models.TaskStatus.Completed
+            ? "font-size: var(--text-sm); text-decoration: line-through; opacity: 0.5;"
+            : "font-size: var(--text-sm);";
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= HandleStateChanged;
+    }
+}

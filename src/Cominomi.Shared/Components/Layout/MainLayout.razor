@@ -7,61 +7,98 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<MudLayout>
-    <MudAppBar Elevation="0" Dense="true" Style="background: transparent;">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
-                       Size="Size.Small" OnClick="@ToggleDrawer" />
-        <span class="app-title ml-3">Cominomi</span>
-        <MudSpacer />
-        <StatusBar />
-        @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status != SessionStatus.Pending)
-        {
-            <MudTooltip Text="컨텍스트 (메모, 계획, 작업)">
-                <MudIconButton Icon="@Icons.Material.Filled.Folder"
-                               Color="@(_contextPanelOpen ? Color.Primary : Color.Inherit)"
-                               Size="Size.Small"
-                               OnClick="@(() => _contextPanelOpen = !_contextPanelOpen)" />
-            </MudTooltip>
-            <MudTooltip Text="변경사항 보기">
-                <MudIconButton Icon="@Icons.Material.Filled.Difference"
-                               Color="@(ChatState.IsDiffPanelOpen ? Color.Primary : Color.Inherit)"
-                               Size="Size.Small"
-                               OnClick="@(() => ChatState.ToggleDiffPanel())" />
-            </MudTooltip>
-        }
-        <MudTooltip Text="@(_isDarkMode ? "라이트 모드" : "다크 모드")">
-            <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
-                           Color="Color.Inherit" Size="Size.Small" OnClick="@ToggleDarkMode" />
-        </MudTooltip>
-        <MudTooltip Text="설정">
-            <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit"
-                           Size="Size.Small" OnClick="@OpenSettings" />
-        </MudTooltip>
-    </MudAppBar>
-
-    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="0"
-               Variant="DrawerVariant.Responsive" Width="260px"
-               Style="border-right: 1px solid var(--cominomi-border-subtle);">
+<div class="cominomi-shell @(ChatState.RightPanel != RightPanelMode.None ? "detail-open" : "") @(!_sidebarOpen ? "sidebar-collapsed" : "")">
+    @* === Left Panel: Sidebar === *@
+    <aside class="cominomi-sidebar">
+        <div class="sidebar-toolbar">
+            <span class="sidebar-brand">Cominomi</span>
+            <div style="display: flex; align-items: center; gap: 2px;">
+                <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                               Color="Color.Inherit" Size="Size.Small" OnClick="@ToggleDarkMode"
+                               Style="width: 28px; height: 28px; opacity: 0.5;" />
+                <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit"
+                               Size="Size.Small" OnClick="@OpenSettings"
+                               Style="width: 28px; height: 28px; opacity: 0.5;" />
+            </div>
+        </div>
         <SessionList />
-    </MudDrawer>
+    </aside>
 
-    <MudMainContent Class="pa-0" Style="height: calc(100vh - 48px);">
-        @Body
-    </MudMainContent>
+    @* === Center Panel: Chat === *@
+    <main class="cominomi-main">
+        <div class="main-toolbar">
+            <MudIconButton Icon="@(_sidebarOpen ? Icons.Material.Filled.MenuOpen : Icons.Material.Filled.Menu)"
+                           Color="Color.Inherit" Size="Size.Small" OnClick="@ToggleSidebar"
+                           Style="width: 28px; height: 28px; opacity: 0.6;" />
 
-    <DiffPanel />
-    <ContextPanel @bind-IsOpen="_contextPanelOpen" />
-</MudLayout>
+            @if (ChatState.CurrentSession != null)
+            {
+                <span class="toolbar-title">@(ChatState.CurrentSession.Title ?? "새 대화")</span>
+
+                @if (!string.IsNullOrEmpty(ChatState.CurrentSession.BranchName))
+                {
+                    <span class="toolbar-branch-badge">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
+                                 Style="width: 12px; height: 12px; opacity: 0.6;" />
+                        @ChatState.CurrentSession.BranchName
+                    </span>
+                }
+
+                @if (ChatState.CurrentSession.PermissionMode == "plan")
+                {
+                    <span class="toolbar-mode-badge plan">플랜</span>
+                }
+                else if (ChatState.CurrentSession.PermissionMode == "bypassAll")
+                {
+                    <span class="toolbar-mode-badge full-access">풀 액세스</span>
+                }
+            }
+
+            <div style="flex: 1;"></div>
+
+            <StatusBar />
+
+            @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status != SessionStatus.Pending)
+            {
+                <MudTooltip Text="변경사항">
+                    <MudIconButton Icon="@Icons.Material.Filled.Difference"
+                                   Color="@(ChatState.RightPanel == RightPanelMode.Diff ? Color.Primary : Color.Inherit)"
+                                   Size="Size.Small"
+                                   Style="width: 28px; height: 28px;"
+                                   OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Diff))" />
+                </MudTooltip>
+                <MudTooltip Text="컨텍스트">
+                    <MudIconButton Icon="@Icons.Material.Filled.Folder"
+                                   Color="@(ChatState.RightPanel == RightPanelMode.Context ? Color.Primary : Color.Inherit)"
+                                   Size="Size.Small"
+                                   Style="width: 28px; height: 28px;"
+                                   OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Context))" />
+                </MudTooltip>
+            }
+        </div>
+
+        <div class="main-content">
+            @Body
+        </div>
+    </main>
+
+    @* === Right Panel: Detail (Diff/Context) === *@
+    @if (ChatState.RightPanel != RightPanelMode.None)
+    {
+        <aside class="cominomi-detail">
+            <DetailPanel />
+        </aside>
+    }
+</div>
 
 <SettingsDialog @bind-IsOpen="_settingsOpen" />
 <SetupDialog @bind-IsOpen="_setupOpen" />
 
 @code {
-    private bool _drawerOpen = true;
+    private bool _sidebarOpen = true;
     private bool _isDarkMode = true;
     private bool _settingsOpen;
     private bool _setupOpen;
-    private bool _contextPanelOpen;
 
     private readonly MudTheme _theme = new()
     {
@@ -84,7 +121,7 @@
             DrawerBackground = "#11111b",
             TextPrimary = "#cdd6f4",
             TextSecondary = "#a6adc8",
-            LinesDefault = "rgba(166,173,200,0.08)",
+            LinesDefault = "rgba(166,173,200,0.12)",
         }
     };
 
@@ -107,7 +144,7 @@
 
     private void HandleStateChanged() => InvokeAsync(StateHasChanged);
 
-    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+    private void ToggleSidebar() => _sidebarOpen = !_sidebarOpen;
     private void ToggleDarkMode() => _isDarkMode = !_isDarkMode;
     private void OpenSettings() => _settingsOpen = true;
 

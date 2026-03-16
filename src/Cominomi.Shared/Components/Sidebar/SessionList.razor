@@ -5,208 +5,120 @@
 @inject IDialogService DialogService
 @implements IDisposable
 
-<div style="display: flex; flex-direction: column; height: 100%; min-height: 0; padding: 8px 0;">
+<div style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
     @if (_workspaces.Count > 0)
     {
-        <div class="sidebar-header">워크스페이스</div>
-
-        <div style="overflow-y: auto; flex: 1; min-height: 0; padding: 4px 0;">
-            @foreach (var ws in _workspaces)
-            {
-                var isExpanded = _expandedWorkspaceId == ws.Id;
-
-                @* Workspace header *@
-                <div class="workspace-item @(isExpanded ? "active" : "")" @onclick="@(() => ToggleWorkspace(ws))">
-                    <MudIcon Icon="@(isExpanded ? Icons.Material.Filled.KeyboardArrowDown : Icons.Material.Filled.KeyboardArrowRight)"
-                             Size="Size.Small" Style="width: 16px; height: 16px; opacity: 0.5;" />
-                    @if (ws.Status == WorkspaceStatus.Error)
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
-                                 Style="width: 14px; height: 14px;" />
-                    }
-                    else if (ws.Status == WorkspaceStatus.Initializing)
-                    {
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 14px; height: 14px;" />
-                    }
-                    <span class="workspace-name">@ws.Name</span>
-                    <div class="workspace-actions">
-                        <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
-                                       Style="width: 24px; height: 24px;"
-                                       OnClick="@(() => _workspaceDialogOpen = true)"
-                                       OnClickStopPropagation="true" />
-                    </div>
-                </div>
-
-                @* Expanded workspace content *@
-                @if (isExpanded)
+        @* Workspace selector *@
+        <div class="workspace-selector">
+            <MudSelect T="string" Value="@_expandedWorkspaceId" ValueChanged="OnWorkspaceSelected"
+                       Variant="Variant.Text" Dense="true" Margin="Margin.Dense"
+                       Style="font-size: var(--text-sm);"
+                       AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+                @foreach (var ws in _workspaces)
                 {
-                    @* New chat button *@
-                    <div class="new-chat-btn" @onclick="@(() => CreateNewChat(ws))"
-                         style="@(ws.Status != WorkspaceStatus.Ready || _isCreatingSession ? "opacity: 0.4; pointer-events: none;" : "")">
-                        <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Style="width: 16px; height: 16px;" />
-                        <span>새 대화</span>
+                    <MudSelectItem T="string" Value="@ws.Id">
+                        @ws.Name
+                        @if (ws.Status == WorkspaceStatus.Error)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
+                                     Style="width: 12px; height: 12px; margin-left: 4px;" />
+                        }
+                    </MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+
+        @* New chat button *@
+        @if (_expandedWorkspaceId != null)
+        {
+            var ws = _workspaces.FirstOrDefault(w => w.Id == _expandedWorkspaceId);
+            @if (ws != null)
+            {
+                <div class="new-chat-btn" @onclick="@(() => CreateNewChat(ws))"
+                     style="@(ws.Status != WorkspaceStatus.Ready || _isCreatingSession ? "opacity: 0.4; pointer-events: none;" : "")">
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Style="width: 14px; height: 14px;" />
+                    <span>새 대화</span>
+                </div>
+            }
+        }
+
+        @* Session list *@
+        <div style="overflow-y: auto; flex: 1; min-height: 0; padding: var(--space-1) 0;">
+            @if (_expandedWorkspaceId != null && _sessionCache.TryGetValue(_expandedWorkspaceId, out var sessions))
+            {
+                @foreach (var session in sessions)
+                {
+                    var isActive = ChatState.CurrentSession?.Id == session.Id;
+                    var isArchived = session.Status == SessionStatus.Archived;
+
+                    <div class="session-item @(isActive ? "active" : "") @(isArchived ? "archived" : "")"
+                         style="@(isArchived ? "opacity: 0.35;" : "")"
+                         @onclick="@(() => SelectSession(session))">
+
+                        <div class="session-actions">
+                            @if (session.Status == SessionStatus.Merged)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.CleaningServices" Size="Size.Small"
+                                               Color="Color.Success" Style="width: 20px; height: 20px;"
+                                               OnClick="@(() => CleanupSession(session))"
+                                               OnClickStopPropagation="true" />
+                            }
+                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                           Style="width: 20px; height: 20px; opacity: 0.4;"
+                                           OnClick="@(() => DeleteSession(session))"
+                                           OnClickStopPropagation="true" />
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span class="status-dot @GetStatusDotClass(session.Status)"></span>
+                            @if (ChatState.IsSessionStreaming(session.Id))
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                     Style="width: 10px; height: 10px;" Color="Color.Primary" />
+                            }
+                            <span class="session-title">@session.Title</span>
+                        </div>
+
+                        <div class="session-meta">
+                            @if (!string.IsNullOrEmpty(session.BranchName))
+                            {
+                                <span class="session-branch">@session.BranchName</span>
+                            }
+                            <span style="margin-left: auto;">@session.UpdatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
+                        </div>
                     </div>
+                }
 
-                    @* Sessions *@
-                    @if (_sessionCache.TryGetValue(ws.Id, out var sessions))
-                    {
-                        @foreach (var session in sessions)
-                        {
-                            var isActive = ChatState.CurrentSession?.Id == session.Id;
-                            var isArchived = session.Status == SessionStatus.Archived;
-
-                            <div class="session-item @(isActive ? "active" : "") @(isArchived ? "archived" : "")"
-                                 style="@(isArchived ? "opacity: 0.4;" : "")"
-                                 @onclick="@(() => SelectSession(session))">
-
-                                <div class="session-actions">
-                                    @if (session.Status == SessionStatus.Merged)
-                                    {
-                                        <MudIconButton Icon="@Icons.Material.Filled.CleaningServices" Size="Size.Small"
-                                                       Color="Color.Success" Style="width: 22px; height: 22px;"
-                                                       OnClick="@(() => CleanupSession(session))"
-                                                       OnClickStopPropagation="true" />
-                                    }
-                                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                                                   Style="width: 22px; height: 22px; opacity: 0.5;"
-                                                   OnClick="@(() => DeleteSession(session))"
-                                                   OnClickStopPropagation="true" />
-                                </div>
-
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <span class="status-dot @GetStatusDotClass(session.Status)"></span>
-                                    @if (ChatState.IsSessionStreaming(session.Id))
-                                    {
-                                        <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                             Style="width: 12px; height: 12px;" Color="Color.Primary" />
-                                    }
-                                    <span class="session-title">@session.Title</span>
-                                    @if (!string.IsNullOrEmpty(session.CityName) && session.Title != session.CityName)
-                                    {
-                                        <span style="font-size: 0.65rem; opacity: 0.35;">@session.CityName</span>
-                                    }
-                                </div>
-
-                                <div class="session-meta">
-                                    @if (!string.IsNullOrEmpty(session.BranchName))
-                                    {
-                                        <span class="session-branch">@session.BranchName</span>
-                                    }
-                                    <span style="margin-left: auto;">@session.UpdatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
-                                </div>
-
-                                @* Workflow actions *@
-                                @if (session.Status is SessionStatus.Ready or SessionStatus.Pushed or SessionStatus.PrOpen or SessionStatus.ConflictDetected)
-                                {
-                                    <div class="session-workflow">
-                                        @if (_operatingSessionId == session.Id)
-                                        {
-                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 12px; height: 12px;" />
-                                            <span style="font-size: 0.7rem; opacity: 0.6;">처리 중...</span>
-                                        }
-                                        else
-                                        {
-                                            @switch (session.Status)
-                                            {
-                                                case SessionStatus.Ready:
-                                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
-                                                               StartIcon="@Icons.Material.Filled.CloudUpload"
-                                                               OnClick="@(() => PushBranch(session))"
-                                                               OnClickStopPropagation="true"
-                                                               Style="text-transform: none; font-size: 0.7rem; min-width: 0; padding: 0 6px; height: 22px;">
-                                                        푸시
-                                                    </MudButton>
-                                                    break;
-                                                case SessionStatus.Pushed:
-                                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
-                                                               StartIcon="@Icons.Material.Filled.RateReview"
-                                                               OnClick="@(() => OpenCreatePrDialog(session))"
-                                                               OnClickStopPropagation="true"
-                                                               Style="text-transform: none; font-size: 0.7rem; min-width: 0; padding: 0 6px; height: 22px;">
-                                                        PR 생성
-                                                    </MudButton>
-                                                    break;
-                                                case SessionStatus.PrOpen:
-                                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
-                                                               StartIcon="@Icons.Material.Filled.MergeType"
-                                                               OnClick="@(() => MergePr(session))"
-                                                               OnClickStopPropagation="true"
-                                                               Style="text-transform: none; font-size: 0.7rem; min-width: 0; padding: 0 6px; height: 22px;">
-                                                        병합
-                                                    </MudButton>
-                                                    @if (!string.IsNullOrEmpty(session.PrUrl))
-                                                    {
-                                                        <MudLink Href="@session.PrUrl" Target="_blank" Typo="Typo.caption"
-                                                                 Style="font-size: 0.68rem;">
-                                                            #@session.PrNumber
-                                                        </MudLink>
-                                                    }
-                                                    break;
-                                                case SessionStatus.ConflictDetected:
-                                                    <span style="font-size: 0.65rem; color: #f38ba8; font-weight: 600;">충돌</span>
-                                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error"
-                                                               OnClick="@(() => ResolveConflicts(session))"
-                                                               OnClickStopPropagation="true"
-                                                               Style="text-transform: none; font-size: 0.7rem; min-width: 0; padding: 0 6px; height: 22px;">
-                                                        해결
-                                                    </MudButton>
-                                                    break;
-                                            }
-
-                                            @if (!string.IsNullOrEmpty(session.ErrorMessage))
-                                            {
-                                                <MudTooltip Text="@session.ErrorMessage">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Error"
-                                                             Style="width: 14px; height: 14px;" />
-                                                </MudTooltip>
-                                                @if (session.ErrorMessage.Contains("rejected", StringComparison.OrdinalIgnoreCase))
-                                                {
-                                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
-                                                               OnClick="@(() => ForcePushBranch(session))"
-                                                               OnClickStopPropagation="true"
-                                                               Style="text-transform: none; font-size: 0.68rem; min-width: 0; padding: 0 4px; height: 22px;">
-                                                        강제 푸시
-                                                    </MudButton>
-                                                }
-                                            }
-                                        }
-                                    </div>
-                                }
-                            </div>
-                        }
-
-                        @if (sessions.Count == 0)
-                        {
-                            <div style="padding: 12px 16px; font-size: 0.78rem; opacity: 0.35; text-align: center;">
-                                대화가 없습니다
-                            </div>
-                        }
-                    }
+                @if (sessions.Count == 0)
+                {
+                    <div style="padding: var(--space-4); font-size: var(--text-sm); opacity: 0.3; text-align: center;">
+                        대화가 없습니다
+                    </div>
                 }
             }
         </div>
 
-        @* Add workspace button at bottom *@
-        <div style="padding: 8px; flex-shrink: 0;">
+        @* Bottom actions *@
+        <div style="padding: var(--space-2); flex-shrink: 0; border-top: 1px solid var(--border-subtle);">
             <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" FullWidth="true"
                        StartIcon="@Icons.Material.Filled.Add"
                        OnClick="@(() => _workspaceDialogOpen = true)"
-                       Style="text-transform: none; font-size: 0.78rem; border-radius: 8px;">
+                       Style="text-transform: none; font-size: var(--text-sm); border-radius: var(--radius-sm);">
                 워크스페이스 추가
             </MudButton>
         </div>
     }
     else
     {
-        <div class="welcome-container" style="padding: 24px;">
-            <MudIcon Icon="@Icons.Material.Filled.Workspaces" Size="Size.Large" Style="opacity: 0.3;" />
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Style="opacity: 0.5;">
+        <div class="welcome-container" style="padding: var(--space-6);">
+            <MudIcon Icon="@Icons.Material.Filled.Workspaces" Size="Size.Large" Style="opacity: 0.2;" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Style="opacity: 0.4;">
                 워크스페이스를 만들어 시작하세요
             </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Add"
                        OnClick="@(() => _workspaceDialogOpen = true)"
-                       Style="text-transform: none; border-radius: 20px;">
+                       Style="text-transform: none; border-radius: var(--radius-full);">
                 새 워크스페이스
             </MudButton>
         </div>
@@ -221,7 +133,6 @@
     private Dictionary<string, List<Session>> _sessionCache = new();
     private bool _workspaceDialogOpen;
     private bool _isCreatingSession;
-    private string? _operatingSessionId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -240,15 +151,11 @@
         }
     }
 
-    private async Task ToggleWorkspace(Workspace ws)
+    private async Task OnWorkspaceSelected(string wsId)
     {
-        if (_expandedWorkspaceId == ws.Id)
-        {
-            _expandedWorkspaceId = null;
-            return;
-        }
-
-        await ExpandWorkspace(ws);
+        var ws = _workspaces.FirstOrDefault(w => w.Id == wsId);
+        if (ws != null)
+            await ExpandWorkspace(ws);
     }
 
     private async Task ExpandWorkspace(Workspace ws)
@@ -256,7 +163,6 @@
         _expandedWorkspaceId = ws.Id;
         ChatState.SetWorkspace(ws);
 
-        // Lazy load sessions
         if (!_sessionCache.ContainsKey(ws.Id))
         {
             var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
@@ -264,7 +170,6 @@
             _ = CheckMergeStatuses(ws.Id);
         }
 
-        // Persist selection
         var settings = await SettingsService.LoadAsync();
         settings.LastWorkspaceId = ws.Id;
         await SettingsService.SaveAsync(settings);
@@ -299,13 +204,9 @@
             _sessionCache.Remove(_expandedWorkspaceId);
             var firstWs = _workspaces.FirstOrDefault();
             if (firstWs != null)
-            {
                 await ExpandWorkspace(firstWs);
-            }
             else
-            {
                 _expandedWorkspaceId = null;
-            }
         }
         else if (_expandedWorkspaceId != null)
         {
@@ -327,9 +228,7 @@
             ChatState.SetSession(session);
 
             if (_sessionCache.TryGetValue(ws.Id, out var sessions))
-            {
                 sessions.Insert(0, session);
-            }
         }
         finally
         {
@@ -365,92 +264,6 @@
             ChatState.SetSession(null!);
     }
 
-    private async Task PushBranch(Session session)
-    {
-        _operatingSessionId = session.Id;
-        StateHasChanged();
-        try
-        {
-            var updated = await SessionService.PushBranchAsync(session.Id);
-            session.Status = updated.Status;
-            session.ErrorMessage = updated.ErrorMessage;
-        }
-        catch (Exception ex) { session.ErrorMessage = ex.Message; }
-        finally { _operatingSessionId = null; StateHasChanged(); }
-    }
-
-    private async Task ForcePushBranch(Session session)
-    {
-        _operatingSessionId = session.Id;
-        StateHasChanged();
-        try
-        {
-            var updated = await SessionService.PushBranchAsync(session.Id, force: true);
-            session.Status = updated.Status;
-            session.ErrorMessage = updated.ErrorMessage;
-        }
-        catch (Exception ex) { session.ErrorMessage = ex.Message; }
-        finally { _operatingSessionId = null; StateHasChanged(); }
-    }
-
-    private async Task OpenCreatePrDialog(Session session)
-    {
-        var parameters = new DialogParameters<CreatePrDialog>
-        {
-            { x => x.SessionId, session.Id },
-            { x => x.DefaultTitle, session.Title }
-        };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<CreatePrDialog>("PR 생성", parameters, options);
-        var result = await dialog.Result;
-
-        if (result is { Canceled: false })
-        {
-            var updated = await SessionService.LoadSessionAsync(session.Id);
-            if (updated != null)
-            {
-                session.Status = updated.Status;
-                session.PrUrl = updated.PrUrl;
-                session.PrNumber = updated.PrNumber;
-                session.ErrorMessage = updated.ErrorMessage;
-            }
-            StateHasChanged();
-        }
-    }
-
-    private async Task MergePr(Session session)
-    {
-        _operatingSessionId = session.Id;
-        StateHasChanged();
-        try
-        {
-            var updated = await SessionService.MergePrAsync(session.Id);
-            session.Status = updated.Status;
-            session.ErrorMessage = updated.ErrorMessage;
-        }
-        catch (Exception ex) { session.ErrorMessage = ex.Message; }
-        finally { _operatingSessionId = null; StateHasChanged(); }
-    }
-
-    private async Task ResolveConflicts(Session session)
-    {
-        await SessionService.RetryAfterConflictResolveAsync(session.Id);
-        session.Status = SessionStatus.Ready;
-        session.ErrorMessage = null;
-        session.ConflictFiles = null;
-
-        var fullSession = await SessionService.LoadSessionAsync(session.Id);
-        if (fullSession != null)
-        {
-            var baseBranch = !string.IsNullOrEmpty(fullSession.BaseBranch) ? fullSession.BaseBranch : "main";
-            ChatState.SetPendingMessage(
-                $"{baseBranch} 브랜치와의 충돌로 PR 병합에 실패했습니다. 이 브랜치를 origin/{baseBranch}에 리베이스하고 충돌을 해결한 후 결과를 커밋해 주세요.");
-            ChatState.SetSession(fullSession);
-        }
-
-        StateHasChanged();
-    }
-
     private static string GetStatusDotClass(SessionStatus status) => status switch
     {
         SessionStatus.Ready => "ready",
@@ -469,7 +282,6 @@
 
     private async void OnStateChanged()
     {
-        // Only re-render when relevant state changes (session selection or streaming status)
         var currentId = ChatState.CurrentSession?.Id;
         var hasStreaming = ChatState.HasAnyStreaming();
         if (currentId == _lastSessionId && hasStreaming == _lastHasStreaming)
