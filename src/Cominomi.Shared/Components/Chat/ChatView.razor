@@ -1,5 +1,6 @@
 @using Cominomi.Shared.Models
 @using Microsoft.Extensions.Logging
+@using System.Text.Json
 @inject ChatState ChatState
 @inject IClaudeService ClaudeService
 @inject ISessionService SessionService
@@ -688,28 +689,119 @@
                         _ = SessionService.SaveSessionAsync(session);
                         break;
 
-                    case "result":
-                        if (string.IsNullOrEmpty(session.ConversationId) && !string.IsNullOrEmpty(evt.SessionId))
-                            session.ConversationId = evt.SessionId;
-                        // Accumulate token usage
+                    case "assistant":
+                        ChatState.SetPhase(StreamingPhase.WritingText, sessionId: session.Id);
+                        if (evt.Message?.Content != null)
+                        {
+                            foreach (var block in evt.Message.Content)
+                            {
+                                switch (block.Type)
+                                {
+                                    case "text" when block.Text != null:
+                                        ChatState.AppendText(assistantMsg, block.Text);
+                                        break;
+                                    case "thinking" when block.Text != null:
+                                        ChatState.AppendThinking(assistantMsg, block.Text);
+                                        break;
+                                    case "tool_use":
+                                        var tc = new ToolCall
+                                        {
+                                            Id = block.Id ?? "",
+                                            Name = block.Name ?? "",
+                                            IsComplete = true
+                                        };
+                                        if (block.Input.HasValue)
+                                        {
+                                            tc.Input = block.Input.Value.ValueKind == JsonValueKind.Undefined
+                                                ? ""
+                                                : JsonSerializer.Serialize(block.Input.Value,
+                                                    new JsonSerializerOptions { WriteIndented = true });
+                                        }
+                                        ChatState.AddToolCall(assistantMsg, tc);
+                                        ChatState.SetPhase(StreamingPhase.UsingTool, block.Name, session.Id);
+                                        if (block.Name == "ExitPlanMode")
+                                            exitPlanModeDetected = true;
+                                        break;
+                                }
+                            }
+                        }
+                        // Intermediate save for multi-turn
+                        _ = SessionService.SaveSessionAsync(session);
+                        break;
+
+                    case "user":
+                        if (evt.Message?.Content != null)
+                        {
+                            foreach (var block in evt.Message.Content)
+                            {
+                                if (block.Type == "tool_result" && !string.IsNullOrEmpty(block.ToolUseId))
+                                {
+                                    var match = assistantMsg.ToolCalls.FirstOrDefault(t => t.Id == block.ToolUseId);
+                                    if (match != null)
+                                    {
+                                        match.IsError = block.IsError ?? false;
+                                        if (block.Content.HasValue)
+                                            match.Output = ExtractToolResultContent(block.Content.Value);
+                                        match.IsComplete = true;
+                                    }
+                                }
+                            }
+                            ChatState.NotifyStateChanged();
+                        }
+                        break;
+
+                    case "message_start":
+                        if (evt.Message?.Model is string startModel && !string.IsNullOrEmpty(startModel))
+                            session.ResolvedModel = startModel;
+                        break;
+
+                    case "message_delta":
                         if (evt.Message?.Usage != null)
                         {
                             session.TotalInputTokens += evt.Message.Usage.InputTokens;
                             session.TotalOutputTokens += evt.Message.Usage.OutputTokens;
                         }
-                        if (evt.Message?.Content != null)
+                        break;
+
+                    case "message_stop":
+                        break;
+
+                    case "result":
+                        if (string.IsNullOrEmpty(session.ConversationId) && !string.IsNullOrEmpty(evt.SessionId))
+                            session.ConversationId = evt.SessionId;
+                        if (evt.Message?.Usage != null)
                         {
-                            foreach (var block in evt.Message.Content)
+                            session.TotalInputTokens += evt.Message.Usage.InputTokens;
+                            session.TotalOutputTokens += evt.Message.Usage.OutputTokens;
+                        }
+                        // assistant 이벤트에서 이미 처리됐을 수 있으므로 Parts 비어있을 때만 fallback
+                        if (assistantMsg.Parts.Count == 0)
+                        {
+                            if (evt.Message?.Content != null)
                             {
-                                if (block.Type == "text" && block.Text != null && string.IsNullOrEmpty(assistantMsg.Text))
-                                    ChatState.AppendText(assistantMsg, block.Text);
-                                // Detect ExitPlanMode in result content blocks
-                                if (block.Type == "tool_use" && block.Name == "ExitPlanMode")
-                                    exitPlanModeDetected = true;
+                                foreach (var block in evt.Message.Content)
+                                {
+                                    if (block.Type == "text" && block.Text != null)
+                                        ChatState.AppendText(assistantMsg, block.Text);
+                                    if (block.Type == "tool_use" && block.Name == "ExitPlanMode")
+                                        exitPlanModeDetected = true;
+                                }
+                            }
+                            if (string.IsNullOrEmpty(assistantMsg.Text) && !string.IsNullOrEmpty(evt.Result))
+                                ChatState.AppendText(assistantMsg, evt.Result);
+                        }
+                        else
+                        {
+                            // Parts가 있더라도 ExitPlanMode 체크는 해야 함
+                            if (evt.Message?.Content != null)
+                            {
+                                foreach (var block in evt.Message.Content)
+                                {
+                                    if (block.Type == "tool_use" && block.Name == "ExitPlanMode")
+                                        exitPlanModeDetected = true;
+                                }
                             }
                         }
-                        if (string.IsNullOrEmpty(assistantMsg.Text) && !string.IsNullOrEmpty(evt.Result))
-                            ChatState.AppendText(assistantMsg, evt.Result);
                         break;
 
                     case "error":
@@ -720,14 +812,7 @@
                         break;
 
                     default:
-                        if (evt.Message?.Content != null)
-                        {
-                            foreach (var block in evt.Message.Content)
-                            {
-                                if (block.Type == "text" && !string.IsNullOrEmpty(block.Text))
-                                    ChatState.AppendText(assistantMsg, block.Text);
-                            }
-                        }
+                        Logger.LogDebug("Unhandled Claude event type: {Type}", evt.Type);
                         break;
                 }
             }
