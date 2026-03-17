@@ -241,6 +241,39 @@ public class ChatState : IDisposable
         NotifyStateChanged();
     }
 
+    // Settings page state
+    public bool ShowSettings { get; private set; }
+    public string SettingsSection { get; private set; } = "general";
+    public string? SettingsWorkspaceId { get; private set; }
+
+    public void OpenSettings(string section = "general", string? workspaceId = null)
+    {
+        ShowSettings = true;
+        SettingsSection = section;
+        SettingsWorkspaceId = workspaceId;
+        NotifyStateChanged();
+    }
+
+    public void CloseSettings()
+    {
+        ShowSettings = false;
+        SettingsWorkspaceId = null;
+        NotifyStateChanged();
+    }
+
+    public void SetSettingsSection(string section)
+    {
+        SettingsSection = section;
+        NotifyStateChanged();
+    }
+
+    public void SetSettingsWorkspace(string? workspaceId)
+    {
+        SettingsWorkspaceId = workspaceId;
+        SettingsSection = workspaceId != null ? "ws-general" : "general";
+        NotifyStateChanged();
+    }
+
     public void SetRightPanel(RightPanelMode mode)
     {
         RightPanel = mode;

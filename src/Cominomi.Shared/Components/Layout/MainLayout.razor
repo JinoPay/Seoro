@@ -8,127 +8,132 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<div class="cominomi-shell @(ChatState.RightPanel != RightPanelMode.None ? "detail-open" : "") @(!_sidebarOpen ? "sidebar-collapsed" : "")">
-    @* === Left Panel: Sidebar === *@
-    <aside class="cominomi-sidebar">
-        <div class="sidebar-toolbar">
-            <span class="sidebar-brand">
-                <svg width="20" height="20" viewBox="0 0 456 456" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="68" y="78" width="320" height="240" rx="40" ry="40" fill="currentColor" opacity="0.8" />
-                    <polygon points="108,318 68,378 168,318" fill="currentColor" opacity="0.8" />
-                    <polyline points="148,158 208,198 148,238" fill="none" stroke="var(--mud-palette-surface)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" />
-                    <line x1="228" y1="238" x2="308" y2="238" stroke="var(--mud-palette-surface)" stroke-width="30" stroke-linecap="round" />
-                </svg>
-                Cominomi
-            </span>
-            <div style="display: flex; align-items: center; gap: 2px;">
-                <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
-                               Color="Color.Inherit" Size="Size.Small" OnClick="@ToggleDarkMode"
-                               Style="width: 28px; height: 28px; opacity: 0.5;" />
-                <MudIconButton Icon="@Icons.Material.Filled.Analytics" Color="Color.Inherit"
-                               Size="Size.Small" OnClick="@OpenUsageDashboard"
-                               Style="width: 28px; height: 28px; opacity: 0.5;"
-                               Title="사용량 대시보드" />
-                <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit"
-                               Size="Size.Small" OnClick="@OpenSettings"
-                               Style="width: 28px; height: 28px; opacity: 0.5;" />
+@if (ChatState.ShowSettings)
+{
+    <SettingsPage />
+}
+else
+{
+    <div class="cominomi-shell @(ChatState.RightPanel != RightPanelMode.None ? "detail-open" : "") @(!_sidebarOpen ? "sidebar-collapsed" : "")">
+        @* === Left Panel: Sidebar === *@
+        <aside class="cominomi-sidebar">
+            <div class="sidebar-toolbar">
+                <span class="sidebar-brand">
+                    <svg width="20" height="20" viewBox="0 0 456 456" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="68" y="78" width="320" height="240" rx="40" ry="40" fill="currentColor" opacity="0.8" />
+                        <polygon points="108,318 68,378 168,318" fill="currentColor" opacity="0.8" />
+                        <polyline points="148,158 208,198 148,238" fill="none" stroke="var(--mud-palette-surface)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" />
+                        <line x1="228" y1="238" x2="308" y2="238" stroke="var(--mud-palette-surface)" stroke-width="30" stroke-linecap="round" />
+                    </svg>
+                    Cominomi
+                </span>
+                <div style="display: flex; align-items: center; gap: 2px;">
+                    <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                                   Color="Color.Inherit" Size="Size.Small" OnClick="@ToggleDarkMode"
+                                   Style="width: 28px; height: 28px; opacity: 0.5;" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Analytics" Color="Color.Inherit"
+                                   Size="Size.Small" OnClick="@OpenUsageDashboard"
+                                   Style="width: 28px; height: 28px; opacity: 0.5;"
+                                   Title="사용량 대시보드" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit"
+                                   Size="Size.Small" OnClick="@OpenSettings"
+                                   Style="width: 28px; height: 28px; opacity: 0.5;" />
+                </div>
             </div>
-        </div>
-        <SessionList />
-    </aside>
-
-    @* === Center Panel: Chat === *@
-    <main class="cominomi-main">
-        <div class="main-toolbar">
-            <MudIconButton Icon="@(_sidebarOpen ? Icons.Material.Filled.MenuOpen : Icons.Material.Filled.Menu)"
-                           Color="Color.Inherit" Size="Size.Small" OnClick="@ToggleSidebar"
-                           Style="width: 28px; height: 28px; opacity: 0.6;" />
-
-            @if (ChatState.CurrentSession != null)
-            {
-                <span class="toolbar-title">@(ChatState.CurrentSession.Title ?? "새 대화")</span>
-
-                @if (!string.IsNullOrEmpty(ChatState.CurrentSession.BranchName))
-                {
-                    <span class="toolbar-branch-badge">
-                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
-                                 Style="width: 12px; height: 12px; opacity: 0.6;" />
-                        @ChatState.CurrentSession.BranchName
-                    </span>
-                }
-
-                @if (ChatState.CurrentSession.PermissionMode == "plan")
-                {
-                    <span class="toolbar-mode-badge plan">플랜</span>
-                }
-            }
-            else
-            {
-                <span class="toolbar-title" style="opacity: 0.4;">대화를 선택하세요</span>
-            }
-
-            <div style="flex: 1;"></div>
-
-            <StatusBar />
-
-            @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status != SessionStatus.Pending)
-            {
-                <MudTooltip Text="파일 탐색기">
-                    <MudIconButton Icon="@Icons.Material.Filled.FolderOpen"
-                                   Color="@(ChatState.RightPanel == RightPanelMode.Explorer ? Color.Primary : Color.Inherit)"
-                                   Size="Size.Small"
-                                   Style="width: 28px; height: 28px;"
-                                   OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Explorer))" />
-                </MudTooltip>
-                <MudTooltip Text="변경사항">
-                    <MudIconButton Icon="@Icons.Material.Filled.Difference"
-                                   Color="@(ChatState.RightPanel == RightPanelMode.Changes ? Color.Primary : Color.Inherit)"
-                                   Size="Size.Small"
-                                   Style="width: 28px; height: 28px;"
-                                   OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Changes))" />
-                </MudTooltip>
-            }
-        </div>
-
-        @if (ChatState.Tabs.OpenTabs.Count > 1)
-        {
-            <MainTabBar />
-        }
-
-        <div class="main-content">
-            @if (ChatState.Tabs.ActiveTab?.Type == MainTabType.FileContent && ChatState.Tabs.ActiveTab.FilePath != null)
-            {
-                <FileContentView FilePath="ChatState.Tabs.ActiveTab.FilePath"
-                                 Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")" />
-            }
-            else if (ChatState.Tabs.ActiveTab?.Type == MainTabType.FileDiff && ChatState.Tabs.ActiveTab.DiffData != null)
-            {
-                <FileDiffView Diff="ChatState.Tabs.ActiveTab.DiffData" />
-            }
-            else
-            {
-                @Body
-            }
-        </div>
-    </main>
-
-    @* === Right Panel: Detail (Context) === *@
-    @if (ChatState.RightPanel != RightPanelMode.None)
-    {
-        <aside class="cominomi-detail">
-            <DetailPanel />
+            <SessionList />
         </aside>
-    }
-</div>
 
-<SettingsDialog @bind-IsOpen="_settingsOpen" />
+        @* === Center Panel: Chat === *@
+        <main class="cominomi-main">
+            <div class="main-toolbar">
+                <MudIconButton Icon="@(_sidebarOpen ? Icons.Material.Filled.MenuOpen : Icons.Material.Filled.Menu)"
+                               Color="Color.Inherit" Size="Size.Small" OnClick="@ToggleSidebar"
+                               Style="width: 28px; height: 28px; opacity: 0.6;" />
+
+                @if (ChatState.CurrentSession != null)
+                {
+                    <span class="toolbar-title">@(ChatState.CurrentSession.Title ?? "새 대화")</span>
+
+                    @if (!string.IsNullOrEmpty(ChatState.CurrentSession.BranchName))
+                    {
+                        <span class="toolbar-branch-badge">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
+                                     Style="width: 12px; height: 12px; opacity: 0.6;" />
+                            @ChatState.CurrentSession.BranchName
+                        </span>
+                    }
+
+                    @if (ChatState.CurrentSession.PermissionMode == "plan")
+                    {
+                        <span class="toolbar-mode-badge plan">플랜</span>
+                    }
+                }
+                else
+                {
+                    <span class="toolbar-title" style="opacity: 0.4;">대화를 선택하세요</span>
+                }
+
+                <div style="flex: 1;"></div>
+
+                <StatusBar />
+
+                @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status != SessionStatus.Pending)
+                {
+                    <MudTooltip Text="파일 탐색기">
+                        <MudIconButton Icon="@Icons.Material.Filled.FolderOpen"
+                                       Color="@(ChatState.RightPanel == RightPanelMode.Explorer ? Color.Primary : Color.Inherit)"
+                                       Size="Size.Small"
+                                       Style="width: 28px; height: 28px;"
+                                       OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Explorer))" />
+                    </MudTooltip>
+                    <MudTooltip Text="변경사항">
+                        <MudIconButton Icon="@Icons.Material.Filled.Difference"
+                                       Color="@(ChatState.RightPanel == RightPanelMode.Changes ? Color.Primary : Color.Inherit)"
+                                       Size="Size.Small"
+                                       Style="width: 28px; height: 28px;"
+                                       OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Changes))" />
+                    </MudTooltip>
+                }
+            </div>
+
+            @if (ChatState.Tabs.OpenTabs.Count > 1)
+            {
+                <MainTabBar />
+            }
+
+            <div class="main-content">
+                @if (ChatState.Tabs.ActiveTab?.Type == MainTabType.FileContent && ChatState.Tabs.ActiveTab.FilePath != null)
+                {
+                    <FileContentView FilePath="ChatState.Tabs.ActiveTab.FilePath"
+                                     Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")" />
+                }
+                else if (ChatState.Tabs.ActiveTab?.Type == MainTabType.FileDiff && ChatState.Tabs.ActiveTab.DiffData != null)
+                {
+                    <FileDiffView Diff="ChatState.Tabs.ActiveTab.DiffData" />
+                }
+                else
+                {
+                    @Body
+                }
+            </div>
+        </main>
+
+        @* === Right Panel: Detail (Context) === *@
+        @if (ChatState.RightPanel != RightPanelMode.None)
+        {
+            <aside class="cominomi-detail">
+                <DetailPanel />
+            </aside>
+        }
+    </div>
+}
+
 <SetupDialog @bind-IsOpen="_setupOpen" />
 <UsageDashboard @bind-IsOpen="_usageDashboardOpen" />
 
 @code {
     private bool _sidebarOpen = true;
     private bool _isDarkMode = true;
-    private bool _settingsOpen;
     private bool _setupOpen;
     private bool _usageDashboardOpen;
 
@@ -213,7 +218,7 @@
         await ApplyTheme(settings.Theme);
     }
 
-    private void OpenSettings() => _settingsOpen = true;
+    private void OpenSettings() => ChatState.OpenSettings();
     private void OpenUsageDashboard() => _usageDashboardOpen = true;
 
     public void Dispose()

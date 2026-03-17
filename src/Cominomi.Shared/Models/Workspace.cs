@@ -24,4 +24,19 @@ public class Workspace
     public string RepoLocalPath { get; set; } = "";
     public string? ErrorMessage { get; set; }
     public string? SystemPrompt { get; set; }
+
+    // Git defaults
+    public string? DefaultBaseBranch { get; set; }
+    public string DefaultRemote { get; set; } = "origin";
+
+    // Scripts
+    public string? SetupScript { get; set; }
+    public string? RunScript { get; set; }
+    public string? ArchiveScript { get; set; }
+
+    // Preferences
+    public string? CodeReviewPreferences { get; set; }
+    public string? CreatePrPreferences { get; set; }
+    public string? BranchRenamePreferences { get; set; }
+    public string? GeneralPreferences { get; set; }
 }
