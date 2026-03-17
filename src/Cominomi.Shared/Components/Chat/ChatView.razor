@@ -17,7 +17,8 @@
 
 <div class="chat-container">
     @* Workflow actions bar (Push/PR/Merge) *@
-    @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status is SessionStatus.Ready
+    @if (ChatState.CurrentSession != null && !ChatState.CurrentSession.IsLocalDir
+         && ChatState.CurrentSession.Status is SessionStatus.Ready
          or SessionStatus.Pushed or SessionStatus.PrOpen or SessionStatus.ConflictDetected)
     {
         <div class="session-workflow" style="padding: var(--space-1) var(--space-4); border-bottom: 1px solid var(--border-subtle); justify-content: flex-end;">
@@ -562,9 +563,12 @@
                 if (!string.IsNullOrEmpty(summary))
                 {
                     session.Title = summary;
-                    var newBranchName = Services.SessionService.GenerateBranchName(summary);
-                    await SessionService.RenameBranchAsync(session.Id, newBranchName);
-                    session.BranchName = newBranchName;
+                    if (!session.IsLocalDir)
+                    {
+                        var newBranchName = Services.SessionService.GenerateBranchName(summary);
+                        await SessionService.RenameBranchAsync(session.Id, newBranchName);
+                        session.BranchName = newBranchName;
+                    }
                     ChatState.NotifyStateChanged();
                 }
             }

@@ -43,6 +43,7 @@ public class Session
     public List<string> AdditionalDirs { get; set; } = [];
     public List<string> AllowedTools { get; set; } = [];
     public List<string> DisallowedTools { get; set; } = [];
+    public bool IsLocalDir { get; set; }
     public bool PlanCompleted { get; set; }
     public string? PlanFilePath { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

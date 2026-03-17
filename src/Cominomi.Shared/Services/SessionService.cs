@@ -70,6 +70,7 @@ public partial class SessionService : ISessionService
                         WorkspaceId = session.WorkspaceId,
                         PermissionMode = session.PermissionMode,
                         AgentType = session.AgentType,
+                        IsLocalDir = session.IsLocalDir,
                         CityName = session.CityName,
                         Status = session.Status,
                         ErrorMessage = session.ErrorMessage,
@@ -162,6 +163,40 @@ public partial class SessionService : ISessionService
 
         await SaveSessionAsync(session);
         _logger.LogInformation("Created session {SessionId} ({CityName}) in workspace {WorkspaceId}", session.Id, cityName, workspaceId);
+
+        await _hooksEngine.FireAsync(HookEvent.OnSessionCreate, new Dictionary<string, string>
+        {
+            ["COMINOMI_SESSION_ID"] = session.Id,
+            ["COMINOMI_CITY_NAME"] = cityName,
+            ["COMINOMI_WORKSPACE_ID"] = workspaceId
+        });
+
+        return session;
+    }
+
+    public async Task<Session> CreateLocalDirSessionAsync(string model, string workspaceId)
+    {
+        var workspace = await _workspaceService.LoadWorkspaceAsync(workspaceId);
+        if (workspace == null)
+            throw new InvalidOperationException($"Workspace '{workspaceId}' not found.");
+
+        var settings = await _settingsService.LoadAsync();
+        var cityName = CityNames.GetRandom();
+        var session = new Session
+        {
+            Model = model,
+            WorkspaceId = workspaceId,
+            CityName = cityName,
+            Title = cityName,
+            IsLocalDir = true,
+            Status = SessionStatus.Ready,
+            WorktreePath = workspace.RepoLocalPath,
+            EffortLevel = settings.DefaultEffortLevel,
+            PermissionMode = settings.DefaultPermissionMode
+        };
+
+        await SaveSessionAsync(session);
+        _logger.LogInformation("Created local-dir session {SessionId} ({CityName}) in workspace {WorkspaceId}", session.Id, cityName, workspaceId);
 
         await _hooksEngine.FireAsync(HookEvent.OnSessionCreate, new Dictionary<string, string>
         {
@@ -299,24 +334,28 @@ public partial class SessionService : ISessionService
             catch (Exception ex) { _logger.LogWarning(ex, "Failed to archive context for session {SessionId}", sessionId); }
         }
 
-        // Remove worktree
-        if (!string.IsNullOrEmpty(session.WorktreePath))
+        // Skip worktree/branch cleanup for local-dir sessions (the directory is the user's real repo)
+        if (!session.IsLocalDir)
         {
-            try
+            // Remove worktree
+            if (!string.IsNullOrEmpty(session.WorktreePath))
             {
-                await _gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, session.WorktreePath);
+                try
+                {
+                    await _gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, session.WorktreePath);
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Failed to remove worktree for session {SessionId}", sessionId); }
             }
-            catch (Exception ex) { _logger.LogWarning(ex, "Failed to remove worktree for session {SessionId}", sessionId); }
-        }
 
-        // Delete branch
-        if (!string.IsNullOrEmpty(session.BranchName))
-        {
-            try
+            // Delete branch
+            if (!string.IsNullOrEmpty(session.BranchName))
             {
-                await _gitService.DeleteBranchAsync(workspace.RepoLocalPath, session.BranchName);
+                try
+                {
+                    await _gitService.DeleteBranchAsync(workspace.RepoLocalPath, session.BranchName);
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete branch {Branch} for session {SessionId}", session.BranchName, sessionId); }
             }
-            catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete branch {Branch} for session {SessionId}", session.BranchName, sessionId); }
         }
 
         session.Status = SessionStatus.Archived;
@@ -333,7 +372,7 @@ public partial class SessionService : ISessionService
     public async Task<bool> CheckMergeStatusAsync(string sessionId)
     {
         var session = await LoadSessionAsync(sessionId);
-        if (session == null || session.Status != SessionStatus.Ready)
+        if (session == null || session.Status != SessionStatus.Ready || session.IsLocalDir)
             return false;
 
         var workspace = await _workspaceService.LoadWorkspaceAsync(session.WorkspaceId);

@@ -40,10 +40,15 @@
                                 }
                                 @if (readyWs != null)
                                 {
-                                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
-                                                   Style="width: 20px; height: 20px; opacity: 0.5;"
-                                                   OnClick="@(() => CreateNewChat(readyWs))"
-                                                   OnClickStopPropagation="true" />
+                                    <MudMenu Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                                             Dense="true" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter"
+                                             Style="width: 20px; height: 20px; opacity: 0.5;"
+                                             ActivationEvent="@MouseEvent.LeftClick">
+                                        <MudMenuItem OnClick="@(() => CreateNewChat(readyWs))"
+                                                     Icon="@Icons.Material.Filled.AccountTree">새 세션</MudMenuItem>
+                                        <MudMenuItem OnClick="@(() => CreateLocalDirChat(readyWs))"
+                                                     Icon="@Icons.Material.Filled.Folder">로컬 디렉토리</MudMenuItem>
+                                    </MudMenu>
                                 }
                                 <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
                                          Dense="true"
@@ -77,10 +82,15 @@
                                     }
                                     @if (ws.Status == WorkspaceStatus.Ready && !_isCreatingSession)
                                     {
-                                        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
-                                                       Style="width: 16px; height: 16px; opacity: 0.4;"
-                                                       OnClick="@(() => CreateNewChat(ws))"
-                                                       OnClickStopPropagation="true" />
+                                        <MudMenu Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                                                 Dense="true" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter"
+                                                 Style="width: 16px; height: 16px; opacity: 0.4;"
+                                                 ActivationEvent="@MouseEvent.LeftClick">
+                                            <MudMenuItem OnClick="@(() => CreateNewChat(ws))"
+                                                         Icon="@Icons.Material.Filled.AccountTree">새 세션</MudMenuItem>
+                                            <MudMenuItem OnClick="@(() => CreateLocalDirChat(ws))"
+                                                         Icon="@Icons.Material.Filled.Folder">로컬 디렉토리</MudMenuItem>
+                                        </MudMenu>
                                     }
                                 </div>
                             }
@@ -119,7 +129,11 @@
 
                                         <div class="tree-session-info">
                                             <span class="tree-session-title">@session.Title</span>
-                                            @if (!string.IsNullOrEmpty(session.BranchName))
+                                            @if (session.IsLocalDir)
+                                            {
+                                                <span class="tree-session-branch" style="opacity: 0.5;">로컬</span>
+                                            }
+                                            else if (!string.IsNullOrEmpty(session.BranchName))
                                             {
                                                 <span class="tree-session-branch">@session.BranchName</span>
                                             }
@@ -295,6 +309,34 @@
         try
         {
             var session = await SessionService.CreatePendingSessionAsync(ws.DefaultModel, ws.Id);
+            ChatState.SetWorkspace(ws);
+            ChatState.SetSession(session);
+
+            if (_sessionCache.TryGetValue(ws.Id, out var sessions))
+                sessions.Insert(0, session);
+
+            var settings = await SettingsService.LoadAsync();
+            settings.LastWorkspaceId = ws.Id;
+            settings.LastSessionId = session.Id;
+            await SettingsService.SaveAsync(settings);
+        }
+        finally
+        {
+            _isCreatingSession = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CreateLocalDirChat(Workspace ws)
+    {
+        if (ws.Status != WorkspaceStatus.Ready) return;
+
+        _isCreatingSession = true;
+        StateHasChanged();
+
+        try
+        {
+            var session = await SessionService.CreateLocalDirSessionAsync(ws.DefaultModel, ws.Id);
             ChatState.SetWorkspace(ws);
             ChatState.SetSession(session);
 
