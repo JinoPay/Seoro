@@ -573,9 +573,15 @@
                         if (renameResult.Success)
                             session.BranchName = newBranchName;
                     }
+                    // Sync the chat tab title
+                    ChatState.UpdateChatTabTitle(summary);
+
+                    // Show in-chat notification
+                    var branchInfo = session.IsLocalDir ? "" : $" · 브랜치: {session.BranchName}";
+                    ChatState.AddSystemMessage($"제목이 \"{summary}\"(으)로 설정됨{branchInfo}");
+
                     // Save once with both title and branch name updated on the same object
                     await SessionService.SaveSessionAsync(session);
-                    ChatState.NotifyStateChanged();
                 }
             }
             catch (Exception ex)

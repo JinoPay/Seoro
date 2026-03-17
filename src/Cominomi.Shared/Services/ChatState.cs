@@ -360,6 +360,23 @@ public class ChatState : IDisposable
         NotifyStateChanged();
     }
 
+    public void UpdateChatTabTitle(string title)
+    {
+        var chatTab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.Chat);
+        if (chatTab != null) chatTab.Title = title;
+        NotifyStateChanged();
+    }
+
+    public void AddSystemMessage(string text)
+    {
+        CurrentSession?.Messages.Add(new ChatMessage
+        {
+            Role = MessageRole.System,
+            Text = text
+        });
+        NotifyStateChanged();
+    }
+
     public void SetRightPanel(RightPanelMode mode)
     {
         RightPanel = mode;

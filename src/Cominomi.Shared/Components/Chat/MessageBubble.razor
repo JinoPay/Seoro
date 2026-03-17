@@ -4,6 +4,19 @@
 @using Cominomi.Shared.Components.Tools
 @inject ChatState ChatState
 
+@if (Message.Role == MessageRole.System)
+{
+    <div class="system-message">
+        <div class="system-message-content">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small"
+                     Style="width: 14px; height: 14px; opacity: 0.5;" />
+            <span>@Message.Text</span>
+            <span class="message-time">@Message.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+        </div>
+    </div>
+    return;
+}
+
 <div class="message-bubble @(Message.Role == MessageRole.User ? "user-message" : "assistant-message")">
     <div class="message-layout">
         <div class="message-avatar">
