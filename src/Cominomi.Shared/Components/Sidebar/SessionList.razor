@@ -3,6 +3,7 @@
 @inject ISettingsService SettingsService
 @inject IWorkspaceService WorkspaceService
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @implements IDisposable
 
 <div class="sidebar-tree">
@@ -346,13 +347,31 @@
 
     private async Task DeleteSession(Session session)
     {
-        await SessionService.DeleteSessionAsync(session.Id);
+        var result = await DialogService.ShowMessageBoxAsync(
+            "세션 삭제",
+            $"'{session.Title}' 세션을 삭제하시겠습니까?",
+            yesText: "삭제", cancelText: "취소");
 
-        if (_sessionCache.TryGetValue(session.WorkspaceId, out var sessions))
-            sessions.Remove(session);
+        if (result != true) return;
 
-        if (ChatState.CurrentSession?.Id == session.Id)
-            ChatState.SetSession(null!);
+        try
+        {
+            await SessionService.DeleteSessionAsync(session.Id);
+
+            if (_sessionCache.TryGetValue(session.WorkspaceId, out var sessions))
+                sessions.Remove(session);
+
+            if (ChatState.CurrentSession?.Id == session.Id)
+                ChatState.SetSession(null!);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"세션 삭제 실패: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
     }
 
     private static string GetStatusDotClass(SessionStatus status) => status switch
