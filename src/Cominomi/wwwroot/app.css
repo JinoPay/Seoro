@@ -806,6 +806,30 @@ html, body {
     padding: 0;
 }
 
+/* ===== System Messages ===== */
+.system-message {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0;
+    margin: 4px 0;
+}
+
+.system-message-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    background: rgba(96, 165, 250, 0.08);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.75rem;
+}
+
+.system-message-content .message-time {
+    opacity: 0.5;
+    font-size: 0.65rem;
+}
+
 /* ===== Message Bubbles (Claude.ai Style) ===== */
 .message-bubble {
     padding: var(--space-4);

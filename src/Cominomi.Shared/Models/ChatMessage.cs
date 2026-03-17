@@ -48,5 +48,6 @@ public class ChatMessage
 public enum MessageRole
 {
     User,
-    Assistant
+    Assistant,
+    System
 }
