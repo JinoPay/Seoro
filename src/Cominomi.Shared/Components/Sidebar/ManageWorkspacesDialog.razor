@@ -1,6 +1,8 @@
 @inject IWorkspaceService WorkspaceService
 @inject ISessionService SessionService
 @inject ChatState ChatState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
@@ -78,7 +80,8 @@
                                            OnClick="@(() => StartEdit(ws))" />
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                            Color="Color.Error"
-                                           OnClick="@(() => DeleteWorkspace(ws))" />
+                                           Disabled="_isDeleting"
+                                           OnClick="@(() => ConfirmAndDeleteWorkspace(ws))" />
                         </MudStack>
                     </MudPaper>
                 }
@@ -97,6 +100,7 @@
 
     private List<Workspace> _workspaces = [];
     private bool _isEditing;
+    private bool _isDeleting;
     private Workspace? _editingWorkspace;
     private string _editName = "";
     private string _editModel = ModelDefinitions.Default.Id;
@@ -145,27 +149,50 @@
         CancelEdit();
     }
 
-    private async Task DeleteWorkspace(Workspace ws)
+    private async Task ConfirmAndDeleteWorkspace(Workspace ws)
     {
-        var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
-        foreach (var session in sessions)
+        var result = await DialogService.ShowMessageBoxAsync(
+            "워크스페이스 삭제",
+            $"'{ws.Name}' 워크스페이스와 모든 세션이 삭제됩니다. 계속하시겠습니까?",
+            yesText: "삭제", cancelText: "취소");
+
+        if (result != true) return;
+
+        _isDeleting = true;
+        StateHasChanged();
+
+        try
         {
-            await SessionService.DeleteSessionAsync(session.Id);
+            var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
+            foreach (var session in sessions)
+            {
+                await SessionService.DeleteSessionAsync(session.Id);
+            }
+
+            await WorkspaceService.DeleteWorkspaceAsync(ws.Id);
+            _workspaces.Remove(ws);
+
+            if (ChatState.CurrentWorkspace?.Id == ws.Id)
+            {
+                var firstWs = _workspaces.FirstOrDefault();
+                if (firstWs != null)
+                    ChatState.SetWorkspace(firstWs);
+                else
+                    ChatState.SetWorkspace(null!);
+            }
+
+            await OnWorkspacesChanged.InvokeAsync();
+            Snackbar.Add($"'{ws.Name}' 워크스페이스가 삭제되었습니다.", Severity.Success);
         }
-
-        await WorkspaceService.DeleteWorkspaceAsync(ws.Id);
-        _workspaces.Remove(ws);
-
-        if (ChatState.CurrentWorkspace?.Id == ws.Id)
+        catch (Exception ex)
         {
-            var firstWs = _workspaces.FirstOrDefault();
-            if (firstWs != null)
-                ChatState.SetWorkspace(firstWs);
-            else
-                ChatState.SetWorkspace(null!);
+            Snackbar.Add($"삭제 중 오류가 발생했습니다: {ex.Message}", Severity.Error);
         }
-
-        await OnWorkspacesChanged.InvokeAsync();
+        finally
+        {
+            _isDeleting = false;
+            StateHasChanged();
+        }
     }
 
     private async Task OnVisibleChanged(bool visible)
