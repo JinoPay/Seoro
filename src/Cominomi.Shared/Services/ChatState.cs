@@ -17,7 +17,6 @@ public enum RightPanelMode
 {
     None,
     Diff,
-    Context,
     Explorer,
     Changes
 }
