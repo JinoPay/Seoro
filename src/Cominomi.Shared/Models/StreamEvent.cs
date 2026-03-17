@@ -27,7 +27,7 @@ public class StreamEvent
     public string? Model { get; set; }
 
     [JsonPropertyName("error")]
-    public string? Error { get; set; }
+    public JsonElement? Error { get; set; }
 
     [JsonPropertyName("result")]
     public string? Result { get; set; }
@@ -35,8 +35,28 @@ public class StreamEvent
     [JsonPropertyName("session_id")]
     public string? SessionId { get; set; }
 
+    [JsonPropertyName("usage")]
+    public UsageInfo? Usage { get; set; }
+
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
+    /// <summary>
+    /// Extract error message from either a string or structured error object.
+    /// </summary>
+    public string? GetErrorMessage()
+    {
+        if (Error == null) return null;
+        var el = Error.Value;
+        return el.ValueKind switch
+        {
+            JsonValueKind.String => el.GetString(),
+            JsonValueKind.Object => el.TryGetProperty("message", out var msg)
+                ? msg.GetString()
+                : el.ToString(),
+            _ => el.ToString()
+        };
+    }
 }
 
 public class StreamMessage
@@ -58,6 +78,9 @@ public class StreamMessage
 
     [JsonPropertyName("usage")]
     public UsageInfo? Usage { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
 
 public class ContentBlock
@@ -67,6 +90,9 @@ public class ContentBlock
 
     [JsonPropertyName("text")]
     public string? Text { get; set; }
+
+    [JsonPropertyName("thinking")]
+    public string? Thinking { get; set; }
 
     [JsonPropertyName("id")]
     public string? Id { get; set; }
@@ -85,6 +111,9 @@ public class ContentBlock
 
     [JsonPropertyName("is_error")]
     public bool? IsError { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
 
 public class ContentDelta
@@ -100,6 +129,12 @@ public class ContentDelta
 
     [JsonPropertyName("thinking")]
     public string? Thinking { get; set; }
+
+    [JsonPropertyName("stop_reason")]
+    public string? StopReason { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
 
 public class UsageInfo
@@ -115,4 +150,10 @@ public class UsageInfo
 
     [JsonPropertyName("cache_read_input_tokens")]
     public int? CacheReadInputTokens { get; set; }
+
+    [JsonPropertyName("server_tool_use_input_tokens")]
+    public int? ServerToolUseInputTokens { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }

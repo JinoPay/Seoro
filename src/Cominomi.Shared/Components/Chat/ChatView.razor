@@ -588,6 +588,7 @@
         var toolResultBlockMap = new Dictionary<int, string>(); // content block index → tool_use_id
         bool firstEvent = true;
         bool exitPlanModeDetected = false;
+        bool usageRecorded = false; // prevent double-counting between message_delta and result
         _streamStartTime = DateTime.UtcNow;
 
         try
@@ -625,6 +626,11 @@
                         ChatState.SetPhase(StreamingPhase.Thinking, sessionId: session.Id);
                         break;
 
+                    case "content_block_start" when evt.ContentBlock?.Type == "redacted_thinking":
+                        ChatState.AppendThinking(assistantMsg, "[사고 내용 생략됨]");
+                        break;
+
+                    case "content_block_start" when evt.ContentBlock?.Type == "server_tool_use":
                     case "content_block_start" when evt.ContentBlock?.Type == "tool_use":
                         currentToolCall = new ToolCall
                         {
@@ -637,6 +643,7 @@
                             exitPlanModeDetected = true;
                         break;
 
+                    case "content_block_start" when evt.ContentBlock?.Type == "server_tool_result":
                     case "content_block_start" when evt.ContentBlock?.Type == "tool_result":
                         if (evt.Index.HasValue && !string.IsNullOrEmpty(evt.ContentBlock.ToolUseId))
                         {
@@ -705,9 +712,13 @@
                                     case "text" when block.Text != null:
                                         ChatState.AppendText(assistantMsg, block.Text);
                                         break;
-                                    case "thinking" when block.Text != null:
-                                        ChatState.AppendThinking(assistantMsg, block.Text);
+                                    case "thinking" when (block.Thinking ?? block.Text) != null:
+                                        ChatState.AppendThinking(assistantMsg, block.Thinking ?? block.Text!);
                                         break;
+                                    case "redacted_thinking":
+                                        ChatState.AppendThinking(assistantMsg, "[사고 내용 생략됨]");
+                                        break;
+                                    case "server_tool_use":
                                     case "tool_use":
                                         var tc = new ToolCall
                                         {
@@ -739,7 +750,7 @@
                         {
                             foreach (var block in evt.Message.Content)
                             {
-                                if (block.Type == "tool_result" && !string.IsNullOrEmpty(block.ToolUseId))
+                                if ((block.Type is "tool_result" or "server_tool_result") && !string.IsNullOrEmpty(block.ToolUseId))
                                 {
                                     var match = assistantMsg.ToolCalls.FirstOrDefault(t => t.Id == block.ToolUseId);
                                     if (match != null)
@@ -758,16 +769,27 @@
                     case "message_start":
                         if (evt.Message?.Model is string startModel && !string.IsNullOrEmpty(startModel))
                             session.ResolvedModel = startModel;
+                        usageRecorded = false; // reset per turn for accurate counting
                         break;
 
                     case "message_delta":
-                        if (evt.Message?.Usage != null)
+                    {
+                        var deltaUsage = evt.Usage ?? evt.Message?.Usage;
+                        if (deltaUsage != null && !usageRecorded)
                         {
-                            session.TotalInputTokens += evt.Message.Usage.InputTokens;
-                            session.TotalOutputTokens += evt.Message.Usage.OutputTokens;
-                            _ = RecordUsageAsync(session, evt.Message.Usage);
+                            session.TotalInputTokens += deltaUsage.InputTokens;
+                            session.TotalOutputTokens += deltaUsage.OutputTokens;
+                            _ = RecordUsageAsync(session, deltaUsage);
+                            usageRecorded = true;
+                        }
+                        // Track stop_reason for truncation detection
+                        var stopReason = evt.Delta?.StopReason ?? evt.Message?.StopReason;
+                        if (!string.IsNullOrEmpty(stopReason) && stopReason == "max_tokens")
+                        {
+                            ChatState.AppendText(assistantMsg, "\n\n⚠️ *응답이 최대 토큰 한도에 도달하여 잘렸습니다.*");
                         }
                         break;
+                    }
 
                     case "message_stop":
                         break;
@@ -775,11 +797,15 @@
                     case "result":
                         if (string.IsNullOrEmpty(session.ConversationId) && !string.IsNullOrEmpty(evt.SessionId))
                             session.ConversationId = evt.SessionId;
-                        if (evt.Message?.Usage != null)
                         {
-                            session.TotalInputTokens += evt.Message.Usage.InputTokens;
-                            session.TotalOutputTokens += evt.Message.Usage.OutputTokens;
-                            _ = RecordUsageAsync(session, evt.Message.Usage);
+                            var resultUsage = evt.Usage ?? evt.Message?.Usage;
+                            if (resultUsage != null && !usageRecorded)
+                            {
+                                session.TotalInputTokens += resultUsage.InputTokens;
+                                session.TotalOutputTokens += resultUsage.OutputTokens;
+                                _ = RecordUsageAsync(session, resultUsage);
+                                usageRecorded = true;
+                            }
                         }
                         // assistant 이벤트에서 이미 처리됐을 수 있으므로 Parts 비어있을 때만 fallback
                         if (assistantMsg.Parts.Count == 0)
@@ -812,11 +838,14 @@
                         break;
 
                     case "error":
-                        if (!string.IsNullOrEmpty(evt.Error))
+                    {
+                        var errorMsg = evt.GetErrorMessage();
+                        if (!string.IsNullOrEmpty(errorMsg))
                         {
-                            ChatState.AppendText(assistantMsg, $"\n\n**Error:** {evt.Error}");
+                            ChatState.AppendText(assistantMsg, $"\n\n**Error:** {errorMsg}");
                         }
                         break;
+                    }
 
                     default:
                         Logger.LogDebug("Unhandled Claude event type: {Type}", evt.Type);

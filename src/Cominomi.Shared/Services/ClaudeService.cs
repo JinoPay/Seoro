@@ -159,7 +159,7 @@ public class ClaudeService : IClaudeService
             yield return new StreamEvent
             {
                 Type = "error",
-                Error = stderr
+                Error = JsonSerializer.SerializeToElement(stderr)
             };
         }
 
@@ -259,6 +259,12 @@ public class ClaudeService : IClaudeService
                 break;
             case "acceptEdits":
                 sb.Append(" --permission-mode acceptEdits");
+                break;
+            case "dontAsk":
+                sb.Append(" --permission-mode dontAsk");
+                break;
+            case "bypassPermissions":
+                sb.Append(" --permission-mode bypassPermissions");
                 break;
             case "bypassAll":
                 sb.Append(" --dangerously-skip-permissions");
