@@ -430,7 +430,6 @@ public class ClaudeService : IClaudeService
             sb.Append("--print --output-format text ");
             sb.Append("--model haiku ");
             sb.Append("--dangerously-skip-permissions ");
-            sb.Append("--max-turns 1 ");
             sb.Append("--append-system-prompt \"Summarize the user message into a concise title (max 5 words, English). Output only the title, nothing else.\"");
 
             var process = new Process
