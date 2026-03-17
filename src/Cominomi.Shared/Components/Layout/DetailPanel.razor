@@ -6,14 +6,29 @@
 
 <div class="detail-panel">
     <div class="detail-toolbar">
-        <span style="font-size: var(--text-sm); font-weight: 600; opacity: 0.7;">컨텍스트</span>
+        <span style="font-size: var(--text-sm); font-weight: 600; opacity: 0.7;">
+            @(ChatState.RightPanel switch {
+                RightPanelMode.Explorer => "파일 탐색기",
+                RightPanelMode.Changes => "변경사항",
+                RightPanelMode.Context => "컨텍스트",
+                _ => ""
+            })
+        </span>
         <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
                        Style="width: 26px; height: 26px; opacity: 0.5;"
                        OnClick="@(() => ChatState.SetRightPanel(RightPanelMode.None))" />
     </div>
 
-    <div class="detail-content">
-        @if (ChatState.RightPanel == RightPanelMode.Context)
+    <div class="detail-content @(ChatState.RightPanel is RightPanelMode.Explorer or RightPanelMode.Changes ? "no-padding" : "")">
+        @if (ChatState.RightPanel == RightPanelMode.Explorer)
+        {
+            <SidebarExplorer />
+        }
+        else if (ChatState.RightPanel == RightPanelMode.Changes)
+        {
+            <SidebarChanges />
+        }
+        else if (ChatState.RightPanel == RightPanelMode.Context)
         {
             <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2"
                      Style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
