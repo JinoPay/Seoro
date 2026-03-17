@@ -1,6 +1,6 @@
 namespace Cominomi.Shared.Models;
 
-public enum MainTabType { Chat, AllFiles, FileDiff }
+public enum MainTabType { Chat, AllFiles, FileDiff, FileContent }
 
 public class MainTab
 {

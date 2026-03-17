@@ -30,7 +30,45 @@
                                Style="width: 28px; height: 28px; opacity: 0.5;" />
             </div>
         </div>
-        <SessionList />
+
+        @* Sidebar view tabs *@
+        <div class="sidebar-view-tabs">
+            <button class="sidebar-view-tab @(_sidebarView == SidebarView.Sessions ? "active" : "")"
+                    @onclick="@(() => _sidebarView = SidebarView.Sessions)"
+                    title="세션">
+                <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small"
+                         Style="width: 18px; height: 18px;" />
+            </button>
+            @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status != SessionStatus.Pending)
+            {
+                <button class="sidebar-view-tab @(_sidebarView == SidebarView.Explorer ? "active" : "")"
+                        @onclick="@(() => _sidebarView = SidebarView.Explorer)"
+                        title="파일 탐색기">
+                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Small"
+                             Style="width: 18px; height: 18px;" />
+                </button>
+                <button class="sidebar-view-tab @(_sidebarView == SidebarView.Changes ? "active" : "")"
+                        @onclick="@(() => _sidebarView = SidebarView.Changes)"
+                        title="변경사항">
+                    <MudIcon Icon="@Icons.Material.Filled.Difference" Size="Size.Small"
+                             Style="width: 18px; height: 18px;" />
+                </button>
+            }
+        </div>
+
+        @* Sidebar content *@
+        @switch (_sidebarView)
+        {
+            case SidebarView.Sessions:
+                <SessionList />
+                break;
+            case SidebarView.Explorer:
+                <SidebarExplorer />
+                break;
+            case SidebarView.Changes:
+                <SidebarChanges />
+                break;
+        }
     </aside>
 
     @* === Center Panel: Chat === *@
@@ -69,20 +107,6 @@
 
             @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status != SessionStatus.Pending)
             {
-                <MudTooltip Text="All Files">
-                    <MudIconButton Icon="@Icons.Material.Filled.FolderOpen"
-                                   Color="@(ChatState.ActiveTab?.Type == MainTabType.AllFiles ? Color.Primary : Color.Inherit)"
-                                   Size="Size.Small"
-                                   Style="width: 28px; height: 28px;"
-                                   OnClick="@(() => ChatState.OpenAllFilesTab())" />
-                </MudTooltip>
-                <MudTooltip Text="변경사항">
-                    <MudIconButton Icon="@Icons.Material.Filled.Difference"
-                                   Color="@(ChatState.RightPanel == RightPanelMode.Diff ? Color.Primary : Color.Inherit)"
-                                   Size="Size.Small"
-                                   Style="width: 28px; height: 28px;"
-                                   OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Diff))" />
-                </MudTooltip>
                 <MudTooltip Text="컨텍스트">
                     <MudIconButton Icon="@Icons.Material.Filled.Folder"
                                    Color="@(ChatState.RightPanel == RightPanelMode.Context ? Color.Primary : Color.Inherit)"
@@ -107,6 +131,10 @@
             {
                 <FileDiffView Diff="ChatState.ActiveTab.DiffData" />
             }
+            else if (ChatState.ActiveTab?.Type == MainTabType.FileContent && ChatState.ActiveTab.FilePath != null)
+            {
+                <FileContentView FilePath="ChatState.ActiveTab.FilePath" />
+            }
             else
             {
                 @Body
@@ -114,7 +142,7 @@
         </div>
     </main>
 
-    @* === Right Panel: Detail (Diff/Context) === *@
+    @* === Right Panel: Detail (Context) === *@
     @if (ChatState.RightPanel != RightPanelMode.None)
     {
         <aside class="cominomi-detail">
@@ -131,6 +159,9 @@
     private bool _isDarkMode = true;
     private bool _settingsOpen;
     private bool _setupOpen;
+    private SidebarView _sidebarView = SidebarView.Sessions;
+
+    private enum SidebarView { Sessions, Explorer, Changes }
 
     private readonly MudTheme _theme = new()
     {

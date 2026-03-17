@@ -1,0 +1,222 @@
+@using Cominomi.Shared.Models
+@inject ChatState ChatState
+@inject IGitService GitService
+@implements IDisposable
+
+<div class="sidebar-explorer">
+    <div class="sidebar-section-header">
+        <span>파일 탐색기</span>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                       Style="width: 20px; height: 20px; opacity: 0.5;"
+                       OnClick="LoadFilesAsync" Disabled="_loading" />
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Style="margin: 4px 8px;" />
+    }
+    else if (_error != null)
+    {
+        <div style="padding: 8px; font-size: var(--text-xs); color: var(--mud-palette-error);">@_error</div>
+    }
+    else if (_tree.Count == 0)
+    {
+        <div class="sidebar-empty">
+            <MudIcon Icon="@Icons.Material.Filled.FolderOff" Size="Size.Small" Style="opacity: 0.2;" />
+            <span>파일 없음</span>
+        </div>
+    }
+    else
+    {
+        <div class="sidebar-file-tree">
+            @RenderNodes(_tree, 0)
+        </div>
+    }
+</div>
+
+@code {
+    private List<FileNode> _tree = new();
+    private HashSet<string> _expandedDirs = new();
+    private bool _loading;
+    private string? _error;
+    private DiffSummary? _diff;
+    private string? _lastSessionId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ChatState.OnChange += HandleStateChanged;
+        await LoadFilesAsync();
+    }
+
+    private async void HandleStateChanged()
+    {
+        var sessionId = ChatState.CurrentSession?.Id;
+        if (sessionId != _lastSessionId)
+        {
+            _lastSessionId = sessionId;
+            await InvokeAsync(async () =>
+            {
+                await LoadFilesAsync();
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task LoadFilesAsync()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || string.IsNullOrEmpty(session.WorktreePath)) return;
+
+        _lastSessionId = session.Id;
+        _loading = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var files = await GitService.ListTrackedFilesAsync(session.WorktreePath);
+
+            try
+            {
+                var diffBase = !string.IsNullOrEmpty(session.BaseBranch) ? session.BaseBranch : "HEAD";
+                var nameStatus = await GitService.GetNameStatusAsync(session.WorktreePath, diffBase);
+                var rawDiff = await GitService.GetUnifiedDiffAsync(session.WorktreePath, diffBase);
+                _diff = Services.GitService.ParseDiff(nameStatus, rawDiff);
+            }
+            catch { _diff = null; }
+
+            _tree = BuildTree(files);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private RenderFragment RenderNodes(List<FileNode> nodes, int depth) => builder =>
+    {
+        foreach (var node in nodes)
+        {
+            var indent = depth * 14 + 4;
+            if (node.IsDirectory)
+            {
+                var expanded = _expandedDirs.Contains(node.FullPath);
+                builder.OpenElement(0, "div");
+                builder.AddAttribute(1, "class", "sidebar-tree-item dir");
+                builder.AddAttribute(2, "style", $"padding-left: {indent}px;");
+                builder.AddAttribute(3, "onclick", EventCallback.Factory.Create(this, () => ToggleDir(node.FullPath)));
+
+                builder.OpenComponent<MudIcon>(4);
+                builder.AddComponentParameter(5, "Icon", expanded ? Icons.Material.Filled.FolderOpen : Icons.Material.Filled.Folder);
+                builder.AddComponentParameter(6, "Size", Size.Small);
+                builder.AddComponentParameter(7, "Style", "width: 14px; height: 14px; opacity: 0.5;");
+                builder.CloseComponent();
+
+                builder.OpenElement(8, "span");
+                builder.AddAttribute(9, "class", "sidebar-tree-name");
+                builder.AddContent(10, node.Name);
+                builder.CloseElement();
+
+                builder.CloseElement();
+
+                if (expanded)
+                    RenderNodes(node.Children, depth + 1)(builder);
+            }
+            else
+            {
+                var fileDiff = _diff?.Files.FirstOrDefault(f => f.FilePath == node.FullPath);
+                builder.OpenElement(0, "div");
+                builder.AddAttribute(1, "class", $"sidebar-tree-item file{(fileDiff != null ? " changed" : "")}");
+                builder.AddAttribute(2, "style", $"padding-left: {indent}px;");
+                builder.AddAttribute(3, "onclick", EventCallback.Factory.Create(this, () => OpenFile(node.FullPath)));
+
+                builder.OpenComponent<MudIcon>(4);
+                builder.AddComponentParameter(5, "Icon", Icons.Material.Filled.InsertDriveFile);
+                builder.AddComponentParameter(6, "Size", Size.Small);
+                builder.AddComponentParameter(7, "Style", $"width: 14px; height: 14px; {(fileDiff != null ? GetChangeColor(fileDiff.ChangeType) : "opacity: 0.35;")}");
+                builder.CloseComponent();
+
+                builder.OpenElement(8, "span");
+                builder.AddAttribute(9, "class", "sidebar-tree-name");
+                builder.AddContent(10, node.Name);
+                builder.CloseElement();
+
+                builder.CloseElement();
+            }
+        }
+    };
+
+    private void OpenFile(string filePath)
+    {
+        // Open full file content (not diff) in main tab
+        ChatState.OpenFileContentTab(filePath);
+    }
+
+    private void ToggleDir(string path)
+    {
+        if (!_expandedDirs.Remove(path))
+            _expandedDirs.Add(path);
+    }
+
+    private static string GetChangeColor(FileChangeType type) => type switch
+    {
+        FileChangeType.Added => "color: #a6e3a1;",
+        FileChangeType.Deleted => "color: #f38ba8;",
+        FileChangeType.Renamed => "color: #fab387;",
+        _ => "color: #89b4fa;"
+    };
+
+    private static List<FileNode> BuildTree(List<string> files)
+    {
+        var root = new List<FileNode>();
+        var dirMap = new Dictionary<string, FileNode>();
+
+        foreach (var file in files.OrderBy(f => f))
+        {
+            var parts = file.Split('/');
+            var currentList = root;
+            var currentPath = "";
+
+            for (int i = 0; i < parts.Length; i++)
+            {
+                currentPath = i == 0 ? parts[i] : $"{currentPath}/{parts[i]}";
+                bool isLast = i == parts.Length - 1;
+
+                if (isLast)
+                {
+                    currentList.Add(new FileNode { Name = parts[i], FullPath = file, IsDirectory = false });
+                }
+                else
+                {
+                    if (!dirMap.TryGetValue(currentPath, out var dirNode))
+                    {
+                        dirNode = new FileNode { Name = parts[i], FullPath = currentPath, IsDirectory = true };
+                        dirMap[currentPath] = dirNode;
+                        currentList.Add(dirNode);
+                    }
+                    currentList = dirNode.Children;
+                }
+            }
+        }
+
+        return root;
+    }
+
+    private class FileNode
+    {
+        public string Name { get; set; } = "";
+        public string FullPath { get; set; } = "";
+        public bool IsDirectory { get; set; }
+        public List<FileNode> Children { get; set; } = new();
+    }
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= HandleStateChanged;
+    }
+}

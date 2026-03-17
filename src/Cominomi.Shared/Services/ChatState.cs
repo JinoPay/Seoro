@@ -310,6 +310,28 @@ public class ChatState : IDisposable
         NotifyStateChanged();
     }
 
+    public void OpenFileContentTab(string filePath)
+    {
+        var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileContent && t.FilePath == filePath);
+        if (existing != null)
+        {
+            ActiveTab = existing;
+        }
+        else
+        {
+            var fileName = Path.GetFileName(filePath);
+            var tab = new MainTab
+            {
+                Type = MainTabType.FileContent,
+                Title = fileName,
+                FilePath = filePath
+            };
+            OpenTabs.Add(tab);
+            ActiveTab = tab;
+        }
+        NotifyStateChanged();
+    }
+
     public void OpenFileDiffTab(string filePath, FileDiff diff)
     {
         var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileDiff && t.FilePath == filePath);

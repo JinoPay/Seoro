@@ -1,0 +1,148 @@
+@using Cominomi.Shared.Models
+@inject ChatState ChatState
+@inject IGitService GitService
+@implements IDisposable
+
+<div class="sidebar-changes">
+    <div class="sidebar-section-header">
+        <span>변경사항</span>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                       Style="width: 20px; height: 20px; opacity: 0.5;"
+                       OnClick="LoadDiffAsync" Disabled="_loading" />
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Style="margin: 4px 8px;" />
+    }
+    else if (_error != null)
+    {
+        <div style="padding: 8px; font-size: var(--text-xs); color: var(--mud-palette-error);">@_error</div>
+    }
+    else if (_diff == null || _diff.Files.Count == 0)
+    {
+        <div class="sidebar-empty">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Small" Style="opacity: 0.2;" />
+            <span>변경사항 없음</span>
+        </div>
+    }
+    else
+    {
+        <div class="sidebar-changes-summary">
+            <span>@(_diff.Files.Count)개 파일</span>
+            <div class="diff-stats">
+                <span class="additions">+@(_diff.TotalAdditions)</span>
+                <span class="deletions">-@(_diff.TotalDeletions)</span>
+            </div>
+        </div>
+
+        <div class="sidebar-changes-list">
+            @foreach (var file in _diff.Files)
+            {
+                <div class="sidebar-change-item" @onclick="@(() => OpenDiff(file))">
+                    <MudIcon Icon="@GetFileIcon(file.ChangeType)" Size="Size.Small"
+                             Style="@($"width: 14px; height: 14px; flex-shrink: 0; {GetIconColor(file.ChangeType)}")" />
+                    <span class="sidebar-change-name" title="@file.FilePath">@GetFileName(file.FilePath)</span>
+                    <div class="diff-stats" style="margin-left: auto; flex-shrink: 0;">
+                        @if (file.Additions > 0) { <span class="additions">+@file.Additions</span> }
+                        @if (file.Deletions > 0) { <span class="deletions">-@file.Deletions</span> }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private DiffSummary? _diff;
+    private bool _loading;
+    private string? _error;
+    private string? _lastSessionId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ChatState.OnChange += HandleStateChanged;
+        await LoadDiffAsync();
+    }
+
+    private async void HandleStateChanged()
+    {
+        var sessionId = ChatState.CurrentSession?.Id;
+        if (sessionId != _lastSessionId)
+        {
+            _lastSessionId = sessionId;
+            await InvokeAsync(async () =>
+            {
+                await LoadDiffAsync();
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task LoadDiffAsync()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || session.Status == SessionStatus.Pending || string.IsNullOrEmpty(session.WorktreePath))
+        {
+            _diff = null;
+            _error = null;
+            StateHasChanged();
+            return;
+        }
+
+        _lastSessionId = session.Id;
+        _loading = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var diffBase = !string.IsNullOrEmpty(session.BaseBranch) ? session.BaseBranch : "HEAD";
+            var nameStatus = await GitService.GetNameStatusAsync(session.WorktreePath, diffBase);
+            var rawDiff = await GitService.GetUnifiedDiffAsync(session.WorktreePath, diffBase);
+            _diff = Services.GitService.ParseDiff(nameStatus, rawDiff);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _diff = null;
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenDiff(FileDiff file)
+    {
+        ChatState.OpenFileDiffTab(file.FilePath, file);
+    }
+
+    private static string GetFileName(string path)
+    {
+        var idx = path.LastIndexOf('/');
+        return idx >= 0 ? path[(idx + 1)..] : path;
+    }
+
+    private static string GetFileIcon(FileChangeType type) => type switch
+    {
+        FileChangeType.Added => Icons.Material.Filled.NoteAdd,
+        FileChangeType.Deleted => Icons.Material.Filled.Delete,
+        FileChangeType.Renamed => Icons.Material.Filled.DriveFileRenameOutline,
+        _ => Icons.Material.Filled.EditNote
+    };
+
+    private static string GetIconColor(FileChangeType type) => type switch
+    {
+        FileChangeType.Added => "color: #a6e3a1;",
+        FileChangeType.Deleted => "color: #f38ba8;",
+        FileChangeType.Renamed => "color: #fab387;",
+        _ => "color: #89b4fa;"
+    };
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= HandleStateChanged;
+    }
+}

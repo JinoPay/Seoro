@@ -1,0 +1,85 @@
+@inject ChatState ChatState
+@inject IGitService GitService
+
+<div class="filecontent-view">
+    <div class="filecontent-header">
+        <MudIcon Icon="@Icons.Material.Filled.InsertDriveFile" Size="Size.Small"
+                 Style="width: 16px; height: 16px; opacity: 0.5;" />
+        <span class="filecontent-path">@FilePath</span>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Style="margin: 8px;" />
+    }
+    else if (_error != null)
+    {
+        <div class="filecontent-empty">
+            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Style="opacity: 0.3;" />
+            <span>@_error</span>
+        </div>
+    }
+    else
+    {
+        <div class="filecontent-content">
+            @{ var lineNum = 0; }
+            @foreach (var line in _lines)
+            {
+                lineNum++;
+                <div class="filecontent-line">
+                    <span class="filecontent-linenum">@lineNum</span>
+                    <span class="filecontent-code">@line</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string FilePath { get; set; } = "";
+
+    private string[] _lines = [];
+    private bool _loading;
+    private string? _error;
+    private string? _lastFilePath;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (FilePath != _lastFilePath)
+        {
+            _lastFilePath = FilePath;
+            await LoadFileAsync();
+        }
+    }
+
+    private async Task LoadFileAsync()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || string.IsNullOrEmpty(session.WorktreePath) || string.IsNullOrEmpty(FilePath))
+        {
+            _error = "파일을 불러올 수 없습니다";
+            return;
+        }
+
+        _loading = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var content = await GitService.ReadFileAsync(session.WorktreePath, FilePath);
+            _lines = content.Split('\n');
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _lines = [];
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+}
