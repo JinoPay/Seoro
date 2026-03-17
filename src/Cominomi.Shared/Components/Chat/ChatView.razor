@@ -492,27 +492,6 @@
 
         var isFirstMessage = session.Messages.Count(m => m.Role == MessageRole.User) == 0;
 
-        // Summarize with Haiku before main model processing to set title & branch name
-        if (isFirstMessage && session.Status == SessionStatus.Ready && !string.IsNullOrWhiteSpace(input.Text))
-        {
-            try
-            {
-                var summary = await ClaudeService.SummarizeAsync(input.Text, session.WorktreePath);
-                if (!string.IsNullOrEmpty(summary))
-                {
-                    session.Title = summary;
-                    var newBranchName = Services.SessionService.GenerateBranchName(summary);
-                    await SessionService.RenameBranchAsync(session.Id, newBranchName);
-                    session.BranchName = newBranchName;
-                    ChatState.NotifyStateChanged();
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogDebug(ex, "Haiku summarization failed, will use fallback title");
-            }
-        }
-
         var fileAttachments = new List<FileAttachment>();
         foreach (var pending in input.Attachments)
         {
@@ -544,8 +523,30 @@
 
         ChatState.SetStreaming(true, session.Id);
         ChatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
-
         var assistantMsg = ChatState.StartAssistantMessage();
+
+        // Summarize with Haiku before main model processing to set title & branch name
+        if (isFirstMessage && session.Status == SessionStatus.Ready && !string.IsNullOrWhiteSpace(input.Text))
+        {
+            ChatState.SetPhase(StreamingPhase.Preparing, sessionId: session.Id);
+            try
+            {
+                var summary = await ClaudeService.SummarizeAsync(input.Text, session.WorktreePath);
+                if (!string.IsNullOrEmpty(summary))
+                {
+                    session.Title = summary;
+                    var newBranchName = Services.SessionService.GenerateBranchName(summary);
+                    await SessionService.RenameBranchAsync(session.Id, newBranchName);
+                    session.BranchName = newBranchName;
+                    ChatState.NotifyStateChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Haiku summarization failed, will use fallback title");
+            }
+            ChatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
+        }
         ToolCall? currentToolCall = null;
         var toolResultBlockMap = new Dictionary<int, string>(); // content block index → tool_use_id
         bool firstEvent = true;

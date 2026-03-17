@@ -3,6 +3,14 @@
 
 @switch (Phase)
 {
+    case StreamingPhase.Preparing:
+        <div class="streaming-pill">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Default"
+                                 Style="width: 14px; height: 14px;" />
+            <span style="font-size: 0.78rem; opacity: 0.7;">준비 중...</span>
+        </div>
+        break;
+
     case StreamingPhase.Sending:
         <div class="streaming-pill">
             <span class="pulse-dot"></span>
