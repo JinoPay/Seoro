@@ -661,6 +661,11 @@ html, body {
     padding: var(--space-2);
 }
 
+.detail-content.no-padding {
+    padding: 0;
+    overflow: hidden;
+}
+
 .detail-empty {
     display: flex;
     flex-direction: column;
@@ -682,41 +687,6 @@ html, body {
 }
 
 /* ===== Sidebar View Tabs ===== */
-.sidebar-view-tabs {
-    display: flex;
-    gap: 2px;
-    padding: var(--space-1) var(--space-2);
-    border-bottom: 1px solid var(--border-subtle);
-    flex-shrink: 0;
-}
-
-.sidebar-view-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: var(--text-xs);
-    font-family: inherit;
-    transition: all var(--transition);
-    flex: 1;
-    justify-content: center;
-}
-
-.sidebar-view-tab:hover {
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text-primary);
-}
-
-.sidebar-view-tab.active {
-    background: var(--accent-dim);
-    color: var(--accent);
-}
-
 /* ===== Sidebar Explorer & Changes ===== */
 .sidebar-explorer,
 .sidebar-changes {
@@ -2153,41 +2123,6 @@ html, body {
 }
 
 /* ===== Sidebar View Tabs ===== */
-.sidebar-view-tabs {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    border-bottom: 1px solid var(--border-subtle);
-    flex-shrink: 0;
-    padding: 0 var(--space-2);
-}
-
-.sidebar-view-tab {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 0;
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 150ms ease;
-    opacity: 0.5;
-}
-
-.sidebar-view-tab:hover {
-    opacity: 0.8;
-    background: var(--bg-surface-hover);
-}
-
-.sidebar-view-tab.active {
-    opacity: 1;
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-}
-
 /* ===== Sidebar Explorer & Changes ===== */
 .sidebar-explorer,
 .sidebar-changes {

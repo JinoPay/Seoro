@@ -30,35 +30,7 @@
                                Style="width: 28px; height: 28px; opacity: 0.5;" />
             </div>
         </div>
-        <div class="sidebar-view-tabs">
-            <button class="sidebar-view-tab @(ChatState.ActiveSidebarView == SidebarView.Sessions ? "active" : "")"
-                    @onclick="@(() => ChatState.SetSidebarView(SidebarView.Sessions))">
-                <MudIcon Icon="@Icons.Material.Filled.Chat" Size="Size.Small" Style="width: 14px; height: 14px;" />
-                Sessions
-            </button>
-            <button class="sidebar-view-tab @(ChatState.ActiveSidebarView == SidebarView.Explorer ? "active" : "")"
-                    @onclick="@(() => ChatState.SetSidebarView(SidebarView.Explorer))">
-                <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Small" Style="width: 14px; height: 14px;" />
-                Files
-            </button>
-            <button class="sidebar-view-tab @(ChatState.ActiveSidebarView == SidebarView.Changes ? "active" : "")"
-                    @onclick="@(() => ChatState.SetSidebarView(SidebarView.Changes))">
-                <MudIcon Icon="@Icons.Material.Filled.Difference" Size="Size.Small" Style="width: 14px; height: 14px;" />
-                Changes
-            </button>
-        </div>
-        @switch (ChatState.ActiveSidebarView)
-        {
-            case SidebarView.Sessions:
-                <SessionList />
-                break;
-            case SidebarView.Explorer:
-                <SidebarExplorer />
-                break;
-            case SidebarView.Changes:
-                <SidebarChanges />
-                break;
-        }
+        <SessionList />
     </aside>
 
     @* === Center Panel: Chat === *@
@@ -97,6 +69,20 @@
 
             @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status != SessionStatus.Pending)
             {
+                <MudTooltip Text="파일 탐색기">
+                    <MudIconButton Icon="@Icons.Material.Filled.FolderOpen"
+                                   Color="@(ChatState.RightPanel == RightPanelMode.Explorer ? Color.Primary : Color.Inherit)"
+                                   Size="Size.Small"
+                                   Style="width: 28px; height: 28px;"
+                                   OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Explorer))" />
+                </MudTooltip>
+                <MudTooltip Text="변경사항">
+                    <MudIconButton Icon="@Icons.Material.Filled.Difference"
+                                   Color="@(ChatState.RightPanel == RightPanelMode.Changes ? Color.Primary : Color.Inherit)"
+                                   Size="Size.Small"
+                                   Style="width: 28px; height: 28px;"
+                                   OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Changes))" />
+                </MudTooltip>
                 <MudTooltip Text="컨텍스트">
                     <MudIconButton Icon="@Icons.Material.Filled.Folder"
                                    Color="@(ChatState.RightPanel == RightPanelMode.Context ? Color.Primary : Color.Inherit)"

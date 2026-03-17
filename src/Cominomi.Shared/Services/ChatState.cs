@@ -17,12 +17,7 @@ public enum RightPanelMode
 {
     None,
     Diff,
-    Context
-}
-
-public enum SidebarView
-{
-    Sessions,
+    Context,
     Explorer,
     Changes
 }
@@ -41,7 +36,6 @@ public class ChatState : IDisposable
     public bool IsSpotlightActive { get; private set; }
     public string? PendingMessage { get; private set; }
     public RightPanelMode RightPanel { get; private set; }
-    public SidebarView ActiveSidebarView { get; private set; } = SidebarView.Sessions;
 
     // Main tab system
     public List<MainTab> OpenTabs { get; private set; } = new();
@@ -294,12 +288,6 @@ public class ChatState : IDisposable
             ActiveTab = OpenTabs.ElementAtOrDefault(Math.Min(idx, OpenTabs.Count - 1))
                         ?? OpenTabs.FirstOrDefault();
         }
-        NotifyStateChanged();
-    }
-
-    public void SetSidebarView(SidebarView view)
-    {
-        ActiveSidebarView = view;
         NotifyStateChanged();
     }
 
