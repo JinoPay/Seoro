@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
@@ -15,12 +14,14 @@ public class HooksEngine : IHooksEngine
     };
 
     private readonly ILogger<HooksEngine> _logger;
+    private readonly IShellService _shellService;
     private readonly string _hooksFile;
     private List<HookDefinition> _hooks = [];
 
-    public HooksEngine(ILogger<HooksEngine> logger)
+    public HooksEngine(ILogger<HooksEngine> logger, IShellService shellService)
     {
         _logger = logger;
+        _shellService = shellService;
         _hooksFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Cominomi", "hooks.json");
@@ -63,31 +64,19 @@ public class HooksEngine : IHooksEngine
         {
             try
             {
-                ProcessStartInfo psi;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                var shell = await _shellService.GetShellAsync();
+                var escapedCommand = hook.Command.Replace("\"", "\\\"");
+                var psi = new ProcessStartInfo
                 {
-                    psi = new ProcessStartInfo
-                    {
-                        FileName = "cmd.exe",
-                        Arguments = $"/c \"{hook.Command.Replace("\"", "\\\"")}\"",
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true
-                    };
-                }
-                else
-                {
-                    psi = new ProcessStartInfo
-                    {
-                        FileName = "/bin/sh",
-                        Arguments = $"-c \"{hook.Command.Replace("\"", "\\\"")}\"",
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true
-                    };
-                }
+                    FileName = shell.FileName,
+                    Arguments = shell.Type == ShellType.Cmd
+                        ? $"/c \"{escapedCommand}\""
+                        : $"-c \"{escapedCommand}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
 
                 if (!string.IsNullOrEmpty(hook.WorkingDirectory))
                     psi.WorkingDirectory = hook.WorkingDirectory;

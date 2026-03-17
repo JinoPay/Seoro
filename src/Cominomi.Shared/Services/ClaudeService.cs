@@ -12,6 +12,7 @@ namespace Cominomi.Shared.Services;
 public class ClaudeService : IClaudeService
 {
     private readonly ISettingsService _settingsService;
+    private readonly IShellService _shellService;
     private readonly ILogger<ClaudeService> _logger;
     private readonly ConcurrentDictionary<string, AgentProcess> _agents = new();
     private CliCapabilities? _capabilities;
@@ -23,9 +24,10 @@ public class ClaudeService : IClaudeService
 
     private const string DefaultAgentKey = "__default__";
 
-    public ClaudeService(ISettingsService settingsService, ILogger<ClaudeService> logger)
+    public ClaudeService(ISettingsService settingsService, IShellService shellService, ILogger<ClaudeService> logger)
     {
         _settingsService = settingsService;
+        _shellService = shellService;
         _logger = logger;
     }
 
@@ -430,7 +432,7 @@ public class ClaudeService : IClaudeService
         }
     }
 
-    private static async Task<(string fileName, string argPrefix)> ResolveClaudeCommandAsync(string? configuredPath)
+    private async Task<(string fileName, string argPrefix)> ResolveClaudeCommandAsync(string? configuredPath)
     {
         if (!string.IsNullOrWhiteSpace(configuredPath))
         {
@@ -442,64 +444,37 @@ public class ClaudeService : IClaudeService
             return (configuredPath, "");
         }
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        var resolved = await _shellService.WhichAsync("claude");
+        if (resolved != null)
         {
-            var resolved = await TryWhichAsync("where.exe", "claude");
-            if (resolved != null)
+            // .cmd wrappers (npm-installed on Windows) need cmd.exe to execute reliably
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                && resolved.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
             {
-                if (resolved.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
-                    return ("cmd.exe", $"/c \"{resolved}\" ");
-                return (resolved, "");
+                return ("cmd.exe", $"/c \"{resolved}\" ");
             }
-            return ("claude.exe", "");
+            return (resolved, "");
         }
 
-        var path = await TryWhichAsync("/usr/bin/which", "claude");
-        if (path != null)
-            return (path, "");
-
-        string[] candidates =
-        [
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".npm", "bin", "claude"),
-            "/usr/local/bin/claude",
-            "/opt/homebrew/bin/claude"
-        ];
-
-        foreach (var candidate in candidates)
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            if (File.Exists(candidate))
-                return (candidate, "");
-        }
+            string[] candidates =
+            [
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".npm", "bin", "claude"),
+                "/usr/local/bin/claude",
+                "/opt/homebrew/bin/claude"
+            ];
 
-        return ("claude", "");
-    }
-
-    private static async Task<string?> TryWhichAsync(string whichCommand, string target)
-    {
-        try
-        {
-            var proc = new Process
+            foreach (var candidate in candidates)
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = whichCommand,
-                    Arguments = target,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true
-                }
-            };
-            proc.Start();
-            var output = (await proc.StandardOutput.ReadLineAsync())?.Trim();
-            using var cts = new CancellationTokenSource(3000);
-            try { await proc.WaitForExitAsync(cts.Token); }
-            catch (OperationCanceledException) { try { proc.Kill(); } catch { } }
-            if (proc.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
-                return output;
+                if (File.Exists(candidate))
+                    return (candidate, "");
+            }
         }
-        catch { }
 
-        return null;
+        return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? ("claude.exe", "")
+            : ("claude", "");
     }
 
     public async Task<string?> SummarizeAsync(string message, string workingDir)

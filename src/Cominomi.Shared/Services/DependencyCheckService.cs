@@ -7,10 +7,12 @@ namespace Cominomi.Shared.Services;
 public class DependencyCheckService : IDependencyCheckService
 {
     private readonly ILogger<DependencyCheckService> _logger;
+    private readonly IShellService _shellService;
 
-    public DependencyCheckService(ILogger<DependencyCheckService> logger)
+    public DependencyCheckService(ILogger<DependencyCheckService> logger, IShellService shellService)
     {
         _logger = logger;
+        _shellService = shellService;
     }
 
     public async Task<List<DependencyResult>> CheckAllAsync()
@@ -36,7 +38,7 @@ public class DependencyCheckService : IDependencyCheckService
         string command, string description,
         string installUrl, string windowsHint, string macHint)
     {
-        var path = FindExecutable(command);
+        var path = await FindExecutableAsync(command);
         if (path == null)
             return new DependencyResult(command, description, false, null, installUrl, windowsHint, macHint);
 
@@ -50,7 +52,7 @@ public class DependencyCheckService : IDependencyCheckService
         const string installUrl = "https://docs.anthropic.com/en/docs/claude-code/overview";
         const string installHint = "npm install -g @anthropic-ai/claude-code";
 
-        var path = FindExecutable("claude");
+        var path = await FindExecutableAsync("claude");
 
         if (path == null && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -78,29 +80,16 @@ public class DependencyCheckService : IDependencyCheckService
         return new DependencyResult("claude", description, true, version, installUrl, installHint, installHint);
     }
 
-    private string? FindExecutable(string command)
+    private async Task<string?> FindExecutableAsync(string command)
     {
         try
         {
-            var whichCmd = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "where.exe" : "/usr/bin/which";
-            var proc = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = whichCmd,
-                    Arguments = command,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true
-                }
-            };
-            proc.Start();
-            var output = proc.StandardOutput.ReadLine()?.Trim();
-            proc.WaitForExit(3000);
-            if (proc.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
-                return output;
+            return await _shellService.WhichAsync(command);
         }
-        catch (Exception ex) { _logger.LogDebug(ex, "Failed to find executable: {Command}", command); }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to find executable: {Command}", command);
+        }
 
         return null;
     }
