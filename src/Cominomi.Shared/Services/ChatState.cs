@@ -84,7 +84,7 @@ public class ChatState : IDisposable
         NotifyStateChanged();
     }
 
-    public void SetSession(Session session)
+    public void SetSession(Session? session)
     {
         CurrentSession = session;
         // Reset tabs for new session
@@ -93,7 +93,7 @@ public class ChatState : IDisposable
         EnsureChatTab();
         // Update chat tab title
         var chatTab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.Chat);
-        if (chatTab != null) chatTab.Title = session.Title ?? "Chat";
+        if (chatTab != null) chatTab.Title = session?.Title ?? "Chat";
         NotifyStateChanged();
     }
 
