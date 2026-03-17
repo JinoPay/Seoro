@@ -19,6 +19,8 @@ public static class MauiProgram
             .MinimumLevel.Debug()
             .WriteTo.Debug()
 #endif
+            .MinimumLevel.Override("Microsoft.AspNetCore.Components", Serilog.Events.LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.Maui", Serilog.Events.LogEventLevel.Warning)
             .WriteTo.Console(
                 outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
             .WriteTo.File(

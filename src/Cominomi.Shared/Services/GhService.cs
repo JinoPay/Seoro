@@ -60,8 +60,9 @@ public class GhService : IGhService
         return result.Success;
     }
 
-    private static async Task<GitResult> RunGhAsync(string arguments, string workingDir, CancellationToken ct = default)
+    private async Task<GitResult> RunGhAsync(string arguments, string workingDir, CancellationToken ct = default)
     {
+        _logger.LogDebug("gh {Arguments}", arguments);
         var process = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -87,6 +88,7 @@ public class GhService : IGhService
         var stderr = await process.StandardError.ReadToEndAsync(ct);
         await process.WaitForExitAsync(ct);
 
+        _logger.LogDebug("gh exited with code {ExitCode}", process.ExitCode);
         var result = new GitResult(process.ExitCode == 0, stdout.Trim(), stderr.Trim());
         process.Dispose();
         return result;

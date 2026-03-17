@@ -69,6 +69,7 @@ public class ClaudeService : IClaudeService
         var token = cts.Token;
         var envVars = settings.EnvironmentVariables.Count > 0 ? settings.EnvironmentVariables : null;
 
+        _logger.LogDebug("Executing: {FileName} {Arguments}", fileName, arguments);
         var process = StartProcess(fileName, arguments, workingDir, envVars);
         var agent = new AgentProcess(process, cts);
         _agents[agentKey] = agent;
@@ -117,6 +118,7 @@ public class ClaudeService : IClaudeService
             process.Dispose();
 
             arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
+            _logger.LogDebug("Executing (retry): {FileName} {Arguments}", fileName, arguments);
             process = StartProcess(fileName, arguments, workingDir, envVars);
             agent = new AgentProcess(process, cts);
             _agents[agentKey] = agent;
@@ -360,6 +362,7 @@ public class ClaudeService : IClaudeService
 
     private async Task<string?> RunSimpleCommand(string fileName, string arguments)
     {
+        _logger.LogDebug("Executing: {FileName} {Arguments}", fileName, arguments);
         try
         {
             var proc = new Process
@@ -509,6 +512,7 @@ public class ClaudeService : IClaudeService
                 }
             };
 
+            _logger.LogDebug("Summarize: {FileName} {Arguments}", fileName, sb.ToString());
             process.Start();
             await process.StandardInput.WriteAsync(message);
             process.StandardInput.Close();

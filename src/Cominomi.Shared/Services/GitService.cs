@@ -20,6 +20,7 @@ public class GitService : IGitService
         if (parentDir != null)
             Directory.CreateDirectory(parentDir);
 
+        _logger.LogDebug("git clone --progress {Url} -> {TargetDir}", url, targetDir);
         var process = CreateGitProcess($"clone --progress \"{url}\" \"{targetDir}\"", parentDir ?? ".");
         process.Start();
 
@@ -176,8 +177,9 @@ public class GitService : IGitService
         return result.Success;
     }
 
-    private static async Task<GitResult> RunGitAsync(string arguments, string workingDir, CancellationToken ct = default)
+    private async Task<GitResult> RunGitAsync(string arguments, string workingDir, CancellationToken ct = default)
     {
+        _logger.LogDebug("git {Arguments}", arguments);
         var process = CreateGitProcess(arguments, workingDir);
         process.Start();
 
@@ -185,6 +187,7 @@ public class GitService : IGitService
         var stderr = await process.StandardError.ReadToEndAsync(ct);
         await process.WaitForExitAsync(ct);
 
+        _logger.LogDebug("git exited with code {ExitCode}", process.ExitCode);
         var result = new GitResult(process.ExitCode == 0, stdout.Trim(), stderr.Trim());
         process.Dispose();
         return result;
