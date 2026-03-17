@@ -1,7 +1,4 @@
-@using Cominomi.Shared.Models
 @inject ChatState ChatState
-@inject IContextService ContextService
-@inject ITaskService TaskService
 @implements IDisposable
 
 <div class="detail-panel">
@@ -10,7 +7,6 @@
             @(ChatState.RightPanel switch {
                 RightPanelMode.Explorer => "파일 탐색기",
                 RightPanelMode.Changes => "변경사항",
-                RightPanelMode.Context => "컨텍스트",
                 _ => ""
             })
         </span>
@@ -19,7 +15,7 @@
                        OnClick="@(() => ChatState.SetRightPanel(RightPanelMode.None))" />
     </div>
 
-    <div class="detail-content @(ChatState.RightPanel is RightPanelMode.Explorer or RightPanelMode.Changes ? "no-padding" : "")">
+    <div class="detail-content no-padding">
         @if (ChatState.RightPanel == RightPanelMode.Explorer)
         {
             <SidebarExplorer />
@@ -28,164 +24,19 @@
         {
             <SidebarChanges />
         }
-        else if (ChatState.RightPanel == RightPanelMode.Context)
-        {
-            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2"
-                     Style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-                <MudTabPanel Text="메모" Icon="@Icons.Material.Filled.Notes" Style="flex: 1; overflow-y: auto;">
-                    <MudTextField @bind-Value="_notes" Lines="12" Variant="Variant.Outlined"
-                                  Placeholder="이 워크스페이스의 공유 메모..." FullWidth="true"
-                                  Style="font-size: var(--text-sm);" Immediate="true" />
-                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
-                               OnClick="SaveNotes" Style="margin-top: 8px; text-transform: none;">
-                        저장
-                    </MudButton>
-                </MudTabPanel>
-
-                <MudTabPanel Text="할 일" Icon="@Icons.Material.Filled.Checklist" Style="flex: 1; overflow-y: auto;">
-                    <MudTextField @bind-Value="_todos" Lines="12" Variant="Variant.Outlined"
-                                  Placeholder="작업 목록 (마크다운 형식)..." FullWidth="true"
-                                  Style="font-size: var(--text-sm);" Immediate="true" />
-                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
-                               OnClick="SaveTodos" Style="margin-top: 8px; text-transform: none;">
-                        저장
-                    </MudButton>
-                </MudTabPanel>
-
-                <MudTabPanel Text="계획" Icon="@Icons.Material.Filled.Map" Style="flex: 1; overflow-y: auto;">
-                    @if (_plans.Count == 0)
-                    {
-                        <MudText Typo="Typo.body2" Style="opacity: 0.5; padding: 16px; text-align: center;">
-                            아직 계획이 없습니다
-                        </MudText>
-                    }
-                    else
-                    {
-                        @foreach (var plan in _plans)
-                        {
-                            <MudExpansionPanels Style="margin-bottom: 4px;">
-                                <MudExpansionPanel Text="@plan.Name" Dense="true"
-                                                   Style="font-size: var(--text-sm); background: var(--bg-surface);">
-                                    <pre style="font-size: var(--text-xs); white-space: pre-wrap; word-wrap: break-word; max-height: 300px; overflow-y: auto;">@plan.Content</pre>
-                                    <MudText Typo="Typo.caption" Style="opacity: 0.4;">
-                                        @plan.LastModified.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-                                    </MudText>
-                                </MudExpansionPanel>
-                            </MudExpansionPanels>
-                        }
-                    }
-                </MudTabPanel>
-
-                <MudTabPanel Text="작업" Icon="@Icons.Material.Filled.Task" Style="flex: 1; overflow-y: auto;">
-                    @if (_tasks.Count == 0)
-                    {
-                        <MudText Typo="Typo.body2" Style="opacity: 0.5; padding: 16px; text-align: center;">
-                            아직 작업이 없습니다
-                        </MudText>
-                    }
-                    else
-                    {
-                        @foreach (var task in _tasks)
-                        {
-                            <div style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-subtle);">
-                                <MudIcon Icon="@GetTaskIcon(task.Status)" Size="Size.Small"
-                                         Color="@GetTaskColor(task.Status)"
-                                         Style="width: 14px; height: 14px;" />
-                                <div style="flex: 1; min-width: 0;">
-                                    <MudText Typo="Typo.body2" Style="@GetTaskTextStyle(task.Status)">
-                                        @task.Subject
-                                    </MudText>
-                                    @if (!string.IsNullOrEmpty(task.Description))
-                                    {
-                                        <MudText Typo="Typo.caption" Style="opacity: 0.5;">@task.Description</MudText>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    }
-                </MudTabPanel>
-            </MudTabs>
-        }
     </div>
 </div>
 
 @code {
-    private string _notes = "";
-    private string _todos = "";
-    private List<PlanFile> _plans = [];
-    private List<TaskItem> _tasks = [];
-    private bool _contextLoaded;
-
     protected override void OnInitialized()
     {
         ChatState.OnChange += HandleStateChanged;
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!_contextLoaded)
-        {
-            await LoadContext();
-            _contextLoaded = true;
-        }
-    }
-
-    private async Task LoadContext()
-    {
-        var session = ChatState.CurrentSession;
-        if (session == null || string.IsNullOrEmpty(session.WorktreePath))
-            return;
-
-        try
-        {
-            var context = await ContextService.LoadContextAsync(session.WorktreePath);
-            _notes = context.Notes;
-            _todos = context.Todos;
-            _plans = context.Plans;
-            _tasks = await TaskService.GetBySessionAsync(session.Id);
-        }
-        catch { }
-    }
-
-    private async Task SaveNotes()
-    {
-        var session = ChatState.CurrentSession;
-        if (session == null || string.IsNullOrEmpty(session.WorktreePath)) return;
-        await ContextService.SaveNotesAsync(session.WorktreePath, _notes);
-    }
-
-    private async Task SaveTodos()
-    {
-        var session = ChatState.CurrentSession;
-        if (session == null || string.IsNullOrEmpty(session.WorktreePath)) return;
-        await ContextService.SaveTodosAsync(session.WorktreePath, _todos);
     }
 
     private async void HandleStateChanged()
     {
         await InvokeAsync(StateHasChanged);
     }
-
-    private static string GetTaskIcon(Models.TaskStatus status) => status switch
-    {
-        Models.TaskStatus.Completed => Icons.Material.Filled.CheckCircle,
-        Models.TaskStatus.InProgress => Icons.Material.Filled.PlayCircle,
-        Models.TaskStatus.Blocked => Icons.Material.Filled.Block,
-        _ => Icons.Material.Filled.RadioButtonUnchecked
-    };
-
-    private static Color GetTaskColor(Models.TaskStatus status) => status switch
-    {
-        Models.TaskStatus.Completed => Color.Success,
-        Models.TaskStatus.InProgress => Color.Info,
-        Models.TaskStatus.Blocked => Color.Error,
-        _ => Color.Default
-    };
-
-    private static string GetTaskTextStyle(Models.TaskStatus status) =>
-        status == Models.TaskStatus.Completed
-            ? "font-size: var(--text-sm); text-decoration: line-through; opacity: 0.5;"
-            : "font-size: var(--text-sm);";
 
     public void Dispose()
     {
