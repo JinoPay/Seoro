@@ -220,6 +220,7 @@
     @* Plan review bar *@
     <PlanReviewBar IsVisible="_planReviewVisible"
                    PlanContent="@_planContent"
+                   PlanFilePath="@_planFilePath"
                    OnAction="HandlePlanReviewAction"
                    OnAdvice="HandlePlanAdvice" />
 
@@ -249,6 +250,7 @@
     private bool _planReviewVisible;
     private string? _planFilePath;
     private string? _planContent;
+    private DateTime _streamStartTime;
 
     private List<Session> _recentSessions = [];
 
@@ -311,7 +313,7 @@
             {
                 _planReviewVisible = true;
                 if (_planContent == null && !string.IsNullOrEmpty(ChatState.CurrentSession.WorktreePath))
-                    _ = RestorePlanContentAsync(ChatState.CurrentSession.WorktreePath);
+                    _ = RestorePlanContentAsync(ChatState.CurrentSession.WorktreePath, ChatState.CurrentSession.PlanFilePath);
             }
             else if (ChatState.CurrentSession?.PermissionMode != "plan" || ChatState.IsStreaming)
             {
@@ -335,9 +337,34 @@
         });
     }
 
-    private async Task RestorePlanContentAsync(string worktreePath)
+    private async Task RestorePlanContentAsync(string worktreePath, string? savedPlanFilePath = null)
     {
-        await DetectPlanFileAsync(worktreePath);
+        _planFilePath = null;
+        _planContent = null;
+
+        // Try saved plan file path first
+        if (!string.IsNullOrEmpty(savedPlanFilePath) && File.Exists(savedPlanFilePath))
+        {
+            _planFilePath = savedPlanFilePath;
+            _planContent = await File.ReadAllTextAsync(savedPlanFilePath);
+        }
+        else
+        {
+            // Fallback: find most recent plan file (no timestamp filter for restore)
+            var plansDir = Path.Combine(worktreePath, ".claude", "plans");
+            if (Directory.Exists(plansDir))
+            {
+                var planFile = Directory.GetFiles(plansDir, "*.md")
+                    .OrderByDescending(f => File.GetLastWriteTimeUtc(f))
+                    .FirstOrDefault();
+                if (planFile != null)
+                {
+                    _planFilePath = planFile;
+                    _planContent = await File.ReadAllTextAsync(planFile);
+                }
+            }
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 
@@ -551,6 +578,7 @@
         var toolResultBlockMap = new Dictionary<int, string>(); // content block index → tool_use_id
         bool firstEvent = true;
         bool exitPlanModeDetected = false;
+        _streamStartTime = DateTime.UtcNow;
 
         try
         {
@@ -658,12 +686,15 @@
                     case "result":
                         if (string.IsNullOrEmpty(session.ConversationId) && !string.IsNullOrEmpty(evt.SessionId))
                             session.ConversationId = evt.SessionId;
-                        if (string.IsNullOrEmpty(assistantMsg.Text) && evt.Message?.Content != null)
+                        if (evt.Message?.Content != null)
                         {
                             foreach (var block in evt.Message.Content)
                             {
-                                if (block.Type == "text" && block.Text != null)
+                                if (block.Type == "text" && block.Text != null && string.IsNullOrEmpty(assistantMsg.Text))
                                     ChatState.AppendText(assistantMsg, block.Text);
+                                // Detect ExitPlanMode in result content blocks
+                                if (block.Type == "tool_use" && block.Name == "ExitPlanMode")
+                                    exitPlanModeDetected = true;
                             }
                         }
                         if (string.IsNullOrEmpty(assistantMsg.Text) && !string.IsNullOrEmpty(evt.Result))
@@ -708,21 +739,43 @@
             // Detect plan completion (skip for workflow actions)
             if (!isWorkflow)
             {
-                if (session.PermissionMode == "plan" && exitPlanModeDetected)
+                if (session.PermissionMode == "plan")
                 {
-                    await DetectPlanFileAsync(session.WorktreePath);
-                    session.PlanCompleted = true;
-                    session.PlanFilePath = _planFilePath;
-                    _planReviewVisible = true;
-                    _quickResponseVisible = false;
-                    _quickResponseOptions = [];
-                }
-                else if (session.PermissionMode == "plan")
-                {
-                    // Still exploring/working — don't show review bar yet
-                    _planReviewVisible = false;
-                    _quickResponseVisible = false;
-                    _quickResponseOptions = [];
+                    // Multi-layer plan completion detection
+                    // Layer 1: ExitPlanMode tool_use (already set during stream)
+
+                    // Layer 2: Check response text for ExitPlanMode traces
+                    if (!exitPlanModeDetected)
+                    {
+                        var text = assistantMsg.Text ?? "";
+                        if (text.Contains("ExitPlanMode", StringComparison.OrdinalIgnoreCase))
+                            exitPlanModeDetected = true;
+                    }
+
+                    // Layer 3: Check if plan file was created/modified during this stream
+                    if (!exitPlanModeDetected && !string.IsNullOrEmpty(session.WorktreePath))
+                    {
+                        await DetectPlanFileAsync(session.WorktreePath);
+                        if (_planContent != null)
+                            exitPlanModeDetected = true;
+                    }
+
+                    if (exitPlanModeDetected)
+                    {
+                        if (_planContent == null)
+                            await DetectPlanFileAsync(session.WorktreePath);
+                        session.PlanCompleted = true;
+                        session.PlanFilePath = _planFilePath;
+                        _planReviewVisible = true;
+                        _quickResponseVisible = false;
+                        _quickResponseOptions = [];
+                    }
+                    else
+                    {
+                        _planReviewVisible = false;
+                        _quickResponseVisible = false;
+                        _quickResponseOptions = [];
+                    }
                 }
                 else
                 {
@@ -908,7 +961,10 @@ Rules:
         _planContent = null;
         var plansDir = Path.Combine(worktreePath, ".claude", "plans");
         if (!Directory.Exists(plansDir)) return;
+        // Only detect plan files modified after stream started (with 5s buffer)
+        var cutoff = _streamStartTime.AddSeconds(-5);
         var planFile = Directory.GetFiles(plansDir, "*.md")
+            .Where(f => File.GetLastWriteTimeUtc(f) > cutoff)
             .OrderByDescending(f => File.GetLastWriteTimeUtc(f))
             .FirstOrDefault();
         if (planFile != null)
