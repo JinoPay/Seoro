@@ -1,6 +1,6 @@
 namespace Cominomi.Shared.Models;
 
-public enum MainTabType { Chat, AllFiles, FileDiff }
+public enum MainTabType { Chat, FileDiff, FileContent }
 
 public class MainTab
 {
@@ -9,4 +9,5 @@ public class MainTab
     public string Title { get; set; } = "";
     public string? FilePath { get; set; }
     public FileDiff? DiffData { get; set; }
+    public string? FileContent { get; set; }
 }
