@@ -17,7 +17,6 @@ public enum RightPanelMode
 {
     None,
     Diff,
-    Context,
     Explorer,
     Changes
 }
@@ -358,6 +357,23 @@ public class ChatState : IDisposable
             OpenTabs.Add(tab);
             ActiveTab = tab;
         }
+        NotifyStateChanged();
+    }
+
+    public void UpdateChatTabTitle(string title)
+    {
+        var chatTab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.Chat);
+        if (chatTab != null) chatTab.Title = title;
+        NotifyStateChanged();
+    }
+
+    public void AddSystemMessage(string text)
+    {
+        CurrentSession?.Messages.Add(new ChatMessage
+        {
+            Role = MessageRole.System,
+            Text = text
+        });
         NotifyStateChanged();
     }
 

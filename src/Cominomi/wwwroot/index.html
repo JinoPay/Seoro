@@ -100,8 +100,22 @@
             if (!container) return;
             var textarea = container.querySelector('textarea');
             if (!textarea || textarea._enterHandler) return; // Already registered → skip
+
+            // Track IME composition state for robust Korean/CJK input handling
+            textarea._isComposing = false;
+            textarea._compositionStartHandler = function() {
+                textarea._isComposing = true;
+                dotNetRef.invokeMethodAsync('OnCompositionStart');
+            };
+            textarea._compositionEndHandler = function() {
+                textarea._isComposing = false;
+                dotNetRef.invokeMethodAsync('OnCompositionEnd');
+            };
+            textarea.addEventListener('compositionstart', textarea._compositionStartHandler);
+            textarea.addEventListener('compositionend', textarea._compositionEndHandler);
+
             textarea._enterHandler = function(e) {
-                if (e.key === 'Enter' && !e.isComposing) {
+                if (e.key === 'Enter' && !e.isComposing && !textarea._isComposing) {
                     e.preventDefault();
                     if (e.shiftKey) {
                         var start = textarea.selectionStart;
@@ -132,8 +146,10 @@
             const container = document.getElementById(elementId);
             if (!container) return;
             const textarea = container.querySelector('textarea');
-            if (!textarea || !textarea._enterHandler) return;
-            textarea.removeEventListener('keydown', textarea._enterHandler);
+            if (!textarea) return;
+            if (textarea._enterHandler) textarea.removeEventListener('keydown', textarea._enterHandler);
+            if (textarea._compositionStartHandler) textarea.removeEventListener('compositionstart', textarea._compositionStartHandler);
+            if (textarea._compositionEndHandler) textarea.removeEventListener('compositionend', textarea._compositionEndHandler);
         };
 
         window.isWindowFocused = function() {

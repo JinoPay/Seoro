@@ -60,11 +60,14 @@
     private bool _loading;
     private string? _error;
     private string? _lastSessionId;
+    private FileSystemWatcher? _watcher;
+    private System.Timers.Timer? _debounceTimer;
 
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += HandleStateChanged;
         await LoadDiffAsync();
+        StartWatching();
     }
 
     protected override async Task OnParametersSetAsync()
@@ -74,7 +77,64 @@
         {
             _lastSessionId = sessionId;
             await LoadDiffAsync();
+            StartWatching();
         }
+    }
+
+    private void StartWatching()
+    {
+        StopWatching();
+
+        var path = ChatState.CurrentSession?.WorktreePath;
+        if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+            return;
+
+        _watcher = new FileSystemWatcher(path)
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+            EnableRaisingEvents = true
+        };
+
+        _debounceTimer = new System.Timers.Timer(1500) { AutoReset = false };
+        _debounceTimer.Elapsed += async (_, _) =>
+        {
+            try
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadDiffAsync();
+                });
+            }
+            catch { /* component may be disposed */ }
+        };
+
+        void OnChange(object sender, FileSystemEventArgs e)
+        {
+            if (e.FullPath.Contains(Path.DirectorySeparatorChar + ".git" + Path.DirectorySeparatorChar) ||
+                e.FullPath.EndsWith(Path.DirectorySeparatorChar + ".git"))
+                return;
+
+            _debounceTimer.Stop();
+            _debounceTimer.Start();
+        }
+
+        _watcher.Changed += OnChange;
+        _watcher.Created += OnChange;
+        _watcher.Deleted += OnChange;
+        _watcher.Renamed += (s, e) => OnChange(s, e);
+    }
+
+    private void StopWatching()
+    {
+        if (_watcher != null)
+        {
+            _watcher.EnableRaisingEvents = false;
+            _watcher.Dispose();
+            _watcher = null;
+        }
+        _debounceTimer?.Dispose();
+        _debounceTimer = null;
     }
 
     private async Task LoadDiffAsync()
@@ -147,5 +207,6 @@
     public void Dispose()
     {
         ChatState.OnChange -= HandleStateChanged;
+        StopWatching();
     }
 }

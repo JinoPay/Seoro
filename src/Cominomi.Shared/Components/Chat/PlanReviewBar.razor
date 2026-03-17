@@ -108,6 +108,8 @@
 
     private async Task HandleAdviceKeyDown(KeyboardEventArgs e)
     {
+        // Skip during IME composition (e.Key is "Process" on macOS WebView)
+        if (e.Key == "Process") return;
         if (e.Key == "Enter" && !e.ShiftKey)
             await SubmitAdvice();
     }

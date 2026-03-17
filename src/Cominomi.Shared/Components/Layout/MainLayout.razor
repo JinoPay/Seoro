@@ -87,13 +87,6 @@
                                    Style="width: 28px; height: 28px;"
                                    OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Changes))" />
                 </MudTooltip>
-                <MudTooltip Text="컨텍스트">
-                    <MudIconButton Icon="@Icons.Material.Filled.Folder"
-                                   Color="@(ChatState.RightPanel == RightPanelMode.Context ? Color.Primary : Color.Inherit)"
-                                   Size="Size.Small"
-                                   Style="width: 28px; height: 28px;"
-                                   OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Context))" />
-                </MudTooltip>
             }
         </div>
 

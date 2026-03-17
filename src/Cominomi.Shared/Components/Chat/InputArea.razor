@@ -36,7 +36,6 @@
                       Immediate="true"
                       Disabled="Disabled"
                       ReadOnly="IsStreaming"
-                      OnKeyDown="HandleKeyDown"
                       Class="input-textarea-full"
                       Style="font-size: var(--text-base);" />
 
@@ -174,6 +173,7 @@
     private string? _prevResolvedModel;
     private string _prevEffortLevel = "auto";
     private bool _forceRender;
+    private bool _isComposing;
 
     private string GetPermissionModeTooltip() => PermissionMode switch
     {
@@ -262,11 +262,23 @@
         var wasEmpty = string.IsNullOrWhiteSpace(_inputText);
         _inputText = value;
         var isEmpty = string.IsNullOrWhiteSpace(_inputText);
-        if (wasEmpty != isEmpty)
+        if (wasEmpty != isEmpty && !_isComposing)
         {
             _forceRender = true;
             StateHasChanged();
         }
+    }
+
+    [JSInvokable]
+    public void OnCompositionStart() => _isComposing = true;
+
+    [JSInvokable]
+    public void OnCompositionEnd()
+    {
+        _isComposing = false;
+        // Catch up on any deferred render (e.g. send button enable/disable)
+        _forceRender = true;
+        StateHasChanged();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -276,11 +288,9 @@
             _dotNetRef = DotNetObjectReference.Create(this);
             await JSRuntime.InvokeVoidAsync("registerPasteHandler", "input-area", _dotNetRef);
             await JSRuntime.InvokeVoidAsync("registerDropHandler", "input-area", _dotNetRef);
+            await JSRuntime.InvokeVoidAsync("registerEnterHandler", "input-area", _dotNetRef);
             _handlersRegistered = true;
         }
-        // Re-register enter handler every render (textarea DOM recreation guard)
-        try { await JSRuntime.InvokeVoidAsync("registerEnterHandler", "input-area", _dotNetRef); }
-        catch { }
     }
 
     [JSInvokable]
@@ -385,14 +395,6 @@
         _forceRender = true;
         Model = modelId;
         await OnModelChanged.InvokeAsync(modelId);
-    }
-
-    private async Task HandleKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && !e.ShiftKey)
-        {
-            await Send();
-        }
     }
 
     [JSInvokable]
