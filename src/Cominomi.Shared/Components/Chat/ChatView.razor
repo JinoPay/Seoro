@@ -270,6 +270,9 @@
             if (ChatState.IsStreaming)
                 _shouldAutoScroll = true;
 
+            if (needsBranches)
+                _isLoadingBranches = true;
+
             StateHasChanged();
 
             if (needsBranches)
@@ -279,7 +282,6 @@
 
     private async Task LoadBranchesInBackground()
     {
-        _isLoadingBranches = true;
         try
         {
             var ws = ChatState.CurrentWorkspace;
@@ -292,12 +294,11 @@
             _branches = branchesTask.Result;
             var defaultBranch = defaultBranchTask.Result;
             _selectedBranch = defaultBranch ?? _branches.FirstOrDefault() ?? "";
-
-            await InvokeAsync(StateHasChanged);
         }
         finally
         {
             _isLoadingBranches = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
