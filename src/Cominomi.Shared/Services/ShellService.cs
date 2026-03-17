@@ -41,33 +41,50 @@ public class ShellService : IShellService
         {
             Process proc;
 
-            if (shell.Type == ShellType.Cmd)
+            switch (shell.Type)
             {
-                proc = new Process
-                {
-                    StartInfo = new ProcessStartInfo
+                case ShellType.Cmd:
+                    proc = new Process
                     {
-                        FileName = "where.exe",
-                        Arguments = executableName,
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        CreateNoWindow = true
-                    }
-                };
-            }
-            else
-            {
-                proc = new Process
-                {
-                    StartInfo = new ProcessStartInfo
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = "where.exe",
+                            Arguments = executableName,
+                            UseShellExecute = false,
+                            RedirectStandardOutput = true,
+                            CreateNoWindow = true
+                        }
+                    };
+                    break;
+
+                case ShellType.Bash:
+                    // Windows Git Bash: convert Unix path to Windows path via cygpath
+                    proc = new Process
                     {
-                        FileName = shell.FileName,
-                        Arguments = $"-c \"cygpath -w \\\"$(which {executableName})\\\"\"",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        CreateNoWindow = true
-                    }
-                };
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = shell.FileName,
+                            Arguments = $"-c \"cygpath -w \\\"$(which {executableName})\\\"\"",
+                            UseShellExecute = false,
+                            RedirectStandardOutput = true,
+                            CreateNoWindow = true
+                        }
+                    };
+                    break;
+
+                default: // ShellType.Sh — macOS/Linux
+                    proc = new Process
+                    {
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = shell.FileName,
+                            Arguments = $"-c \"which {executableName}\"",
+                            UseShellExecute = false,
+                            RedirectStandardOutput = true,
+                            CreateNoWindow = true
+                        }
+                    };
+                    break;
             }
 
             proc.Start();
