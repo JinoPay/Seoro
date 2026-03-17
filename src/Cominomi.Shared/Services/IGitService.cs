@@ -23,4 +23,5 @@ public interface IGitService
     Task<List<string>> ListTrackedFilesAsync(string workingDir, CancellationToken ct = default);
     Task<GitResult> GetCommitLogAsync(string repoDir, string baseBranch, CancellationToken ct = default);
     Task<string> ReadFileAsync(string workingDir, string relativePath, CancellationToken ct = default);
+    Task<(int Additions, int Deletions)> GetDiffStatAsync(string workingDir, string baseBranch, CancellationToken ct = default);
 }

@@ -256,6 +256,32 @@ public class GitService : IGitService
         return await File.ReadAllTextAsync(fullPath, ct);
     }
 
+    public async Task<(int Additions, int Deletions)> GetDiffStatAsync(string workingDir, string baseBranch, CancellationToken ct = default)
+    {
+        var result = await RunGitAsync($"diff --shortstat {baseBranch}", workingDir, ct);
+        if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
+            return (0, 0);
+
+        // Parse output like: " 3 files changed, 36 insertions(+), 16 deletions(-)"
+        int additions = 0, deletions = 0;
+        var parts = result.Output.Split(',');
+        foreach (var part in parts)
+        {
+            var trimmed = part.Trim();
+            if (trimmed.Contains("insertion"))
+            {
+                var numStr = trimmed.Split(' ')[0];
+                int.TryParse(numStr, out additions);
+            }
+            else if (trimmed.Contains("deletion"))
+            {
+                var numStr = trimmed.Split(' ')[0];
+                int.TryParse(numStr, out deletions);
+            }
+        }
+        return (additions, deletions);
+    }
+
     public static DiffSummary ParseDiff(string nameStatus, string rawDiff)
     {
         var summary = new DiffSummary();
