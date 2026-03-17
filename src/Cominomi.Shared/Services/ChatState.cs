@@ -45,6 +45,7 @@ public class ChatState : IDisposable
     private const int DebounceMs = 50;
 
     public event Action? OnChange;
+    public event Action? OnRequestCreateWorkspace;
 
     // Current session streaming shortcuts (backward compatible)
     public bool IsStreaming => CurrentSession != null && IsSessionStreaming(CurrentSession.Id);
@@ -222,6 +223,11 @@ public class ChatState : IDisposable
     {
         IsSpotlightActive = active;
         NotifyStateChanged();
+    }
+
+    public void RequestCreateWorkspace()
+    {
+        OnRequestCreateWorkspace?.Invoke();
     }
 
     public void SetPendingMessage(string? message)

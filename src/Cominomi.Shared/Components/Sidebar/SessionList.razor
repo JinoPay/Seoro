@@ -164,6 +164,7 @@
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += OnStateChanged;
+        ChatState.OnRequestCreateWorkspace += HandleCreateWorkspaceRequest;
 
         _workspaces = await WorkspaceService.GetWorkspacesAsync();
 
@@ -403,8 +404,15 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private void HandleCreateWorkspaceRequest()
+    {
+        _createDialogOpen = true;
+        InvokeAsync(StateHasChanged);
+    }
+
     public void Dispose()
     {
         ChatState.OnChange -= OnStateChanged;
+        ChatState.OnRequestCreateWorkspace -= HandleCreateWorkspaceRequest;
     }
 }
