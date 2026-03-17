@@ -5,6 +5,8 @@ using MudBlazor;
 using MudBlazor.Services;
 using Serilog;
 
+using NotificationService = Cominomi.Services.NotificationService;
+
 namespace Cominomi;
 
 public static class MauiProgram
@@ -78,6 +80,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IPluginService, PluginService>();
         builder.Services.AddSingleton<IUsageService, UsageService>();
         builder.Services.AddSingleton<IMcpService, McpService>();
+        builder.Services.AddSingleton<INotificationService, NotificationService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

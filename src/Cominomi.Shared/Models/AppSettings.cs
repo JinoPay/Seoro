@@ -13,6 +13,8 @@ public class AppSettings
     public string? FallbackModel { get; set; }
     public string? McpConfigPath { get; set; }
     public bool DebugMode { get; set; }
+    public bool NotificationsEnabled { get; set; } = true;
+    public bool NotificationSound { get; set; } = true;
     public Dictionary<string, string> EnvironmentVariables { get; set; } = [];
     public string DefaultMergeStrategy { get; set; } = "squash";
     public string? DefaultPrBodyTemplate { get; set; }

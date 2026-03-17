@@ -15,6 +15,7 @@
 @inject ILogger<ChatView> Logger
 @inject ISnackbar Snackbar
 @inject IUsageService UsageService
+@inject INotificationService NotificationService
 @inject ISettingsService SettingsService
 @implements IDisposable
 
@@ -886,6 +887,7 @@
                     _planReviewVisible = true;
                     _quickResponseVisible = false;
                     _quickResponseOptions = [];
+                    _ = SendNotificationIfNeeded(session, "Plan ready for review", NotificationType.PlanReview);
                 }
                 else
                 {
@@ -902,6 +904,11 @@
                 var (isQuestion, options) = QuestionDetector.Detect(assistantMsg);
                 _quickResponseVisible = isQuestion;
                 _quickResponseOptions = options;
+
+                if (isQuestion)
+                {
+                    _ = SendNotificationIfNeeded(session, "Response needed", NotificationType.Question);
+                }
             }
 
             await InvokeAsync(StateHasChanged);
@@ -913,6 +920,11 @@
                 ["COMINOMI_SESSION_ID"] = session.Id,
                 ["COMINOMI_CITY_NAME"] = session.CityName
             });
+
+            if (!_quickResponseVisible && !_planReviewVisible)
+            {
+                _ = SendNotificationIfNeeded(session, "Task completed", NotificationType.Info);
+            }
         }
     }
 
@@ -1019,6 +1031,22 @@ Rules:
         }
     }
 
+    private async Task SendNotificationIfNeeded(Session session, string body, NotificationType type)
+    {
+        try
+        {
+            // Only send if window is not focused or viewing a different session
+            var isFocused = await JSRuntime.InvokeAsync<bool>("isWindowFocused");
+            var isCurrentSession = ChatState.CurrentSession?.Id == session.Id;
+
+            if (!isFocused || !isCurrentSession)
+            {
+                await NotificationService.SendAsync(session.CityName, body, type);
+            }
+        }
+        catch { }
+    }
+
     private void HandleCancel()
     {
         ClaudeService.Cancel(ChatState.CurrentSession?.Id);
@@ -1042,7 +1070,10 @@ Rules:
             session.PrNumber = updated.PrNumber;
 
             if (updated.Status == SessionStatus.Merged)
+            {
                 Snackbar.MergeSuccess(session.BranchName);
+                _ = SendNotificationIfNeeded(session, $"Branch {session.BranchName} merged", NotificationType.Success);
+            }
             else if (updated.Status == SessionStatus.ConflictDetected)
                 Snackbar.ConflictDetected(session.BranchName);
             else if (!string.IsNullOrEmpty(updated.ErrorMessage))
