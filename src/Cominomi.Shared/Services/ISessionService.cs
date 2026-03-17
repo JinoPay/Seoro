@@ -8,6 +8,7 @@ public interface ISessionService
     Task<List<Session>> GetSessionsByWorkspaceAsync(string workspaceId);
     Task<Session> CreateSessionAsync(string model, string workspaceId, string baseBranch);
     Task<Session> CreatePendingSessionAsync(string model, string workspaceId);
+    Task<Session> CreateLocalDirSessionAsync(string model, string workspaceId);
     Task<Session> InitializeWorktreeAsync(string sessionId, string baseBranch);
     Task<Session?> LoadSessionAsync(string sessionId);
     Task SaveSessionAsync(Session session);
