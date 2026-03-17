@@ -835,11 +835,17 @@
                             session.ConversationId = evt.SessionId;
                         {
                             var resultUsage = evt.Usage ?? evt.Message?.Usage ?? TryExtractUsageFromExtensionData(evt);
+                            var costOverride = TryExtractCost(evt);
+
+                            Logger.LogDebug("Result event: Usage={HasUsage}, MsgUsage={HasMsgUsage}, ExtKeys={ExtKeys}, Cost={Cost}, AccIn={AccIn}, AccOut={AccOut}",
+                                evt.Usage != null, evt.Message?.Usage != null,
+                                evt.ExtensionData?.Keys != null ? string.Join(",", evt.ExtensionData.Keys) : "null",
+                                costOverride, accInputTokens, accOutputTokens);
+
                             if (resultUsage != null && !usageRecorded)
                             {
                                 session.TotalInputTokens += resultUsage.InputTokens;
                                 session.TotalOutputTokens += resultUsage.OutputTokens;
-                                var costOverride = TryExtractCost(evt);
                                 await RecordUsageAsync(session, resultUsage, costOverride);
                                 usageRecorded = true;
                             }
@@ -855,11 +861,18 @@
                                 };
                                 session.TotalInputTokens += accUsage.InputTokens;
                                 session.TotalOutputTokens += accUsage.OutputTokens;
-                                var costOverride = TryExtractCost(evt);
                                 await RecordUsageAsync(session, accUsage, costOverride);
                                 usageRecorded = true;
                                 Logger.LogWarning("Usage recorded from accumulated deltas (no result usage). In={In}, Out={Out}",
                                     accInputTokens, accOutputTokens);
+                            }
+                            else if (!usageRecorded && costOverride.HasValue && costOverride > 0)
+                            {
+                                // Cost-only fallback: CLI provided cost but no token breakdown
+                                var costOnlyUsage = new UsageInfo { InputTokens = 0, OutputTokens = 0 };
+                                await RecordUsageAsync(session, costOnlyUsage, costOverride);
+                                usageRecorded = true;
+                                Logger.LogWarning("Usage recorded with cost only (no token data). Cost=${Cost:F6}", costOverride.Value);
                             }
                         }
                         // assistant 이벤트에서 이미 처리됐을 수 있으므로 Parts 비어있을 때만 fallback
@@ -1339,6 +1352,7 @@ Rules:
         int input = 0, output = 0;
         int? cacheCreation = null, cacheRead = null;
 
+        // Check top-level token fields
         if (evt.ExtensionData.TryGetValue("input_tokens", out var inEl))
             inEl.TryGetInt32(out input);
         if (evt.ExtensionData.TryGetValue("output_tokens", out var outEl))
@@ -1347,6 +1361,21 @@ Rules:
             cacheCreation = cw;
         if (evt.ExtensionData.TryGetValue("cache_read_input_tokens", out var crEl) && crEl.TryGetInt32(out var cr))
             cacheRead = cr;
+
+        // Check nested "usage" object (result event may wrap tokens here)
+        if (input == 0 && output == 0
+            && evt.ExtensionData.TryGetValue("usage", out var usageEl)
+            && usageEl.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            if (usageEl.TryGetProperty("input_tokens", out var inProp))
+                inProp.TryGetInt32(out input);
+            if (usageEl.TryGetProperty("output_tokens", out var outProp))
+                outProp.TryGetInt32(out output);
+            if (usageEl.TryGetProperty("cache_creation_input_tokens", out var cwProp) && cwProp.TryGetInt32(out var cwVal))
+                cacheCreation = cwVal;
+            if (usageEl.TryGetProperty("cache_read_input_tokens", out var crProp) && crProp.TryGetInt32(out var crVal))
+                cacheRead = crVal;
+        }
 
         if (input == 0 && output == 0) return null;
 
