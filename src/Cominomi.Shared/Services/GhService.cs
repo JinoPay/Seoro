@@ -25,7 +25,7 @@ public class GhService : IGhService
     public async Task<GitResult> MergePrAsync(string repoDir, int prNumber, string mergeMethod = "squash", CancellationToken ct = default)
     {
         return await RunGhAsync(
-            $"pr merge {prNumber} --{mergeMethod} --delete-branch",
+            $"pr merge {prNumber} --{mergeMethod}",
             repoDir, ct);
     }
 
