@@ -1,6 +1,7 @@
 using Cominomi.Services;
 using Cominomi.Shared.Services;
 using Microsoft.Extensions.Logging;
+using MudBlazor;
 using MudBlazor.Services;
 using Serilog;
 
@@ -42,7 +43,16 @@ public static class MauiProgram
         builder.Logging.AddSerilog(Log.Logger);
 
         // MudBlazor
-        builder.Services.AddMudServices();
+        builder.Services.AddMudServices(config =>
+        {
+            config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
+            config.SnackbarConfiguration.VisibleStateDuration = 3000;
+            config.SnackbarConfiguration.ShowTransitionDuration = 200;
+            config.SnackbarConfiguration.HideTransitionDuration = 200;
+            config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
+            config.SnackbarConfiguration.MaxDisplayedSnackbars = 3;
+            config.SnackbarConfiguration.PreventDuplicates = true;
+        });
 
         // App Services
         builder.Services.AddSingleton<ChatState>();

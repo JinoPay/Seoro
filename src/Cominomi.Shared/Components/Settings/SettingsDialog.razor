@@ -2,6 +2,7 @@
 @inject IFolderPickerService FolderPickerService
 @inject IGhService GhService
 @inject IClaudeService ClaudeService
+@inject ISnackbar Snackbar
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
@@ -248,6 +249,7 @@
     private async Task Save()
     {
         await SettingsService.SaveAsync(_settings);
+        Snackbar.SettingsSaved();
         await Close();
     }
 

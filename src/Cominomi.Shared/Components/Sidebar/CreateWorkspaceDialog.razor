@@ -1,6 +1,7 @@
 @inject IWorkspaceService WorkspaceService
 @inject IGitService GitService
 @inject IFolderPickerService FolderPickerService
+@inject ISnackbar Snackbar
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
@@ -168,6 +169,7 @@
             }
             else
             {
+                Snackbar.WorkspaceCreated(_editName.Trim());
                 await OnWorkspaceCreated.InvokeAsync();
                 await Close();
             }
@@ -203,6 +205,7 @@
             }
             else
             {
+                Snackbar.WorkspaceCreated(_editName.Trim());
                 await OnWorkspaceCreated.InvokeAsync();
                 await Close();
             }

@@ -363,6 +363,8 @@
 
             if (ChatState.CurrentSession?.Id == session.Id)
                 ChatState.SetSession(null!);
+
+            Snackbar.SessionDeleted();
         }
         catch (Exception ex)
         {

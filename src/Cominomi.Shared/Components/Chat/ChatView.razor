@@ -12,6 +12,7 @@
 @inject IHooksEngine HooksEngine
 @inject IJSRuntime JSRuntime
 @inject ILogger<ChatView> Logger
+@inject ISnackbar Snackbar
 @implements IDisposable
 
 <div class="chat-container">
@@ -635,6 +636,7 @@
             Logger.LogError(ex, "Error during message processing for session {SessionId}", session.Id);
             if (string.IsNullOrEmpty(assistantMsg.Text))
                 ChatState.AppendText(assistantMsg, $"Error: {ex.Message}");
+            await InvokeAsync(() => Snackbar.StreamingError(ex.Message));
         }
         finally
         {
@@ -729,6 +731,8 @@
                             ["COMINOMI_SESSION_ID"] = session.Id,
                             ["COMINOMI_BRANCH"] = session.BranchName
                         });
+
+                        await InvokeAsync(() => Snackbar.PushSuccess(session.BranchName));
                     }
                     else if (completedAction == WorkflowAction.CreatePr && workspace != null)
                     {
@@ -747,6 +751,8 @@
                                 ["COMINOMI_BRANCH"] = session.BranchName,
                                 ["COMINOMI_PR_URL"] = prInfo.Url
                             });
+
+                            await InvokeAsync(() => Snackbar.PrCreated(prInfo.Number));
                         }
                     }
                 }
@@ -953,8 +959,20 @@ Rules:
             var updated = await SessionService.MergePrAsync(session.Id);
             session.Status = updated.Status;
             session.ErrorMessage = updated.ErrorMessage;
+
+            if (updated.Status == SessionStatus.Merged)
+                Snackbar.MergeSuccess(session.BranchName);
+            else if (updated.Status == SessionStatus.ConflictDetected)
+                Snackbar.ConflictDetected(session.BranchName);
+            else if (!string.IsNullOrEmpty(updated.ErrorMessage))
+                Snackbar.MergeError(updated.ErrorMessage);
         }
-        catch (Exception ex) { Logger.LogError(ex, "Workflow action failed for session {SessionId}", session.Id); session.ErrorMessage = ex.Message; }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Workflow action failed for session {SessionId}", session.Id);
+            session.ErrorMessage = ex.Message;
+            Snackbar.MergeError(ex.Message);
+        }
         finally { _operatingSessionId = null; StateHasChanged(); }
     }
 
