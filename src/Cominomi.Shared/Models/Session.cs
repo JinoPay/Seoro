@@ -34,6 +34,8 @@ public class Session
     public List<ChatMessage> Messages { get; set; } = [];
     public string? PrUrl { get; set; }
     public int? PrNumber { get; set; }
+    public int? IssueNumber { get; set; }
+    public string? IssueUrl { get; set; }
     public List<string>? ConflictFiles { get; set; }
     public string? ConversationId { get; set; }
     public int? MaxTurns { get; set; }

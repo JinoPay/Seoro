@@ -199,6 +199,11 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
                 body = logResult.Success ? logResult.Output.Trim() : "";
             }
 
+            if (session.IssueNumber != null && !body.Contains($"#{session.IssueNumber}"))
+            {
+                body = $"Closes #{session.IssueNumber}\n\n{body}";
+            }
+
             session = await CreatePrAsync(sessionId, title, body, ct);
             if (session.Status != SessionStatus.PrOpen)
                 return session; // PR creation failed

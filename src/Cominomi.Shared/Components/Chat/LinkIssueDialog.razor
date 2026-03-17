@@ -1,0 +1,209 @@
+@inject IGhService GhService
+@inject ChatState ChatState
+@inject IWorkspaceService WorkspaceService
+@inject ISnackbar Snackbar
+
+<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" Style="vertical-align: middle;" />
+            이슈 연결
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div style="min-width: 420px;">
+            <MudTabs @bind-ActivePanelIndex="_activeTab" Rounded="true" ApplyEffectsToContainer="true"
+                     PanelClass="pa-3">
+                <MudTabPanel Text="기존 이슈" Icon="@Icons.Material.Filled.List">
+                    @if (_isLoading)
+                    {
+                        <div style="display: flex; justify-content: center; padding: var(--space-4);">
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        </div>
+                    }
+                    else if (_issues.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center"
+                                 Style="padding: var(--space-4);">
+                            열린 이슈가 없습니다.
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudList T="IssueInfo" Dense="true" Style="max-height: 300px; overflow-y: auto;">
+                            @foreach (var issue in _issues)
+                            {
+                                <MudListItem T="IssueInfo" OnClick="@(() => SelectIssue(issue))"
+                                             Style="cursor: pointer;">
+                                    <div style="display: flex; align-items: center; gap: var(--space-2);">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                                                 Style="min-width: 48px; justify-content: center;">
+                                            #@issue.Number
+                                        </MudChip>
+                                        <span style="font-size: var(--text-sm);">@issue.Title</span>
+                                    </div>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+                </MudTabPanel>
+                <MudTabPanel Text="새 이슈" Icon="@Icons.Material.Filled.Add">
+                    <MudStack Spacing="3">
+                        <MudTextField @bind-Value="_newTitle" Label="제목" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" Placeholder="이슈 제목" />
+                        <MudTextField @bind-Value="_newBody" Label="내용" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" Lines="4" Placeholder="이슈 설명 (선택)" />
+                    </MudStack>
+                </MudTabPanel>
+            </MudTabs>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@_errorMessage</MudAlert>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Disabled="_isCreating">취소</MudButton>
+        @if (_activeTab == 1)
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                       OnClick="CreateAndLink" Disabled="@(!CanCreate)">
+                @if (_isCreating)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                생성 및 연결
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public EventCallback<IssueInfo> OnIssueLinked { get; set; }
+
+    private int _activeTab;
+    private bool _isLoading;
+    private bool _isCreating;
+    private string _newTitle = "";
+    private string _newBody = "";
+    private string? _errorMessage;
+    private List<IssueInfo> _issues = [];
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true
+    };
+
+    private bool CanCreate => !_isCreating && !string.IsNullOrWhiteSpace(_newTitle);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen && _issues.Count == 0 && !_isLoading)
+        {
+            await LoadIssues();
+        }
+    }
+
+    private async Task LoadIssues()
+    {
+        var repoPath = await GetRepoPath();
+        if (repoPath == null) return;
+
+        _isLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            _issues = await GhService.ListIssuesAsync(repoPath);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SelectIssue(IssueInfo issue)
+    {
+        Snackbar.IssueLinked(issue.Number);
+        await OnIssueLinked.InvokeAsync(issue);
+        await Close();
+    }
+
+    private async Task CreateAndLink()
+    {
+        var repoPath = await GetRepoPath();
+        if (repoPath == null) return;
+
+        _isCreating = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await GhService.CreateIssueAsync(repoPath, _newTitle.Trim(), _newBody.Trim());
+            if (!result.Success)
+            {
+                _errorMessage = result.Error;
+                _isCreating = false;
+                return;
+            }
+
+            // Parse issue URL from output to get issue number
+            var url = result.Output.Trim();
+            var lastSlash = url.LastIndexOf('/');
+            if (lastSlash >= 0 && int.TryParse(url[(lastSlash + 1)..], out var number))
+            {
+                var issue = new IssueInfo(number, url, _newTitle.Trim(), "OPEN");
+                Snackbar.IssueCreated(number);
+                await OnIssueLinked.InvokeAsync(issue);
+                await Close();
+            }
+            else
+            {
+                _errorMessage = "이슈가 생성되었지만 번호를 파싱할 수 없습니다.";
+                _isCreating = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _isCreating = false;
+        }
+    }
+
+    private async Task<string?> GetRepoPath()
+    {
+        if (ChatState.CurrentSession == null) return null;
+        var workspace = await WorkspaceService.LoadWorkspaceAsync(ChatState.CurrentSession.WorkspaceId);
+        return workspace?.RepoLocalPath;
+    }
+
+    private async Task OnVisibleChanged(bool visible)
+    {
+        if (IsOpen != visible)
+        {
+            IsOpen = visible;
+            await IsOpenChanged.InvokeAsync(visible);
+        }
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        _isCreating = false;
+        _newTitle = "";
+        _newBody = "";
+        _errorMessage = null;
+        _issues = [];
+        await IsOpenChanged.InvokeAsync(false);
+    }
+}

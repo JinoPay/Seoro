@@ -36,4 +36,10 @@ public static class SnackbarExtensions
 
     public static void StreamingError(this ISnackbar snackbar, string error)
         => snackbar.Add($"응답 오류: {error}", Severity.Error);
+
+    public static void IssueLinked(this ISnackbar snackbar, int number)
+        => snackbar.Add($"Issue #{number} 연결됨", Severity.Success);
+
+    public static void IssueCreated(this ISnackbar snackbar, int number)
+        => snackbar.Add($"Issue #{number} 생성 완료", Severity.Success);
 }
