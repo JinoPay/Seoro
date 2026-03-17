@@ -78,7 +78,12 @@ public class ShellService : IShellService
             catch (OperationCanceledException) { try { proc.Kill(); } catch { } }
 
             if (proc.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
+            {
+                // Git Bash 'which' returns MSYS Unix-style paths; convert for Windows ProcessStartInfo
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && shell.Type == ShellType.Bash)
+                    output = ConvertMsysPathToWindows(output);
                 return output;
+            }
         }
         catch (Exception ex)
         {
@@ -170,5 +175,16 @@ public class ShellService : IShellService
 
         _logger.LogDebug("Git Bash not found, will fall back to cmd.exe");
         return null;
+    }
+
+    /// <summary>
+    /// Converts MSYS/Git Bash Unix-style paths (e.g., /c/Users/...) to Windows paths (C:\Users\...).
+    /// </summary>
+    private static string ConvertMsysPathToWindows(string path)
+    {
+        if (path.Length >= 3 && path[0] == '/' && char.IsLetter(path[1]) && path[2] == '/')
+            return $"{char.ToUpper(path[1])}:{path[2..]}".Replace('/', '\\');
+
+        return path.Replace('/', '\\');
     }
 }
