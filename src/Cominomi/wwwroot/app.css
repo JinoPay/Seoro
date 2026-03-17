@@ -139,6 +139,9 @@ html, body {
     font-size: var(--text-lg);
     letter-spacing: -0.02em;
     opacity: 0.9;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .sidebar-header {
