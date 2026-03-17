@@ -36,6 +36,8 @@ public class Session
     public int? PrNumber { get; set; }
     public List<string>? ConflictFiles { get; set; }
     public string? ConversationId { get; set; }
+    public bool PlanCompleted { get; set; }
+    public string? PlanFilePath { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
