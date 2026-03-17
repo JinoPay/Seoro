@@ -137,7 +137,7 @@
                             <span>브랜치 불러오는 중...</span>
                         </div>
                     }
-                    else if (_branches.Count > 0)
+                    else if (_branchGroups.Count > 0)
                     {
                         <div class="branch-selector-wrapper">
                             <button class="branch-selector-pill" type="button" @onclick="ToggleBranchMenu">
@@ -160,23 +160,27 @@
                                                   Style="font-size: var(--text-sm);" />
                                 </div>
                                 <MudList T="string" Dense="true" Class="branch-list">
-                                    @foreach (var branch in FilteredBranches)
+                                    @foreach (var group in FilteredBranchGroups)
                                     {
-                                        <MudListItem T="string" OnClick="@(() => SelectBranch(branch))"
-                                                     Class="@(branch == _selectedBranch ? "branch-item-active" : "")">
-                                            <div class="branch-item-content">
-                                                <MudIcon Icon="@Icons.Material.Filled.AccountTree"
-                                                         Style="font-size: 14px; opacity: 0.5;" />
-                                                <span class="branch-item-name">@branch</span>
-                                                @if (branch == _selectedBranch)
-                                                {
-                                                    <MudIcon Icon="@Icons.Material.Filled.Check"
-                                                             Style="font-size: 14px; color: var(--accent);" />
-                                                }
-                                            </div>
-                                        </MudListItem>
+                                        <div class="branch-group-header">@group.Name</div>
+                                        @foreach (var branch in group.Branches)
+                                        {
+                                            <MudListItem T="string" OnClick="@(() => SelectBranch(branch))"
+                                                         Class="@(branch == _selectedBranch ? "branch-item-active" : "")">
+                                                <div class="branch-item-content">
+                                                    <MudIcon Icon="@Icons.Material.Filled.AccountTree"
+                                                             Style="font-size: 14px; opacity: 0.5;" />
+                                                    <span class="branch-item-name">@branch</span>
+                                                    @if (branch == _selectedBranch)
+                                                    {
+                                                        <MudIcon Icon="@Icons.Material.Filled.Check"
+                                                                 Style="font-size: 14px; color: var(--accent);" />
+                                                    }
+                                                </div>
+                                            </MudListItem>
+                                        }
                                     }
-                                    @if (!FilteredBranches.Any())
+                                    @if (!FilteredBranchGroups.Any())
                                     {
                                         <div class="branch-no-results">일치하는 브랜치 없음</div>
                                     }
@@ -233,7 +237,7 @@
 </div>
 
 @code {
-    private List<string> _branches = [];
+    private List<BranchGroup> _branchGroups = [];
     private string _selectedBranch = "";
     private bool _isInitializingWorktree;
     private string? _operatingSessionId;
@@ -257,10 +261,14 @@
     private bool _branchMenuOpen;
     private string _branchSearchText = "";
 
-    private IEnumerable<string> FilteredBranches =>
+    private IEnumerable<BranchGroup> FilteredBranchGroups =>
         string.IsNullOrWhiteSpace(_branchSearchText)
-            ? _branches
-            : _branches.Where(b => b.Contains(_branchSearchText, StringComparison.OrdinalIgnoreCase));
+            ? _branchGroups
+            : _branchGroups
+                .Select(g => new BranchGroup(g.Name,
+                    g.Branches.Where(b => b.Contains(_branchSearchText, StringComparison.OrdinalIgnoreCase)).ToList()))
+                .Where(g => g.Branches.Count > 0)
+                .ToList();
 
     private void ToggleBranchMenu()
     {
@@ -286,7 +294,7 @@
         await InvokeAsync(() =>
         {
             bool needsBranches = ChatState.CurrentSession?.Status == SessionStatus.Pending
-                                 && _branches.Count == 0 && !_isLoadingBranches;
+                                 && _branchGroups.Count == 0 && !_isLoadingBranches;
 
             var pendingMsg = ChatState.ConsumePendingMessage();
             if (pendingMsg != null && ChatState.CurrentSession != null && !ChatState.IsStreaming)
@@ -363,13 +371,19 @@
             var ws = ChatState.CurrentWorkspace;
             if (ws == null || string.IsNullOrEmpty(ws.RepoLocalPath)) return;
 
-            var branchesTask = GitService.ListBranchesAsync(ws.RepoLocalPath);
-            var defaultBranchTask = GitService.DetectDefaultBranchAsync(ws.RepoLocalPath);
-            await Task.WhenAll(branchesTask, defaultBranchTask);
+            // Fetch all remotes to get latest branches
+            try { await GitService.FetchAllAsync(ws.RepoLocalPath); }
+            catch { /* Continue with cached branches if offline */ }
 
-            _branches = branchesTask.Result;
+            var branchGroupsTask = GitService.ListAllBranchesGroupedAsync(ws.RepoLocalPath);
+            var defaultBranchTask = GitService.DetectDefaultBranchAsync(ws.RepoLocalPath);
+            await Task.WhenAll(branchGroupsTask, defaultBranchTask);
+
+            _branchGroups = branchGroupsTask.Result;
             var defaultBranch = defaultBranchTask.Result;
-            _selectedBranch = defaultBranch ?? _branches.FirstOrDefault() ?? "";
+            _selectedBranch = defaultBranch
+                ?? _branchGroups.SelectMany(g => g.Branches).FirstOrDefault()
+                ?? "";
         }
         finally
         {
