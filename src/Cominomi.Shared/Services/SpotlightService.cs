@@ -23,6 +23,9 @@ public class SpotlightService : ISpotlightService, IDisposable
         if (_sessions.ContainsKey(session.Id))
             return;
 
+        if (session.IsLocalDir || string.IsNullOrEmpty(session.BranchName))
+            throw new InvalidOperationException("Spotlight is not supported for local directory sessions.");
+
         var repoDir = workspace.RepoLocalPath;
         if (string.IsNullOrEmpty(repoDir) || !Directory.Exists(repoDir))
             throw new InvalidOperationException("Repository path not found.");
@@ -68,6 +71,8 @@ public class SpotlightService : ISpotlightService, IDisposable
         var debounceTimer = new System.Timers.Timer(500) { AutoReset = false };
         debounceTimer.Elapsed += async (_, _) =>
         {
+            if (!spotlightSession.SyncLock.Wait(0))
+                return; // Another sync is in progress; next change will trigger a fresh sync
             try
             {
                 await SyncFilesAsync(spotlightSession.WorktreePath, spotlightSession.RepoDir);
@@ -75,6 +80,10 @@ public class SpotlightService : ISpotlightService, IDisposable
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Spotlight sync failed for session {SessionId}", session.Id);
+            }
+            finally
+            {
+                spotlightSession.SyncLock.Release();
             }
         };
         spotlightSession.DebounceTimer = debounceTimer;
@@ -108,6 +117,7 @@ public class SpotlightService : ISpotlightService, IDisposable
         session.Watcher.EnableRaisingEvents = false;
         session.Watcher.Dispose();
         session.DebounceTimer?.Dispose();
+        session.SyncLock.Dispose();
 
         // Discard changes in repo root and restore original branch
         await RunGitAsync("checkout -- .", session.RepoDir);
@@ -126,43 +136,34 @@ public class SpotlightService : ISpotlightService, IDisposable
 
     private async Task SyncFilesAsync(string worktreePath, string repoDir)
     {
-        // Get list of git-tracked files in the worktree
-        var result = await RunGitAsync("ls-files", worktreePath);
-        if (!result.Success) return;
-
-        var trackedFiles = result.Output
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Select(f => f.Trim())
-            .Where(f => !string.IsNullOrEmpty(f));
-
-        // Also get modified/untracked files that are not ignored
+        // Only sync files that have actually changed (modified, added, deleted, untracked)
         var statusResult = await RunGitAsync("status --porcelain -u", worktreePath);
-        var modifiedFiles = new HashSet<string>();
-        if (statusResult.Success)
+        if (!statusResult.Success) return;
+
+        foreach (var line in statusResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
-            foreach (var line in statusResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            if (line.Length < 4) continue;
+
+            var statusCode = line[..2];
+            var filePath = line[3..].Trim();
+
+            // Handle renamed files (old -> new)
+            if (filePath.Contains(" -> "))
+                filePath = filePath.Split(" -> ")[1];
+
+            var sourcePath = Path.Combine(worktreePath, filePath);
+            var destPath = Path.Combine(repoDir, filePath);
+
+            if (statusCode.Contains('D'))
             {
-                if (line.Length > 3)
+                // File was deleted in worktree
+                if (File.Exists(destPath))
                 {
-                    var filePath = line[3..].Trim();
-                    // Handle renamed files (old -> new)
-                    if (filePath.Contains(" -> "))
-                        filePath = filePath.Split(" -> ")[1];
-                    modifiedFiles.Add(filePath);
+                    try { File.Delete(destPath); }
+                    catch (Exception ex) { _logger.LogDebug(ex, "Failed to delete spotlight file: {Path}", destPath); }
                 }
             }
-        }
-
-        // Combine tracked and modified files
-        var allFiles = new HashSet<string>(trackedFiles);
-        foreach (var f in modifiedFiles) allFiles.Add(f);
-
-        foreach (var relativePath in allFiles)
-        {
-            var sourcePath = Path.Combine(worktreePath, relativePath);
-            var destPath = Path.Combine(repoDir, relativePath);
-
-            if (File.Exists(sourcePath))
+            else if (File.Exists(sourcePath))
             {
                 var destDir = Path.GetDirectoryName(destPath);
                 if (destDir != null)
@@ -174,14 +175,8 @@ public class SpotlightService : ISpotlightService, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogDebug(ex, "Failed to copy spotlight file: {Path}", relativePath);
+                    _logger.LogDebug(ex, "Failed to copy spotlight file: {Path}", filePath);
                 }
-            }
-            else if (File.Exists(destPath))
-            {
-                // File was deleted in worktree, delete from repo root too
-                try { File.Delete(destPath); }
-                catch (Exception ex) { _logger.LogDebug(ex, "Failed to delete spotlight file: {Path}", destPath); }
             }
         }
     }
@@ -195,6 +190,7 @@ public class SpotlightService : ISpotlightService, IDisposable
         {
             session.Watcher.Dispose();
             session.DebounceTimer?.Dispose();
+            session.SyncLock.Dispose();
         }
         _sessions.Clear();
     }
@@ -207,5 +203,6 @@ public class SpotlightService : ISpotlightService, IDisposable
         public required string WorktreePath { get; init; }
         public required FileSystemWatcher Watcher { get; init; }
         public System.Timers.Timer? DebounceTimer { get; set; }
+        public SemaphoreSlim SyncLock { get; } = new(1, 1);
     }
 }

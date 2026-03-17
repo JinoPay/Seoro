@@ -5,6 +5,7 @@
 
 @if (ChatState.CurrentWorkspace?.Status == WorkspaceStatus.Ready &&
      ChatState.CurrentSession?.Status == SessionStatus.Ready &&
+     !ChatState.CurrentSession.IsLocalDir &&
      !string.IsNullOrEmpty(ChatState.CurrentWorkspace.RepoLocalPath))
 {
     <MudTooltip Text="@(_isActive ? $"Spotlight: {ShortenPath(ChatState.CurrentWorkspace.RepoLocalPath)}에 동기화 중" : "Spotlight 테스트")">
