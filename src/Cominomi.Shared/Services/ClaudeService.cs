@@ -91,6 +91,8 @@ public class ClaudeService : IClaudeService
 
             if (string.IsNullOrWhiteSpace(line)) continue;
 
+            _logger.LogDebug("Claude raw line: {Line}", line);
+
             StreamEvent? evt = null;
             try { evt = JsonSerializer.Deserialize<StreamEvent>(line); }
             catch (JsonException) { _logger.LogDebug("Skipping non-JSON line from Claude CLI"); }
