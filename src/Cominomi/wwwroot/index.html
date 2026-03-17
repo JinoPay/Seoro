@@ -35,9 +35,11 @@
         };
 
         window.registerPasteHandler = function(elementId, dotNetRef) {
-            const el = document.getElementById(elementId);
-            if (!el) return;
-            el._pasteHandler = async function(e) {
+            const container = document.getElementById(elementId);
+            if (!container) return;
+            const textarea = container.querySelector('textarea');
+            const target = textarea || container;
+            target._pasteHandler = async function(e) {
                 const items = e.clipboardData?.items;
                 if (!items) return;
                 for (const item of items) {
@@ -54,7 +56,7 @@
                     }
                 }
             };
-            el.addEventListener('paste', el._pasteHandler);
+            target.addEventListener('paste', target._pasteHandler);
         };
 
         window.registerDropHandler = function(elementId, dotNetRef) {
@@ -89,7 +91,9 @@
         window.unregisterFileHandlers = function(elementId) {
             const el = document.getElementById(elementId);
             if (!el) return;
-            if (el._pasteHandler) el.removeEventListener('paste', el._pasteHandler);
+            var textarea = el.querySelector('textarea');
+            var pasteTarget = textarea || el;
+            if (pasteTarget._pasteHandler) pasteTarget.removeEventListener('paste', pasteTarget._pasteHandler);
             if (el._dragOverHandler) el.removeEventListener('dragover', el._dragOverHandler);
             if (el._dragLeaveHandler) el.removeEventListener('dragleave', el._dragLeaveHandler);
             if (el._dropHandler) el.removeEventListener('drop', el._dropHandler);
