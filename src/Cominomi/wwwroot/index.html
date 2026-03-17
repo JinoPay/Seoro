@@ -101,6 +101,12 @@
             var textarea = container.querySelector('textarea');
             if (!textarea || textarea._enterHandler) return; // Already registered → skip
 
+            // Disable macOS autocorrect/spellcheck to prevent cursor jumping on space/period
+            textarea.setAttribute('spellcheck', 'false');
+            textarea.setAttribute('autocorrect', 'off');
+            textarea.setAttribute('autocomplete', 'off');
+            textarea.setAttribute('autocapitalize', 'off');
+
             // Track IME composition state for robust Korean/CJK input handling
             textarea._isComposing = false;
             textarea._compositionStartHandler = function() {
