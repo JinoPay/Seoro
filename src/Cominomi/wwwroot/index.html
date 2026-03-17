@@ -109,6 +109,7 @@
                         textarea.value = textarea.value.substring(0, start) + '\n' + textarea.value.substring(end);
                         textarea.selectionStart = textarea.selectionEnd = start + 1;
                         textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                        textarea.dispatchEvent(new Event('change', { bubbles: true }));
                         textarea.style.height = 'auto';
                         textarea.style.height = textarea.scrollHeight + 'px';
                     } else {

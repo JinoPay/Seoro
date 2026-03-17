@@ -802,6 +802,12 @@ html, body {
     width: 100%;
 }
 
+.input-area-float .input-textarea-full textarea {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+}
+
 .input-area-float .input-textarea-full .mud-input-control {
     margin: 0;
 }
