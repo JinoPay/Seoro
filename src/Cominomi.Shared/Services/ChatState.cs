@@ -20,6 +20,13 @@ public enum RightPanelMode
     Context
 }
 
+public enum SidebarView
+{
+    Sessions,
+    Explorer,
+    Changes
+}
+
 public class SessionStreamingState
 {
     public bool IsStreaming { get; set; }
@@ -34,6 +41,7 @@ public class ChatState : IDisposable
     public bool IsSpotlightActive { get; private set; }
     public string? PendingMessage { get; private set; }
     public RightPanelMode RightPanel { get; private set; }
+    public SidebarView ActiveSidebarView { get; private set; } = SidebarView.Sessions;
 
     // Main tab system
     public List<MainTab> OpenTabs { get; private set; } = new();
@@ -289,20 +297,29 @@ public class ChatState : IDisposable
         NotifyStateChanged();
     }
 
-    public void OpenAllFilesTab()
+    public void SetSidebarView(SidebarView view)
     {
-        var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.AllFiles);
+        ActiveSidebarView = view;
+        NotifyStateChanged();
+    }
+
+    public void OpenFileContentTab(string filePath, string content)
+    {
+        var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileContent && t.FilePath == filePath);
         if (existing != null)
         {
+            existing.FileContent = content;
             ActiveTab = existing;
         }
         else
         {
+            var fileName = Path.GetFileName(filePath);
             var tab = new MainTab
             {
-                Id = "allfiles",
-                Type = MainTabType.AllFiles,
-                Title = "All Files"
+                Type = MainTabType.FileContent,
+                Title = fileName,
+                FilePath = filePath,
+                FileContent = content
             };
             OpenTabs.Add(tab);
             ActiveTab = tab;
