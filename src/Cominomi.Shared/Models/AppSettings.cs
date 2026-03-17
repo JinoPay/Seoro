@@ -14,6 +14,8 @@ public class AppSettings
     public string? McpConfigPath { get; set; }
     public bool DebugMode { get; set; }
     public Dictionary<string, string> EnvironmentVariables { get; set; } = [];
+    public string DefaultMergeStrategy { get; set; } = "squash";
+    public string? DefaultPrBodyTemplate { get; set; }
     public string LastWorkspaceId { get; set; } = "";
     public string LastSessionId { get; set; } = "";
 }

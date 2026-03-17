@@ -15,10 +15,11 @@
 @inject ILogger<ChatView> Logger
 @inject ISnackbar Snackbar
 @inject IUsageService UsageService
+@inject ISettingsService SettingsService
 @implements IDisposable
 
 <div class="chat-container">
-    @* Workflow actions bar (Push/PR/Merge) *@
+    @* Workflow actions bar (Merge all) *@
     @if (ChatState.CurrentSession != null && !ChatState.CurrentSession.IsLocalDir
          && ChatState.CurrentSession.Status is SessionStatus.Ready
          or SessionStatus.Pushed or SessionStatus.PrOpen or SessionStatus.ConflictDetected)
@@ -34,25 +35,11 @@
                 @switch (ChatState.CurrentSession.Status)
                 {
                     case SessionStatus.Ready:
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.CloudUpload"
-                                   OnClick="@(() => PushBranch(ChatState.CurrentSession))"
-                                   Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
-                            푸시
-                        </MudButton>
-                        break;
                     case SessionStatus.Pushed:
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.RateReview"
-                                   OnClick="@(() => OpenCreatePrDialog(ChatState.CurrentSession))"
-                                   Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
-                            PR 생성
-                        </MudButton>
-                        break;
                     case SessionStatus.PrOpen:
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
                                    StartIcon="@Icons.Material.Filled.MergeType"
-                                   OnClick="@(() => MergePr(ChatState.CurrentSession))"
+                                   OnClick="@(() => MergeAll(ChatState.CurrentSession))"
                                    Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
                             병합
                         </MudButton>
@@ -83,7 +70,7 @@
                     @if (ChatState.CurrentSession.ErrorMessage.Contains("rejected", StringComparison.OrdinalIgnoreCase))
                     {
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
-                                   OnClick="@(() => ForcePushBranch(ChatState.CurrentSession))"
+                                   OnClick="@(() => ForcePushAndMerge(ChatState.CurrentSession))"
                                    Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-1); height: 24px;">
                             강제 푸시
                         </MudButton>
@@ -257,10 +244,6 @@
 
     private List<Session> _recentSessions = [];
 
-    private enum WorkflowAction { None, Push, CreatePr }
-    private WorkflowAction _pendingWorkflowAction = WorkflowAction.None;
-    private string? _savedModel;
-    private string? _savedPermissionMode;
 
     protected override async Task OnInitializedAsync()
     {
@@ -843,140 +826,64 @@
             ChatState.SetStreaming(false, session.Id);
             _shouldAutoScroll = true;
 
-            var isWorkflow = _pendingWorkflowAction != WorkflowAction.None;
-
-            // Detect plan completion (skip for workflow actions)
-            if (!isWorkflow)
+            // Detect plan completion
+            if (session.PermissionMode == "plan")
             {
-                if (session.PermissionMode == "plan")
+                // Multi-layer plan completion detection
+                // Layer 1: ExitPlanMode tool_use (already set during stream)
+
+                // Layer 2: Check response text for ExitPlanMode traces
+                if (!exitPlanModeDetected)
                 {
-                    // Multi-layer plan completion detection
-                    // Layer 1: ExitPlanMode tool_use (already set during stream)
+                    var text = assistantMsg.Text ?? "";
+                    if (text.Contains("ExitPlanMode", StringComparison.OrdinalIgnoreCase))
+                        exitPlanModeDetected = true;
+                }
 
-                    // Layer 2: Check response text for ExitPlanMode traces
-                    if (!exitPlanModeDetected)
-                    {
-                        var text = assistantMsg.Text ?? "";
-                        if (text.Contains("ExitPlanMode", StringComparison.OrdinalIgnoreCase))
-                            exitPlanModeDetected = true;
-                    }
+                // Layer 3: Check if plan file was created/modified during this stream
+                if (!exitPlanModeDetected && !string.IsNullOrEmpty(session.WorktreePath))
+                {
+                    await DetectPlanFileAsync(session.WorktreePath);
+                    if (_planContent != null)
+                        exitPlanModeDetected = true;
+                }
 
-                    // Layer 3: Check if plan file was created/modified during this stream
-                    if (!exitPlanModeDetected && !string.IsNullOrEmpty(session.WorktreePath))
-                    {
+                if (exitPlanModeDetected)
+                {
+                    if (_planContent == null)
                         await DetectPlanFileAsync(session.WorktreePath);
-                        if (_planContent != null)
-                            exitPlanModeDetected = true;
-                    }
-
-                    if (exitPlanModeDetected)
-                    {
-                        if (_planContent == null)
-                            await DetectPlanFileAsync(session.WorktreePath);
-                        session.PlanCompleted = true;
-                        session.PlanFilePath = _planFilePath;
-                        _planReviewVisible = true;
-                        _quickResponseVisible = false;
-                        _quickResponseOptions = [];
-                    }
-                    else
-                    {
-                        _planReviewVisible = false;
-                        _quickResponseVisible = false;
-                        _quickResponseOptions = [];
-                    }
+                    session.PlanCompleted = true;
+                    session.PlanFilePath = _planFilePath;
+                    _planReviewVisible = true;
+                    _quickResponseVisible = false;
+                    _quickResponseOptions = [];
                 }
                 else
                 {
                     _planReviewVisible = false;
-
-                    // Detect if the assistant is asking a question
-                    var (isQuestion, options) = QuestionDetector.Detect(assistantMsg);
-                    _quickResponseVisible = isQuestion;
-                    _quickResponseOptions = options;
+                    _quickResponseVisible = false;
+                    _quickResponseOptions = [];
                 }
+            }
+            else
+            {
+                _planReviewVisible = false;
+
+                // Detect if the assistant is asking a question
+                var (isQuestion, options) = QuestionDetector.Detect(assistantMsg);
+                _quickResponseVisible = isQuestion;
+                _quickResponseOptions = options;
             }
 
             await InvokeAsync(StateHasChanged);
             await SessionService.SaveSessionAsync(session);
             ChatState.UnregisterActiveSession(session.Id);
 
-            if (!isWorkflow)
+            _ = HooksEngine.FireAsync(HookEvent.OnMessageComplete, new Dictionary<string, string>
             {
-                _ = HooksEngine.FireAsync(HookEvent.OnMessageComplete, new Dictionary<string, string>
-                {
-                    ["COMINOMI_SESSION_ID"] = session.Id,
-                    ["COMINOMI_CITY_NAME"] = session.CityName
-                });
-            }
-
-            // Branch rename is now done before main model processing (via Haiku summarization)
-
-            // Workflow completion: restore model/permission, verify result, update status
-            if (isWorkflow)
-            {
-                var completedAction = _pendingWorkflowAction;
-                _pendingWorkflowAction = WorkflowAction.None;
-
-                if (_savedModel != null)
-                {
-                    session.Model = _savedModel;
-                    _savedModel = null;
-                }
-                if (_savedPermissionMode != null)
-                {
-                    session.PermissionMode = _savedPermissionMode;
-                    _savedPermissionMode = null;
-                }
-
-                try
-                {
-                    var workspace = ChatState.CurrentWorkspace;
-                    if (completedAction == WorkflowAction.Push && workspace != null)
-                    {
-                        session.Status = SessionStatus.Pushed;
-                        session.ErrorMessage = null;
-
-                        _ = HooksEngine.FireAsync(HookEvent.OnBranchPush, new Dictionary<string, string>
-                        {
-                            ["COMINOMI_SESSION_ID"] = session.Id,
-                            ["COMINOMI_BRANCH"] = session.BranchName
-                        });
-
-                        await InvokeAsync(() => Snackbar.PushSuccess(session.BranchName));
-                    }
-                    else if (completedAction == WorkflowAction.CreatePr && workspace != null)
-                    {
-                        var prInfo = await GhService.GetPrForBranchAsync(
-                            workspace.RepoLocalPath, session.BranchName);
-                        if (prInfo != null)
-                        {
-                            session.Status = SessionStatus.PrOpen;
-                            session.PrUrl = prInfo.Url;
-                            session.PrNumber = prInfo.Number;
-                            session.ErrorMessage = null;
-
-                            _ = HooksEngine.FireAsync(HookEvent.OnPrCreate, new Dictionary<string, string>
-                            {
-                                ["COMINOMI_SESSION_ID"] = session.Id,
-                                ["COMINOMI_BRANCH"] = session.BranchName,
-                                ["COMINOMI_PR_URL"] = prInfo.Url
-                            });
-
-                            await InvokeAsync(() => Snackbar.PrCreated(prInfo.Number));
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning(ex, "Failed to verify workflow action result");
-                }
-
-                await SessionService.SaveSessionAsync(session);
-                _operatingSessionId = null;
-                ChatState.NotifyStateChanged();
-                await InvokeAsync(StateHasChanged);
-            }
+                ["COMINOMI_SESSION_ID"] = session.Id,
+                ["COMINOMI_CITY_NAME"] = session.CityName
+            });
         }
     }
 
@@ -1088,91 +995,22 @@ Rules:
         ClaudeService.Cancel(ChatState.CurrentSession?.Id);
     }
 
-    // Workflow actions (moved from SessionList)
-    private Task PushBranch(Session session)
-    {
-        _operatingSessionId = session.Id;
-        StateHasChanged();
-
-        _savedModel = session.Model;
-        _savedPermissionMode = session.PermissionMode;
-        session.Model = "haiku";
-        session.PermissionMode = "bypassAll";
-        _pendingWorkflowAction = WorkflowAction.Push;
-
-        var prompt = $"""
-            다음 규칙에 따라 이 브랜치를 push해주세요:
-
-            ## 규칙
-            1. `git status`와 `git log --oneline -5`로 현재 상태를 확인하세요
-            2. 커밋되지 않은 변경사항이 있으면 적절한 메시지로 커밋하세요
-            3. `git push -u origin {session.BranchName}` 명령으로 push하세요
-            4. 결과를 간단히 보고해주세요
-            """;
-
-        return HandleSend(new ChatInputMessage { Text = prompt });
-    }
-
-    private Task ForcePushBranch(Session session)
-    {
-        _operatingSessionId = session.Id;
-        StateHasChanged();
-
-        _savedModel = session.Model;
-        _savedPermissionMode = session.PermissionMode;
-        session.Model = "haiku";
-        session.PermissionMode = "bypassAll";
-        _pendingWorkflowAction = WorkflowAction.Push;
-
-        var prompt = $"""
-            다음 규칙에 따라 이 브랜치를 강제 push해주세요:
-
-            ## 규칙
-            1. `git status`로 현재 상태를 확인하세요
-            2. `git push --force-with-lease origin {session.BranchName}` 명령으로 push하세요
-            3. 결과를 간단히 보고해주세요
-            """;
-
-        return HandleSend(new ChatInputMessage { Text = prompt });
-    }
-
-    @inject IDialogService DialogService
-
-    private Task OpenCreatePrDialog(Session session)
-    {
-        _operatingSessionId = session.Id;
-        StateHasChanged();
-
-        _savedModel = session.Model;
-        _savedPermissionMode = session.PermissionMode;
-        session.Model = "haiku";
-        session.PermissionMode = "bypassAll";
-        _pendingWorkflowAction = WorkflowAction.CreatePr;
-
-        var baseBranch = !string.IsNullOrEmpty(session.BaseBranch) ? session.BaseBranch : "main";
-
-        var prompt = $"""
-            다음 규칙에 따라 PR을 생성해주세요:
-
-            ## 규칙
-            1. `git log {baseBranch}..HEAD --oneline`으로 이 브랜치의 모든 커밋을 확인하세요
-            2. 커밋 내용을 분석하여 설명적인 PR 제목과 본문을 작성하세요
-            3. `gh pr create --base {baseBranch} --title "제목" --body "본문"` 명령으로 PR을 생성하세요
-            4. PR URL을 보고해주세요
-            """;
-
-        return HandleSend(new ChatInputMessage { Text = prompt });
-    }
-
-    private async Task MergePr(Session session)
+    // Workflow: single merge-all action (push + PR + merge)
+    private async Task MergeAll(Session session)
     {
         _operatingSessionId = session.Id;
         StateHasChanged();
         try
         {
-            var updated = await SessionService.MergePrAsync(session.Id);
+            var settings = await SettingsService.LoadAsync();
+            var mergeMethod = settings.DefaultMergeStrategy ?? "squash";
+            var bodyTemplate = settings.DefaultPrBodyTemplate;
+
+            var updated = await SessionService.MergeAllAsync(session.Id, mergeMethod, bodyTemplate);
             session.Status = updated.Status;
             session.ErrorMessage = updated.ErrorMessage;
+            session.PrUrl = updated.PrUrl;
+            session.PrNumber = updated.PrNumber;
 
             if (updated.Status == SessionStatus.Merged)
                 Snackbar.MergeSuccess(session.BranchName);
@@ -1183,7 +1021,54 @@ Rules:
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Workflow action failed for session {SessionId}", session.Id);
+            Logger.LogError(ex, "MergeAll failed for session {SessionId}", session.Id);
+            session.ErrorMessage = ex.Message;
+            Snackbar.MergeError(ex.Message);
+        }
+        finally { _operatingSessionId = null; StateHasChanged(); }
+    }
+
+    private async Task ForcePushAndMerge(Session session)
+    {
+        _operatingSessionId = session.Id;
+        StateHasChanged();
+        try
+        {
+            // Force push first
+            var pushed = await SessionService.PushBranchAsync(session.Id, force: true);
+            if (pushed.Status != SessionStatus.Pushed)
+            {
+                session.Status = pushed.Status;
+                session.ErrorMessage = pushed.ErrorMessage;
+                if (!string.IsNullOrEmpty(pushed.ErrorMessage))
+                    Snackbar.PushError(pushed.ErrorMessage);
+                return;
+            }
+
+            session.Status = pushed.Status;
+            session.ErrorMessage = null;
+
+            // Continue with PR + merge
+            var settings = await SettingsService.LoadAsync();
+            var mergeMethod = settings.DefaultMergeStrategy ?? "squash";
+            var bodyTemplate = settings.DefaultPrBodyTemplate;
+
+            var updated = await SessionService.MergeAllAsync(session.Id, mergeMethod, bodyTemplate);
+            session.Status = updated.Status;
+            session.ErrorMessage = updated.ErrorMessage;
+            session.PrUrl = updated.PrUrl;
+            session.PrNumber = updated.PrNumber;
+
+            if (updated.Status == SessionStatus.Merged)
+                Snackbar.MergeSuccess(session.BranchName);
+            else if (updated.Status == SessionStatus.ConflictDetected)
+                Snackbar.ConflictDetected(session.BranchName);
+            else if (!string.IsNullOrEmpty(updated.ErrorMessage))
+                Snackbar.MergeError(updated.ErrorMessage);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "ForcePushAndMerge failed for session {SessionId}", session.Id);
             session.ErrorMessage = ex.Message;
             Snackbar.MergeError(ex.Message);
         }
