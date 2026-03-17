@@ -211,6 +211,7 @@
 
     private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
+        .DisableHtml()
         .Build();
 
     private readonly Dictionary<string, string> _imageCache = new();

@@ -214,7 +214,9 @@ public class ClaudeService : IClaudeService
 
         if (process is { HasExited: false })
         {
-            await process.WaitForExitAsync(CancellationToken.None);
+            using var exitCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            try { await process.WaitForExitAsync(exitCts.Token); }
+            catch (OperationCanceledException) { try { process.Kill(entireProcessTree: true); } catch { } }
         }
     }
 

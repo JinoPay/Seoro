@@ -69,10 +69,20 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             session.Status = SessionStatus.Pushed;
             session.ErrorMessage = null;
 
-            _ = _hooksEngine.FireAsync(HookEvent.OnBranchPush, new Dictionary<string, string>
+            _ = Task.Run(async () =>
             {
-                ["COMINOMI_SESSION_ID"] = session.Id,
-                ["COMINOMI_BRANCH"] = session.BranchName
+                try
+                {
+                    await _hooksEngine.FireAsync(HookEvent.OnBranchPush, new Dictionary<string, string>
+                    {
+                        ["COMINOMI_SESSION_ID"] = session.Id,
+                        ["COMINOMI_BRANCH"] = session.BranchName
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Hook fire failed for OnBranchPush");
+                }
             });
         }
         else
