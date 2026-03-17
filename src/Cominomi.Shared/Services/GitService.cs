@@ -242,6 +242,12 @@ public class GitService : IGitService
         return result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
     }
 
+    public async Task<string> ReadFileAsync(string workingDir, string relativePath, CancellationToken ct = default)
+    {
+        var fullPath = Path.Combine(workingDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        return await File.ReadAllTextAsync(fullPath, ct);
+    }
+
     public static DiffSummary ParseDiff(string nameStatus, string rawDiff)
     {
         var summary = new DiffSummary();

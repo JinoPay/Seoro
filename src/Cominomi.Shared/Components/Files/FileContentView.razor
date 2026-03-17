@@ -1,0 +1,40 @@
+@using Cominomi.Shared.Models
+
+<div class="filediff-view">
+    <div class="filediff-header">
+        <MudIcon Icon="@Icons.Material.Filled.InsertDriveFile" Size="Size.Small"
+                 Style="width: 16px; height: 16px; opacity: 0.5;" />
+        <span class="filediff-path">@FilePath</span>
+    </div>
+
+    <div class="filecontent-body">
+        @if (string.IsNullOrEmpty(Content))
+        {
+            <div class="filediff-empty">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Style="opacity: 0.3;" />
+                <span>Empty file</span>
+            </div>
+        }
+        else
+        {
+            var lines = Content.Split('\n');
+            @for (int i = 0; i < lines.Length; i++)
+            {
+                var lineNum = i + 1;
+                var line = lines[i];
+                <div class="filecontent-line">
+                    <span class="filecontent-linenum">@lineNum</span>
+                    <span class="filecontent-text">@line</span>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string FilePath { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public string Content { get; set; } = "";
+}

@@ -22,7 +22,7 @@
     private static string GetTabIcon(MainTab tab) => tab.Type switch
     {
         MainTabType.Chat => Icons.Material.Filled.Chat,
-        MainTabType.AllFiles => Icons.Material.Filled.FolderOpen,
+        MainTabType.FileContent => Icons.Material.Filled.InsertDriveFile,
         MainTabType.FileDiff => Icons.Material.Filled.Description,
         _ => Icons.Material.Filled.Tab
     };

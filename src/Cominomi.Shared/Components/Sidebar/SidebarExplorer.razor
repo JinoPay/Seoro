@@ -2,12 +2,14 @@
 @inject ChatState ChatState
 @inject IGitService GitService
 
-<div class="allfiles-view">
-    <div class="allfiles-toolbar">
-        <span class="allfiles-title">All Files</span>
-        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       Style="width: 22px; height: 22px; opacity: 0.5;"
-                       OnClick="LoadFilesAsync" Disabled="_loading" />
+<div class="sidebar-explorer">
+    <div class="tree-header">
+        <span class="tree-header-label">Explorer</span>
+        <div class="tree-header-actions">
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                           Style="width: 22px; height: 22px; opacity: 0.5;"
+                           OnClick="LoadFilesAsync" Disabled="_loading" />
+        </div>
     </div>
 
     @if (_loading)
@@ -20,14 +22,14 @@
     }
     else if (_tree.Count == 0)
     {
-        <div class="allfiles-empty">
+        <div class="sidebar-explorer-empty">
             <MudIcon Icon="@Icons.Material.Filled.FolderOff" Size="Size.Large" Style="opacity: 0.15;" />
             <span>No files found</span>
         </div>
     }
     else
     {
-        <div class="allfiles-tree">
+        <div class="sidebar-explorer-tree">
             @RenderNodes(_tree, 0)
         </div>
     }
@@ -39,10 +41,22 @@
     private bool _loading;
     private string? _error;
     private DiffSummary? _diff;
+    private string? _lastSessionId;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadFilesAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var sessionId = ChatState.CurrentSession?.Id;
+        if (sessionId != _lastSessionId)
+        {
+            _lastSessionId = sessionId;
+            _expandedDirs.Clear();
+            await LoadFilesAsync();
+        }
     }
 
     private async Task LoadFilesAsync()
@@ -58,7 +72,6 @@
         {
             var files = await GitService.ListTrackedFilesAsync(session.WorktreePath);
 
-            // Load diff data for file status
             try
             {
                 var diffBase = !string.IsNullOrEmpty(session.BaseBranch) ? session.BaseBranch : "HEAD";
@@ -85,13 +98,13 @@
     {
         foreach (var node in nodes)
         {
-            var indent = depth * 16;
+            var indent = depth * 12;
             if (node.IsDirectory)
             {
                 var expanded = _expandedDirs.Contains(node.FullPath);
                 builder.OpenElement(0, "div");
-                builder.AddAttribute(1, "class", "allfiles-item dir");
-                builder.AddAttribute(2, "style", $"padding-left: {indent}px;");
+                builder.AddAttribute(1, "class", "sidebar-file-item dir");
+                builder.AddAttribute(2, "style", $"padding-left: {indent + 8}px;");
                 builder.AddAttribute(3, "onclick", EventCallback.Factory.Create(this, () => ToggleDir(node.FullPath)));
 
                 builder.OpenComponent<MudIcon>(4);
@@ -101,7 +114,7 @@
                 builder.CloseComponent();
 
                 builder.OpenElement(8, "span");
-                builder.AddAttribute(9, "class", "allfiles-name");
+                builder.AddAttribute(9, "class", "sidebar-file-name");
                 builder.AddContent(10, node.Name);
                 builder.CloseElement();
 
@@ -116,8 +129,8 @@
             {
                 var fileDiff = _diff?.Files.FirstOrDefault(f => f.FilePath == node.FullPath);
                 builder.OpenElement(0, "div");
-                builder.AddAttribute(1, "class", $"allfiles-item file{(fileDiff != null ? " modified" : "")}");
-                builder.AddAttribute(2, "style", $"padding-left: {indent}px;");
+                builder.AddAttribute(1, "class", $"sidebar-file-item file{(fileDiff != null ? " modified" : "")}");
+                builder.AddAttribute(2, "style", $"padding-left: {indent + 8}px;");
                 builder.AddAttribute(3, "onclick", EventCallback.Factory.Create(this, () => OpenFile(node.FullPath)));
 
                 builder.OpenComponent<MudIcon>(4);
@@ -127,49 +140,28 @@
                 builder.CloseComponent();
 
                 builder.OpenElement(8, "span");
-                builder.AddAttribute(9, "class", "allfiles-name");
+                builder.AddAttribute(9, "class", "sidebar-file-name");
                 builder.AddContent(10, node.Name);
                 builder.CloseElement();
-
-                if (fileDiff != null)
-                {
-                    builder.OpenElement(11, "div");
-                    builder.AddAttribute(12, "class", "diff-stats");
-                    builder.AddAttribute(13, "style", "margin-left: auto;");
-                    if (fileDiff.Additions > 0)
-                    {
-                        builder.OpenElement(14, "span");
-                        builder.AddAttribute(15, "class", "additions");
-                        builder.AddContent(16, $"+{fileDiff.Additions}");
-                        builder.CloseElement();
-                    }
-                    if (fileDiff.Deletions > 0)
-                    {
-                        builder.OpenElement(17, "span");
-                        builder.AddAttribute(18, "class", "deletions");
-                        builder.AddContent(19, $"-{fileDiff.Deletions}");
-                        builder.CloseElement();
-                    }
-                    builder.CloseElement();
-                }
 
                 builder.CloseElement();
             }
         }
     };
 
-    private void OpenFile(string filePath)
+    private async Task OpenFile(string filePath)
     {
-        var fileDiff = _diff?.Files.FirstOrDefault(f => f.FilePath == filePath);
-        if (fileDiff != null)
+        var session = ChatState.CurrentSession;
+        if (session == null || string.IsNullOrEmpty(session.WorktreePath)) return;
+
+        try
         {
-            ChatState.OpenFileDiffTab(filePath, fileDiff);
+            var content = await GitService.ReadFileAsync(session.WorktreePath, filePath);
+            ChatState.OpenFileContentTab(filePath, content);
         }
-        else
+        catch (Exception ex)
         {
-            // No diff data, open with empty diff
-            var emptyDiff = new FileDiff { FilePath = filePath, ChangeType = FileChangeType.Modified };
-            ChatState.OpenFileDiffTab(filePath, emptyDiff);
+            ChatState.OpenFileContentTab(filePath, $"Error reading file: {ex.Message}");
         }
     }
 
