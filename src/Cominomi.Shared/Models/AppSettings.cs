@@ -12,6 +12,7 @@ public class AppSettings
     public decimal? DefaultMaxBudgetUsd { get; set; }
     public string? FallbackModel { get; set; }
     public string? McpConfigPath { get; set; }
+    public bool DebugMode { get; set; }
     public Dictionary<string, string> EnvironmentVariables { get; set; } = [];
     public string LastWorkspaceId { get; set; } = "";
     public string LastSessionId { get; set; } = "";

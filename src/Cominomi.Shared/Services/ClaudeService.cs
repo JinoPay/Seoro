@@ -40,8 +40,12 @@ public class ClaudeService : IClaudeService
         string? systemPrompt = null,
         string? sessionName = null,
         bool continueMode = false,
+        bool forkSession = false,
         int? maxTurns = null,
         decimal? maxBudgetUsd = null,
+        List<string>? additionalDirs = null,
+        List<string>? allowedTools = null,
+        List<string>? disallowedTools = null,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var agentKey = sessionId ?? DefaultAgentKey;
@@ -59,7 +63,7 @@ public class ClaudeService : IClaudeService
             previous.Cancel();
         }
 
-        var arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath);
+        var arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
         var token = cts.Token;
         var envVars = settings.EnvironmentVariables.Count > 0 ? settings.EnvironmentVariables : null;
 
@@ -110,7 +114,7 @@ public class ClaudeService : IClaudeService
             caps.SupportsVerbose = true;
             process.Dispose();
 
-            arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath);
+            arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
             process = StartProcess(fileName, arguments, workingDir, envVars);
             agent = new AgentProcess(process, cts);
             _agents[agentKey] = agent;
@@ -224,15 +228,22 @@ public class ClaudeService : IClaudeService
         string effortLevel = "auto",
         string? sessionName = null,
         bool continueMode = false,
+        bool forkSession = false,
         int? maxTurns = null,
         decimal? maxBudgetUsd = null,
         string? fallbackModel = null,
-        string? mcpConfigPath = null)
+        string? mcpConfigPath = null,
+        bool debugMode = false,
+        List<string>? additionalDirs = null,
+        List<string>? allowedTools = null,
+        List<string>? disallowedTools = null)
     {
         var sb = new StringBuilder(baseArgs);
         sb.Append("--print --output-format stream-json ");
         if (caps.SupportsVerbose)
             sb.Append("--verbose ");
+        if (debugMode)
+            sb.Append("--debug ");
         sb.Append($"--model {model}");
 
         switch (permissionMode)
@@ -254,7 +265,11 @@ public class ClaudeService : IClaudeService
 
         // Resume or continue existing conversation
         if (!string.IsNullOrEmpty(conversationId))
+        {
             sb.Append($" --resume {conversationId}");
+            if (forkSession)
+                sb.Append(" --fork-session");
+        }
         else if (continueMode)
             sb.Append(" --continue");
 
@@ -279,6 +294,25 @@ public class ClaudeService : IClaudeService
         // MCP server configuration
         if (!string.IsNullOrEmpty(mcpConfigPath))
             sb.Append($" --mcp-config \"{mcpConfigPath}\"");
+
+        // Additional directories
+        if (additionalDirs is { Count: > 0 })
+        {
+            foreach (var dir in additionalDirs)
+                sb.Append($" --add-dir \"{dir}\"");
+        }
+
+        // Tool restrictions
+        if (allowedTools is { Count: > 0 })
+        {
+            foreach (var tool in allowedTools)
+                sb.Append($" --allowedTools \"{tool}\"");
+        }
+        if (disallowedTools is { Count: > 0 })
+        {
+            foreach (var tool in disallowedTools)
+                sb.Append($" --disallowedTools \"{tool}\"");
+        }
 
         // System prompt injection
         if (!string.IsNullOrEmpty(systemPrompt))

@@ -58,6 +58,10 @@ public static class ToolDisplayHelper
                 "Glob" => "파일 검색됨",
                 "Bash" => count == 1 ? "명령 실행됨" : $"명령 {count}회 실행됨",
                 "Agent" => count == 1 ? "에이전트 실행됨" : $"에이전트 {count}회 실행됨",
+                "WebFetch" => count == 1 ? "웹 페이지 조회됨" : $"웹 페이지 {count}개 조회됨",
+                "WebSearch" => count == 1 ? "웹 검색됨" : $"웹 검색 {count}회",
+                "NotebookEdit" => count == 1 ? "노트북 수정됨" : $"노트북 {count}회 수정됨",
+                "TodoWrite" => "할일 목록 업데이트됨",
                 _ => count > 1 ? $"{name} {count}회" : name
             });
         }
@@ -82,6 +86,9 @@ public static class ToolDisplayHelper
                 "Grep" => GetStringProperty(root, "pattern", 50),
                 "Glob" => GetStringProperty(root, "pattern", 50),
                 "Agent" => GetAgentDescription(root),
+                "WebFetch" => GetStringProperty(root, "url", 60),
+                "WebSearch" => GetStringProperty(root, "query", 50),
+                "NotebookEdit" => GetFilePath(root),
                 _ => null
             };
         }
@@ -193,6 +200,18 @@ public static class ToolDisplayHelper
         "glob" => "Glob",
         "grep" => "Grep",
         "agent" => "Agent",
+        "webfetch" or "web_fetch" => "WebFetch",
+        "websearch" or "web_search" => "WebSearch",
+        "notebookedit" or "notebook_edit" => "NotebookEdit",
+        "todowrite" or "todo_write" => "TodoWrite",
+        _ when name.StartsWith("mcp__", StringComparison.OrdinalIgnoreCase) => ExtractMcpToolName(name),
         _ => name
     };
+
+    private static string ExtractMcpToolName(string name)
+    {
+        // mcp__serverId__toolName → extract toolName
+        var parts = name.Split("__");
+        return parts.Length >= 3 ? parts[^1] : name;
+    }
 }

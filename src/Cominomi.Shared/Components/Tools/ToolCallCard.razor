@@ -84,6 +84,12 @@
         "edit" or "edit_file" => Icons.Material.Filled.EditNote,
         "glob" => Icons.Material.Filled.Search,
         "grep" => Icons.Material.Filled.FindInPage,
+        "agent" => Icons.Material.Filled.SmartToy,
+        "webfetch" or "web_fetch" => Icons.Material.Filled.Language,
+        "websearch" or "web_search" => Icons.Material.Filled.TravelExplore,
+        "notebookedit" or "notebook_edit" => Icons.Material.Filled.DataObject,
+        "todowrite" or "todo_write" => Icons.Material.Filled.Checklist,
+        _ when Tool.Name.StartsWith("mcp__", StringComparison.OrdinalIgnoreCase) => Icons.Material.Filled.Hub,
         _ => Icons.Material.Filled.Extension
     };
 }

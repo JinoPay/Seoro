@@ -5,18 +5,34 @@ namespace Cominomi.Shared.Models;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum HookEvent
 {
+    // Cominomi app-level events
     OnMessageComplete,
     OnSessionCreate,
     OnSessionArchive,
     OnBranchPush,
     OnPrCreate,
-    OnPrMerge
+    OnPrMerge,
+
+    // CLI standard hook events (aligned with Claude CLI hooks.md)
+    PreToolUse,
+    PostToolUse,
+    NotificationSend,
+    Stop
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HookType
+{
+    Command,
+    Prompt
 }
 
 public class HookDefinition
 {
     public HookEvent Event { get; set; }
+    public HookType Type { get; set; } = HookType.Command;
     public string Command { get; set; } = string.Empty;
     public string? WorkingDirectory { get; set; }
+    public string? Matcher { get; set; }
     public bool Enabled { get; set; } = true;
 }

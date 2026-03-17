@@ -183,7 +183,18 @@
                 else if (_activeSection == "advanced")
                 {
                     <div class="settings-section-title">고급</div>
-                    <div class="settings-section-desc">Claude CLI 프로세스에 전달할 환경변수를 설정합니다.</div>
+                    <div class="settings-section-desc">Claude CLI 고급 설정 및 환경변수를 관리합니다.</div>
+
+                    <MudStack Spacing="3">
+                        <MudSwitch T="bool" @bind-Value="_settings.DebugMode" Label="디버그 모드"
+                                   Color="Color.Warning"
+                                   UncheckedColor="Color.Default" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-top: -8px;">
+                            활성화하면 Claude CLI에 --debug 플래그를 전달합니다.
+                        </MudText>
+                    </MudStack>
+
+                    <div class="settings-group-title" style="margin-top: 16px;">환경변수</div>
 
                     <MudStack Spacing="2">
                         @foreach (var key in _settings.EnvironmentVariables.Keys.ToList())
