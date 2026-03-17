@@ -3,29 +3,98 @@
 @if (IsVisible)
 {
     <div class="plan-review-bar">
-        <span class="plan-review-label">플랜 검토</span>
-        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
-                   StartIcon="@Icons.Material.Filled.CheckCircle"
-                   OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Approve))"
-                   Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
-            승인
-        </MudButton>
-        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.Edit"
-                   OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Advice))"
-                   Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
-            조언하기
-        </MudButton>
-        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
-                   StartIcon="@Icons.Material.Filled.Cancel"
-                   OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Reject))"
-                   Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
-            거절
-        </MudButton>
+        @if (!string.IsNullOrEmpty(PlanContent))
+        {
+            <div class="plan-preview-toggle" @onclick="TogglePreview"
+                 style="display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; opacity: 0.8; font-size: var(--text-xs);">
+                <MudIcon Icon="@(_showPreview ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                         Size="Size.Small" Style="width: 16px; height: 16px;" />
+                <span>플랜 내용 @(_showPreview ? "접기" : "보기")</span>
+            </div>
+
+            @if (_showPreview)
+            {
+                <div class="plan-preview-content"
+                     style="max-height: 240px; overflow-y: auto; padding: 8px 12px; margin: 0 8px 8px;
+                            border-radius: 8px; background: var(--surface-variant); font-size: var(--text-xs);
+                            white-space: pre-wrap; line-height: 1.5; border: 1px solid var(--border-subtle);">
+                    @PlanContent
+                </div>
+            }
+        }
+
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 8px;">
+            <span class="plan-review-label">플랜 검토</span>
+            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
+                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                       OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Approve))"
+                       Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
+                승인
+            </MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Edit"
+                       OnClick="ToggleAdviceInput"
+                       Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
+                조언하기
+            </MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.Cancel"
+                       OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Reject))"
+                       Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
+                거절
+            </MudButton>
+        </div>
+
+        @if (_showAdviceInput)
+        {
+            <div style="display: flex; align-items: center; gap: 8px; padding: 4px 8px;">
+                <MudTextField T="string" @bind-Value="_adviceText"
+                              Placeholder="조언을 입력하세요..."
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Style="font-size: var(--text-sm); flex: 1;"
+                              OnKeyDown="HandleAdviceKeyDown" />
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="@string.IsNullOrWhiteSpace(_adviceText)"
+                           OnClick="SubmitAdvice"
+                           Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
+                    보내기
+                </MudButton>
+            </div>
+        }
     </div>
 }
 
 @code {
     [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string? PlanContent { get; set; }
     [Parameter] public EventCallback<PlanReviewAction> OnAction { get; set; }
+    [Parameter] public EventCallback<string> OnAdvice { get; set; }
+
+    private bool _showPreview;
+    private bool _showAdviceInput;
+    private string _adviceText = "";
+
+    private void TogglePreview() => _showPreview = !_showPreview;
+
+    private void ToggleAdviceInput()
+    {
+        _showAdviceInput = !_showAdviceInput;
+        if (!_showAdviceInput) _adviceText = "";
+    }
+
+    private async Task SubmitAdvice()
+    {
+        if (string.IsNullOrWhiteSpace(_adviceText)) return;
+        var text = _adviceText;
+        _adviceText = "";
+        _showAdviceInput = false;
+        await OnAdvice.InvokeAsync(text);
+    }
+
+    private async Task HandleAdviceKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+            await SubmitAdvice();
+    }
 }

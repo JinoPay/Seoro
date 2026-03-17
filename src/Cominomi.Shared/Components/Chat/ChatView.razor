@@ -190,7 +190,9 @@
 
     @* Plan review bar *@
     <PlanReviewBar IsVisible="_planReviewVisible"
-                   OnAction="HandlePlanReviewAction" />
+                   PlanContent="@_planContent"
+                   OnAction="HandlePlanReviewAction"
+                   OnAdvice="HandlePlanAdvice" />
 
     @* Input area *@
     <InputArea OnSend="HandleSend" OnCancel="HandleCancel" IsStreaming="ChatState.IsStreaming"
@@ -213,6 +215,8 @@
     private bool _quickResponseVisible;
     private List<string> _quickResponseOptions = [];
     private bool _planReviewVisible;
+    private string? _planFilePath;
+    private string? _planContent;
 
     private enum WorkflowAction { None, Push, CreatePr }
     private WorkflowAction _pendingWorkflowAction = WorkflowAction.None;
@@ -267,6 +271,19 @@
                 return;
             }
 
+            // Restore plan review state when switching to a session with completed plan
+            if (ChatState.CurrentSession is { PlanCompleted: true, PermissionMode: "plan" } && !ChatState.IsStreaming)
+            {
+                _planReviewVisible = true;
+                if (_planContent == null && !string.IsNullOrEmpty(ChatState.CurrentSession.WorktreePath))
+                    _ = RestorePlanContentAsync(ChatState.CurrentSession.WorktreePath);
+            }
+            else if (ChatState.CurrentSession?.PermissionMode != "plan" || ChatState.IsStreaming)
+            {
+                if (!ChatState.IsStreaming)
+                    _planReviewVisible = false;
+            }
+
             if (ChatState.IsStreaming)
                 _shouldAutoScroll = true;
 
@@ -278,6 +295,12 @@
             if (needsBranches)
                 _ = LoadBranchesInBackground();
         });
+    }
+
+    private async Task RestorePlanContentAsync(string worktreePath)
+    {
+        await DetectPlanFileAsync(worktreePath);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadBranchesInBackground()
@@ -336,14 +359,24 @@
         {
             case PlanReviewAction.Approve:
                 await HandlePermissionModeChanged("bypassAll");
+                var planRef = !string.IsNullOrEmpty(_planFilePath)
+                    ? ".claude/plans/ 에 저장된 플랜 파일을 참고하여 "
+                    : "";
                 await HandleSend(new ChatInputMessage
                 {
-                    Text = "플랜을 승인합니다. 구현을 진행해주세요."
+                    Text = $"플랜을 승인합니다. {planRef}구현을 진행해주세요. 플랜의 각 단계를 순서대로 실행하세요."
                 });
+                if (ChatState.CurrentSession != null)
+                {
+                    ChatState.CurrentSession.PlanCompleted = false;
+                    ChatState.CurrentSession.PlanFilePath = null;
+                }
+                _planFilePath = null;
+                _planContent = null;
                 break;
 
             case PlanReviewAction.Advice:
-                StateHasChanged();
+                // Handled by OnAdvice callback in PlanReviewBar
                 break;
 
             case PlanReviewAction.Reject:
@@ -353,6 +386,16 @@
                 });
                 break;
         }
+    }
+
+    private async Task HandlePlanAdvice(string advice)
+    {
+        _planReviewVisible = false;
+        // Stay in plan mode — send feedback and let Claude revise the plan
+        await HandleSend(new ChatInputMessage
+        {
+            Text = $"플랜에 대한 피드백: {advice}\n\n이 피드백을 반영하여 플랜을 수정해주세요."
+        });
     }
 
     private Task HandleSend(ChatInputMessage input)
@@ -447,6 +490,7 @@
         ToolCall? currentToolCall = null;
         var toolResultBlockMap = new Dictionary<int, string>(); // content block index → tool_use_id
         bool firstEvent = true;
+        bool exitPlanModeDetected = false;
 
         try
         {
@@ -490,6 +534,8 @@
                         };
                         ChatState.AddToolCall(assistantMsg, currentToolCall);
                         ChatState.SetPhase(StreamingPhase.UsingTool, evt.ContentBlock.Name, session.Id);
+                        if (evt.ContentBlock.Name == "ExitPlanMode")
+                            exitPlanModeDetected = true;
                         break;
 
                     case "content_block_start" when evt.ContentBlock?.Type == "tool_result":
@@ -601,9 +647,19 @@
             // Detect plan completion (skip for workflow actions)
             if (!isWorkflow)
             {
-                if (session.PermissionMode == "plan")
+                if (session.PermissionMode == "plan" && exitPlanModeDetected)
                 {
+                    await DetectPlanFileAsync(session.WorktreePath);
+                    session.PlanCompleted = true;
+                    session.PlanFilePath = _planFilePath;
                     _planReviewVisible = true;
+                    _quickResponseVisible = false;
+                    _quickResponseOptions = [];
+                }
+                else if (session.PermissionMode == "plan")
+                {
+                    // Still exploring/working — don't show review bar yet
+                    _planReviewVisible = false;
                     _quickResponseVisible = false;
                     _quickResponseOptions = [];
                 }
@@ -751,10 +807,19 @@
         if (!string.IsNullOrWhiteSpace(wsPrompt))
             parts.Add(wsPrompt);
 
-        if (session.AgentType == AgentType.Explore)
+        if (session.PermissionMode == "plan")
+        {
+            parts.Add(@"You are in Plan mode. Your goal is to explore the codebase thoroughly and create a detailed implementation plan.
+
+Rules:
+- Use read-only tools (Read, Grep, Glob, Bash for read-only commands) to explore the codebase
+- Create a detailed implementation plan and save it to .claude/plans/ directory
+- Do NOT modify any source files — only create/update plan files
+- When your plan is complete and ready for review, call the ExitPlanMode tool to signal completion
+- Structure your plan with: Context, Changes (specific files and what to change), and Verification steps");
+        }
+        else if (session.AgentType == AgentType.Explore)
             parts.Add("You are in Explore mode. Only read and search — do not modify any files.");
-        else if (session.AgentType == AgentType.Plan)
-            parts.Add("You are in Plan mode. Create a detailed implementation plan and save it to .context/plans/.");
 
         if (!string.IsNullOrEmpty(session.WorktreePath) && Directory.Exists(session.WorktreePath))
         {
@@ -780,6 +845,22 @@
         catch (Exception ex) { Logger.LogDebug(ex, "Failed to load memory for system prompt"); }
 
         return parts.Count > 0 ? string.Join("\n\n", parts) : null;
+    }
+
+    private async Task DetectPlanFileAsync(string worktreePath)
+    {
+        _planFilePath = null;
+        _planContent = null;
+        var plansDir = Path.Combine(worktreePath, ".claude", "plans");
+        if (!Directory.Exists(plansDir)) return;
+        var planFile = Directory.GetFiles(plansDir, "*.md")
+            .OrderByDescending(f => File.GetLastWriteTimeUtc(f))
+            .FirstOrDefault();
+        if (planFile != null)
+        {
+            _planFilePath = planFile;
+            _planContent = await File.ReadAllTextAsync(planFile);
+        }
     }
 
     private void HandleCancel()
