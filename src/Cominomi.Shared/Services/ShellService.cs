@@ -37,6 +37,12 @@ public class ShellService : IShellService
     {
         var shell = await GetShellAsync();
 
+        if (!IsValidExecutableName(executableName))
+        {
+            _logger.LogWarning("Invalid executable name rejected: {Name}", executableName);
+            return null;
+        }
+
         try
         {
             Process proc;
@@ -106,6 +112,9 @@ public class ShellService : IShellService
 
         return null;
     }
+
+    private static bool IsValidExecutableName(string name)
+        => !string.IsNullOrEmpty(name) && name.All(c => char.IsLetterOrDigit(c) || c is '-' or '_' or '.');
 
     private async Task<ShellInfo> ResolveShellAsync()
     {

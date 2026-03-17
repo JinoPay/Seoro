@@ -1010,10 +1010,20 @@
             await SessionService.SaveSessionAsync(session);
             ChatState.UnregisterActiveSession(session.Id);
 
-            _ = HooksEngine.FireAsync(HookEvent.OnMessageComplete, new Dictionary<string, string>
+            _ = Task.Run(async () =>
             {
-                ["COMINOMI_SESSION_ID"] = session.Id,
-                ["COMINOMI_CITY_NAME"] = session.CityName
+                try
+                {
+                    await HooksEngine.FireAsync(HookEvent.OnMessageComplete, new Dictionary<string, string>
+                    {
+                        ["COMINOMI_SESSION_ID"] = session.Id,
+                        ["COMINOMI_CITY_NAME"] = session.CityName
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Hook fire failed for OnMessageComplete");
+                }
             });
 
             if (!_quickResponseVisible && !_planReviewVisible)

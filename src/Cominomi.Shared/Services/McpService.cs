@@ -146,9 +146,9 @@ public class McpService : IMcpService
         try
         {
             var shell = await _shellService.GetShellAsync();
-            var escapedJson = json.Replace("\"", "\\\"").Replace("\n", " ");
+            var escapedJson = json.Replace("'", "'\\''");
             var scopeArg = scope != "user" ? $" --scope {scope}" : "";
-            var output = await RunClaudeCommandAsync(shell, $"mcp add-json{scopeArg} \"{escapedJson}\"");
+            var output = await RunClaudeCommandAsync(shell, $"mcp add-json{scopeArg} '{escapedJson}'");
             return output != null;
         }
         catch (Exception ex)
@@ -196,8 +196,8 @@ public class McpService : IMcpService
 
     private static string EscapeArg(string arg)
     {
-        if (arg.Contains(' ') || arg.Contains('"'))
-            return $"\"{arg.Replace("\"", "\\\"")}\"";
-        return arg;
+        // Use single quotes for shell safety — escape any embedded single quotes
+        var escaped = arg.Replace("'", "'\\''");
+        return $"'{escaped}'";
     }
 }
