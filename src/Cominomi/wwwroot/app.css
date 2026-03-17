@@ -271,6 +271,8 @@ html, body {
 
 .tree-session.active {
     background: var(--accent-dim);
+    border-left: 2px solid var(--accent);
+    padding-left: calc(42px - 2px);
 }
 
 .tree-session.archived {
@@ -322,6 +324,71 @@ html, body {
     opacity: 1;
 }
 
+/* Filter input */
+.tree-filter {
+    padding: 0 var(--space-2) var(--space-1);
+}
+
+.tree-filter .mud-input-outlined {
+    font-size: var(--text-xs) !important;
+}
+
+/* Session meta row (branch + diff stats) */
+.tree-session-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+/* Diff stats */
+.tree-session-diff-stats {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.6rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.tree-session-diff-stats .diff-add {
+    color: #a6e3a1;
+    background: rgba(166, 227, 161, 0.1);
+    padding: 0 3px;
+    border-radius: 3px;
+}
+
+.tree-session-diff-stats .diff-del {
+    color: #f38ba8;
+    background: rgba(243, 139, 168, 0.1);
+    padding: 0 3px;
+    border-radius: 3px;
+}
+
+/* Streaming status text */
+.tree-session-status {
+    font-size: var(--text-xs);
+    color: var(--accent);
+    opacity: 0.8;
+    animation: pulse-status 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-status {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* Keyboard shortcut badge */
+.tree-session-shortcut {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.6rem;
+    opacity: 0.25;
+    flex-shrink: 0;
+    align-self: center;
+    color: var(--text-secondary);
+}
+
 /* Status dots */
 .status-dot {
     width: 6px;
@@ -339,6 +406,17 @@ html, body {
 .status-dot.error { background: #f38ba8; }
 .status-dot.pending { background: #a6adc8; opacity: 0.5; }
 .status-dot.archived { background: #585b70; }
+
+.status-dot.streaming {
+    background: #a6e3a1;
+    box-shadow: 0 0 4px rgba(166, 227, 161, 0.6);
+    animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 0.6; box-shadow: 0 0 2px rgba(166, 227, 161, 0.3); }
+    50% { opacity: 1; box-shadow: 0 0 6px rgba(166, 227, 161, 0.8); }
+}
 
 /* ===== Main Panel ===== */
 .cominomi-main {

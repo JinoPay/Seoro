@@ -2,8 +2,10 @@
 @inject ISessionService SessionService
 @inject ISettingsService SettingsService
 @inject IWorkspaceService WorkspaceService
+@inject IGitService GitService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="sidebar-tree">
@@ -13,15 +15,33 @@
         <div class="tree-header">
             <span class="tree-header-label">Workspaces</span>
             <div class="tree-header-actions">
+                <MudIconButton Icon="@(_filterVisible ? Icons.Material.Filled.FilterListOff : Icons.Material.Filled.FilterList)"
+                               Size="Size.Small"
+                               Style="width: 24px; height: 24px; opacity: 0.5;"
+                               OnClick="@(() => ToggleFilter())" />
                 <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
                                Style="width: 24px; height: 24px; opacity: 0.5;"
                                OnClick="@(() => _createDialogOpen = true)" />
             </div>
         </div>
 
+        @if (_filterVisible)
+        {
+            <div class="tree-filter">
+                <MudTextField @bind-Value="_filterText" Placeholder="검색..."
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_filterText?.Length > 0 ? Icons.Material.Filled.Close : "")"
+                              OnAdornmentClick="@(() => _filterText = "")"
+                              Immediate="true"
+                              Style="font-size: var(--text-xs);" />
+            </div>
+        }
+
         @* Tree body *@
         <div class="tree-body">
-            @foreach (var group in _workspaces.GroupBy(GetProjectName))
+            @{ var sessionIndex = 0; }
+            @foreach (var group in GetFilteredWorkspaces().GroupBy(GetProjectName))
             {
                 var projectName = group.Key;
                 var isExpanded = _expandedProjects.Contains(projectName);
@@ -97,10 +117,13 @@
 
                             @if (_sessionCache.TryGetValue(ws.Id, out var sessions))
                             {
-                                @foreach (var session in sessions)
+                                @foreach (var session in FilterSessions(sessions))
                                 {
                                     var isActive = ChatState.CurrentSession?.Id == session.Id;
                                     var isArchived = session.Status == SessionStatus.Archived;
+                                    var isStreaming = ChatState.IsSessionStreaming(session.Id);
+                                    var currentIndex = sessionIndex;
+                                    sessionIndex++;
 
                                     <div @key="session.Id"
                                          class="tree-session @(isActive ? "active" : "") @(isArchived ? "archived" : "")"
@@ -120,24 +143,45 @@
                                                            OnClickStopPropagation="true" />
                                         </div>
 
-                                        <span class="status-dot @GetStatusDotClass(session.Status)"></span>
-                                        @if (ChatState.IsSessionStreaming(session.Id))
-                                        {
-                                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                                 Style="width: 10px; height: 10px; flex-shrink: 0; margin-top: 5px;" Color="Color.Primary" />
-                                        }
+                                        <span class="status-dot @GetStatusDotClass(session.Status) @(isStreaming ? "streaming" : "")"></span>
 
                                         <div class="tree-session-info">
                                             <span class="tree-session-title">@session.Title</span>
-                                            @if (session.IsLocalDir)
+                                            <div class="tree-session-meta">
+                                                @if (session.IsLocalDir)
+                                                {
+                                                    <span class="tree-session-branch" style="opacity: 0.5;">로컬</span>
+                                                }
+                                                else if (!string.IsNullOrEmpty(session.BranchName))
+                                                {
+                                                    <span class="tree-session-branch">@session.BranchName</span>
+                                                }
+
+                                                @if (_diffStatsCache.TryGetValue(session.Id, out var stats) && (stats.Additions > 0 || stats.Deletions > 0))
+                                                {
+                                                    <span class="tree-session-diff-stats">
+                                                        @if (stats.Additions > 0)
+                                                        {
+                                                            <span class="diff-add">+@stats.Additions</span>
+                                                        }
+                                                        @if (stats.Deletions > 0)
+                                                        {
+                                                            <span class="diff-del">-@stats.Deletions</span>
+                                                        }
+                                                    </span>
+                                                }
+                                            </div>
+
+                                            @if (isStreaming)
                                             {
-                                                <span class="tree-session-branch" style="opacity: 0.5;">로컬</span>
-                                            }
-                                            else if (!string.IsNullOrEmpty(session.BranchName))
-                                            {
-                                                <span class="tree-session-branch">@session.BranchName</span>
+                                                <span class="tree-session-status">@GetStreamingStatusText(session)</span>
                                             }
                                         </div>
+
+                                        @if (currentIndex < 5)
+                                        {
+                                            <span class="tree-session-shortcut">@GetShortcutLabel(currentIndex)</span>
+                                        }
                                     </div>
                                 }
                             }
@@ -171,9 +215,16 @@
     private List<Workspace> _workspaces = [];
     private HashSet<string> _expandedProjects = new();
     private Dictionary<string, List<Session>> _sessionCache = new();
+    private Dictionary<string, (int Additions, int Deletions)> _diffStatsCache = new();
     private bool _createDialogOpen;
     private bool _manageDialogOpen;
     private bool _isCreatingSession;
+    private bool _filterVisible;
+    private string? _filterText;
+    private DotNetObjectReference<SessionList>? _dotNetRef;
+
+    // Ordered list of session IDs for keyboard shortcuts
+    private List<(Session Session, Workspace Workspace)> _orderedSessions = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -204,6 +255,110 @@
                     await SelectSession(lastSession, currentWs);
             }
         }
+
+        RebuildOrderedSessions();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("registerSessionShortcuts", _dotNetRef);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnSessionShortcut(int index)
+    {
+        if (index >= 0 && index < _orderedSessions.Count)
+        {
+            var (session, ws) = _orderedSessions[index];
+            await SelectSession(session, ws);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void RebuildOrderedSessions()
+    {
+        _orderedSessions.Clear();
+        foreach (var group in _workspaces.GroupBy(GetProjectName))
+        {
+            var workspacesInGroup = group.OrderByDescending(w => w.UpdatedAt).ToList();
+            foreach (var ws in workspacesInGroup)
+            {
+                if (_sessionCache.TryGetValue(ws.Id, out var sessions))
+                {
+                    foreach (var s in sessions)
+                    {
+                        _orderedSessions.Add((s, ws));
+                    }
+                }
+            }
+        }
+    }
+
+    private static string GetShortcutLabel(int index)
+    {
+        // Use platform-appropriate modifier
+        return OperatingSystem.IsMacCatalyst() || OperatingSystem.IsMacOS()
+            ? $"\u2318{index + 1}"
+            : $"Ctrl+{index + 1}";
+    }
+
+    private string GetStreamingStatusText(Session session)
+    {
+        if (session.PermissionMode == "plan")
+            return "Planning...";
+
+        var phase = ChatState.GetSessionPhase(session.Id);
+        return phase switch
+        {
+            StreamingPhase.Preparing or StreamingPhase.Sending => "Starting...",
+            StreamingPhase.Thinking => "Thinking...",
+            StreamingPhase.WritingText => "Writing...",
+            StreamingPhase.UsingTool => ChatState.GetSessionToolName(session.Id) ?? "Working...",
+            _ => "Working..."
+        };
+    }
+
+    private IEnumerable<Workspace> GetFilteredWorkspaces()
+    {
+        if (string.IsNullOrWhiteSpace(_filterText))
+            return _workspaces;
+
+        var filter = _filterText.Trim();
+        return _workspaces.Where(w =>
+        {
+            if (GetProjectName(w).Contains(filter, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (w.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (_sessionCache.TryGetValue(w.Id, out var sessions))
+                return sessions.Any(s => s.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                    || s.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                    || s.CityName.Contains(filter, StringComparison.OrdinalIgnoreCase));
+            return false;
+        });
+    }
+
+    private IEnumerable<Session> FilterSessions(List<Session> sessions)
+    {
+        if (string.IsNullOrWhiteSpace(_filterText))
+            return sessions;
+
+        var filter = _filterText.Trim();
+        return sessions.Where(s =>
+            s.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || s.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || s.CityName.Contains(filter, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ToggleFilter()
+    {
+        _filterVisible = !_filterVisible;
+        if (!_filterVisible)
+            _filterText = "";
     }
 
     private static string GetProjectName(Workspace ws)
@@ -254,8 +409,47 @@
                 var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
                 _sessionCache[ws.Id] = sessions;
                 _ = CheckMergeStatuses(ws.Id);
+                _ = LoadDiffStatsForWorkspace(ws, sessions);
             }
         }
+        RebuildOrderedSessions();
+    }
+
+    private async Task LoadDiffStatsForWorkspace(Workspace ws, List<Session> sessions)
+    {
+        foreach (var session in sessions)
+        {
+            if (session.Status == SessionStatus.Pending || session.IsLocalDir
+                || string.IsNullOrEmpty(session.WorktreePath) || string.IsNullOrEmpty(session.BaseBranch))
+                continue;
+
+            try
+            {
+                var stats = await GitService.GetDiffStatAsync(session.WorktreePath, session.BaseBranch);
+                if (stats.Additions > 0 || stats.Deletions > 0)
+                {
+                    _diffStatsCache[session.Id] = stats;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch { }
+        }
+    }
+
+    private async Task RefreshDiffStats(string sessionId)
+    {
+        var session = _orderedSessions.FirstOrDefault(o => o.Session.Id == sessionId).Session;
+        if (session == null || session.IsLocalDir
+            || string.IsNullOrEmpty(session.WorktreePath) || string.IsNullOrEmpty(session.BaseBranch))
+            return;
+
+        try
+        {
+            var stats = await GitService.GetDiffStatAsync(session.WorktreePath, session.BaseBranch);
+            _diffStatsCache[sessionId] = stats;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { }
     }
 
     private async Task CheckMergeStatuses(string workspaceId)
@@ -297,6 +491,7 @@
                 _sessionCache[ws.Id] = sessions;
             }
         }
+        RebuildOrderedSessions();
     }
 
     private async Task CreateNewChat(Workspace ws)
@@ -319,6 +514,8 @@
             settings.LastWorkspaceId = ws.Id;
             settings.LastSessionId = session.Id;
             await SettingsService.SaveAsync(settings);
+
+            RebuildOrderedSessions();
         }
         finally
         {
@@ -347,6 +544,8 @@
             settings.LastWorkspaceId = ws.Id;
             settings.LastSessionId = session.Id;
             await SettingsService.SaveAsync(settings);
+
+            RebuildOrderedSessions();
         }
         finally
         {
@@ -407,6 +606,8 @@
             if (ChatState.CurrentSession?.Id == session.Id)
                 ChatState.SetSession(null!);
 
+            _diffStatsCache.Remove(session.Id);
+            RebuildOrderedSessions();
             Snackbar.SessionDeleted();
         }
         catch (Exception ex)
@@ -434,15 +635,35 @@
 
     private string? _lastSessionId;
     private bool _lastHasStreaming;
+    private int _lastStreamingHash;
 
     private async void OnStateChanged()
     {
         var currentId = ChatState.CurrentSession?.Id;
         var hasStreaming = ChatState.HasAnyStreaming();
-        if (currentId == _lastSessionId && hasStreaming == _lastHasStreaming)
+
+        // Compute a hash of streaming phases to detect phase changes
+        var streamingHash = 0;
+        foreach (var sid in ChatState.GetStreamingSessionIds())
+        {
+            streamingHash ^= sid.GetHashCode() ^ ChatState.GetSessionPhase(sid).GetHashCode();
+        }
+
+        if (currentId == _lastSessionId && hasStreaming == _lastHasStreaming && streamingHash == _lastStreamingHash)
             return;
+
+        // If a session stopped streaming, refresh its diff stats
+        if (_lastHasStreaming && !hasStreaming)
+        {
+            foreach (var ordered in _orderedSessions)
+            {
+                _ = RefreshDiffStats(ordered.Session.Id);
+            }
+        }
+
         _lastSessionId = currentId;
         _lastHasStreaming = hasStreaming;
+        _lastStreamingHash = streamingHash;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -456,5 +677,7 @@
     {
         ChatState.OnChange -= OnStateChanged;
         ChatState.OnRequestCreateWorkspace -= HandleCreateWorkspaceRequest;
+        _ = JS.InvokeVoidAsync("unregisterSessionShortcuts");
+        _dotNetRef?.Dispose();
     }
 }

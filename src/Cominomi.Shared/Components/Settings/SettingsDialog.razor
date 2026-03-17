@@ -60,6 +60,22 @@
                             <MudSelectItem T="string" Value="@("system")">시스템</MudSelectItem>
                         </MudSelect>
 
+                        <div class="settings-group-title" style="margin-top: 16px;">알림</div>
+
+                        <MudSwitch T="bool" @bind-Value="_settings.NotificationsEnabled" Label="데스크톱 알림"
+                                   Color="Color.Primary"
+                                   UncheckedColor="Color.Default" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-top: -8px;">
+                            작업 완료, 응답 대기, 플랜 리뷰 시 OS 알림을 발송합니다.
+                        </MudText>
+
+                        <MudSwitch T="bool" @bind-Value="_settings.NotificationSound" Label="알림 사운드"
+                                   Color="Color.Primary"
+                                   UncheckedColor="Color.Default"
+                                   Disabled="@(!_settings.NotificationsEnabled)" />
+
+                        <div class="settings-group-title" style="margin-top: 16px;">저장소</div>
+
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                             <MudTextField @bind-Value="_settings.DefaultCloneDirectory" Label="클론 디렉토리"
                                           Variant="Variant.Outlined" Margin="Margin.Dense"

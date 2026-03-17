@@ -135,6 +135,33 @@
             if (!textarea || !textarea._enterHandler) return;
             textarea.removeEventListener('keydown', textarea._enterHandler);
         };
+
+        window.isWindowFocused = function() {
+            return document.hasFocus();
+        };
+
+        window.registerSessionShortcuts = function(dotNetRef) {
+            if (window._sessionShortcutHandler) {
+                document.removeEventListener('keydown', window._sessionShortcutHandler);
+            }
+            window._sessionShortcutHandler = function(e) {
+                var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                var modifier = isMac ? e.metaKey : e.ctrlKey;
+                if (modifier && e.key >= '1' && e.key <= '5') {
+                    e.preventDefault();
+                    var index = parseInt(e.key) - 1;
+                    dotNetRef.invokeMethodAsync('OnSessionShortcut', index);
+                }
+            };
+            document.addEventListener('keydown', window._sessionShortcutHandler);
+        };
+
+        window.unregisterSessionShortcuts = function() {
+            if (window._sessionShortcutHandler) {
+                document.removeEventListener('keydown', window._sessionShortcutHandler);
+                window._sessionShortcutHandler = null;
+            }
+        };
     </script>
 
 </body>
