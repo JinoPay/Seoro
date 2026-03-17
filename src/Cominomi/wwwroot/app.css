@@ -2072,6 +2072,15 @@ html, body {
     white-space: nowrap;
 }
 
+.branch-group-header {
+    padding: 6px 16px 2px;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    opacity: 0.5;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 .branch-no-results {
     padding: var(--space-3);
     text-align: center;

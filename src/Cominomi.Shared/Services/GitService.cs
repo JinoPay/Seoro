@@ -123,16 +123,16 @@ public class GitService : IGitService
         if (result.Success)
         {
             var refPath = result.Output.Trim();
-            var branch = refPath.Replace("refs/remotes/origin/", "");
+            var branch = refPath.Replace("refs/remotes/", "");
             if (!string.IsNullOrEmpty(branch))
                 return branch;
         }
 
         // Fallback: check if main or master exists
         if (await BranchExistsAsync(repoDir, "main"))
-            return "main";
+            return "origin/main";
         if (await BranchExistsAsync(repoDir, "master"))
-            return "master";
+            return "origin/master";
 
         // Last resort: get current branch
         return await GetCurrentBranchAsync(repoDir);
@@ -225,6 +225,61 @@ public class GitService : IGitService
     public async Task<GitResult> FetchAsync(string repoDir, CancellationToken ct = default)
     {
         return await RunGitAsync("fetch origin", repoDir, ct);
+    }
+
+    public async Task<GitResult> FetchAllAsync(string repoDir, CancellationToken ct = default)
+    {
+        return await RunGitAsync("fetch --all --prune", repoDir, ct);
+    }
+
+    public async Task<List<BranchGroup>> ListAllBranchesGroupedAsync(string repoDir)
+    {
+        var groups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        // Get remote branches
+        var remoteResult = await RunGitAsync("branch -r --format=%(refname:short)", repoDir);
+        if (remoteResult.Success)
+        {
+            foreach (var line in remoteResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var branch = line.Trim();
+                if (string.IsNullOrEmpty(branch) || branch.Contains("/HEAD")) continue;
+
+                var slashIdx = branch.IndexOf('/');
+                if (slashIdx <= 0) continue;
+
+                var remoteName = branch[..slashIdx];
+                if (!groups.ContainsKey(remoteName))
+                    groups[remoteName] = [];
+                groups[remoteName].Add(branch);
+            }
+        }
+
+        // Get local branches
+        var localResult = await RunGitAsync("branch --format=%(refname:short)", repoDir);
+        var localBranches = new List<string>();
+        if (localResult.Success)
+        {
+            localBranches = localResult.Output
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                .Select(b => b.Trim())
+                .Where(b => !string.IsNullOrEmpty(b))
+                .ToList();
+        }
+
+        // Build ordered result: origin first, then other remotes alphabetically, then local
+        var result = new List<BranchGroup>();
+
+        if (groups.Remove("origin", out var originBranches))
+            result.Add(new BranchGroup("origin", originBranches));
+
+        foreach (var kv in groups.OrderBy(k => k.Key))
+            result.Add(new BranchGroup(kv.Key, kv.Value));
+
+        if (localBranches.Count > 0)
+            result.Add(new BranchGroup("로컬", localBranches));
+
+        return result;
     }
 
     public async Task<string> GetNameStatusAsync(string workingDir, string baseBranch, CancellationToken ct = default)
