@@ -1845,6 +1845,7 @@ html, body {
     height: 100%;
     gap: var(--space-3);
     opacity: 0.8;
+    user-select: none;
 }
 
 .welcome-container .welcome-title {
