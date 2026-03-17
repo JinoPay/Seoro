@@ -567,9 +567,13 @@
                     if (!session.IsLocalDir)
                     {
                         var newBranchName = Services.SessionService.GenerateBranchName(summary);
-                        await SessionService.RenameBranchAsync(session.Id, newBranchName);
-                        session.BranchName = newBranchName;
+                        var renameResult = await GitService.RenameBranchAsync(
+                            session.WorktreePath, session.BranchName, newBranchName);
+                        if (renameResult.Success)
+                            session.BranchName = newBranchName;
                     }
+                    // Save once with both title and branch name updated on the same object
+                    await SessionService.SaveSessionAsync(session);
                     ChatState.NotifyStateChanged();
                 }
             }

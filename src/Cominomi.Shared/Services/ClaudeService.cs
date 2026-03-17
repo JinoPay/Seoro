@@ -493,7 +493,7 @@ public class ClaudeService : IClaudeService
             sb.Append("--print --output-format text ");
             sb.Append("--model haiku ");
             sb.Append("--dangerously-skip-permissions ");
-            sb.Append("--append-system-prompt \"Summarize the user message into a concise title (max 5 words, English). Output only the title, nothing else.\"");
+            sb.Append("--append-system-prompt \"Generate a short, natural title for this chat (3-7 words). Use the same language as the user's message. Use Title Case (capitalize each word). Output only the title text, nothing else.\"");
 
             var process = new Process
             {
