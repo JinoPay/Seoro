@@ -101,9 +101,19 @@
             var textarea = container.querySelector('textarea');
             if (!textarea || textarea._enterHandler) return; // Already registered → skip
             textarea._enterHandler = function(e) {
-                if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                if (e.key === 'Enter' && !e.isComposing) {
                     e.preventDefault();
-                    dotNetRef.invokeMethodAsync('SendFromJs');
+                    if (e.shiftKey) {
+                        var start = textarea.selectionStart;
+                        var end = textarea.selectionEnd;
+                        textarea.value = textarea.value.substring(0, start) + '\n' + textarea.value.substring(end);
+                        textarea.selectionStart = textarea.selectionEnd = start + 1;
+                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                        textarea.style.height = 'auto';
+                        textarea.style.height = textarea.scrollHeight + 'px';
+                    } else {
+                        dotNetRef.invokeMethodAsync('SendFromJs');
+                    }
                 }
             };
             textarea.addEventListener('keydown', textarea._enterHandler);
