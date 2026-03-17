@@ -594,6 +594,8 @@
         bool firstEvent = true;
         bool exitPlanModeDetected = false;
         bool usageRecorded = false; // prevent double-counting between message_delta and result
+        int accInputTokens = 0, accOutputTokens = 0;
+        int accCacheCreation = 0, accCacheRead = 0;
         _streamStartTime = DateTime.UtcNow;
 
         try
@@ -774,17 +776,30 @@
                         if (evt.Message?.Model is string startModel && !string.IsNullOrEmpty(startModel))
                             session.ResolvedModel = startModel;
                         usageRecorded = false; // reset per turn for accurate counting
+                        // Capture input tokens from message_start (API puts them here)
+                        if (evt.Message?.Usage is { } startUsage)
+                        {
+                            accInputTokens = startUsage.InputTokens;
+                            accCacheCreation = startUsage.CacheCreationInputTokens ?? 0;
+                            accCacheRead = startUsage.CacheReadInputTokens ?? 0;
+                            accOutputTokens = 0;
+                        }
                         break;
 
                     case "message_delta":
                     {
+                        // Accumulate tokens but don't record yet — wait for result event
                         var deltaUsage = evt.Usage ?? evt.Message?.Usage;
-                        if (deltaUsage != null && !usageRecorded)
+                        if (deltaUsage != null)
                         {
-                            session.TotalInputTokens += deltaUsage.InputTokens;
-                            session.TotalOutputTokens += deltaUsage.OutputTokens;
-                            _ = RecordUsageAsync(session, deltaUsage);
-                            usageRecorded = true;
+                            if (deltaUsage.InputTokens > 0)
+                                accInputTokens = deltaUsage.InputTokens;
+                            if (deltaUsage.OutputTokens > 0)
+                                accOutputTokens = deltaUsage.OutputTokens;
+                            if (deltaUsage.CacheCreationInputTokens is > 0)
+                                accCacheCreation = deltaUsage.CacheCreationInputTokens.Value;
+                            if (deltaUsage.CacheReadInputTokens is > 0)
+                                accCacheRead = deltaUsage.CacheReadInputTokens.Value;
                         }
                         // Track stop_reason for truncation detection
                         var stopReason = evt.Delta?.StopReason ?? evt.Message?.StopReason;
@@ -802,13 +817,32 @@
                         if (string.IsNullOrEmpty(session.ConversationId) && !string.IsNullOrEmpty(evt.SessionId))
                             session.ConversationId = evt.SessionId;
                         {
-                            var resultUsage = evt.Usage ?? evt.Message?.Usage;
+                            var resultUsage = evt.Usage ?? evt.Message?.Usage ?? TryExtractUsageFromExtensionData(evt);
                             if (resultUsage != null && !usageRecorded)
                             {
                                 session.TotalInputTokens += resultUsage.InputTokens;
                                 session.TotalOutputTokens += resultUsage.OutputTokens;
-                                _ = RecordUsageAsync(session, resultUsage);
+                                var costOverride = TryExtractCost(evt);
+                                await RecordUsageAsync(session, resultUsage, costOverride);
                                 usageRecorded = true;
+                            }
+                            else if (!usageRecorded && (accInputTokens > 0 || accOutputTokens > 0))
+                            {
+                                // Use accumulated tokens from message_start/message_delta
+                                var accUsage = new UsageInfo
+                                {
+                                    InputTokens = accInputTokens,
+                                    OutputTokens = accOutputTokens,
+                                    CacheCreationInputTokens = accCacheCreation,
+                                    CacheReadInputTokens = accCacheRead,
+                                };
+                                session.TotalInputTokens += accUsage.InputTokens;
+                                session.TotalOutputTokens += accUsage.OutputTokens;
+                                var costOverride = TryExtractCost(evt);
+                                await RecordUsageAsync(session, accUsage, costOverride);
+                                usageRecorded = true;
+                                Logger.LogWarning("Usage recorded from accumulated deltas (no result usage). In={In}, Out={Out}",
+                                    accInputTokens, accOutputTokens);
                             }
                         }
                         // assistant 이벤트에서 이미 처리됐을 수 있으므로 Parts 비어있을 때만 fallback
@@ -855,6 +889,23 @@
                         Logger.LogDebug("Unhandled Claude event type: {Type}", evt.Type);
                         break;
                 }
+            }
+
+            // Final fallback: if no event recorded usage, use accumulated values
+            if (!usageRecorded && (accInputTokens > 0 || accOutputTokens > 0))
+            {
+                var fallbackUsage = new UsageInfo
+                {
+                    InputTokens = accInputTokens,
+                    OutputTokens = accOutputTokens,
+                    CacheCreationInputTokens = accCacheCreation,
+                    CacheReadInputTokens = accCacheRead,
+                };
+                session.TotalInputTokens += fallbackUsage.InputTokens;
+                session.TotalOutputTokens += fallbackUsage.OutputTokens;
+                await RecordUsageAsync(session, fallbackUsage);
+                Logger.LogWarning("Usage recorded from post-loop fallback (no result event). In={In}, Out={Out}",
+                    accInputTokens, accOutputTokens);
             }
         }
         catch (Exception ex)
@@ -1208,7 +1259,7 @@ Rules:
         if (fullSession != null) ChatState.SetSession(fullSession);
     }
 
-    private async Task RecordUsageAsync(Session session, UsageInfo usage)
+    private async Task RecordUsageAsync(Session session, UsageInfo usage, decimal? costOverride = null)
     {
         try
         {
@@ -1224,15 +1275,62 @@ Rules:
                 SessionId = session.Id,
                 ProjectPath = session.WorktreePath
             };
-            entry.CostUsd = UsageService.CalculateCost(
+            entry.CostUsd = costOverride ?? UsageService.CalculateCost(
                 model, entry.InputTokens, entry.OutputTokens,
                 entry.CacheCreationTokens, entry.CacheReadTokens);
+
+            Logger.LogInformation("Recording usage: Model={Model}, In={In}, Out={Out}, CacheW={CW}, CacheR={CR}, Cost=${Cost:F6}",
+                model, entry.InputTokens, entry.OutputTokens,
+                entry.CacheCreationTokens, entry.CacheReadTokens, entry.CostUsd);
+
             await UsageService.RecordUsageAsync(entry);
         }
         catch (Exception ex)
         {
-            Logger.LogDebug(ex, "Failed to record usage");
+            Logger.LogError(ex, "Failed to record usage for session {SessionId}", session.Id);
         }
+    }
+
+    private static decimal? TryExtractCost(StreamEvent evt)
+    {
+        if (evt.CostUsd is > 0) return evt.CostUsd.Value;
+        if (evt.TotalCostUsd is > 0) return evt.TotalCostUsd.Value;
+
+        if (evt.ExtensionData != null)
+        {
+            if (evt.ExtensionData.TryGetValue("cost_usd", out var costEl) && costEl.TryGetDecimal(out var cost) && cost > 0)
+                return cost;
+            if (evt.ExtensionData.TryGetValue("total_cost_usd", out var tcEl) && tcEl.TryGetDecimal(out var tc) && tc > 0)
+                return tc;
+        }
+        return null;
+    }
+
+    private static UsageInfo? TryExtractUsageFromExtensionData(StreamEvent evt)
+    {
+        if (evt.ExtensionData == null) return null;
+
+        int input = 0, output = 0;
+        int? cacheCreation = null, cacheRead = null;
+
+        if (evt.ExtensionData.TryGetValue("input_tokens", out var inEl))
+            inEl.TryGetInt32(out input);
+        if (evt.ExtensionData.TryGetValue("output_tokens", out var outEl))
+            outEl.TryGetInt32(out output);
+        if (evt.ExtensionData.TryGetValue("cache_creation_input_tokens", out var cwEl) && cwEl.TryGetInt32(out var cw))
+            cacheCreation = cw;
+        if (evt.ExtensionData.TryGetValue("cache_read_input_tokens", out var crEl) && crEl.TryGetInt32(out var cr))
+            cacheRead = cr;
+
+        if (input == 0 && output == 0) return null;
+
+        return new UsageInfo
+        {
+            InputTokens = input,
+            OutputTokens = output,
+            CacheCreationInputTokens = cacheCreation,
+            CacheReadInputTokens = cacheRead,
+        };
     }
 
     public void Dispose()

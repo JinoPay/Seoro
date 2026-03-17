@@ -29,6 +29,12 @@ public class StreamEvent
     [JsonPropertyName("error")]
     public JsonElement? Error { get; set; }
 
+    [JsonPropertyName("cost_usd")]
+    public decimal? CostUsd { get; set; }
+
+    [JsonPropertyName("total_cost_usd")]
+    public decimal? TotalCostUsd { get; set; }
+
     [JsonPropertyName("result")]
     public string? Result { get; set; }
 
