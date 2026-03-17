@@ -40,7 +40,6 @@ public class ClaudeService : IClaudeService
         string? sessionId = null,
         string? conversationId = null,
         string? systemPrompt = null,
-        string? sessionName = null,
         bool continueMode = false,
         bool forkSession = false,
         int? maxTurns = null,
@@ -65,7 +64,7 @@ public class ClaudeService : IClaudeService
             previous.Cancel();
         }
 
-        var arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
+        var arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
         var token = cts.Token;
         var envVars = settings.EnvironmentVariables.Count > 0 ? settings.EnvironmentVariables : null;
 
@@ -119,7 +118,7 @@ public class ClaudeService : IClaudeService
             caps.SupportsVerbose = true;
             process.Dispose();
 
-            arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
+            arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
             _logger.LogDebug("Executing (retry): {FileName} {Arguments}", fileName, arguments);
             process = StartProcess(fileName, arguments, workingDir, envVars);
             agent = new AgentProcess(process, cts);
@@ -232,7 +231,6 @@ public class ClaudeService : IClaudeService
         string? conversationId = null,
         string? systemPrompt = null,
         string effortLevel = "auto",
-        string? sessionName = null,
         bool continueMode = false,
         bool forkSession = false,
         int? maxTurns = null,
@@ -284,13 +282,6 @@ public class ClaudeService : IClaudeService
         }
         else if (continueMode)
             sb.Append(" --continue");
-
-        // Session name
-        if (!string.IsNullOrEmpty(sessionName))
-        {
-            var escapedName = sessionName.Replace("\\", "\\\\").Replace("\"", "\\\"");
-            sb.Append($" --name \"{escapedName}\"");
-        }
 
         // Turn and budget limits
         if (maxTurns.HasValue)
