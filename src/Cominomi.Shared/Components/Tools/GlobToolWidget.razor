@@ -1,0 +1,79 @@
+@using System.Text.Json
+
+<div class="tool-widget tool-widget-glob">
+    <div class="tool-widget-header">
+        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small"
+                 Style="width: 14px; height: 14px; opacity: 0.6;" />
+        <span class="tool-widget-pattern">@_pattern</span>
+        @if (_fileCount > 0)
+        {
+            <span class="tool-widget-hint">@(_fileCount)개 파일</span>
+        }
+    </div>
+    @if (_files.Count > 0)
+    {
+        <div class="tool-widget-filelist @(_collapsed ? "collapsed" : "")">
+            @foreach (var file in _files.Take(_collapsed ? 10 : _files.Count))
+            {
+                <div class="glob-file-item">
+                    <MudIcon Icon="@GetFileIcon(file)" Size="Size.Small"
+                             Style="width: 14px; height: 14px; opacity: 0.5;" />
+                    <span>@ShortenPath(file)</span>
+                </div>
+            }
+        </div>
+        @if (_files.Count > 10)
+        {
+            <div class="tool-widget-toggle" @onclick="@(() => _collapsed = !_collapsed)" @onclick:stopPropagation="true">
+                @(_collapsed ? $"전체 보기 ({_files.Count}개 파일)" : "접기")
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ToolCall Tool { get; set; } = default!;
+
+    private string _pattern = "";
+    private List<string> _files = [];
+    private int _fileCount;
+    private bool _collapsed = true;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Tool.Input))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(Tool.Input);
+                if (doc.RootElement.TryGetProperty("pattern", out var p))
+                    _pattern = p.GetString() ?? "";
+            }
+            catch { }
+        }
+
+        _files = string.IsNullOrEmpty(Tool.Output)
+            ? []
+            : Tool.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                .Select(l => l.Trim())
+                .Where(l => !string.IsNullOrEmpty(l))
+                .ToList();
+        _fileCount = _files.Count;
+        _collapsed = _files.Count > 10;
+    }
+
+    private static string GetFileIcon(string path)
+    {
+        if (path.EndsWith('/') || path.EndsWith('\\') || !path.Contains('.'))
+            return Icons.Material.Filled.Folder;
+        return Icons.Material.Filled.InsertDriveFile;
+    }
+
+    private static string ShortenPath(string path)
+    {
+        var normalized = path.Replace('\\', '/').TrimEnd('/');
+        var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length <= 3 ? normalized : string.Join("/", parts[^3..]);
+    }
+}

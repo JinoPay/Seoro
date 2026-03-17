@@ -1,3 +1,5 @@
+@using Cominomi.Shared.Services
+
 <div class="tool-card @(!Tool.IsComplete ? "running" : "")">
     <div class="tool-card-header" @onclick="@(() => _expanded = !_expanded)">
         @if (!Tool.IsComplete)
@@ -28,41 +30,61 @@
     @if (_expanded)
     {
         <div class="tool-card-body">
-            @if (!string.IsNullOrEmpty(Tool.Input))
+            @switch (GetWidgetType())
             {
-                var isAgent = Tool.Name.Equals("agent", StringComparison.OrdinalIgnoreCase);
-                var inputLineCount = Tool.Input.Split('\n').Length;
-                <div class="tool-card-section">
-                    <div class="tool-card-section-label">입력 @(inputLineCount > 1 ? $"({inputLineCount}줄)" : "")</div>
-                    <div class="tool-card-content @(isAgent && inputLineCount > 5 && !_inputExpanded ? "tool-output-collapsed" : "")">
-                        <pre>@Tool.Input</pre>
-                    </div>
-                    @if (isAgent && inputLineCount > 5)
+                case WidgetType.Read:
+                    <ReadToolWidget Tool="Tool" />
+                    break;
+                case WidgetType.Edit:
+                    <EditToolWidget Tool="Tool" />
+                    break;
+                case WidgetType.Bash:
+                    <BashToolWidget Tool="Tool" />
+                    break;
+                case WidgetType.Grep:
+                    <GrepToolWidget Tool="Tool" />
+                    break;
+                case WidgetType.Glob:
+                    <GlobToolWidget Tool="Tool" />
+                    break;
+                default:
+                    @* Generic fallback *@
+                    @if (!string.IsNullOrEmpty(Tool.Input))
                     {
-                        <div class="tool-output-toggle" @onclick="@(() => _inputExpanded = !_inputExpanded)"
-                             @onclick:stopPropagation="true">
-                            @(_inputExpanded ? "접기" : "전체 보기")
+                        var isAgent = Tool.Name.Equals("agent", StringComparison.OrdinalIgnoreCase);
+                        var inputLineCount = Tool.Input.Split('\n').Length;
+                        <div class="tool-card-section">
+                            <div class="tool-card-section-label">입력 @(inputLineCount > 1 ? $"({inputLineCount}줄)" : "")</div>
+                            <div class="tool-card-content @(isAgent && inputLineCount > 5 && !_inputExpanded ? "tool-output-collapsed" : "")">
+                                <pre>@Tool.Input</pre>
+                            </div>
+                            @if (isAgent && inputLineCount > 5)
+                            {
+                                <div class="tool-output-toggle" @onclick="@(() => _inputExpanded = !_inputExpanded)"
+                                     @onclick:stopPropagation="true">
+                                    @(_inputExpanded ? "접기" : "전체 보기")
+                                </div>
+                            }
                         </div>
                     }
-                </div>
-            }
-
-            @if (!string.IsNullOrEmpty(Tool.Output))
-            {
-                var lineCount = Tool.Output.Split('\n').Length;
-                <div class="tool-card-section">
-                    <div class="tool-card-section-label">출력 @(lineCount > 1 ? $"({lineCount}줄)" : "")</div>
-                    <div class="tool-card-content @(lineCount > 15 && !_outputExpanded ? "tool-output-collapsed" : "")">
-                        <pre>@Tool.Output</pre>
-                    </div>
-                    @if (lineCount > 15)
+                    @if (!string.IsNullOrEmpty(Tool.Output))
                     {
-                        <div class="tool-output-toggle" @onclick="@(() => _outputExpanded = !_outputExpanded)"
-                             @onclick:stopPropagation="true">
-                            @(_outputExpanded ? "접기" : "전체 보기")
+                        var lineCount = Tool.Output.Split('\n').Length;
+                        <div class="tool-card-section">
+                            <div class="tool-card-section-label">출력 @(lineCount > 1 ? $"({lineCount}줄)" : "")</div>
+                            <div class="tool-card-content @(lineCount > 15 && !_outputExpanded ? "tool-output-collapsed" : "")">
+                                <pre>@Tool.Output</pre>
+                            </div>
+                            @if (lineCount > 15)
+                            {
+                                <div class="tool-output-toggle" @onclick="@(() => _outputExpanded = !_outputExpanded)"
+                                     @onclick:stopPropagation="true">
+                                    @(_outputExpanded ? "접기" : "전체 보기")
+                                </div>
+                            }
                         </div>
                     }
-                </div>
+                    break;
             }
         </div>
     }
@@ -75,6 +97,19 @@
     private bool _expanded;
     private bool _inputExpanded;
     private bool _outputExpanded;
+
+    private enum WidgetType { Generic, Read, Edit, Bash, Grep, Glob }
+
+    private WidgetType GetWidgetType() => Tool.Name.ToLowerInvariant() switch
+    {
+        "read" or "read_file" => WidgetType.Read,
+        "edit" or "edit_file" => WidgetType.Edit,
+        "write" or "write_file" => WidgetType.Edit, // Write uses same diff-style widget
+        "bash" or "execute_bash" => WidgetType.Bash,
+        "grep" => WidgetType.Grep,
+        "glob" => WidgetType.Glob,
+        _ => WidgetType.Generic
+    };
 
     private string GetToolIcon() => Tool.Name.ToLowerInvariant() switch
     {

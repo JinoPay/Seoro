@@ -76,6 +76,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IFilePickerService, FilePickerService>();
         builder.Services.AddSingleton<IAttachmentService, AttachmentService>();
         builder.Services.AddSingleton<IPluginService, PluginService>();
+        builder.Services.AddSingleton<IUsageService, UsageService>();
+        builder.Services.AddSingleton<IMcpService, McpService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

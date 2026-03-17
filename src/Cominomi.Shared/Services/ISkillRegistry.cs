@@ -9,4 +9,7 @@ public interface ISkillRegistry
     string? TryParseSkillCommand(string input, out string? args);
     string ExpandSkill(SkillDefinition skill, string? args, Session session);
     void Register(SkillDefinition skill);
+    Task LoadCustomCommandsAsync(string? projectPath);
+    Task SaveCommandAsync(SkillDefinition command);
+    Task DeleteCommandAsync(string name, string scope, string? projectPath);
 }

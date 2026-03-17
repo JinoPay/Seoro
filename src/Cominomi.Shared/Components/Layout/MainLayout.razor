@@ -25,6 +25,10 @@
                 <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                                Color="Color.Inherit" Size="Size.Small" OnClick="@ToggleDarkMode"
                                Style="width: 28px; height: 28px; opacity: 0.5;" />
+                <MudIconButton Icon="@Icons.Material.Filled.Analytics" Color="Color.Inherit"
+                               Size="Size.Small" OnClick="@OpenUsageDashboard"
+                               Style="width: 28px; height: 28px; opacity: 0.5;"
+                               Title="사용량 대시보드" />
                 <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit"
                                Size="Size.Small" OnClick="@OpenSettings"
                                Style="width: 28px; height: 28px; opacity: 0.5;" />
@@ -126,12 +130,14 @@
 
 <SettingsDialog @bind-IsOpen="_settingsOpen" />
 <SetupDialog @bind-IsOpen="_setupOpen" />
+<UsageDashboard @bind-IsOpen="_usageDashboardOpen" />
 
 @code {
     private bool _sidebarOpen = true;
     private bool _isDarkMode = true;
     private bool _settingsOpen;
     private bool _setupOpen;
+    private bool _usageDashboardOpen;
 
     private readonly MudTheme _theme = new()
     {
@@ -215,6 +221,7 @@
     }
 
     private void OpenSettings() => _settingsOpen = true;
+    private void OpenUsageDashboard() => _usageDashboardOpen = true;
 
     public void Dispose()
     {

@@ -1,0 +1,342 @@
+@using Cominomi.Shared.Models
+@inject IMcpService McpService
+@inject ISnackbar Snackbar
+
+<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Hub" Class="mr-2" />
+            MCP 서버 관리
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
+            @* Server List Tab *@
+            <MudTabPanel Text="서버 목록" Icon="@Icons.Material.Filled.List">
+                @if (_loading)
+                {
+                    <div style="display: flex; justify-content: center; padding: 24px;">
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                    </div>
+                }
+                else if (_servers.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
+                        등록된 MCP 서버가 없습니다.
+                    </MudText>
+                }
+                else
+                {
+                    <MudSimpleTable Dense="true" Hover="true" Class="mcp-table">
+                        <thead>
+                            <tr>
+                                <th>이름</th>
+                                <th>전송 방식</th>
+                                <th>범위</th>
+                                <th style="width: 80px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var server in _servers)
+                            {
+                                <tr>
+                                    <td>
+                                        <MudIcon Icon="@(server.Status.Running ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.RadioButtonUnchecked)"
+                                                 Color="@(server.Status.Running ? Color.Success : Color.Default)"
+                                                 Size="Size.Small" Style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;" />
+                                        @server.Name
+                                    </td>
+                                    <td>@server.Transport</td>
+                                    <td>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                 Color="@(server.Scope == "project" ? Color.Info : server.Scope == "local" ? Color.Warning : Color.Default)">
+                                            @server.Scope
+                                        </MudChip>
+                                    </td>
+                                    <td>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => RemoveServer(server))" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+                <div style="padding: 8px;">
+                    <MudButton StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                               Variant="Variant.Text" OnClick="RefreshServers">새로고침</MudButton>
+                </div>
+            </MudTabPanel>
+
+            @* Add Server Tab *@
+            <MudTabPanel Text="서버 추가" Icon="@Icons.Material.Filled.Add">
+                <MudStack Spacing="3" Class="pa-3">
+                    <MudTextField @bind-Value="_newName" Label="서버 이름" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" Required="true" />
+
+                    <MudSelect T="string" @bind-Value="_newTransport" Label="전송 방식"
+                               Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem T="string" Value="@("stdio")">stdio</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("sse")">SSE</MudSelectItem>
+                    </MudSelect>
+
+                    @if (_newTransport == "stdio")
+                    {
+                        <MudTextField @bind-Value="_newCommand" Label="명령어" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" Placeholder="npx, node, python..."
+                                      Required="true" />
+                        <MudTextField @bind-Value="_newArgs" Label="인수 (공백 구분)" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" Placeholder="-y server-filesystem /tmp" />
+                    }
+                    else
+                    {
+                        <MudTextField @bind-Value="_newUrl" Label="서버 URL" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" Placeholder="http://localhost:3000/sse"
+                                      Required="true" />
+                    }
+
+                    <MudSelect T="string" @bind-Value="_newScope" Label="범위"
+                               Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem T="string" Value="@("user")">사용자 (전역)</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("project")">프로젝트</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("local")">로컬</MudSelectItem>
+                    </MudSelect>
+
+                    @* Environment Variables *@
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">환경변수</MudText>
+                        @foreach (var (key, idx) in _envKeys.Select((k, i) => (k, i)))
+                        {
+                            var capturedIdx = idx;
+                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mb-1">
+                                <MudTextField T="string" Value="@_envKeys[capturedIdx]"
+                                              ValueChanged="@(v => _envKeys[capturedIdx] = v)"
+                                              Placeholder="KEY" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                              Style="flex: 0.4;" />
+                                <MudTextField T="string" Value="@_envValues[capturedIdx]"
+                                              ValueChanged="@(v => _envValues[capturedIdx] = v)"
+                                              Placeholder="VALUE" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                              Style="flex: 0.6;" InputType="InputType.Password" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small"
+                                               OnClick="@(() => RemoveEnvRow(capturedIdx))" />
+                            </MudStack>
+                        }
+                        <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Variant="Variant.Text"
+                                   OnClick="AddEnvRow">환경변수 추가</MudButton>
+                    </div>
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddServer"
+                               Disabled="@(string.IsNullOrWhiteSpace(_newName) || (_newTransport == "stdio" && string.IsNullOrWhiteSpace(_newCommand)) || (_newTransport == "sse" && string.IsNullOrWhiteSpace(_newUrl)))">
+                        서버 추가
+                    </MudButton>
+                </MudStack>
+            </MudTabPanel>
+
+            @* Import/Export Tab *@
+            <MudTabPanel Text="가져오기" Icon="@Icons.Material.Filled.FileDownload">
+                <MudStack Spacing="3" Class="pa-3">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Claude Desktop에서 가져오기</MudText>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.DesktopWindows"
+                                   OnClick="ImportFromDesktop"
+                                   Disabled="_importing">
+                            @if (_importing)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                     Style="width: 16px; height: 16px; margin-right: 8px;" />
+                            }
+                            Claude Desktop 설정 가져오기
+                        </MudButton>
+                    </div>
+
+                    <MudDivider />
+
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">JSON으로 가져오기</MudText>
+                        <MudTextField @bind-Value="_importJson" Label="MCP 설정 JSON" Variant="Variant.Outlined"
+                                      Lines="6" Placeholder='{"mcpServers": {"name": {"command": "...", "args": []}}}' />
+                        <MudSelect T="string" @bind-Value="_importScope" Label="범위"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-2">
+                            <MudSelectItem T="string" Value="@("user")">사용자 (전역)</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("project")">프로젝트</MudSelectItem>
+                        </MudSelect>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="mt-2"
+                                   OnClick="ImportFromJson"
+                                   Disabled="@(string.IsNullOrWhiteSpace(_importJson))">
+                            JSON 가져오기
+                        </MudButton>
+                    </div>
+                </MudStack>
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">닫기</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private List<McpServer> _servers = [];
+    private bool _loading;
+    private bool _importing;
+
+    // Add server form
+    private string _newName = "";
+    private string _newTransport = "stdio";
+    private string _newCommand = "";
+    private string _newArgs = "";
+    private string _newUrl = "";
+    private string _newScope = "user";
+    private List<string> _envKeys = [];
+    private List<string> _envValues = [];
+
+    // Import
+    private string _importJson = "";
+    private string _importScope = "user";
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen && _servers.Count == 0)
+            await RefreshServers();
+    }
+
+    private async Task RefreshServers()
+    {
+        _loading = true;
+        StateHasChanged();
+        _servers = await McpService.ListServersAsync();
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private async Task RemoveServer(McpServer server)
+    {
+        var result = await McpService.RemoveServerAsync(server.Name, server.Scope);
+        if (result)
+        {
+            Snackbar.Add($"서버 '{server.Name}'이 제거되었습니다.", Severity.Success);
+            await RefreshServers();
+        }
+        else
+        {
+            Snackbar.Add("서버 제거에 실패했습니다.", Severity.Error);
+        }
+    }
+
+    private async Task AddServer()
+    {
+        var env = new Dictionary<string, string>();
+        for (int i = 0; i < _envKeys.Count; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(_envKeys[i]))
+                env[_envKeys[i]] = _envValues[i];
+        }
+
+        var args = string.IsNullOrWhiteSpace(_newArgs) ? null : _newArgs.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+
+        var result = await McpService.AddServerAsync(
+            _newName, _newTransport,
+            _newTransport == "stdio" ? _newCommand : null,
+            args, env.Count > 0 ? env : null,
+            _newTransport == "sse" ? _newUrl : null,
+            _newScope);
+
+        if (result)
+        {
+            Snackbar.Add($"서버 '{_newName}'이 추가되었습니다.", Severity.Success);
+            ResetAddForm();
+            await RefreshServers();
+        }
+        else
+        {
+            Snackbar.Add("서버 추가에 실패했습니다.", Severity.Error);
+        }
+    }
+
+    private void ResetAddForm()
+    {
+        _newName = "";
+        _newCommand = "";
+        _newArgs = "";
+        _newUrl = "";
+        _newScope = "user";
+        _envKeys.Clear();
+        _envValues.Clear();
+    }
+
+    private void AddEnvRow()
+    {
+        _envKeys.Add("");
+        _envValues.Add("");
+    }
+
+    private void RemoveEnvRow(int idx)
+    {
+        if (idx < _envKeys.Count)
+        {
+            _envKeys.RemoveAt(idx);
+            _envValues.RemoveAt(idx);
+        }
+    }
+
+    private async Task ImportFromDesktop()
+    {
+        _importing = true;
+        StateHasChanged();
+
+        var result = await McpService.ImportFromClaudeDesktopAsync();
+        if (result)
+        {
+            Snackbar.Add("Claude Desktop 설정을 가져왔습니다.", Severity.Success);
+            await RefreshServers();
+        }
+        else
+        {
+            Snackbar.Add("가져오기에 실패했습니다.", Severity.Error);
+        }
+
+        _importing = false;
+        StateHasChanged();
+    }
+
+    private async Task ImportFromJson()
+    {
+        var result = await McpService.ImportFromJsonAsync(_importJson, _importScope);
+        if (result)
+        {
+            Snackbar.Add("JSON 설정을 가져왔습니다.", Severity.Success);
+            _importJson = "";
+            await RefreshServers();
+        }
+        else
+        {
+            Snackbar.Add("JSON 가져오기에 실패했습니다.", Severity.Error);
+        }
+    }
+
+    private async Task OnVisibleChanged(bool visible)
+    {
+        if (IsOpen != visible)
+        {
+            IsOpen = visible;
+            await IsOpenChanged.InvokeAsync(visible);
+        }
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+}

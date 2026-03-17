@@ -1,0 +1,83 @@
+@using System.Text.Json
+
+<div class="tool-widget tool-widget-read">
+    <div class="tool-widget-header">
+        <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"
+                 Style="width: 14px; height: 14px; opacity: 0.6;" />
+        <span class="tool-widget-filepath">@_filePath</span>
+        @if (_lineCount > 0)
+        {
+            <span class="tool-widget-hint">@(_lineCount)줄</span>
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(Tool.Output))
+    {
+        <div class="tool-widget-code @(_collapsed ? "collapsed" : "")">
+            <pre class="code-block @_syntaxClass"><code>@Tool.Output</code></pre>
+        </div>
+        @if (_lineCount > 20)
+        {
+            <div class="tool-widget-toggle" @onclick="@(() => _collapsed = !_collapsed)" @onclick:stopPropagation="true">
+                @(_collapsed ? $"전체 보기 ({_lineCount}줄)" : "접기")
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ToolCall Tool { get; set; } = default!;
+
+    private string _filePath = "";
+    private int _lineCount;
+    private string _syntaxClass = "";
+    private bool _collapsed = true;
+
+    protected override void OnParametersSet()
+    {
+        _filePath = ParseFilePath(Tool.Input);
+        _lineCount = string.IsNullOrEmpty(Tool.Output) ? 0 : Tool.Output.Split('\n').Length;
+        _collapsed = _lineCount > 20;
+
+        var ext = Path.GetExtension(_filePath).ToLowerInvariant();
+        _syntaxClass = ext switch
+        {
+            ".cs" => "lang-csharp",
+            ".js" or ".jsx" => "lang-javascript",
+            ".ts" or ".tsx" => "lang-typescript",
+            ".py" => "lang-python",
+            ".rs" => "lang-rust",
+            ".go" => "lang-go",
+            ".java" => "lang-java",
+            ".html" or ".razor" => "lang-html",
+            ".css" => "lang-css",
+            ".json" => "lang-json",
+            ".yaml" or ".yml" => "lang-yaml",
+            ".xml" or ".csproj" => "lang-xml",
+            ".md" => "lang-markdown",
+            _ => ""
+        };
+    }
+
+    private static string ParseFilePath(string? input)
+    {
+        if (string.IsNullOrEmpty(input)) return "";
+        try
+        {
+            using var doc = JsonDocument.Parse(input);
+            if (doc.RootElement.TryGetProperty("file_path", out var fp))
+                return ShortenPath(fp.GetString() ?? "");
+            if (doc.RootElement.TryGetProperty("path", out var p))
+                return ShortenPath(p.GetString() ?? "");
+        }
+        catch { }
+        return "";
+    }
+
+    private static string ShortenPath(string path)
+    {
+        var normalized = path.Replace('\\', '/');
+        var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length <= 3 ? normalized : string.Join("/", parts[^3..]);
+    }
+}

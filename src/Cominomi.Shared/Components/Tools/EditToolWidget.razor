@@ -1,0 +1,76 @@
+@using System.Text.Json
+
+<div class="tool-widget tool-widget-edit">
+    <div class="tool-widget-header">
+        <MudIcon Icon="@Icons.Material.Filled.EditNote" Size="Size.Small"
+                 Style="width: 14px; height: 14px; opacity: 0.6;" />
+        <span class="tool-widget-filepath">@_filePath</span>
+    </div>
+    @if (_oldLines.Length > 0 || _newLines.Length > 0)
+    {
+        <div class="tool-widget-diff">
+            @foreach (var line in _oldLines)
+            {
+                <div class="diff-line diff-removed">
+                    <span class="diff-prefix">-</span>
+                    <span class="diff-content">@line</span>
+                </div>
+            }
+            @foreach (var line in _newLines)
+            {
+                <div class="diff-line diff-added">
+                    <span class="diff-prefix">+</span>
+                    <span class="diff-content">@line</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ToolCall Tool { get; set; } = default!;
+
+    private string _filePath = "";
+    private string[] _oldLines = [];
+    private string[] _newLines = [];
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(Tool.Input)) return;
+        try
+        {
+            using var doc = JsonDocument.Parse(Tool.Input);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("file_path", out var fp))
+                _filePath = ShortenPath(fp.GetString() ?? "");
+
+            if (root.TryGetProperty("old_string", out var old))
+                _oldLines = (old.GetString() ?? "").Split('\n');
+            else
+                _oldLines = [];
+
+            if (root.TryGetProperty("new_string", out var ns))
+                _newLines = (ns.GetString() ?? "").Split('\n');
+            else if (root.TryGetProperty("content", out var content))
+            {
+                var text = content.GetString() ?? "";
+                _newLines = text.Split('\n').Length > 20
+                    ? text.Split('\n').Take(20).Append("...").ToArray()
+                    : text.Split('\n');
+                _oldLines = [];
+            }
+            else
+                _newLines = [];
+        }
+        catch { }
+    }
+
+    private static string ShortenPath(string path)
+    {
+        var normalized = path.Replace('\\', '/');
+        var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length <= 3 ? normalized : string.Join("/", parts[^3..]);
+    }
+}

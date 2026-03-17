@@ -1,0 +1,127 @@
+@using System.Text.Json
+
+<div class="tool-widget tool-widget-grep">
+    <div class="tool-widget-header">
+        <MudIcon Icon="@Icons.Material.Filled.FindInPage" Size="Size.Small"
+                 Style="width: 14px; height: 14px; opacity: 0.6;" />
+        <span class="tool-widget-pattern">/@_pattern/</span>
+        @if (!string.IsNullOrEmpty(_path))
+        {
+            <span class="tool-widget-hint">in @_path</span>
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(Tool.Output))
+    {
+        <div class="tool-widget-results @(_collapsed ? "collapsed" : "")">
+            @foreach (var group in _fileGroups.Take(_collapsed ? 5 : _fileGroups.Count))
+            {
+                <div class="grep-file-group">
+                    <div class="grep-file-header">@ShortenPath(group.Key)</div>
+                    @foreach (var line in group.Value.Take(_collapsed ? 3 : group.Value.Count))
+                    {
+                        <div class="grep-result-line">
+                            <span class="grep-line-num">@line.LineNumber</span>
+                            <span class="grep-line-content">@line.Content</span>
+                        </div>
+                    }
+                    @if (_collapsed && group.Value.Count > 3)
+                    {
+                        <div class="grep-more">+@(group.Value.Count - 3)줄 더</div>
+                    }
+                </div>
+            }
+        </div>
+        @if (_fileGroups.Count > 5 || _fileGroups.Values.Any(v => v.Count > 3))
+        {
+            <div class="tool-widget-toggle" @onclick="@(() => _collapsed = !_collapsed)" @onclick:stopPropagation="true">
+                @(_collapsed ? $"전체 보기 ({_totalResults}개 결과)" : "접기")
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ToolCall Tool { get; set; } = default!;
+
+    private string _pattern = "";
+    private string _path = "";
+    private Dictionary<string, List<GrepLine>> _fileGroups = new();
+    private int _totalResults;
+    private bool _collapsed = true;
+
+    private record GrepLine(string LineNumber, string Content);
+
+    protected override void OnParametersSet()
+    {
+        ParseInput();
+        ParseOutput();
+    }
+
+    private void ParseInput()
+    {
+        if (string.IsNullOrEmpty(Tool.Input)) return;
+        try
+        {
+            using var doc = JsonDocument.Parse(Tool.Input);
+            if (doc.RootElement.TryGetProperty("pattern", out var p))
+                _pattern = p.GetString() ?? "";
+            if (doc.RootElement.TryGetProperty("path", out var path))
+                _path = ShortenPath(path.GetString() ?? "");
+        }
+        catch { }
+    }
+
+    private void ParseOutput()
+    {
+        _fileGroups.Clear();
+        _totalResults = 0;
+        if (string.IsNullOrEmpty(Tool.Output)) return;
+
+        var currentFile = "";
+        foreach (var line in Tool.Output.Split('\n'))
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            // Try to parse "file:line:content" format
+            var colonIdx = line.IndexOf(':');
+            if (colonIdx > 0)
+            {
+                var potentialFile = line[..colonIdx];
+                var rest = line[(colonIdx + 1)..];
+
+                var secondColon = rest.IndexOf(':');
+                if (secondColon > 0 && int.TryParse(rest[..secondColon], out _))
+                {
+                    currentFile = potentialFile;
+                    if (!_fileGroups.ContainsKey(currentFile))
+                        _fileGroups[currentFile] = new();
+                    _fileGroups[currentFile].Add(new GrepLine(rest[..secondColon], rest[(secondColon + 1)..]));
+                    _totalResults++;
+                    continue;
+                }
+            }
+
+            // Fallback: treat as file path or plain result
+            if (!line.Contains(':') && !line.StartsWith(' '))
+            {
+                currentFile = line.Trim();
+                if (!_fileGroups.ContainsKey(currentFile))
+                    _fileGroups[currentFile] = new();
+                _totalResults++;
+            }
+            else if (!string.IsNullOrEmpty(currentFile))
+            {
+                _fileGroups[currentFile].Add(new GrepLine("", line));
+                _totalResults++;
+            }
+        }
+    }
+
+    private static string ShortenPath(string path)
+    {
+        var normalized = path.Replace('\\', '/');
+        var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length <= 3 ? normalized : string.Join("/", parts[^3..]);
+    }
+}

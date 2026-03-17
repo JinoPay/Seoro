@@ -1,0 +1,61 @@
+@using System.Text.Json
+
+<div class="tool-widget tool-widget-bash">
+    <div class="tool-widget-header">
+        <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"
+                 Style="width: 14px; height: 14px; opacity: 0.6;" />
+        <span class="tool-widget-command">$ @_command</span>
+    </div>
+    @if (!string.IsNullOrEmpty(Tool.Output))
+    {
+        <div class="tool-widget-output @(_collapsed ? "collapsed" : "") @(Tool.IsError ? "error-output" : "")">
+            <pre>@StripAnsi(Tool.Output)</pre>
+        </div>
+        @if (_lineCount > 30)
+        {
+            <div class="tool-widget-toggle" @onclick="@(() => _collapsed = !_collapsed)" @onclick:stopPropagation="true">
+                @(_collapsed ? $"전체 보기 ({_lineCount}줄)" : "접기")
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ToolCall Tool { get; set; } = default!;
+
+    private string _command = "";
+    private int _lineCount;
+    private bool _collapsed = true;
+
+    protected override void OnParametersSet()
+    {
+        _command = ParseCommand(Tool.Input);
+        _lineCount = string.IsNullOrEmpty(Tool.Output) ? 0 : Tool.Output.Split('\n').Length;
+        _collapsed = _lineCount > 30;
+    }
+
+    private static string ParseCommand(string? input)
+    {
+        if (string.IsNullOrEmpty(input)) return "";
+        try
+        {
+            using var doc = JsonDocument.Parse(input);
+            if (doc.RootElement.TryGetProperty("command", out var cmd))
+            {
+                var text = cmd.GetString() ?? "";
+                // Show first line only for multi-line commands
+                var firstLine = text.Split('\n')[0];
+                return firstLine.Length > 80 ? firstLine[..80] + "..." : firstLine;
+            }
+        }
+        catch { }
+        return "";
+    }
+
+    private static string StripAnsi(string text)
+    {
+        // Remove ANSI escape sequences
+        return System.Text.RegularExpressions.Regex.Replace(text, @"\x1B\[[0-9;]*[a-zA-Z]", "");
+    }
+}
