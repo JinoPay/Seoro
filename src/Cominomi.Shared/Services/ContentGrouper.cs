@@ -169,15 +169,7 @@ public static partial class ContentGrouper
 
     private static string BuildToolSummary(List<ContentPart> toolParts)
     {
-        var counts = new Dictionary<string, int>();
-        foreach (var part in toolParts)
-        {
-            var name = NormalizeToolName(part.ToolCall?.Name ?? "Tool");
-            counts[name] = counts.GetValueOrDefault(name) + 1;
-        }
-
-        var summaryParts = counts.Select(kv => kv.Value > 1 ? $"{kv.Key} {kv.Value}회" : kv.Key);
-        return string.Join(", ", summaryParts);
+        return ToolDisplayHelper.BuildDescriptiveSummary(toolParts);
     }
 
     private static string NormalizeToolName(string name) => name.ToLowerInvariant() switch

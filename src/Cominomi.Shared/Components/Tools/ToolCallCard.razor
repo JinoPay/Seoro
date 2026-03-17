@@ -16,7 +16,11 @@
                      Style="width: 16px; height: 16px;" />
         }
         <MudIcon Icon="@GetToolIcon()" Size="Size.Small" Style="width: 16px; height: 16px; opacity: 0.6;" />
-        <span class="tool-card-name">@Tool.Name</span>
+        <span class="tool-card-name">@ToolDisplayHelper.GetHeaderLabel(Tool)</span>
+        @if (Tool.IsComplete && ToolDisplayHelper.GetCompactResult(Tool) is string hint)
+        {
+            <span class="tool-card-hint">@hint</span>
+        }
         <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
                  Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px;" />
     </div>

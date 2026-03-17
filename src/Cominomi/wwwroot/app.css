@@ -1035,6 +1035,17 @@ html, body {
     font-size: var(--text-sm);
     font-weight: 500;
     flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.tool-card-hint {
+    font-size: var(--text-xs);
+    opacity: 0.5;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .tool-card-body {
