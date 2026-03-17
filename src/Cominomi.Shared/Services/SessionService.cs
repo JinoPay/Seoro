@@ -60,6 +60,8 @@ public partial class SessionService : ISessionService
                         ErrorMessage = session.ErrorMessage,
                         PrUrl = session.PrUrl,
                         PrNumber = session.PrNumber,
+                        IssueNumber = session.IssueNumber,
+                        IssueUrl = session.IssueUrl,
                         ConflictFiles = session.ConflictFiles,
                         CreatedAt = session.CreatedAt,
                         UpdatedAt = session.UpdatedAt

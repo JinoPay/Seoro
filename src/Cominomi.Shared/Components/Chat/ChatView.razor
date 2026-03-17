@@ -27,6 +27,20 @@
          or SessionStatus.Pushed or SessionStatus.PrOpen or SessionStatus.ConflictDetected)
     {
         <div class="session-workflow" style="padding: var(--space-1) var(--space-4); border-bottom: 1px solid var(--border-subtle); justify-content: flex-end;">
+            @if (ChatState.CurrentSession.IssueNumber != null)
+            {
+                <MudLink Href="@ChatState.CurrentSession.IssueUrl" Target="_blank" Typo="Typo.caption"
+                         Style="font-size: var(--text-xs); margin-right: auto;">
+                    Issue #@ChatState.CurrentSession.IssueNumber
+                </MudLink>
+            }
+            else
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.BugReport" Size="Size.Small"
+                               OnClick="@(() => _linkIssueDialogOpen = true)"
+                               Style="width: 24px; height: 24px; opacity: 0.5; margin-right: auto;"
+                               Title="이슈 연결" />
+            }
             @if (_operatingSessionId == ChatState.CurrentSession.Id)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 12px; height: 12px;" />
@@ -236,11 +250,14 @@
     }
 </div>
 
+<LinkIssueDialog @bind-IsOpen="_linkIssueDialogOpen" OnIssueLinked="HandleIssueLinked" />
+
 @code {
     private List<BranchGroup> _branchGroups = [];
     private string _selectedBranch = "";
     private bool _isInitializingWorktree;
     private string? _operatingSessionId;
+    private bool _linkIssueDialogOpen;
     private bool _quickResponseVisible;
     private List<string> _quickResponseOptions = [];
     private bool _planReviewVisible;
@@ -1216,6 +1233,15 @@ Rules:
             ChatState.SetSession(fullSession);
         }
 
+        StateHasChanged();
+    }
+
+    private async Task HandleIssueLinked(IssueInfo issue)
+    {
+        if (ChatState.CurrentSession == null) return;
+        ChatState.CurrentSession.IssueNumber = issue.Number;
+        ChatState.CurrentSession.IssueUrl = issue.Url;
+        await SessionService.SaveSessionAsync(ChatState.CurrentSession);
         StateHasChanged();
     }
 

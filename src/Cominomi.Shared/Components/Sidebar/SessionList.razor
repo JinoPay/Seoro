@@ -158,6 +158,11 @@
                                                     <span class="tree-session-branch">@session.BranchName</span>
                                                 }
 
+                                                @if (session.IssueNumber != null)
+                                                {
+                                                    <span style="opacity: 0.6; font-size: 0.65rem;">#@session.IssueNumber</span>
+                                                }
+
                                                 @if (_diffStatsCache.TryGetValue(session.Id, out var stats) && (stats.Additions > 0 || stats.Deletions > 0))
                                                 {
                                                     <span class="tree-session-diff-stats">
