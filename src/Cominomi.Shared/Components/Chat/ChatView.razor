@@ -107,15 +107,6 @@
                 <p class="landing-subtitle">AI 코딩 어시스턴트</p>
 
                 <div class="landing-actions">
-                    @if (ChatState.CurrentWorkspace?.Status == WorkspaceStatus.Ready)
-                    {
-                        <button class="landing-action-card" @onclick="LandingStartNewChat">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size: 20px;" />
-                            <div class="landing-action-text">
-                                <span class="landing-action-title">새 대화 시작</span>
-                            </div>
-                        </button>
-                    }
                     <button class="landing-action-card" @onclick="LandingCreateWorkspace">
                         <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Style="font-size: 20px;" />
                         <div class="landing-action-text">
@@ -1079,14 +1070,6 @@ Rules:
                 .ToList();
         }
         catch { _recentSessions = []; }
-    }
-
-    private async Task LandingStartNewChat()
-    {
-        if (ChatState.CurrentWorkspace?.Status != WorkspaceStatus.Ready) return;
-        var session = await SessionService.CreatePendingSessionAsync(
-            ChatState.CurrentWorkspace.DefaultModel, ChatState.CurrentWorkspace.Id);
-        ChatState.SetSession(session);
     }
 
     private void LandingCreateWorkspace()
