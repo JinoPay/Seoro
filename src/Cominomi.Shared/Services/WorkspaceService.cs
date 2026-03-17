@@ -7,33 +7,17 @@ namespace Cominomi.Shared.Services;
 
 public partial class WorkspaceService : IWorkspaceService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     private readonly IGitService _gitService;
     private readonly ISettingsService _settingsService;
     private readonly ILogger<WorkspaceService> _logger;
-    private readonly string _workspacesDir;
-    private readonly string _repoInfoDir;
+    private readonly string _workspacesDir = AppPaths.Workspaces;
+    private readonly string _repoInfoDir = AppPaths.Repos;
 
     public WorkspaceService(IGitService gitService, ISettingsService settingsService, ILogger<WorkspaceService> logger)
     {
         _gitService = gitService;
         _settingsService = settingsService;
         _logger = logger;
-
-        _workspacesDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Cominomi", "workspaces");
-        _repoInfoDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Cominomi", "repos");
-
-        Directory.CreateDirectory(_workspacesDir);
-        Directory.CreateDirectory(_repoInfoDir);
     }
 
     private async Task<string> GetBaseDirAsync()
@@ -70,7 +54,7 @@ public partial class WorkspaceService : IWorkspaceService
             try
             {
                 var json = await File.ReadAllTextAsync(file);
-                var workspace = JsonSerializer.Deserialize<Workspace>(json, JsonOptions);
+                var workspace = JsonSerializer.Deserialize<Workspace>(json, JsonDefaults.Options);
                 if (workspace != null)
                     workspaces.Add(workspace);
             }
@@ -90,14 +74,14 @@ public partial class WorkspaceService : IWorkspaceService
             return null;
 
         var json = await File.ReadAllTextAsync(path);
-        return JsonSerializer.Deserialize<Workspace>(json, JsonOptions);
+        return JsonSerializer.Deserialize<Workspace>(json, JsonDefaults.Options);
     }
 
     public async Task SaveWorkspaceAsync(Workspace workspace)
     {
         workspace.UpdatedAt = DateTime.UtcNow;
         var path = Path.Combine(_workspacesDir, $"{workspace.Id}.json");
-        var json = JsonSerializer.Serialize(workspace, JsonOptions);
+        var json = JsonSerializer.Serialize(workspace, JsonDefaults.Options);
         await File.WriteAllTextAsync(path, json);
     }
 
@@ -134,7 +118,7 @@ public partial class WorkspaceService : IWorkspaceService
 
                 // Fetch latest
                 progress?.Report("Fetching latest changes...");
-                await RunGitFetchAsync(repoDir, ct);
+                await _gitService.FetchAsync(repoDir, ct);
             }
             else
             {
@@ -245,7 +229,7 @@ public partial class WorkspaceService : IWorkspaceService
             try
             {
                 var json = await File.ReadAllTextAsync(file);
-                var info = JsonSerializer.Deserialize<GitRepoInfo>(json, JsonOptions);
+                var info = JsonSerializer.Deserialize<GitRepoInfo>(json, JsonDefaults.Options);
                 if (info != null && NormalizeUrl(info.RemoteUrl) == normalizedUrl && Directory.Exists(info.LocalPath))
                     return info;
             }
@@ -258,31 +242,8 @@ public partial class WorkspaceService : IWorkspaceService
     private async Task SaveRepoInfoAsync(GitRepoInfo repoInfo)
     {
         var path = Path.Combine(_repoInfoDir, $"{repoInfo.Id}.json");
-        var json = JsonSerializer.Serialize(repoInfo, JsonOptions);
+        var json = JsonSerializer.Serialize(repoInfo, JsonDefaults.Options);
         await File.WriteAllTextAsync(path, json);
-    }
-
-    private static async Task RunGitFetchAsync(string repoDir, CancellationToken ct)
-    {
-        var process = new System.Diagnostics.Process
-        {
-            StartInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "git",
-                Arguments = "fetch --all --prune",
-                WorkingDirectory = repoDir,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                Environment = { ["GIT_TERMINAL_PROMPT"] = "0" }
-            }
-        };
-        process.Start();
-        await process.StandardOutput.ReadToEndAsync(ct);
-        await process.StandardError.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
-        process.Dispose();
     }
 
     private static string ExtractRepoSlug(string url)

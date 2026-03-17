@@ -6,22 +6,12 @@ namespace Cominomi.Shared.Services;
 
 public class TaskService : ITaskService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     private readonly ILogger<TaskService> _logger;
-    private readonly string _tasksDir;
+    private readonly string _tasksDir = AppPaths.Tasks;
 
     public TaskService(ILogger<TaskService> logger)
     {
         _logger = logger;
-        _tasksDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Cominomi", "tasks");
-        Directory.CreateDirectory(_tasksDir);
     }
 
     public Task<List<TaskItem>> GetBySessionAsync(string sessionId)
@@ -43,24 +33,24 @@ public class TaskService : ITaskService
         Directory.CreateDirectory(sessionDir);
 
         var path = Path.Combine(sessionDir, $"{task.Id}.json");
-        var json = JsonSerializer.Serialize(task, JsonOptions);
+        var json = JsonSerializer.Serialize(task, JsonDefaults.Options);
         await File.WriteAllTextAsync(path, json);
 
         return task;
     }
 
-    public Task<TaskItem?> GetAsync(string taskId)
+    public async Task<TaskItem?> GetAsync(string taskId)
     {
         foreach (var dir in Directory.GetDirectories(_tasksDir))
         {
             var path = Path.Combine(dir, $"{taskId}.json");
             if (File.Exists(path))
             {
-                var json = File.ReadAllText(path);
-                return Task.FromResult(JsonSerializer.Deserialize<TaskItem>(json, JsonOptions));
+                var json = await File.ReadAllTextAsync(path);
+                return JsonSerializer.Deserialize<TaskItem>(json, JsonDefaults.Options);
             }
         }
-        return Task.FromResult<TaskItem?>(null);
+        return null;
     }
 
     public async Task UpdateStatusAsync(string taskId, Models.TaskStatus status)
@@ -72,7 +62,7 @@ public class TaskService : ITaskService
         task.UpdatedAt = DateTime.UtcNow;
 
         var path = Path.Combine(_tasksDir, task.SessionId, $"{task.Id}.json");
-        var json = JsonSerializer.Serialize(task, JsonOptions);
+        var json = JsonSerializer.Serialize(task, JsonDefaults.Options);
         await File.WriteAllTextAsync(path, json);
     }
 
@@ -104,23 +94,23 @@ public class TaskService : ITaskService
         return all.OrderByDescending(t => t.UpdatedAt).ToList();
     }
 
-    private Task<List<TaskItem>> LoadTasksFromDirAsync(string dir)
+    private async Task<List<TaskItem>> LoadTasksFromDirAsync(string dir)
     {
         var tasks = new List<TaskItem>();
-        if (!Directory.Exists(dir)) return Task.FromResult(tasks);
+        if (!Directory.Exists(dir)) return tasks;
 
         foreach (var file in Directory.GetFiles(dir, "*.json"))
         {
             try
             {
-                var json = File.ReadAllText(file);
-                var task = JsonSerializer.Deserialize<TaskItem>(json, JsonOptions);
+                var json = await File.ReadAllTextAsync(file);
+                var task = JsonSerializer.Deserialize<TaskItem>(json, JsonDefaults.Options);
                 if (task != null)
                     tasks.Add(task);
             }
             catch (Exception ex) { _logger.LogWarning(ex, "Skipping corrupted task file: {File}", file); }
         }
 
-        return Task.FromResult(tasks.OrderBy(t => t.CreatedAt).ToList());
+        return tasks.OrderBy(t => t.CreatedAt).ToList();
     }
 }

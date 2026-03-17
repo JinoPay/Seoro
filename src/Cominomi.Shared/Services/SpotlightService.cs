@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -187,36 +186,8 @@ public class SpotlightService : ISpotlightService, IDisposable
         }
     }
 
-    private async Task<GitResult> RunGitAsync(string arguments, string workingDir, CancellationToken ct = default)
-    {
-        _logger.LogDebug("git {Arguments}", arguments);
-        var process = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "git",
-                Arguments = arguments,
-                WorkingDirectory = workingDir,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                Environment =
-                {
-                    ["GIT_TERMINAL_PROMPT"] = "0",
-                    ["NO_COLOR"] = "1"
-                }
-            }
-        };
-        process.Start();
-        var stdout = await process.StandardOutput.ReadToEndAsync(ct);
-        var stderr = await process.StandardError.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
-        _logger.LogDebug("git exited with code {ExitCode}", process.ExitCode);
-        var result = new GitResult(process.ExitCode == 0, stdout.Trim(), stderr.Trim());
-        process.Dispose();
-        return result;
-    }
+    private Task<GitResult> RunGitAsync(string arguments, string workingDir, CancellationToken ct = default)
+        => _gitService.RunAsync(arguments, workingDir, ct);
 
     public void Dispose()
     {

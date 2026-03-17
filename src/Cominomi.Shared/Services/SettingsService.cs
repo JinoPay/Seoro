@@ -6,23 +6,10 @@ namespace Cominomi.Shared.Services;
 public class SettingsService : ISettingsService
 {
     public event Action<AppSettings>? OnSettingsChanged;
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
-    private readonly string _settingsPath;
+    private readonly string _settingsPath = AppPaths.SettingsFile;
     private AppSettings? _cached;
 
-    public SettingsService()
-    {
-        var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Cominomi");
-        Directory.CreateDirectory(dir);
-        _settingsPath = Path.Combine(dir, "settings.json");
-    }
 
     public async Task<AppSettings> LoadAsync()
     {
@@ -36,7 +23,7 @@ public class SettingsService : ISettingsService
         }
 
         var json = await File.ReadAllTextAsync(_settingsPath);
-        _cached = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+        _cached = JsonSerializer.Deserialize<AppSettings>(json, JsonDefaults.Options) ?? new AppSettings();
         _cached.DefaultModel = ModelDefinitions.NormalizeModelId(_cached.DefaultModel);
         return _cached;
     }
@@ -44,7 +31,7 @@ public class SettingsService : ISettingsService
     public async Task SaveAsync(AppSettings settings)
     {
         _cached = settings;
-        var json = JsonSerializer.Serialize(settings, JsonOptions);
+        var json = JsonSerializer.Serialize(settings, JsonDefaults.Options);
         await File.WriteAllTextAsync(_settingsPath, json);
         OnSettingsChanged?.Invoke(settings);
     }

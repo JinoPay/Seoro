@@ -1,5 +1,6 @@
 @inject ChatState ChatState
 @inject ISessionService SessionService
+@inject ISessionGitWorkflowService GitWorkflow
 @inject ISettingsService SettingsService
 @inject IWorkspaceService WorkspaceService
 @inject IGitService GitService
@@ -461,7 +462,7 @@
         {
             try
             {
-                var merged = await SessionService.CheckMergeStatusAsync(session.Id);
+                var merged = await GitWorkflow.CheckMergeStatusAsync(session.Id);
                 if (merged)
                 {
                     session.Status = SessionStatus.Merged;

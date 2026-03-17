@@ -4,6 +4,7 @@
 @inject ChatState ChatState
 @inject IClaudeService ClaudeService
 @inject ISessionService SessionService
+@inject ISessionGitWorkflowService GitWorkflow
 @inject IGitService GitService
 @inject IGhService GhService
 @inject IWorkspaceService WorkspaceService
@@ -558,7 +559,7 @@
                             session.BranchName = newBranchName;
                     }
                     // Sync the chat tab title
-                    ChatState.UpdateChatTabTitle(summary);
+                    ChatState.Tabs.UpdateChatTabTitle(summary);
 
                     // Show in-chat notification
                     var branchInfo = session.IsLocalDir ? "" : $" · 브랜치: {session.BranchName}";
@@ -1062,7 +1063,7 @@ Rules:
             var mergeMethod = settings.DefaultMergeStrategy ?? "squash";
             var bodyTemplate = settings.DefaultPrBodyTemplate;
 
-            var updated = await SessionService.MergeAllAsync(session.Id, mergeMethod, bodyTemplate);
+            var updated = await GitWorkflow.MergeAllAsync(session.Id, mergeMethod, bodyTemplate);
             session.Status = updated.Status;
             session.ErrorMessage = updated.ErrorMessage;
             session.PrUrl = updated.PrUrl;
@@ -1094,7 +1095,7 @@ Rules:
         try
         {
             // Force push first
-            var pushed = await SessionService.PushBranchAsync(session.Id, force: true);
+            var pushed = await GitWorkflow.PushBranchAsync(session.Id, force: true);
             if (pushed.Status != SessionStatus.Pushed)
             {
                 session.Status = pushed.Status;
@@ -1112,7 +1113,7 @@ Rules:
             var mergeMethod = settings.DefaultMergeStrategy ?? "squash";
             var bodyTemplate = settings.DefaultPrBodyTemplate;
 
-            var updated = await SessionService.MergeAllAsync(session.Id, mergeMethod, bodyTemplate);
+            var updated = await GitWorkflow.MergeAllAsync(session.Id, mergeMethod, bodyTemplate);
             session.Status = updated.Status;
             session.ErrorMessage = updated.ErrorMessage;
             session.PrUrl = updated.PrUrl;
@@ -1136,7 +1137,7 @@ Rules:
 
     private async Task ResolveConflicts(Session session)
     {
-        await SessionService.RetryAfterConflictResolveAsync(session.Id);
+        await GitWorkflow.RetryAfterConflictResolveAsync(session.Id);
         session.Status = SessionStatus.Ready;
         session.ErrorMessage = null;
         session.ConflictFiles = null;

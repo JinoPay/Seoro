@@ -90,20 +90,20 @@
             }
         </div>
 
-        @if (ChatState.OpenTabs.Count > 1)
+        @if (ChatState.Tabs.OpenTabs.Count > 1)
         {
             <MainTabBar />
         }
 
         <div class="main-content">
-            @if (ChatState.ActiveTab?.Type == MainTabType.FileContent && ChatState.ActiveTab.FilePath != null)
+            @if (ChatState.Tabs.ActiveTab?.Type == MainTabType.FileContent && ChatState.Tabs.ActiveTab.FilePath != null)
             {
-                <FileContentView FilePath="ChatState.ActiveTab.FilePath"
-                                 Content="@(ChatState.ActiveTab.FileContent ?? "")" />
+                <FileContentView FilePath="ChatState.Tabs.ActiveTab.FilePath"
+                                 Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")" />
             }
-            else if (ChatState.ActiveTab?.Type == MainTabType.FileDiff && ChatState.ActiveTab.DiffData != null)
+            else if (ChatState.Tabs.ActiveTab?.Type == MainTabType.FileDiff && ChatState.Tabs.ActiveTab.DiffData != null)
             {
-                <FileDiffView Diff="ChatState.ActiveTab.DiffData" />
+                <FileDiffView Diff="ChatState.Tabs.ActiveTab.DiffData" />
             }
             else
             {

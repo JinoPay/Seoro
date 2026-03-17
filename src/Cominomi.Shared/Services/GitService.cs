@@ -177,6 +177,9 @@ public class GitService : IGitService
         return result.Success;
     }
 
+    public async Task<GitResult> RunAsync(string arguments, string workingDir, CancellationToken ct = default)
+        => await RunGitAsync(arguments, workingDir, ct);
+
     private async Task<GitResult> RunGitAsync(string arguments, string workingDir, CancellationToken ct = default)
     {
         _logger.LogDebug("git {Arguments}", arguments);

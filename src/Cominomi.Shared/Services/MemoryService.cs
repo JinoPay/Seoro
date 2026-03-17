@@ -7,25 +7,15 @@ namespace Cominomi.Shared.Services;
 
 public class MemoryService : IMemoryService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     private readonly ILogger<MemoryService> _logger;
-    private readonly string _memoryDir;
+    private readonly string _memoryDir = AppPaths.Memory;
 
     public MemoryService(ILogger<MemoryService> logger)
     {
         _logger = logger;
-        _memoryDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Cominomi", "memory");
-        Directory.CreateDirectory(_memoryDir);
     }
 
-    public Task<List<MemoryEntry>> GetAllAsync()
+    public async Task<List<MemoryEntry>> GetAllAsync()
     {
         var entries = new List<MemoryEntry>();
 
@@ -33,15 +23,15 @@ public class MemoryService : IMemoryService
         {
             try
             {
-                var json = File.ReadAllText(file);
-                var entry = JsonSerializer.Deserialize<MemoryEntry>(json, JsonOptions);
+                var json = await File.ReadAllTextAsync(file);
+                var entry = JsonSerializer.Deserialize<MemoryEntry>(json, JsonDefaults.Options);
                 if (entry != null)
                     entries.Add(entry);
             }
             catch (Exception ex) { _logger.LogWarning(ex, "Skipping corrupted memory file: {File}", file); }
         }
 
-        return Task.FromResult(entries.OrderByDescending(e => e.UpdatedAt).ToList());
+        return entries.OrderByDescending(e => e.UpdatedAt).ToList();
     }
 
     public async Task<List<MemoryEntry>> GetByTypeAsync(MemoryType type)
@@ -54,7 +44,7 @@ public class MemoryService : IMemoryService
     {
         entry.UpdatedAt = DateTime.UtcNow;
         var path = Path.Combine(_memoryDir, $"{entry.Id}.json");
-        var json = JsonSerializer.Serialize(entry, JsonOptions);
+        var json = JsonSerializer.Serialize(entry, JsonDefaults.Options);
         await File.WriteAllTextAsync(path, json);
     }
 
@@ -66,15 +56,14 @@ public class MemoryService : IMemoryService
         return Task.CompletedTask;
     }
 
-    public Task<MemoryEntry?> FindAsync(string entryId)
+    public async Task<MemoryEntry?> FindAsync(string entryId)
     {
         var path = Path.Combine(_memoryDir, $"{entryId}.json");
         if (!File.Exists(path))
-            return Task.FromResult<MemoryEntry?>(null);
+            return null;
 
-        var json = File.ReadAllText(path);
-        var entry = JsonSerializer.Deserialize<MemoryEntry>(json, JsonOptions);
-        return Task.FromResult(entry);
+        var json = await File.ReadAllTextAsync(path);
+        return JsonSerializer.Deserialize<MemoryEntry>(json, JsonDefaults.Options);
     }
 
     public string BuildMemoryPrompt(IEnumerable<MemoryEntry> entries)

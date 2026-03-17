@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using Cominomi.Shared.Models;
@@ -12,23 +11,19 @@ namespace Cominomi.Shared.Services;
 public class ClaudeService : IClaudeService
 {
     private readonly ISettingsService _settingsService;
-    private readonly IShellService _shellService;
     private readonly ILogger<ClaudeService> _logger;
+    private readonly ClaudeCliResolver _cliResolver;
     private readonly ConcurrentDictionary<string, AgentProcess> _agents = new();
     private CliCapabilities? _capabilities;
     private readonly SemaphoreSlim _capLock = new(1, 1);
-
-    private (string fileName, string argPrefix)? _resolvedCommand;
-    private string? _resolvedCommandPath;
-    private readonly SemaphoreSlim _resolveLock = new(1, 1);
 
     private const string DefaultAgentKey = "__default__";
 
     public ClaudeService(ISettingsService settingsService, IShellService shellService, ILogger<ClaudeService> logger)
     {
         _settingsService = settingsService;
-        _shellService = shellService;
         _logger = logger;
+        _cliResolver = new ClaudeCliResolver(shellService, logger);
     }
 
     public async IAsyncEnumerable<StreamEvent> SendMessageAsync(
@@ -53,7 +48,7 @@ public class ClaudeService : IClaudeService
         _logger.LogInformation("Starting Claude process for session {AgentKey} with model {Model}", agentKey, model);
 
         var settings = await _settingsService.LoadAsync();
-        var (fileName, baseArgs) = await ResolveClaudeCommandCachedAsync(settings.ClaudePath);
+        var (fileName, baseArgs) = await _cliResolver.ResolveAsync(settings.ClaudePath);
         var caps = await DetectCapabilitiesAsync(fileName, baseArgs);
 
         var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -64,7 +59,7 @@ public class ClaudeService : IClaudeService
             previous.Cancel();
         }
 
-        var arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
+        var arguments = ClaudeArgumentBuilder.Build(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
         var token = cts.Token;
         var envVars = settings.EnvironmentVariables.Count > 0 ? settings.EnvironmentVariables : null;
 
@@ -118,7 +113,7 @@ public class ClaudeService : IClaudeService
             caps.SupportsVerbose = true;
             process.Dispose();
 
-            arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
+            arguments = ClaudeArgumentBuilder.Build(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
             _logger.LogDebug("Executing (retry): {FileName} {Arguments}", fileName, arguments);
             process = StartProcess(fileName, arguments, workingDir, envVars);
             agent = new AgentProcess(process, cts);
@@ -223,110 +218,6 @@ public class ClaudeService : IClaudeService
         }
     }
 
-    private static string BuildArguments(
-        string baseArgs,
-        string model,
-        string permissionMode,
-        CliCapabilities caps,
-        string? conversationId = null,
-        string? systemPrompt = null,
-        string effortLevel = "auto",
-        bool continueMode = false,
-        bool forkSession = false,
-        int? maxTurns = null,
-        decimal? maxBudgetUsd = null,
-        string? fallbackModel = null,
-        string? mcpConfigPath = null,
-        bool debugMode = false,
-        List<string>? additionalDirs = null,
-        List<string>? allowedTools = null,
-        List<string>? disallowedTools = null)
-    {
-        var sb = new StringBuilder(baseArgs);
-        sb.Append("--print --output-format stream-json ");
-        if (caps.SupportsVerbose)
-            sb.Append("--verbose ");
-        if (debugMode)
-            sb.Append("--debug ");
-        sb.Append($"--model {model}");
-
-        switch (permissionMode)
-        {
-            case "plan":
-                sb.Append(" --permission-mode plan");
-                break;
-            case "acceptEdits":
-                sb.Append(" --permission-mode acceptEdits");
-                break;
-            case "dontAsk":
-                sb.Append(" --permission-mode dontAsk");
-                break;
-            case "bypassPermissions":
-                sb.Append(" --permission-mode bypassPermissions");
-                break;
-            case "bypassAll":
-                sb.Append(" --dangerously-skip-permissions");
-                break;
-            // "default" — no flag needed
-        }
-
-        if (!string.IsNullOrEmpty(effortLevel) && effortLevel != "auto")
-            sb.Append($" --effort {effortLevel}");
-
-        // Resume or continue existing conversation
-        if (!string.IsNullOrEmpty(conversationId))
-        {
-            sb.Append($" --resume {conversationId}");
-            if (forkSession)
-                sb.Append(" --fork-session");
-        }
-        else if (continueMode)
-            sb.Append(" --continue");
-
-        // Turn and budget limits
-        if (maxTurns.HasValue)
-            sb.Append($" --max-turns {maxTurns.Value}");
-
-        if (maxBudgetUsd.HasValue)
-            sb.Append($" --max-budget-usd {maxBudgetUsd.Value:F2}");
-
-        // Fallback model for overload resilience
-        if (!string.IsNullOrEmpty(fallbackModel))
-            sb.Append($" --fallback-model {fallbackModel}");
-
-        // MCP server configuration
-        if (!string.IsNullOrEmpty(mcpConfigPath))
-            sb.Append($" --mcp-config \"{mcpConfigPath}\"");
-
-        // Additional directories
-        if (additionalDirs is { Count: > 0 })
-        {
-            foreach (var dir in additionalDirs)
-                sb.Append($" --add-dir \"{dir}\"");
-        }
-
-        // Tool restrictions
-        if (allowedTools is { Count: > 0 })
-        {
-            foreach (var tool in allowedTools)
-                sb.Append($" --allowedTools \"{tool}\"");
-        }
-        if (disallowedTools is { Count: > 0 })
-        {
-            foreach (var tool in disallowedTools)
-                sb.Append($" --disallowedTools \"{tool}\"");
-        }
-
-        // System prompt injection
-        if (!string.IsNullOrEmpty(systemPrompt))
-        {
-            var escaped = systemPrompt.Replace("\\", "\\\\").Replace("\"", "\\\"");
-            sb.Append($" --append-system-prompt \"{escaped}\"");
-        }
-
-        return sb.ToString();
-    }
-
     private async Task<CliCapabilities> DetectCapabilitiesAsync(string fileName, string baseArgs)
     {
         if (_capabilities != null)
@@ -340,10 +231,10 @@ public class ClaudeService : IClaudeService
 
             var caps = new CliCapabilities();
 
-            var version = await RunSimpleCommand(fileName, $"{baseArgs}--version");
+            var version = await _cliResolver.RunSimpleCommandAsync(fileName, $"{baseArgs}--version");
             caps.Version = version?.Trim() ?? "";
 
-            var help = await RunSimpleCommand(fileName, $"{baseArgs}--help");
+            var help = await _cliResolver.RunSimpleCommandAsync(fileName, $"{baseArgs}--help");
             if (help != null)
             {
                 caps.SupportsVerbose = help.Contains("--verbose", StringComparison.OrdinalIgnoreCase);
@@ -359,43 +250,12 @@ public class ClaudeService : IClaudeService
         }
     }
 
-    private async Task<string?> RunSimpleCommand(string fileName, string arguments)
-    {
-        _logger.LogDebug("Executing: {FileName} {Arguments}", fileName, arguments);
-        try
-        {
-            var proc = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = fileName,
-                    Arguments = arguments,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    Environment = { ["NO_COLOR"] = "1" }
-                }
-            };
-            proc.Start();
-            var output = await proc.StandardOutput.ReadToEndAsync();
-            await proc.WaitForExitAsync();
-            proc.Dispose();
-            return output;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to run simple command: {FileName} {Args}", fileName, arguments);
-            return null;
-        }
-    }
-
     public async Task<(bool found, string resolvedPath)> DetectCliAsync()
     {
         try
         {
             var settings = await _settingsService.LoadAsync();
-            var (fileName, _) = await ResolveClaudeCommandCachedAsync(settings.ClaudePath);
+            var (fileName, _) = await _cliResolver.ResolveAsync(settings.ClaudePath);
             return (true, fileName);
         }
         catch (Exception ex)
@@ -415,76 +275,12 @@ public class ClaudeService : IClaudeService
         }
     }
 
-    private async Task<(string fileName, string argPrefix)> ResolveClaudeCommandCachedAsync(string? configuredPath)
-    {
-        await _resolveLock.WaitAsync();
-        try
-        {
-            if (_resolvedCommand.HasValue && _resolvedCommandPath == configuredPath)
-                return _resolvedCommand.Value;
-
-            var result = await ResolveClaudeCommandAsync(configuredPath);
-            _resolvedCommand = result;
-            _resolvedCommandPath = configuredPath;
-            return result;
-        }
-        finally
-        {
-            _resolveLock.Release();
-        }
-    }
-
-    private async Task<(string fileName, string argPrefix)> ResolveClaudeCommandAsync(string? configuredPath)
-    {
-        if (!string.IsNullOrWhiteSpace(configuredPath))
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                && configuredPath.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
-            {
-                return ("cmd.exe", $"/c \"{configuredPath}\" ");
-            }
-            return (configuredPath, "");
-        }
-
-        var resolved = await _shellService.WhichAsync("claude");
-        if (resolved != null)
-        {
-            // .cmd wrappers (npm-installed on Windows) need cmd.exe to execute reliably
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                && resolved.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
-            {
-                return ("cmd.exe", $"/c \"{resolved}\" ");
-            }
-            return (resolved, "");
-        }
-
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            string[] candidates =
-            [
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".npm", "bin", "claude"),
-                "/usr/local/bin/claude",
-                "/opt/homebrew/bin/claude"
-            ];
-
-            foreach (var candidate in candidates)
-            {
-                if (File.Exists(candidate))
-                    return (candidate, "");
-            }
-        }
-
-        return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-            ? ("claude.exe", "")
-            : ("claude", "");
-    }
-
     public async Task<string?> SummarizeAsync(string message, string workingDir)
     {
         try
         {
             var settings = await _settingsService.LoadAsync();
-            var (fileName, baseArgs) = await ResolveClaudeCommandCachedAsync(settings.ClaudePath);
+            var (fileName, baseArgs) = await _cliResolver.ResolveAsync(settings.ClaudePath);
 
             var sb = new StringBuilder(baseArgs);
             sb.Append("--print --output-format text ");

@@ -2,15 +2,15 @@
 @inject ChatState ChatState
 
 <div class="main-tab-bar">
-    @foreach (var tab in ChatState.OpenTabs)
+    @foreach (var tab in ChatState.Tabs.OpenTabs)
     {
-        <div class="main-tab @(ChatState.ActiveTab?.Id == tab.Id ? "active" : "")"
-             @onclick="@(() => ChatState.SetActiveTab(tab.Id))">
+        <div class="main-tab @(ChatState.Tabs.ActiveTab?.Id == tab.Id ? "active" : "")"
+             @onclick="@(() => ChatState.Tabs.SetActiveTab(tab.Id))">
             <MudIcon Icon="@GetTabIcon(tab)" Size="Size.Small" Style="width: 14px; height: 14px;" />
             <span class="main-tab-title">@tab.Title</span>
             @if (tab.Type != MainTabType.Chat)
             {
-                <button class="main-tab-close" @onclick="@(() => ChatState.CloseTab(tab.Id))" @onclick:stopPropagation="true">
+                <button class="main-tab-close" @onclick="@(() => ChatState.Tabs.CloseTab(tab.Id))" @onclick:stopPropagation="true">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" Style="width: 12px; height: 12px;" />
                 </button>
             }

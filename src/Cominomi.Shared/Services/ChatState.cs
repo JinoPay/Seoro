@@ -3,24 +3,6 @@ using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
 
-public enum StreamingPhase
-{
-    None,
-    Preparing,
-    Sending,
-    Thinking,
-    WritingText,
-    UsingTool
-}
-
-public enum RightPanelMode
-{
-    None,
-    Diff,
-    Explorer,
-    Changes
-}
-
 public class SessionStreamingState
 {
     public bool IsStreaming { get; set; }
@@ -36,9 +18,7 @@ public class ChatState : IDisposable
     public string? PendingMessage { get; private set; }
     public RightPanelMode RightPanel { get; private set; }
 
-    // Main tab system
-    public List<MainTab> OpenTabs { get; private set; } = new();
-    public MainTab? ActiveTab { get; private set; }
+    public TabManager Tabs { get; } = new();
 
     private readonly ConcurrentDictionary<string, SessionStreamingState> _streamingStates = new();
     private readonly ConcurrentDictionary<string, Session> _activeSessions = new();
@@ -48,6 +28,11 @@ public class ChatState : IDisposable
 
     public event Action? OnChange;
     public event Action? OnRequestCreateWorkspace;
+
+    public ChatState()
+    {
+        Tabs.OnTabChanged += NotifyStateChanged;
+    }
 
     // Current session streaming shortcuts (backward compatible)
     public bool IsStreaming => CurrentSession != null && IsSessionStreaming(CurrentSession.Id);
@@ -90,13 +75,7 @@ public class ChatState : IDisposable
     public void SetSession(Session? session)
     {
         CurrentSession = session;
-        // Reset tabs for new session
-        OpenTabs.Clear();
-        ActiveTab = null;
-        EnsureChatTab();
-        // Update chat tab title
-        var chatTab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.Chat);
-        if (chatTab != null) chatTab.Title = session?.Title ?? "Chat";
+        Tabs.Reset(session?.Title);
         NotifyStateChanged();
     }
 
@@ -243,128 +222,6 @@ public class ChatState : IDisposable
         var msg = PendingMessage;
         PendingMessage = null;
         return msg;
-    }
-
-    // Tab management
-    public void EnsureChatTab()
-    {
-        if (!OpenTabs.Any(t => t.Type == MainTabType.Chat))
-        {
-            var chatTab = new MainTab
-            {
-                Id = "chat",
-                Type = MainTabType.Chat,
-                Title = CurrentSession?.Title ?? "Chat"
-            };
-            OpenTabs.Insert(0, chatTab);
-        }
-        if (ActiveTab == null)
-        {
-            ActiveTab = OpenTabs.First(t => t.Type == MainTabType.Chat);
-        }
-    }
-
-    public void SetActiveTab(string tabId)
-    {
-        var tab = OpenTabs.FirstOrDefault(t => t.Id == tabId);
-        if (tab != null)
-        {
-            ActiveTab = tab;
-            NotifyStateChanged();
-        }
-    }
-
-    public void CloseTab(string tabId)
-    {
-        var tab = OpenTabs.FirstOrDefault(t => t.Id == tabId);
-        if (tab == null || tab.Type == MainTabType.Chat) return;
-
-        var idx = OpenTabs.IndexOf(tab);
-        OpenTabs.Remove(tab);
-
-        if (ActiveTab?.Id == tabId)
-        {
-            ActiveTab = OpenTabs.ElementAtOrDefault(Math.Min(idx, OpenTabs.Count - 1))
-                        ?? OpenTabs.FirstOrDefault();
-        }
-        NotifyStateChanged();
-    }
-
-    public void OpenFileContentTab(string filePath, string content)
-    {
-        var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileContent && t.FilePath == filePath);
-        if (existing != null)
-        {
-            existing.FileContent = content;
-            ActiveTab = existing;
-        }
-        else
-        {
-            var fileName = Path.GetFileName(filePath);
-            var tab = new MainTab
-            {
-                Type = MainTabType.FileContent,
-                Title = fileName,
-                FilePath = filePath,
-                FileContent = content
-            };
-            OpenTabs.Add(tab);
-            ActiveTab = tab;
-        }
-        NotifyStateChanged();
-    }
-
-    public void OpenFileContentTab(string filePath)
-    {
-        var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileContent && t.FilePath == filePath);
-        if (existing != null)
-        {
-            ActiveTab = existing;
-        }
-        else
-        {
-            var fileName = Path.GetFileName(filePath);
-            var tab = new MainTab
-            {
-                Type = MainTabType.FileContent,
-                Title = fileName,
-                FilePath = filePath
-            };
-            OpenTabs.Add(tab);
-            ActiveTab = tab;
-        }
-        NotifyStateChanged();
-    }
-
-    public void OpenFileDiffTab(string filePath, FileDiff diff)
-    {
-        var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileDiff && t.FilePath == filePath);
-        if (existing != null)
-        {
-            existing.DiffData = diff;
-            ActiveTab = existing;
-        }
-        else
-        {
-            var fileName = Path.GetFileName(filePath);
-            var tab = new MainTab
-            {
-                Type = MainTabType.FileDiff,
-                Title = fileName,
-                FilePath = filePath,
-                DiffData = diff
-            };
-            OpenTabs.Add(tab);
-            ActiveTab = tab;
-        }
-        NotifyStateChanged();
-    }
-
-    public void UpdateChatTabTitle(string title)
-    {
-        var chatTab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.Chat);
-        if (chatTab != null) chatTab.Title = title;
-        NotifyStateChanged();
     }
 
     public void AddSystemMessage(string text)

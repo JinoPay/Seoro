@@ -157,11 +157,11 @@
         try
         {
             var content = await GitService.ReadFileAsync(session.WorktreePath, filePath);
-            ChatState.OpenFileContentTab(filePath, content);
+            ChatState.Tabs.OpenFileContentTab(filePath, content);
         }
         catch (Exception ex)
         {
-            ChatState.OpenFileContentTab(filePath, $"Error reading file: {ex.Message}");
+            ChatState.Tabs.OpenFileContentTab(filePath, $"Error reading file: {ex.Message}");
         }
     }
 

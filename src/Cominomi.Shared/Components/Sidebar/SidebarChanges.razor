@@ -174,7 +174,7 @@
 
     private void OpenFileDiff(FileDiff file)
     {
-        ChatState.OpenFileDiffTab(file.FilePath, file);
+        ChatState.Tabs.OpenFileDiffTab(file.FilePath, file);
     }
 
     private static string GetFileName(string path)
