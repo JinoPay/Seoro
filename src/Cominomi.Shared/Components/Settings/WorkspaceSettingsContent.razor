@@ -1,0 +1,282 @@
+@inject IWorkspaceService WorkspaceService
+@inject ISessionService SessionService
+@inject IGitService GitService
+@inject ChatState ChatState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<div class="settings-content-area">
+    @if (_workspace != null)
+    {
+        <div class="settings-content-header">
+            <MudText Typo="Typo.h6" Style="font-size: var(--text-lg);">@_workspace.Name</MudText>
+            <div style="flex: 1;"></div>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
+                       Size="Size.Small" Style="text-transform: none;">
+                저장
+            </MudButton>
+        </div>
+
+        <div class="ws-settings-tabs">
+            <button class="ws-settings-tab @(_tab == "general" ? "active" : "")"
+                    @onclick="@(() => _tab = "general")">일반</button>
+            <button class="ws-settings-tab @(_tab == "git" ? "active" : "")"
+                    @onclick="@(() => _tab = "git")">Git</button>
+            <button class="ws-settings-tab @(_tab == "scripts" ? "active" : "")"
+                    @onclick="@(() => _tab = "scripts")">스크립트</button>
+            <button class="ws-settings-tab @(_tab == "prompts" ? "active" : "")"
+                    @onclick="@(() => _tab = "prompts")">프롬프트</button>
+        </div>
+
+        <div class="settings-content-body">
+            @if (_tab == "general")
+            {
+                <div class="settings-section-title">일반</div>
+                <div class="settings-section-desc">워크스페이스 기본 정보를 관리합니다.</div>
+
+                <MudStack Spacing="3">
+                    <MudTextField @bind-Value="_workspace.Name" Label="이름"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+
+                    <MudSelect T="string" @bind-Value="_workspace.DefaultModel" Label="기본 모델"
+                               Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var model in ModelDefinitions.All)
+                        {
+                            <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    @if (!string.IsNullOrEmpty(_workspace.RepoLocalPath))
+                    {
+                        <MudTextField Value="@ShortenPath(_workspace.RepoLocalPath)" Label="저장소 경로"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" ReadOnly="true" />
+                    }
+
+                    @if (!string.IsNullOrEmpty(_workspace.RepoUrl))
+                    {
+                        <MudTextField Value="@_workspace.RepoUrl" Label="저장소 URL"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" ReadOnly="true" />
+                    }
+
+                    <MudTextField @bind-Value="_workspace.SystemPrompt" Label="시스템 프롬프트"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
+                                  Placeholder="이 워크스페이스의 모든 세션에 추가될 시스템 프롬프트입니다."
+                                  HelperText="비워두면 기본 시스템 프롬프트만 사용합니다." />
+                </MudStack>
+            }
+            else if (_tab == "git")
+            {
+                <div class="settings-section-title">Git</div>
+                <div class="settings-section-desc">Git 기본값을 설정합니다.</div>
+
+                <MudStack Spacing="3">
+                    @if (_branches.Count > 0)
+                    {
+                        <MudSelect T="string" @bind-Value="_workspace.DefaultBaseBranch"
+                                   Label="기본 베이스 브랜치"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   HelperText="새 세션 생성 시 기본으로 사용할 브랜치입니다. 비워두면 자동 감지합니다."
+                                   Clearable="true">
+                            @foreach (var branch in _branches)
+                            {
+                                <MudSelectItem T="string" Value="@branch">@branch</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else
+                    {
+                        <MudTextField @bind-Value="_workspace.DefaultBaseBranch"
+                                      Label="기본 베이스 브랜치"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Placeholder="origin/main"
+                                      HelperText="비워두면 자동 감지합니다." />
+                    }
+
+                    <MudTextField @bind-Value="_workspace.DefaultRemote" Label="기본 리모트"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Placeholder="origin" />
+                </MudStack>
+            }
+            else if (_tab == "scripts")
+            {
+                <div class="settings-section-title">스크립트</div>
+                <div class="settings-section-desc">워크스페이스 이벤트에 실행할 스크립트를 설정합니다.</div>
+
+                <MudStack Spacing="4">
+                    <div>
+                        <div class="settings-group-title">Setup 스크립트</div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-bottom: 8px;">
+                            새 세션이 생성될 때 실행됩니다.
+                        </MudText>
+                        <MudTextField @bind-Value="_workspace.SetupScript"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="3"
+                                      Placeholder="e.g., npm install" />
+                    </div>
+
+                    <div>
+                        <div class="settings-group-title">Run 스크립트</div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-bottom: 8px;">
+                            플레이 버튼을 클릭할 때 실행됩니다.
+                        </MudText>
+                        <MudTextField @bind-Value="_workspace.RunScript"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="3"
+                                      Placeholder="e.g., npm run dev" />
+                    </div>
+
+                    <div>
+                        <div class="settings-group-title">Archive 스크립트</div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-bottom: 8px;">
+                            세션이 아카이브되기 전에 실행됩니다.
+                        </MudText>
+                        <MudTextField @bind-Value="_workspace.ArchiveScript"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="3"
+                                      Placeholder="e.g., rm -rf node_modules" />
+                    </div>
+                </MudStack>
+            }
+            else if (_tab == "prompts")
+            {
+                <div class="settings-section-title">프롬프트</div>
+                <div class="settings-section-desc">에이전트에 전달할 커스텀 지침을 설정합니다.</div>
+
+                <MudStack Spacing="4">
+                    <MudTextField @bind-Value="_workspace.CodeReviewPreferences"
+                                  Label="코드 리뷰 프롬프트"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
+                                  Placeholder="코드 리뷰 시 에이전트에 전달할 지침입니다." />
+
+                    <MudTextField @bind-Value="_workspace.CreatePrPreferences"
+                                  Label="PR 생성 프롬프트"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
+                                  Placeholder="PR 생성 시 에이전트에 전달할 지침입니다." />
+
+                    <MudTextField @bind-Value="_workspace.BranchRenamePreferences"
+                                  Label="브랜치 리네임 프롬프트"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
+                                  Placeholder="브랜치 리네임 시 에이전트에 전달할 지침입니다." />
+
+                    <MudTextField @bind-Value="_workspace.GeneralPreferences"
+                                  Label="일반 프롬프트"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
+                                  Placeholder="모든 새 대화 시작 시 에이전트에 전달할 지침입니다." />
+                </MudStack>
+            }
+
+            <div class="settings-danger-zone">
+                <div class="settings-group-title" style="color: var(--mud-palette-error);">위험 영역</div>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.Delete"
+                           OnClick="DeleteWorkspace"
+                           Style="text-transform: none;">
+                    워크스페이스 삭제
+                </MudButton>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-top: 4px;">
+                    이 워크스페이스와 모든 세션이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                </MudText>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div style="padding: var(--space-6); text-align: center;">
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string WorkspaceId { get; set; } = "";
+    [Parameter] public EventCallback OnWorkspaceDeleted { get; set; }
+
+    private Workspace? _workspace;
+    private string _tab = "general";
+    private List<string> _branches = [];
+    private string _lastWorkspaceId = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (WorkspaceId != _lastWorkspaceId)
+        {
+            _lastWorkspaceId = WorkspaceId;
+            _tab = "general";
+            await LoadWorkspace();
+        }
+    }
+
+    private async Task LoadWorkspace()
+    {
+        _workspace = await WorkspaceService.LoadWorkspaceAsync(WorkspaceId);
+        if (_workspace != null && !string.IsNullOrEmpty(_workspace.RepoLocalPath))
+        {
+            _ = LoadBranches();
+        }
+    }
+
+    private async Task LoadBranches()
+    {
+        try
+        {
+            var groups = await GitService.ListAllBranchesGroupedAsync(_workspace!.RepoLocalPath);
+            _branches = groups
+                .SelectMany(g => g.Branches)
+                .OrderBy(b => b)
+                .ToList();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            _branches = [];
+        }
+    }
+
+    private async Task Save()
+    {
+        if (_workspace == null) return;
+        _workspace.UpdatedAt = DateTime.UtcNow;
+        await WorkspaceService.SaveWorkspaceAsync(_workspace);
+        Snackbar.SettingsSaved();
+    }
+
+    private async Task DeleteWorkspace()
+    {
+        if (_workspace == null) return;
+
+        var result = await DialogService.ShowMessageBoxAsync(
+            "워크스페이스 삭제",
+            $"'{_workspace.Name}' 워크스페이스와 모든 세션이 삭제됩니다. 계속하시겠습니까?",
+            yesText: "삭제", cancelText: "취소");
+
+        if (result != true) return;
+
+        try
+        {
+            var sessions = await SessionService.GetSessionsByWorkspaceAsync(_workspace.Id);
+            foreach (var session in sessions)
+            {
+                await SessionService.DeleteSessionAsync(session.Id);
+            }
+
+            await WorkspaceService.DeleteWorkspaceAsync(_workspace.Id);
+
+            if (ChatState.CurrentWorkspace?.Id == _workspace.Id)
+            {
+                ChatState.SetWorkspace(null!);
+            }
+
+            Snackbar.Add($"'{_workspace.Name}' 워크스페이스가 삭제되었습니다.", Severity.Success);
+            await OnWorkspaceDeleted.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"삭제 중 오류가 발생했습니다: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static string ShortenPath(string path)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (path.StartsWith(home))
+            return "~" + path[home.Length..];
+        return path;
+    }
+}

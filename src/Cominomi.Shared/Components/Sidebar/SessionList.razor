@@ -76,9 +76,9 @@
                                          AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
                                          Style="width: 20px; height: 20px; opacity: 0.5;"
                                          ActivationEvent="@MouseEvent.LeftClick">
-                                    <MudMenuItem OnClick="@(() => _manageDialogOpen = true)"
+                                    <MudMenuItem OnClick="@(() => ChatState.OpenSettings("ws-general", workspacesInGroup.First().Id))"
                                                  Icon="@Icons.Material.Filled.Settings">
-                                        워크스페이스 관리
+                                        워크스페이스 설정
                                     </MudMenuItem>
                                 </MudMenu>
                             </div>
@@ -210,7 +210,6 @@
 </div>
 
 <CreateWorkspaceDialog @bind-IsOpen="_createDialogOpen" OnWorkspaceCreated="ReloadWorkspaces" />
-<ManageWorkspacesDialog @bind-IsOpen="_manageDialogOpen" OnWorkspacesChanged="ReloadWorkspaces" />
 
 @code {
     private List<Workspace> _workspaces = [];
@@ -218,7 +217,6 @@
     private Dictionary<string, List<Session>> _sessionCache = new();
     private Dictionary<string, (int Additions, int Deletions)> _diffStatsCache = new();
     private bool _createDialogOpen;
-    private bool _manageDialogOpen;
     private bool _isCreatingSession;
     private bool _filterVisible;
     private string? _filterText;
