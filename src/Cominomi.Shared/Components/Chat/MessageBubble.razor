@@ -135,6 +135,19 @@
                     var activityGroups = groups.Where(g => g.Type != ContentGroupType.FinalText).ToList();
                     var finalText = groups.FirstOrDefault(g => g.Type == ContentGroupType.FinalText);
 
+                    @* Safeguard: if no FinalText exists, promote the last text group *@
+                    if (finalText == null)
+                    {
+                        var lastTextInActivity = activityGroups.LastOrDefault(g => g.Type == ContentGroupType.Text);
+                        if (lastTextInActivity != null)
+                        {
+                            lastTextInActivity.Type = ContentGroupType.FinalText;
+                            lastTextInActivity.IsIntermediate = false;
+                            activityGroups.Remove(lastTextInActivity);
+                            finalText = lastTextInActivity;
+                        }
+                    }
+
                     @if (activityGroups.Count > 0 && activityGroups.Any(g => g.Type == ContentGroupType.ToolGroup))
                     {
                         var summaryInfo = ContentGrouper.BuildActivitySummary(activityGroups);

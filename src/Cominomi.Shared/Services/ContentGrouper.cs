@@ -110,19 +110,21 @@ public static partial class ContentGrouper
 
             if (i == lastTextIndex)
             {
-                // During streaming: if this looks like verbose pre-tool text, collapse it
-                if (isStreaming && hasPrevTool && IsLikelyVerboseText(text))
+                if (hasNextTool)
                 {
-                    group.IsIntermediate = true;
-                }
-                // After streaming: also collapse if adjacent to tools and verbose
-                else if (!isStreaming && (hasPrevTool || hasNextTool) &&
-                         (text.Length <= 150 || IsIntermediateText(text) || IsLikelyVerboseText(text)))
-                {
-                    group.IsIntermediate = true;
+                    // More tool calls follow — only collapse if clearly filler
+                    if (text.Length <= 80 && IsIntermediateText(text))
+                    {
+                        group.IsIntermediate = true;
+                    }
+                    else
+                    {
+                        group.Type = ContentGroupType.FinalText;
+                    }
                 }
                 else
                 {
+                    // Final text after all tools — always show
                     group.Type = ContentGroupType.FinalText;
                 }
                 continue;
