@@ -59,7 +59,7 @@ public class ClaudeService : IClaudeService
             previous.Cancel();
         }
 
-        var arguments = ClaudeArgumentBuilder.Build(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
+        var arguments = ClaudeArgumentBuilder.Build(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
         var token = cts.Token;
         var envVars = settings.EnvironmentVariables.Count > 0 ? settings.EnvironmentVariables : null;
 
@@ -113,7 +113,7 @@ public class ClaudeService : IClaudeService
             caps.SupportsVerbose = true;
             process.Dispose();
 
-            arguments = ClaudeArgumentBuilder.Build(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
+            arguments = ClaudeArgumentBuilder.Build(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
             _logger.LogDebug("Executing (retry): {FileName} {Arguments}", fileName, arguments);
             process = StartProcess(fileName, arguments, workingDir, envVars);
             agent = new AgentProcess(process, cts);

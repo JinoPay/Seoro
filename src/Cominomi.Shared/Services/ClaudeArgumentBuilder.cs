@@ -13,7 +13,6 @@ public static class ClaudeArgumentBuilder
         string? conversationId = null,
         string? systemPrompt = null,
         string effortLevel = "auto",
-        string? sessionName = null,
         bool continueMode = false,
         bool forkSession = false,
         int? maxTurns = null,
@@ -65,13 +64,6 @@ public static class ClaudeArgumentBuilder
         }
         else if (continueMode)
             sb.Append(" --continue");
-
-        // Session name
-        if (!string.IsNullOrEmpty(sessionName))
-        {
-            var escapedName = sessionName.Replace("\\", "\\\\").Replace("\"", "\\\"");
-            sb.Append($" --name \"{escapedName}\"");
-        }
 
         // Turn and budget limits
         if (maxTurns.HasValue)
