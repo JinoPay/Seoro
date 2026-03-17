@@ -50,11 +50,11 @@
                                    Disabled="Disabled || IsStreaming" />
                 </MudTooltip>
 
-                <MudTooltip Text="@(ThinkingEnabled ? "Thinking 모드 (켜짐)" : "Thinking 모드 (꺼짐)")">
+                <MudTooltip Text="@GetEffortLevelTooltip()">
                     <MudIconButton Icon="@Icons.Material.Filled.Psychology"
-                                   Color="@(ThinkingEnabled ? Color.Secondary : Color.Default)"
+                                   Color="@GetEffortLevelColor()"
                                    Size="Size.Small"
-                                   OnClick="ToggleThinking"
+                                   OnClick="CycleEffortLevel"
                                    Disabled="Disabled || IsStreaming" />
                 </MudTooltip>
 
@@ -87,6 +87,23 @@
                                 @model.DisplayName
                             </MudListItem>
                         }
+                        <MudDivider />
+                        <MudListItem T="string" OnClick="@(() => _customModelInput = true)"
+                                     Class="@(_isCustomModel ? "model-item-active" : "")">
+                            @if (_customModelInput)
+                            {
+                                <MudTextField T="string" @bind-Value="_customModelId"
+                                              Placeholder="claude-sonnet-4-6..."
+                                              Variant="Variant.Text" Margin="Margin.Dense"
+                                              Immediate="true" AutoFocus="true"
+                                              OnKeyDown="HandleCustomModelKeyDown"
+                                              Style="font-size: 0.8rem;" />
+                            }
+                            else
+                            {
+                                <span style="opacity: 0.7;">커스텀 모델...</span>
+                            }
+                        </MudListItem>
                     </MudList>
                 </MudPopover>
 
@@ -133,10 +150,11 @@
     [Parameter] public string Model { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> OnModelChanged { get; set; }
     [Parameter] public string? ResolvedModel { get; set; }
-    [Parameter] public bool ThinkingEnabled { get; set; }
-    [Parameter] public EventCallback<bool> ThinkingEnabledChanged { get; set; }
+    [Parameter] public string EffortLevel { get; set; } = "auto";
+    [Parameter] public EventCallback<string> EffortLevelChanged { get; set; }
 
     private static readonly string[] PermissionModes = ["bypassAll", "plan"];
+    private static readonly string[] EffortLevels = ["auto", "low", "medium", "high", "max"];
 
     private string _inputText = string.Empty;
     private List<PendingAttachment> _pendingAttachments = [];
@@ -144,6 +162,9 @@
     private bool _handlersRegistered;
     private bool _suppressInputUpdates;
     private bool _modelMenuOpen;
+    private bool _customModelInput;
+    private string _customModelId = "";
+    private bool _isCustomModel => !ModelDefinitions.All.Any(m => m.Id == Model) && !string.IsNullOrEmpty(Model);
 
     // Parameter tracking to prevent unnecessary re-renders (cursor jumping fix)
     private bool _prevIsStreaming;
@@ -151,7 +172,7 @@
     private string _prevPermissionMode = "bypassAll";
     private string _prevModel = string.Empty;
     private string? _prevResolvedModel;
-    private bool _prevThinkingEnabled;
+    private string _prevEffortLevel = "auto";
     private bool _forceRender;
 
     private string GetPermissionModeTooltip() => PermissionMode switch
@@ -180,10 +201,30 @@
         await PermissionModeChanged.InvokeAsync(next);
     }
 
-    private async Task ToggleThinking()
+    private string GetEffortLevelTooltip() => EffortLevel switch
+    {
+        "low" => "Effort: Low",
+        "medium" => "Effort: Medium",
+        "high" => "Effort: High",
+        "max" => "Effort: Max (Thinking)",
+        _ => "Effort: Auto"
+    };
+
+    private Color GetEffortLevelColor() => EffortLevel switch
+    {
+        "max" => Color.Secondary,
+        "high" => Color.Info,
+        "medium" => Color.Warning,
+        "low" => Color.Default,
+        _ => Color.Default
+    };
+
+    private async Task CycleEffortLevel()
     {
         _forceRender = true;
-        await ThinkingEnabledChanged.InvokeAsync(!ThinkingEnabled);
+        var idx = Array.IndexOf(EffortLevels, EffortLevel);
+        var next = EffortLevels[(idx + 1) % EffortLevels.Length];
+        await EffortLevelChanged.InvokeAsync(next);
     }
 
     protected override void OnParametersSet()
@@ -193,14 +234,14 @@
             _prevPermissionMode != PermissionMode ||
             _prevModel != Model ||
             _prevResolvedModel != ResolvedModel ||
-            _prevThinkingEnabled != ThinkingEnabled)
+            _prevEffortLevel != EffortLevel)
         {
             _prevIsStreaming = IsStreaming;
             _prevDisabled = Disabled;
             _prevPermissionMode = PermissionMode;
             _prevModel = Model;
             _prevResolvedModel = ResolvedModel;
-            _prevThinkingEnabled = ThinkingEnabled;
+            _prevEffortLevel = EffortLevel;
             _forceRender = true;
         }
     }
@@ -317,8 +358,25 @@
     private void CloseModelMenu()
     {
         _modelMenuOpen = false;
+        _customModelInput = false;
         _forceRender = true;
         StateHasChanged();
+    }
+
+    private async Task HandleCustomModelKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_customModelId))
+        {
+            await SelectModel(_customModelId.Trim());
+            _customModelInput = false;
+            _customModelId = "";
+        }
+        else if (e.Key == "Escape")
+        {
+            _customModelInput = false;
+            _forceRender = true;
+            StateHasChanged();
+        }
     }
 
     private async Task SelectModel(string modelId)

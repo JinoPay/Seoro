@@ -62,6 +62,34 @@ public class SkillRegistry : ISkillRegistry
                 Description = "Create a detailed implementation plan",
                 PromptTemplate = "Create a detailed implementation plan for the following task. Include file paths, code changes, and verification steps. Save the plan to .context/plans/. Task: {args}",
                 IsBuiltIn = true
+            },
+            new SkillDefinition
+            {
+                Name = "compact",
+                Description = "Compact conversation to free context space",
+                PromptTemplate = "Summarize the conversation so far into a compact context, focusing on key decisions, code changes made, and current state. Discard verbose tool outputs and intermediate reasoning. {args}",
+                IsBuiltIn = true
+            },
+            new SkillDefinition
+            {
+                Name = "security-review",
+                Description = "Analyze changes for security vulnerabilities",
+                PromptTemplate = "Analyze the pending changes on the current branch for security vulnerabilities. Review the git diff and identify risks like injection, auth issues, data exposure, and other OWASP top 10 concerns. {args}",
+                IsBuiltIn = true
+            },
+            new SkillDefinition
+            {
+                Name = "pr-comments",
+                Description = "Fetch and address PR comments",
+                PromptTemplate = "Fetch the comments from the current pull request using `gh pr view --comments` and address any feedback or requested changes. {args}",
+                IsBuiltIn = true
+            },
+            new SkillDefinition
+            {
+                Name = "debug",
+                Description = "Debug and diagnose an issue",
+                PromptTemplate = "Debug and diagnose the following issue. Check logs, error messages, and code paths to find the root cause and suggest a fix: {args}",
+                IsBuiltIn = true
             }
         ]);
     }

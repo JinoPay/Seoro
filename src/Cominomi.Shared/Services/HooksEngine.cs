@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
@@ -62,15 +63,31 @@ public class HooksEngine : IHooksEngine
         {
             try
             {
-                var psi = new ProcessStartInfo
+                ProcessStartInfo psi;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    FileName = "/bin/sh",
-                    Arguments = $"-c \"{hook.Command.Replace("\"", "\\\"")}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
-                };
+                    psi = new ProcessStartInfo
+                    {
+                        FileName = "cmd.exe",
+                        Arguments = $"/c \"{hook.Command.Replace("\"", "\\\"")}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    };
+                }
+                else
+                {
+                    psi = new ProcessStartInfo
+                    {
+                        FileName = "/bin/sh",
+                        Arguments = $"-c \"{hook.Command.Replace("\"", "\\\"")}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    };
+                }
 
                 if (!string.IsNullOrEmpty(hook.WorkingDirectory))
                     psi.WorkingDirectory = hook.WorkingDirectory;

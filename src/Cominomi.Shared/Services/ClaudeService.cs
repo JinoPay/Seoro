@@ -34,10 +34,14 @@ public class ClaudeService : IClaudeService
         string workingDir,
         string model,
         string permissionMode = "bypassAll",
-        bool thinkingEnabled = false,
+        string effortLevel = "auto",
         string? sessionId = null,
         string? conversationId = null,
         string? systemPrompt = null,
+        string? sessionName = null,
+        bool continueMode = false,
+        int? maxTurns = null,
+        decimal? maxBudgetUsd = null,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var agentKey = sessionId ?? DefaultAgentKey;
@@ -55,10 +59,11 @@ public class ClaudeService : IClaudeService
             previous.Cancel();
         }
 
-        var arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, thinkingEnabled);
+        var arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath);
         var token = cts.Token;
+        var envVars = settings.EnvironmentVariables.Count > 0 ? settings.EnvironmentVariables : null;
 
-        var process = StartProcess(fileName, arguments, workingDir);
+        var process = StartProcess(fileName, arguments, workingDir, envVars);
         var agent = new AgentProcess(process, cts);
         _agents[agentKey] = agent;
 
@@ -105,8 +110,8 @@ public class ClaudeService : IClaudeService
             caps.SupportsVerbose = true;
             process.Dispose();
 
-            arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, thinkingEnabled);
-            process = StartProcess(fileName, arguments, workingDir);
+            arguments = BuildArguments(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, sessionName, continueMode, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath);
+            process = StartProcess(fileName, arguments, workingDir, envVars);
             agent = new AgentProcess(process, cts);
             _agents[agentKey] = agent;
 
@@ -152,27 +157,32 @@ public class ClaudeService : IClaudeService
         _agents.TryRemove(agentKey, out _);
     }
 
-    private static Process StartProcess(string fileName, string arguments, string workingDir)
+    private static Process StartProcess(string fileName, string arguments, string workingDir, Dictionary<string, string>? envVars = null)
     {
-        var process = new Process
+        var psi = new ProcessStartInfo
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = fileName,
-                Arguments = arguments,
-                WorkingDirectory = workingDir,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                RedirectStandardInput = true,
-                CreateNoWindow = true,
-                StandardInputEncoding = new UTF8Encoding(false),
-                StandardOutputEncoding = Encoding.UTF8,
-                StandardErrorEncoding = Encoding.UTF8,
-                Environment = { ["NO_COLOR"] = "1" }
-            }
+            FileName = fileName,
+            Arguments = arguments,
+            WorkingDirectory = workingDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            RedirectStandardInput = true,
+            CreateNoWindow = true,
+            StandardInputEncoding = new UTF8Encoding(false),
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
         };
 
+        psi.Environment["NO_COLOR"] = "1";
+
+        if (envVars != null)
+        {
+            foreach (var (key, value) in envVars)
+                psi.Environment[key] = value;
+        }
+
+        var process = new Process { StartInfo = psi };
         process.Start();
         return process;
     }
@@ -211,7 +221,13 @@ public class ClaudeService : IClaudeService
         CliCapabilities caps,
         string? conversationId = null,
         string? systemPrompt = null,
-        bool thinkingEnabled = false)
+        string effortLevel = "auto",
+        string? sessionName = null,
+        bool continueMode = false,
+        int? maxTurns = null,
+        decimal? maxBudgetUsd = null,
+        string? fallbackModel = null,
+        string? mcpConfigPath = null)
     {
         var sb = new StringBuilder(baseArgs);
         sb.Append("--print --output-format stream-json ");
@@ -219,17 +235,50 @@ public class ClaudeService : IClaudeService
             sb.Append("--verbose ");
         sb.Append($"--model {model}");
 
-        if (permissionMode == "plan")
-            sb.Append(" --permission-mode plan");
-        else if (permissionMode == "bypassAll")
-            sb.Append(" --dangerously-skip-permissions");
+        switch (permissionMode)
+        {
+            case "plan":
+                sb.Append(" --permission-mode plan");
+                break;
+            case "acceptEdits":
+                sb.Append(" --permission-mode acceptEdits");
+                break;
+            case "bypassAll":
+                sb.Append(" --dangerously-skip-permissions");
+                break;
+            // "default" — no flag needed
+        }
 
-        if (thinkingEnabled)
-            sb.Append(" --effort max");
+        if (!string.IsNullOrEmpty(effortLevel) && effortLevel != "auto")
+            sb.Append($" --effort {effortLevel}");
 
-        // Resume existing conversation
+        // Resume or continue existing conversation
         if (!string.IsNullOrEmpty(conversationId))
             sb.Append($" --resume {conversationId}");
+        else if (continueMode)
+            sb.Append(" --continue");
+
+        // Session name
+        if (!string.IsNullOrEmpty(sessionName))
+        {
+            var escapedName = sessionName.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            sb.Append($" --name \"{escapedName}\"");
+        }
+
+        // Turn and budget limits
+        if (maxTurns.HasValue)
+            sb.Append($" --max-turns {maxTurns.Value}");
+
+        if (maxBudgetUsd.HasValue)
+            sb.Append($" --max-budget-usd {maxBudgetUsd.Value:F2}");
+
+        // Fallback model for overload resilience
+        if (!string.IsNullOrEmpty(fallbackModel))
+            sb.Append($" --fallback-model {fallbackModel}");
+
+        // MCP server configuration
+        if (!string.IsNullOrEmpty(mcpConfigPath))
+            sb.Append($" --mcp-config \"{mcpConfigPath}\"");
 
         // System prompt injection
         if (!string.IsNullOrEmpty(systemPrompt))

@@ -9,10 +9,14 @@ public interface IClaudeService
         string workingDir,
         string model,
         string permissionMode = "bypassAll",
-        bool thinkingEnabled = false,
+        string effortLevel = "auto",
         string? sessionId = null,
         string? conversationId = null,
         string? systemPrompt = null,
+        string? sessionName = null,
+        bool continueMode = false,
+        int? maxTurns = null,
+        decimal? maxBudgetUsd = null,
         CancellationToken ct = default);
 
     void Cancel(string? sessionId = null);

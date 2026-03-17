@@ -29,6 +29,11 @@
                     <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small" />
                     연동
                 </button>
+                <button class="settings-nav-item @(_activeSection == "advanced" ? "active" : "")"
+                        @onclick="@(() => SetSection("advanced"))">
+                    <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" />
+                    고급
+                </button>
             </div>
 
             <div class="settings-content">
@@ -70,14 +75,31 @@
                             }
                         </MudSelect>
 
-                        <MudSwitch T="bool" @bind-Value="_settings.DefaultThinkingEnabled"
-                                   Label="Thinking 모드 기본값" Color="Color.Secondary" />
+                        <MudSelect T="string" @bind-Value="_settings.DefaultEffortLevel" Label="기본 Effort 레벨"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   HelperText="auto: 모델 기본값 / low~max: 고정 레벨 (max는 Opus만 지원)">
+                            <MudSelectItem T="string" Value="@("auto")">Auto</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("low")">Low</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("medium")">Medium</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("high")">High</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("max")">Max (Thinking)</MudSelectItem>
+                        </MudSelect>
 
                         <MudSelect T="string" @bind-Value="_settings.DefaultPermissionMode" Label="기본 권한 모드"
                                    Variant="Variant.Outlined" Margin="Margin.Dense">
                             <MudSelectItem T="string" Value="@("bypassAll")">일반 모드</MudSelectItem>
                             <MudSelectItem T="string" Value="@("plan")">플랜 모드</MudSelectItem>
                         </MudSelect>
+
+                        <MudTextField @bind-Value="_settings.FallbackModel" Label="Fallback 모델"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Placeholder="sonnet"
+                                      HelperText="기본 모델 과부하 시 대체 모델 (비워두면 미사용)" />
+
+                        <MudTextField @bind-Value="_settings.McpConfigPath" Label="MCP 설정 파일 경로"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Placeholder="./mcp.json"
+                                      HelperText="MCP 서버 설정 JSON 파일 경로 (비워두면 미사용)" />
                     </MudStack>
                 }
                 else if (_activeSection == "integrations")
@@ -158,6 +180,47 @@
                                       HelperText="비워두면 자동으로 감지합니다" />
                     </div>
                 }
+                else if (_activeSection == "advanced")
+                {
+                    <div class="settings-section-title">고급</div>
+                    <div class="settings-section-desc">Claude CLI 프로세스에 전달할 환경변수를 설정합니다.</div>
+
+                    <MudStack Spacing="2">
+                        @foreach (var key in _settings.EnvironmentVariables.Keys.ToList())
+                        {
+                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                <MudTextField T="string" Value="@key" ReadOnly="true"
+                                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                                              Style="flex: 0.4;" />
+                                <MudTextField T="string" Value="@_settings.EnvironmentVariables[key]"
+                                              ValueChanged="@(v => _settings.EnvironmentVariables[key] = v)"
+                                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                                              Style="flex: 0.6;"
+                                              InputType="@(key.Contains("KEY", StringComparison.OrdinalIgnoreCase) ? InputType.Password : InputType.Text)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                               Color="Color.Error"
+                                               OnClick="@(() => RemoveEnvVar(key))" />
+                            </MudStack>
+                        }
+
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                            <MudTextField @bind-Value="_newEnvKey" Placeholder="변수명"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                                          Style="flex: 0.4;" />
+                            <MudTextField @bind-Value="_newEnvValue" Placeholder="값"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                                          Style="flex: 0.6;" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                                           Color="Color.Primary"
+                                           OnClick="AddEnvVar"
+                                           Disabled="@(string.IsNullOrWhiteSpace(_newEnvKey))" />
+                        </MudStack>
+
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            예: ANTHROPIC_API_KEY, CLAUDE_CODE_USE_BEDROCK, CLAUDE_CODE_MAX_OUTPUT_TOKENS
+                        </MudText>
+                    </MudStack>
+                }
             </div>
         </div>
     </DialogContent>
@@ -179,6 +242,8 @@
     private bool _claudeCliChecking;
     private bool _claudeCliFound;
     private string? _claudeCliResolvedPath;
+    private string _newEnvKey = "";
+    private string _newEnvValue = "";
 
     private readonly DialogOptions _dialogOptions = new()
     {
@@ -244,6 +309,21 @@
         {
             _settings.DefaultCloneDirectory = path;
         }
+    }
+
+    private void AddEnvVar()
+    {
+        if (!string.IsNullOrWhiteSpace(_newEnvKey))
+        {
+            _settings.EnvironmentVariables[_newEnvKey.Trim()] = _newEnvValue;
+            _newEnvKey = "";
+            _newEnvValue = "";
+        }
+    }
+
+    private void RemoveEnvVar(string key)
+    {
+        _settings.EnvironmentVariables.Remove(key);
     }
 
     private async Task Save()

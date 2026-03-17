@@ -231,8 +231,8 @@
                    Disabled="@(ChatState.CurrentSession.Status == SessionStatus.Archived || _isInitializingWorktree)"
                    PermissionMode="@(ChatState.CurrentSession.PermissionMode ?? "bypassAll")"
                    PermissionModeChanged="HandlePermissionModeChanged"
-                   ThinkingEnabled="@(ChatState.CurrentSession.ThinkingEnabled)"
-                   ThinkingEnabledChanged="HandleThinkingToggled"
+                   EffortLevel="@(ChatState.CurrentSession.EffortLevel ?? "auto")"
+                   EffortLevelChanged="HandleEffortLevelChanged"
                    Model="@(ChatState.CurrentSession.Model ?? "")"
                    OnModelChanged="HandleModelChanged"
                    ResolvedModel="@(ChatState.CurrentSession.ResolvedModel)"
@@ -590,10 +590,11 @@
                 session.WorktreePath,
                 session.Model,
                 session.PermissionMode,
-                thinkingEnabled: session.ThinkingEnabled,
+                effortLevel: session.EffortLevel ?? "auto",
                 sessionId: session.Id,
                 conversationId: conversationId,
-                systemPrompt: systemPrompt))
+                systemPrompt: systemPrompt,
+                sessionName: session.Title != session.CityName ? session.Title : null))
             {
                 if (firstEvent)
                 {
@@ -686,6 +687,12 @@
                     case "result":
                         if (string.IsNullOrEmpty(session.ConversationId) && !string.IsNullOrEmpty(evt.SessionId))
                             session.ConversationId = evt.SessionId;
+                        // Accumulate token usage
+                        if (evt.Message?.Usage != null)
+                        {
+                            session.TotalInputTokens += evt.Message.Usage.InputTokens;
+                            session.TotalOutputTokens += evt.Message.Usage.OutputTokens;
+                        }
                         if (evt.Message?.Content != null)
                         {
                             foreach (var block in evt.Message.Content)
@@ -871,10 +878,10 @@
         }
     }
 
-    private async Task HandleThinkingToggled(bool enabled)
+    private async Task HandleEffortLevelChanged(string level)
     {
         if (ChatState.CurrentSession == null) return;
-        ChatState.CurrentSession.ThinkingEnabled = enabled;
+        ChatState.CurrentSession.EffortLevel = level;
         ChatState.NotifyStateChanged();
         await SessionService.SaveSessionAsync(ChatState.CurrentSession);
     }

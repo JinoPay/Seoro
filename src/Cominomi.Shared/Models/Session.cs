@@ -26,7 +26,7 @@ public class Session
     public string Model { get; set; } = ModelDefinitions.Default.Id;
     public string WorkspaceId { get; set; } = "default";
     public string PermissionMode { get; set; } = "bypassAll";
-    public bool ThinkingEnabled { get; set; }
+    public string EffortLevel { get; set; } = "auto";
     public AgentType AgentType { get; set; } = AgentType.Code;
     public string CityName { get; set; } = "";
     public SessionStatus Status { get; set; } = SessionStatus.Initializing;
@@ -36,6 +36,10 @@ public class Session
     public int? PrNumber { get; set; }
     public List<string>? ConflictFiles { get; set; }
     public string? ConversationId { get; set; }
+    public int? MaxTurns { get; set; }
+    public decimal? MaxBudgetUsd { get; set; }
+    public long TotalInputTokens { get; set; }
+    public long TotalOutputTokens { get; set; }
     public bool PlanCompleted { get; set; }
     public string? PlanFilePath { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

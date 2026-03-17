@@ -156,7 +156,7 @@ public partial class SessionService : ISessionService
             CityName = cityName,
             Title = cityName,
             Status = SessionStatus.Pending,
-            ThinkingEnabled = settings.DefaultThinkingEnabled,
+            EffortLevel = settings.DefaultEffortLevel,
             PermissionMode = settings.DefaultPermissionMode
         };
 
