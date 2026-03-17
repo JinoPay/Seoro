@@ -522,6 +522,55 @@ public partial class SessionService : ISessionService
         return session;
     }
 
+    public async Task<Session> MergeAllAsync(string sessionId, string mergeMethod = "squash", string? prBodyTemplate = null, CancellationToken ct = default)
+    {
+        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
+
+        // Step 1: Push (if not already pushed)
+        if (session.Status == SessionStatus.Ready)
+        {
+            session = await PushBranchAsync(sessionId, force: false, ct);
+            if (session.Status != SessionStatus.Pushed)
+                return session; // push failed, ErrorMessage set
+        }
+
+        // Step 2: Create PR (if not already created)
+        if (session.Status == SessionStatus.Pushed)
+        {
+            var baseBranch = !string.IsNullOrEmpty(session.BaseBranch)
+                ? session.BaseBranch
+                : await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath) ?? "main";
+
+            var title = session.Title is "New Chat" or "" ? session.BranchName : session.Title;
+
+            string body;
+            if (!string.IsNullOrEmpty(prBodyTemplate))
+            {
+                body = prBodyTemplate
+                    .Replace("{branchName}", session.BranchName)
+                    .Replace("{baseBranch}", baseBranch)
+                    .Replace("{sessionTitle}", session.Title);
+            }
+            else
+            {
+                var logResult = await _gitService.GetCommitLogAsync(workspace.RepoLocalPath, baseBranch, ct);
+                body = logResult.Success ? logResult.Output.Trim() : "";
+            }
+
+            session = await CreatePrAsync(sessionId, title, body, ct);
+            if (session.Status != SessionStatus.PrOpen)
+                return session; // PR creation failed
+        }
+
+        // Step 3: Merge
+        if (session.Status == SessionStatus.PrOpen)
+        {
+            session = await MergePrAsync(sessionId, mergeMethod, ct);
+        }
+
+        return session;
+    }
+
     public async Task RetryAfterConflictResolveAsync(string sessionId)
     {
         var session = await LoadSessionAsync(sessionId);

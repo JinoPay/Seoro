@@ -238,6 +238,11 @@ public class GitService : IGitService
         return result.Success ? result.Output : "";
     }
 
+    public async Task<GitResult> GetCommitLogAsync(string repoDir, string baseBranch, CancellationToken ct = default)
+    {
+        return await RunGitAsync($"log {baseBranch}..HEAD --oneline", repoDir, ct);
+    }
+
     public async Task<List<string>> ListTrackedFilesAsync(string workingDir, CancellationToken ct = default)
     {
         var result = await RunGitAsync("ls-files", workingDir, ct);
