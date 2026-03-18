@@ -30,6 +30,11 @@
                 <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small" />
                 MCP 서버
             </button>
+            <button class="settings-nav-item @ActiveClass("plugins")"
+                    @onclick="@(() => SetSection("plugins"))">
+                <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small" />
+                플러그인
+            </button>
             <button class="settings-nav-item @ActiveClass("commands")"
                     @onclick="@(() => SetSection("commands"))">
                 <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" />
