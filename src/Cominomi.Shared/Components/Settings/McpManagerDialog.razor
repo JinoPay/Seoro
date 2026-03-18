@@ -10,7 +10,7 @@
         </MudText>
     </TitleContent>
     <DialogContent>
-        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
+        <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
             @* Server List Tab *@
             <MudTabPanel Text="서버 목록" Icon="@Icons.Material.Filled.List">
                 @if (_loading)
@@ -33,7 +33,7 @@
                                 <th>이름</th>
                                 <th>전송 방식</th>
                                 <th>범위</th>
-                                <th style="width: 80px;"></th>
+                                <th style="width: 110px;"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -54,6 +54,9 @@
                                         </MudChip>
                                     </td>
                                     <td>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                                       Color="Color.Primary"
+                                                       OnClick="@(() => StartEdit(server))" />
                                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                                        Color="Color.Error"
                                                        OnClick="@(() => RemoveServer(server))" />
@@ -69,8 +72,9 @@
                 </div>
             </MudTabPanel>
 
-            @* Add Server Tab *@
-            <MudTabPanel Text="서버 추가" Icon="@Icons.Material.Filled.Add">
+            @* Add/Edit Server Tab *@
+            <MudTabPanel Text="@(_editingServer != null ? "서버 수정" : "서버 추가")"
+                         Icon="@(_editingServer != null ? Icons.Material.Filled.Edit : Icons.Material.Filled.Add)">
                 <MudStack Spacing="3" Class="pa-3">
                     <MudTextField @bind-Value="_newName" Label="서버 이름" Variant="Variant.Outlined"
                                   Margin="Margin.Dense" Required="true" />
@@ -126,10 +130,17 @@
                                    OnClick="AddEnvRow">환경변수 추가</MudButton>
                     </div>
 
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddServer"
-                               Disabled="@(string.IsNullOrWhiteSpace(_newName) || (_newTransport == "stdio" && string.IsNullOrWhiteSpace(_newCommand)) || (_newTransport == "sse" && string.IsNullOrWhiteSpace(_newUrl)))">
-                        서버 추가
-                    </MudButton>
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   OnClick="@(_editingServer != null ? SaveEdit : AddServer)"
+                                   Disabled="@(string.IsNullOrWhiteSpace(_newName) || (_newTransport == "stdio" && string.IsNullOrWhiteSpace(_newCommand)) || (_newTransport == "sse" && string.IsNullOrWhiteSpace(_newUrl)))">
+                            @(_editingServer != null ? "저장" : "서버 추가")
+                        </MudButton>
+                        @if (_editingServer != null)
+                        {
+                            <MudButton Variant="Variant.Text" OnClick="CancelEdit">취소</MudButton>
+                        }
+                    </MudStack>
                 </MudStack>
             </MudTabPanel>
 
@@ -184,8 +195,10 @@
     private List<McpServer> _servers = [];
     private bool _loading;
     private bool _importing;
+    private McpServer? _editingServer;
+    private int _activeTabIndex;
 
-    // Add server form
+    // Add/Edit server form
     private string _newName = "";
     private string _newTransport = "stdio";
     private string _newCommand = "";
@@ -264,8 +277,72 @@
         }
     }
 
+    private void StartEdit(McpServer server)
+    {
+        _editingServer = server;
+        _newName = server.Name;
+        _newTransport = server.Transport;
+        _newCommand = server.Command ?? "";
+        _newArgs = server.Args.Count > 0 ? string.Join(" ", server.Args) : "";
+        _newUrl = server.Url ?? "";
+        _newScope = server.Scope;
+
+        _envKeys.Clear();
+        _envValues.Clear();
+        foreach (var (key, value) in server.Env)
+        {
+            _envKeys.Add(key);
+            _envValues.Add(value);
+        }
+
+        _activeTabIndex = 1;
+        StateHasChanged();
+    }
+
+    private async Task SaveEdit()
+    {
+        if (_editingServer == null) return;
+
+        var env = new Dictionary<string, string>();
+        for (int i = 0; i < _envKeys.Count; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(_envKeys[i]))
+                env[_envKeys[i]] = _envValues[i];
+        }
+
+        var args = string.IsNullOrWhiteSpace(_newArgs) ? null : _newArgs.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+
+        var result = await McpService.UpdateServerAsync(
+            _editingServer.Name, _editingServer.Scope,
+            _newName, _newTransport,
+            _newTransport == "stdio" ? _newCommand : null,
+            args, env.Count > 0 ? env : null,
+            _newTransport == "sse" ? _newUrl : null,
+            _newScope);
+
+        if (result)
+        {
+            Snackbar.Add($"서버 '{_newName}'이 수정되었습니다.", Severity.Success);
+            ResetAddForm();
+            _activeTabIndex = 0;
+            await RefreshServers();
+        }
+        else
+        {
+            Snackbar.Add("서버 수정에 실패했습니다.", Severity.Error);
+        }
+    }
+
+    private void CancelEdit()
+    {
+        ResetAddForm();
+        _activeTabIndex = 0;
+        StateHasChanged();
+    }
+
     private void ResetAddForm()
     {
+        _editingServer = null;
         _newName = "";
         _newCommand = "";
         _newArgs = "";
