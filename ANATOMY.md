@@ -1533,7 +1533,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **4** | **데이터 모델 불변성 부재** — 모든 모델이 `public set`, 가변 참조 공유 | `ChatState`와 `Session`이 같은 `ChatMessage` 객체 참조. `AppendText()`가 `Text` + `Parts` 양쪽 수정. 상태 추적 불가 | §3, §23 | 높 |
 | **5** | **Git/Activity 캐싱 없음** — 매번 프로세스 생성 | `DetectDefaultBranchAsync`, `ListBranchesAsync`가 매 호출마다 git 프로세스. 탭 전환마다 모든 세션의 `git log` 재실행 | §5, §19.5 | 중 |
 | **6** | **시스템 프롬프트·메모리 크기 제한 없음** — 무제한 토큰 소비 | notes.md 10만줄이 그대로 프롬프트에 주입. 메모리도 전체 JSON 로드 + 워크스페이스별 필터링 없음 | §17, §18 | 중 |
-| **7** | **app.css 3,169줄 모놀리스** — 토큰·컴포넌트 스타일 혼재 | 디자인 토큰 변경 시 전체 파일 탐색 필요. `tokens.css` 미분리. 테마 확장 어려움 | §11 | 낮 |
+| **7** | ~~**app.css 3,169줄 모놀리스** — 토큰·컴포넌트 스타일 혼재~~ ✅ **해결** | `tokens.css` 분리 완료 (73줄). `app.css` → 3,095줄 (컴포넌트 전용). `index.html`에서 `tokens.css` → `app.css` 순서 로드 | §11 | 낮 |
 | **8** | **SessionList 가상화 없음** — 전체 DOM 렌더링 | 세션 수십 개 이상에서 사이드바 렌더 성능 저하. `<Virtualize>` 미적용 | §12 | 낮 |
 | **9** | **입력 검증 전면 부재** — 설정/세션/플러그인 경계에서 | 빈 `WorkspaceId`로 Session 생성 가능, 음수 토큰 허용, 잘못된 경로의 설정 저장 가능. 5+ public 메서드에 null 체크 없음 | §3, §22 | 중 |
 | **10** | **JSONL 사용량 로그 무한 성장** — 로테이션/정리 없음 | `usage.jsonl` 무한 증가. 중복 제거 `HashSet` 앱 재시작 시 리셋 → 이중 기록. 내보내기 기능도 없음 | §20 | 낮 |
