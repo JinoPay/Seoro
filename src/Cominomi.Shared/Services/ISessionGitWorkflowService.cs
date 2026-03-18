@@ -10,5 +10,7 @@ public interface ISessionGitWorkflowService
     Task<Session> CreatePrAsync(string sessionId, string title, string body, CancellationToken ct = default);
     Task<Session> MergePrAsync(string sessionId, string mergeMethod = CominomiConstants.DefaultMergeStrategy, CancellationToken ct = default);
     Task<Session> MergeAllAsync(string sessionId, string mergeMethod = CominomiConstants.DefaultMergeStrategy, string? prBodyTemplate = null, CancellationToken ct = default);
+    Task<Session> RebaseOntoBaseAsync(string sessionId, CancellationToken ct = default);
+    Task<Session> ClosePrAsync(string sessionId, CancellationToken ct = default);
     Task RetryAfterConflictResolveAsync(string sessionId);
 }
