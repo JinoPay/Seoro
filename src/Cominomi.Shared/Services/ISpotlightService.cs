@@ -7,4 +7,5 @@ public interface ISpotlightService
     bool IsActive(string sessionId);
     Task StartAsync(Workspace workspace, Session session);
     Task StopAsync(string sessionId);
+    Task RecoverAsync();
 }

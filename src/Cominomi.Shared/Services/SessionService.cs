@@ -37,7 +37,9 @@ public partial class SessionService : ISessionService
         if (!Directory.Exists(_sessionsDir))
             return sessions;
 
-        foreach (var file in Directory.GetFiles(_sessionsDir, "*.json"))
+        // Only read metadata files (exclude .messages.json)
+        foreach (var file in Directory.GetFiles(_sessionsDir, "*.json")
+                     .Where(f => !f.EndsWith(".messages.json", StringComparison.OrdinalIgnoreCase)))
         {
             try
             {
@@ -45,30 +47,10 @@ public partial class SessionService : ISessionService
                 var session = JsonSerializer.Deserialize<Session>(json, JsonDefaults.Options);
                 if (session != null)
                 {
-                    // Don't load full messages for the list view
-                    sessions.Add(new Session
-                    {
-                        Id = session.Id,
-                        Title = session.Title,
-                        WorktreePath = session.WorktreePath,
-                        BranchName = session.BranchName,
-                        BaseBranch = session.BaseBranch,
-                        Model = ModelDefinitions.NormalizeModelId(session.Model),
-                        WorkspaceId = session.WorkspaceId,
-                        PermissionMode = session.PermissionMode,
-                        AgentType = session.AgentType,
-                        IsLocalDir = session.IsLocalDir,
-                        CityName = session.CityName,
-                        Status = session.Status,
-                        ErrorMessage = session.ErrorMessage,
-                        PrUrl = session.PrUrl,
-                        PrNumber = session.PrNumber,
-                        IssueNumber = session.IssueNumber,
-                        IssueUrl = session.IssueUrl,
-                        ConflictFiles = session.ConflictFiles,
-                        CreatedAt = session.CreatedAt,
-                        UpdatedAt = session.UpdatedAt
-                    });
+                    session.Model = ModelDefinitions.NormalizeModelId(session.Model);
+                    // Messages are stored separately — the metadata file has none (or empty for new format)
+                    session.Messages.Clear();
+                    sessions.Add(session);
                 }
             }
             catch (Exception ex)
@@ -100,9 +82,9 @@ public partial class SessionService : ISessionService
             Model = model,
             WorkspaceId = workspaceId,
             BranchName = branchName,
-            BaseBranch = baseBranch,
-            Status = SessionStatus.Initializing
+            BaseBranch = baseBranch
         };
+        session.TransitionStatus(SessionStatus.Initializing);
 
         session.WorktreePath = Path.Combine(worktreesDir, session.Id);
 
@@ -113,18 +95,18 @@ public partial class SessionService : ISessionService
 
             if (!result.Success)
             {
-                session.Status = SessionStatus.Error;
+                session.TransitionStatus(SessionStatus.Error);
                 session.ErrorMessage = result.Error;
             }
             else
             {
-                session.Status = SessionStatus.Ready;
+                session.TransitionStatus(SessionStatus.Ready);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create session worktree for workspace {WorkspaceId}", workspaceId);
-            session.Status = SessionStatus.Error;
+            session.TransitionStatus(SessionStatus.Error);
             session.ErrorMessage = ex.Message;
         }
 
@@ -145,10 +127,10 @@ public partial class SessionService : ISessionService
             WorkspaceId = workspaceId,
             CityName = cityName,
             Title = cityName,
-            Status = SessionStatus.Pending,
             EffortLevel = settings.DefaultEffortLevel,
             PermissionMode = settings.DefaultPermissionMode
         };
+        session.TransitionStatus(SessionStatus.Pending);
 
         await SaveSessionAsync(session);
         _logger.LogInformation("Created session {SessionId} ({CityName}) in workspace {WorkspaceId}", session.Id, cityName, workspaceId);
@@ -178,11 +160,11 @@ public partial class SessionService : ISessionService
             CityName = cityName,
             Title = cityName,
             IsLocalDir = true,
-            Status = SessionStatus.Ready,
             WorktreePath = workspace.RepoLocalPath,
             EffortLevel = settings.DefaultEffortLevel,
             PermissionMode = settings.DefaultPermissionMode
         };
+        session.TransitionStatus(SessionStatus.Ready);
 
         await SaveSessionAsync(session);
         _logger.LogInformation("Created local-dir session {SessionId} ({CityName}) in workspace {WorkspaceId}", session.Id, cityName, workspaceId);
@@ -213,7 +195,7 @@ public partial class SessionService : ISessionService
         session.BranchName = branchName;
         session.BaseBranch = baseBranch;
         session.WorktreePath = Path.Combine(worktreesDir, session.Id);
-        session.Status = SessionStatus.Initializing;
+        session.TransitionStatus(SessionStatus.Initializing);
 
         try
         {
@@ -222,12 +204,12 @@ public partial class SessionService : ISessionService
 
             if (!result.Success)
             {
-                session.Status = SessionStatus.Error;
+                session.TransitionStatus(SessionStatus.Error);
                 session.ErrorMessage = result.Error;
             }
             else
             {
-                session.Status = SessionStatus.Ready;
+                session.TransitionStatus(SessionStatus.Ready);
                 // Initialize .context/ directory for collaboration
                 await _contextService.EnsureContextDirectoryAsync(session.WorktreePath);
                 _logger.LogInformation("Worktree initialized for session {SessionId} on branch {Branch}", sessionId, branchName);
@@ -236,7 +218,7 @@ public partial class SessionService : ISessionService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to initialize worktree for session {SessionId}", sessionId);
-            session.Status = SessionStatus.Error;
+            session.TransitionStatus(SessionStatus.Error);
             session.ErrorMessage = ex.Message;
         }
 
@@ -252,15 +234,28 @@ public partial class SessionService : ISessionService
 
         var json = await File.ReadAllTextAsync(path);
         var session = JsonSerializer.Deserialize<Session>(json, JsonDefaults.Options);
-        if (session != null)
+        if (session == null) return null;
+
+        session.Model = ModelDefinitions.NormalizeModelId(session.Model);
+
+        // Load messages from separate file (new format)
+        var messagesPath = Path.Combine(_sessionsDir, $"{sessionId}.messages.json");
+        if (File.Exists(messagesPath))
         {
-            session.Model = ModelDefinitions.NormalizeModelId(session.Model);
-            // Migrate old messages that only have Text/ToolCalls to Parts
-            foreach (var msg in session.Messages)
-                msg.MigrateToParts();
+            var messagesJson = await File.ReadAllTextAsync(messagesPath);
+            var messages = JsonSerializer.Deserialize<List<ChatMessage>>(messagesJson, JsonDefaults.Options);
+            if (messages != null)
+                session.Messages = messages;
         }
+        // else: old format — messages are already inline from the main JSON
+
+        foreach (var msg in session.Messages)
+            msg.MigrateToParts();
+
         return session;
     }
+
+    private const int MaxToolOutputLength = 2000;
 
     public async Task SaveSessionAsync(Session session)
     {
@@ -282,14 +277,70 @@ public partial class SessionService : ISessionService
                 }
             }
 
-            var path = Path.Combine(_sessionsDir, $"{session.Id}.json");
-            var json = JsonSerializer.Serialize(session, JsonDefaults.Options);
-            await AtomicFileWriter.WriteAsync(path, json);
+            // Save metadata (without messages)
+            var messages = session.Messages;
+            session.Messages = [];
+            var metadataJson = JsonSerializer.Serialize(session, JsonDefaults.Options);
+            session.Messages = messages;
+
+            var metadataPath = Path.Combine(_sessionsDir, $"{session.Id}.json");
+            await AtomicFileWriter.WriteAsync(metadataPath, metadataJson);
+
+            // Save messages separately (with tool output truncation)
+            if (messages.Count > 0)
+            {
+                var truncated = TruncateToolOutputs(messages);
+                var messagesJson = JsonSerializer.Serialize(truncated, JsonDefaults.Options);
+                var messagesPath = Path.Combine(_sessionsDir, $"{session.Id}.messages.json");
+                await AtomicFileWriter.WriteAsync(messagesPath, messagesJson);
+            }
         }
         finally
         {
             semaphore.Release();
         }
+    }
+
+    private static List<ChatMessage> TruncateToolOutputs(List<ChatMessage> messages)
+    {
+        return messages.Select(msg =>
+        {
+            bool needsTruncation = msg.ToolCalls.Any(tc => tc.Output.Length > MaxToolOutputLength)
+                || msg.Parts.Any(p => p.ToolCall != null && p.ToolCall.Output.Length > MaxToolOutputLength);
+
+            if (!needsTruncation)
+                return msg;
+
+            return new ChatMessage
+            {
+                Id = msg.Id,
+                Role = msg.Role,
+                Text = msg.Text,
+                Timestamp = msg.Timestamp,
+                IsStreaming = msg.IsStreaming,
+                StreamingStartedAt = msg.StreamingStartedAt,
+                StreamingFinishedAt = msg.StreamingFinishedAt,
+                Attachments = msg.Attachments,
+                ToolCalls = msg.ToolCalls.Select(TruncateToolCall).ToList(),
+                Parts = msg.Parts.Select(p => p.ToolCall != null
+                    ? new ContentPart { Type = p.Type, Text = p.Text, ToolCall = TruncateToolCall(p.ToolCall) }
+                    : p).ToList()
+            };
+        }).ToList();
+    }
+
+    private static ToolCall TruncateToolCall(ToolCall tc)
+    {
+        if (tc.Output.Length <= MaxToolOutputLength) return tc;
+        return new ToolCall
+        {
+            Id = tc.Id,
+            Name = tc.Name,
+            Input = tc.Input,
+            Output = tc.Output[..MaxToolOutputLength] + $"\n[...truncated, {tc.Output.Length} chars total]",
+            IsError = tc.IsError,
+            IsComplete = tc.IsComplete
+        };
     }
 
     public async Task RenameBranchAsync(string sessionId, string newBranchName)
@@ -356,7 +407,7 @@ public partial class SessionService : ISessionService
             }
         }
 
-        session.Status = SessionStatus.Archived;
+        session.TransitionStatus(SessionStatus.Archived);
         await SaveSessionAsync(session);
         _logger.LogInformation("Session {SessionId} archived", sessionId);
 
@@ -380,6 +431,10 @@ public partial class SessionService : ISessionService
         var path = Path.Combine(_sessionsDir, $"{sessionId}.json");
         if (File.Exists(path))
             File.Delete(path);
+
+        var messagesPath = Path.Combine(_sessionsDir, $"{sessionId}.messages.json");
+        if (File.Exists(messagesPath))
+            File.Delete(messagesPath);
 
         _logger.LogInformation("Session {SessionId} deleted", sessionId);
     }

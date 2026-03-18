@@ -48,7 +48,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
 
         if (isMerged)
         {
-            session.Status = SessionStatus.Merged;
+            session.TransitionStatus(SessionStatus.Merged);
             await _sessionService.SaveSessionAsync(session);
         }
 
@@ -67,7 +67,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
 
         if (result.Success)
         {
-            session.Status = SessionStatus.Pushed;
+            session.TransitionStatus(SessionStatus.Pushed);
             session.ErrorMessage = null;
 
             _ = Task.Run(async () =>
@@ -108,7 +108,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
 
         if (result.Success)
         {
-            session.Status = SessionStatus.PrOpen;
+            session.TransitionStatus(SessionStatus.PrOpen);
             session.ErrorMessage = null;
 
             // Parse PR URL from output (gh pr create prints the URL)
@@ -153,7 +153,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
 
         if (result.Success)
         {
-            session.Status = SessionStatus.Merged;
+            session.TransitionStatus(SessionStatus.Merged);
             session.ErrorMessage = null;
         }
         else
@@ -162,7 +162,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             var errorLower = (result.Error + result.Output).ToLowerInvariant();
             if (errorLower.Contains("conflict") || errorLower.Contains("merge") || errorLower.Contains("not mergeable"))
             {
-                session.Status = SessionStatus.ConflictDetected;
+                session.TransitionStatus(SessionStatus.ConflictDetected);
                 session.ErrorMessage = result.Error;
             }
             else
@@ -234,7 +234,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         var session = await _sessionService.LoadSessionAsync(sessionId)
             ?? throw new InvalidOperationException($"Session '{sessionId}' not found.");
 
-        session.Status = SessionStatus.Ready;
+        session.TransitionStatus(SessionStatus.Ready);
         session.ErrorMessage = null;
         session.ConflictFiles = null;
         await _sessionService.SaveSessionAsync(session);

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -9,6 +10,7 @@ public class SpotlightService : ISpotlightService, IDisposable
     private readonly IGitService _gitService;
     private readonly ILogger<SpotlightService> _logger;
     private readonly ConcurrentDictionary<string, SpotlightSession> _sessions = new();
+    private static readonly string StateFilePath = Path.Combine(AppPaths.Settings, "spotlight-state.json");
 
     public SpotlightService(IGitService gitService, ILogger<SpotlightService> logger)
     {
@@ -18,10 +20,77 @@ public class SpotlightService : ISpotlightService, IDisposable
 
     public bool IsActive(string sessionId) => _sessions.ContainsKey(sessionId);
 
+    public async Task RecoverAsync()
+    {
+        if (!File.Exists(StateFilePath))
+            return;
+
+        SpotlightPersistedState? state = null;
+        try
+        {
+            var json = await File.ReadAllTextAsync(StateFilePath);
+            state = JsonSerializer.Deserialize<SpotlightPersistedState>(json);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read spotlight state file, deleting");
+            TryDeleteStateFile();
+            return;
+        }
+
+        if (state == null || string.IsNullOrEmpty(state.RepoDir) || string.IsNullOrEmpty(state.OriginalBranch))
+        {
+            TryDeleteStateFile();
+            return;
+        }
+
+        if (!Directory.Exists(state.RepoDir))
+        {
+            _logger.LogWarning("Spotlight recovery: repo dir {RepoDir} no longer exists", state.RepoDir);
+            TryDeleteStateFile();
+            return;
+        }
+
+        _logger.LogWarning("Recovering from spotlight crash for session {SessionId} in {RepoDir}",
+            state.SessionId, state.RepoDir);
+
+        try
+        {
+            await RunGitAsync("checkout -- .", state.RepoDir);
+            await RunGitAsync("clean -fd", state.RepoDir);
+            await RunGitAsync($"checkout \"{state.OriginalBranch}\"", state.RepoDir);
+
+            var stashMarker = $"cominomi-spotlight-{state.SessionId}";
+            var stashList = await RunGitAsync("stash list", state.RepoDir);
+            if (stashList.Success && stashList.Output.Contains(stashMarker))
+            {
+                await RunGitAsync("stash pop", state.RepoDir);
+            }
+
+            _logger.LogInformation("Spotlight recovery completed for session {SessionId}", state.SessionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Spotlight recovery failed for session {SessionId}", state.SessionId);
+        }
+        finally
+        {
+            TryDeleteStateFile();
+        }
+    }
+
     public async Task StartAsync(Workspace workspace, Session session)
     {
         if (_sessions.ContainsKey(session.Id))
             return;
+
+        // Guard: only one Spotlight at a time
+        if (!_sessions.IsEmpty)
+        {
+            var existingId = _sessions.Keys.First();
+            _logger.LogWarning("Stopping existing spotlight {ExistingId} before starting {NewId}", existingId, session.Id);
+            await StopAsync(existingId);
+        }
 
         if (session.IsLocalDir || string.IsNullOrEmpty(session.BranchName))
             throw new InvalidOperationException("Spotlight is not supported for local directory sessions.");
@@ -35,8 +104,13 @@ public class SpotlightService : ISpotlightService, IDisposable
         if (originalBranch == null)
             throw new InvalidOperationException("Could not detect current branch in repository.");
 
+        // Persist state BEFORE making changes so crash recovery can clean up
+        await PersistStateAsync(session.Id, originalBranch, repoDir);
+
+        var stashMarker = $"cominomi-spotlight-{session.Id}";
+
         // Stash any uncommitted changes in the repo root
-        await RunGitAsync("stash push -m \"cominomi-spotlight-backup\"", repoDir);
+        await RunGitAsync($"stash push -m \"{stashMarker}\"", repoDir);
 
         // Checkout the session branch in the repo root
         var checkoutResult = await RunGitAsync($"checkout \"{session.BranchName}\"", repoDir);
@@ -44,6 +118,7 @@ public class SpotlightService : ISpotlightService, IDisposable
         {
             // Restore stash if checkout failed
             await RunGitAsync("stash pop", repoDir);
+            TryDeleteStateFile();
             throw new InvalidOperationException($"Failed to checkout branch: {checkoutResult.Error}");
         }
 
@@ -125,13 +200,33 @@ public class SpotlightService : ISpotlightService, IDisposable
         await RunGitAsync($"checkout \"{session.OriginalBranch}\"", session.RepoDir);
 
         // Restore stashed changes if any
+        var stashMarker = $"cominomi-spotlight-{sessionId}";
         var stashList = await RunGitAsync("stash list", session.RepoDir);
-        if (stashList.Success && stashList.Output.Contains("cominomi-spotlight-backup"))
+        if (stashList.Success && stashList.Output.Contains(stashMarker))
         {
             await RunGitAsync("stash pop", session.RepoDir);
         }
 
+        TryDeleteStateFile();
         _logger.LogInformation("Spotlight stopped for session {SessionId}", sessionId);
+    }
+
+    private async Task PersistStateAsync(string sessionId, string originalBranch, string repoDir)
+    {
+        var state = new SpotlightPersistedState
+        {
+            SessionId = sessionId,
+            OriginalBranch = originalBranch,
+            RepoDir = repoDir
+        };
+        var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(StateFilePath, json);
+    }
+
+    private void TryDeleteStateFile()
+    {
+        try { if (File.Exists(StateFilePath)) File.Delete(StateFilePath); }
+        catch (Exception ex) { _logger.LogDebug(ex, "Failed to delete spotlight state file"); }
     }
 
     private async Task SyncFilesAsync(string worktreePath, string repoDir)
@@ -204,5 +299,12 @@ public class SpotlightService : ISpotlightService, IDisposable
         public required FileSystemWatcher Watcher { get; init; }
         public System.Timers.Timer? DebounceTimer { get; set; }
         public SemaphoreSlim SyncLock { get; } = new(1, 1);
+    }
+
+    private class SpotlightPersistedState
+    {
+        public string SessionId { get; set; } = "";
+        public string OriginalBranch { get; set; } = "";
+        public string RepoDir { get; set; } = "";
     }
 }
