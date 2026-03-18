@@ -455,32 +455,34 @@ public class GitService : IGitService
             string? currentFile = null;
             var currentDiff = new StringBuilder();
             int additions = 0, deletions = 0;
+            bool inDiffBlock = false;
 
             while (await streaming.ReadLineAsync(ct) is { } line)
             {
                 if (line.StartsWith("diff --git "))
                 {
-                    // Flush previous file
                     FlushFileDiff(fileMap, currentFile, currentDiff, additions, deletions);
 
-                    // Extract file path from "diff --git a/path b/path"
-                    var bIndex = line.LastIndexOf(" b/");
-                    currentFile = bIndex >= 0 ? line[(bIndex + 3)..] : null;
+                    currentFile = ExtractPathFromDiffHeader(line);
                     currentDiff.Clear();
                     additions = 0;
                     deletions = 0;
+                    inDiffBlock = true;
                     continue;
                 }
 
-                if (currentFile != null)
-                {
-                    currentDiff.AppendLine(line);
+                if (!inDiffBlock) continue;
 
-                    if (line.StartsWith('+') && !line.StartsWith("+++"))
-                        additions++;
-                    else if (line.StartsWith('-') && !line.StartsWith("---"))
-                        deletions++;
-                }
+                // Fall back to +++ line for renames or ambiguous headers
+                if (currentFile == null && line.StartsWith("+++ b/"))
+                    currentFile = line[6..];
+
+                currentDiff.AppendLine(line);
+
+                if (line.StartsWith('+') && !line.StartsWith("+++"))
+                    additions++;
+                else if (line.StartsWith('-') && !line.StartsWith("---"))
+                    deletions++;
             }
 
             // Flush last file
@@ -529,6 +531,35 @@ public class GitService : IGitService
         return fileMap;
     }
 
+    /// <summary>
+    /// Extracts the file path from a diff header using symmetric path structure.
+    /// Handles paths containing " b/" correctly, unlike LastIndexOf(" b/").
+    /// Accepts "diff --git a/&lt;path&gt; b/&lt;path&gt;" or "a/&lt;path&gt; b/&lt;path&gt;" formats.
+    /// Returns null for renames (asymmetric paths) — caller should fall back to +++ line.
+    /// </summary>
+    internal static string? ExtractPathFromDiffHeader(string header)
+    {
+        const string fullPrefix = "diff --git a/";
+        const string shortPrefix = "a/";
+
+        string rest;
+        if (header.StartsWith(fullPrefix))
+            rest = header[fullPrefix.Length..];
+        else if (header.StartsWith(shortPrefix))
+            rest = header[shortPrefix.Length..];
+        else
+            return null;
+
+        // For non-renames: rest = "<path> b/<path>", length = 2 * pathLen + 3
+        if (rest.Length < 3 || (rest.Length - 3) % 2 != 0)
+            return null;
+
+        var pathLen = (rest.Length - 3) / 2;
+        var candidate = rest[..pathLen];
+
+        return rest.EndsWith(" b/" + candidate) ? candidate : null;
+    }
+
     private static void FlushFileDiff(Dictionary<string, FileDiff> fileMap, string? filePath, StringBuilder diffContent, int additions, int deletions)
     {
         if (filePath == null) return;
@@ -559,11 +590,22 @@ public class GitService : IGitService
                 if (firstNewline < 0) continue;
 
                 var header = chunk[..firstNewline];
-                var bIndex = header.LastIndexOf(" b/");
-                if (bIndex < 0) continue;
-
-                var filePath = header[(bIndex + 3)..].Trim();
+                var filePath = ExtractPathFromDiffHeader(header);
                 var diffContent = chunk[(firstNewline + 1)..];
+
+                // Fall back to +++ line for renames or ambiguous headers
+                if (filePath == null)
+                {
+                    foreach (var diffLine in diffContent.Split('\n'))
+                    {
+                        if (diffLine.StartsWith("+++ b/"))
+                        {
+                            filePath = diffLine[6..];
+                            break;
+                        }
+                    }
+                    if (filePath == null) continue;
+                }
 
                 // Count additions and deletions
                 int additions = 0, deletions = 0;
