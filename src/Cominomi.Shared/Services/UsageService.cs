@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -28,11 +27,7 @@ public class UsageService : IUsageService
     public UsageService(ILogger<UsageService> logger)
     {
         _logger = logger;
-        var appDataDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            CominomiConstants.AppName);
-        Directory.CreateDirectory(appDataDir);
-        _usageFilePath = Path.Combine(appDataDir, "usage.jsonl");
+        _usageFilePath = Path.Combine(AppPaths.Usage, "usage.jsonl");
     }
 
     public decimal CalculateCost(string model, long inputTokens, long outputTokens, long cacheCreationTokens, long cacheReadTokens)

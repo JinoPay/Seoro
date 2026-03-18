@@ -1,10 +1,6 @@
 @inject IChatState ChatState
-@inject ISessionService SessionService
-@inject IOptionsMonitor<AppSettings> AppSettings
-@inject ISettingsService SettingsService
 @inject SessionListDataService DataService
-@inject IDialogService DialogService
-@inject ISnackbar Snackbar
+@inject ISessionListFacade Facade
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -184,26 +180,17 @@
 
         await DataService.LoadWorkspacesAsync();
 
-        var settings = AppSettings.CurrentValue;
-        var lastId = settings.LastWorkspaceId;
+        var (ws, lastSession, projectName) = await Facade.RestoreLastSelectionAsync(
+            DataService.Workspaces, DataService.SessionCache);
 
-        var currentWs = DataService.Workspaces.FirstOrDefault(w => w.Id == lastId)
-                        ?? DataService.Workspaces.FirstOrDefault();
-        if (currentWs != null)
+        if (ws != null)
         {
-            var projectName = SessionListDataService.GetProjectName(currentWs);
-            _expandedProjects.Add(projectName);
-            await DataService.LoadSessionsForProjectAsync(projectName);
+            _expandedProjects.Add(projectName!);
+            await DataService.LoadSessionsForProjectAsync(projectName!);
+            ChatState.SetWorkspace(ws);
 
-            ChatState.SetWorkspace(currentWs);
-
-            if (!string.IsNullOrEmpty(settings.LastSessionId)
-                && DataService.SessionCache.TryGetValue(currentWs.Id, out var cached))
-            {
-                var lastSession = cached.FirstOrDefault(s => s.Id == settings.LastSessionId);
-                if (lastSession != null)
-                    await SelectSession(lastSession, currentWs);
-            }
+            if (lastSession != null)
+                await SelectSession(lastSession, ws);
         }
 
         DataService.RebuildOrderedSessions();
@@ -287,7 +274,10 @@
         RebuildFlatRows();
     }
 
-    private async Task CreateNewChat(Workspace ws)
+    private async Task CreateNewChat(Workspace ws) => await CreateSession(ws, localDir: false);
+    private async Task CreateLocalDirChat(Workspace ws) => await CreateSession(ws, localDir: true);
+
+    private async Task CreateSession(Workspace ws, bool localDir)
     {
         if (ws.Status != WorkspaceStatus.Ready) return;
 
@@ -296,50 +286,7 @@
 
         try
         {
-            var session = await SessionService.CreatePendingSessionAsync(ws.DefaultModel, ws.Id);
-            ChatState.SetWorkspace(ws);
-            ChatState.SetSession(session);
-
-            if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
-                sessions.Insert(0, session);
-
-            var settings = AppSettings.CurrentValue;
-            settings.LastWorkspaceId = ws.Id;
-            settings.LastSessionId = session.Id;
-            await SettingsService.SaveAsync(settings);
-
-            DataService.RebuildOrderedSessions();
-            RebuildFlatRows();
-        }
-        finally
-        {
-            _isCreatingSession = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task CreateLocalDirChat(Workspace ws)
-    {
-        if (ws.Status != WorkspaceStatus.Ready) return;
-
-        _isCreatingSession = true;
-        StateHasChanged();
-
-        try
-        {
-            var session = await SessionService.CreateLocalDirSessionAsync(ws.DefaultModel, ws.Id);
-            ChatState.SetWorkspace(ws);
-            ChatState.SetSession(session);
-
-            if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
-                sessions.Insert(0, session);
-
-            var settings = AppSettings.CurrentValue;
-            settings.LastWorkspaceId = ws.Id;
-            settings.LastSessionId = session.Id;
-            await SettingsService.SaveAsync(settings);
-
-            DataService.RebuildOrderedSessions();
+            await Facade.CreateSessionAsync(ws, localDir);
             RebuildFlatRows();
         }
         finally
@@ -351,69 +298,20 @@
 
     private async Task SelectSession(Session session, Workspace? ws = null)
     {
-        ws ??= DataService.Workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);
-        if (ws != null)
-            ChatState.SetWorkspace(ws);
-
-        var activeSession = ChatState.GetActiveSession(session.Id);
-        if (activeSession != null)
-        {
-            ChatState.SetSession(activeSession);
-        }
-        else
-        {
-            var fullSess = await SessionService.LoadSessionAsync(session.Id);
-            if (fullSess != null)
-                ChatState.SetSession(fullSess);
-            else
-                ChatState.SetSession(session);
-        }
-
-        var settings = AppSettings.CurrentValue;
-        settings.LastWorkspaceId = session.WorkspaceId;
-        settings.LastSessionId = session.Id;
-        await SettingsService.SaveAsync(settings);
+        await Facade.SelectSessionAsync(session, ws, DataService.Workspaces);
     }
 
     private async Task CleanupSession(Session session)
     {
-        await SessionService.CleanupSessionAsync(session.Id);
-        session.TransitionStatus(SessionStatus.Archived);
+        await Facade.CleanupSessionAsync(session);
         StateHasChanged();
     }
 
     private async Task DeleteSession(Session session)
     {
-        var result = await DialogService.ShowMessageBoxAsync(
-            "세션 삭제",
-            $"'{session.Title}' 세션을 삭제하시겠습니까?",
-            yesText: "삭제", cancelText: "취소");
-
-        if (result != true) return;
-
-        try
-        {
-            await SessionService.DeleteSessionAsync(session.Id);
-
-            if (DataService.SessionCache.TryGetValue(session.WorkspaceId, out var sessions))
-                sessions.Remove(session);
-
-            if (ChatState.CurrentSession?.Id == session.Id)
-                ChatState.SetSession(null!);
-
-            DataService.DiffStatsCache.Remove(session.Id);
-            DataService.RebuildOrderedSessions();
+        if (await Facade.DeleteSessionAsync(session))
             RebuildFlatRows();
-            Snackbar.SessionDeleted();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"세션 삭제 실패: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            StateHasChanged();
-        }
+        StateHasChanged();
     }
 
     private string? _lastSessionId;

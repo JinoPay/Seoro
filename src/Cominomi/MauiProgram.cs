@@ -100,6 +100,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISessionInitializer, SessionInitializer>();
         builder.Services.AddSingleton<IChatPrWorkflowService, ChatPrWorkflowService>();
         builder.Services.AddSingleton<SessionListDataService>();
+        builder.Services.AddSingleton<ISessionListFacade, SessionListFacade>();
         builder.Services.AddSingleton<IThemeService, ThemeService>();
 
         // Load external model definitions (pricing, model names) if present
