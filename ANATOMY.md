@@ -51,7 +51,7 @@
 | `AttachmentChips.razor` (신규, ~30줄) | InputArea에서 첨부파일 칩 표시 추출 — 순수 표시 컴포넌트 |
 | `InputArea.razor` 분해 | 460→~340줄(26%↓). 모델 선택 관련 상태/메서드 5개 + 첨부 칩 마크업을 자식 컴포넌트로 추출 |
 
-### 구조 개선 Phase 10 (2026-03-18) — 차기 개선 후보 #5 해결
+### 구조 개선 Phase 11 (2026-03-19) — 차기 개선 후보 #5 해결 (스트리밍)
 | 변경 내용 | 역할 / 영향 범위 |
 |-----------|-----------------|
 | `IProcessRunner.cs` 변경 | `StreamingProcess` 클래스 + `RunStreamingAsync` 메서드 추가 — stdout 스트리밍 읽기 지원 |
@@ -60,6 +60,14 @@
 | `GitService.cs` 변경 | `GetDiffSummaryAsync` 구현 — `RunStreamingAsync`로 diff 출력을 한 줄씩 읽으며 `FileDiff` 구축. 전체 diff를 메모리에 로드하지 않음 |
 | `SidebarChanges.razor` 변경 | `GetNameStatusAsync` + `GetUnifiedDiffAsync` + `ParseDiff` 3단계 → `GetDiffSummaryAsync` 단일 호출로 교체 |
 | `SidebarExplorer.razor` 변경 | 동일 패턴 교체 |
+
+### 구조 개선 Phase 10 (2026-03-18) — 차기 개선 후보 #3+#4 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| `UsageEntry.DedupHash` 필드 추가 | JSONL에 해시를 직접 저장 — DateTime 직렬화 라운드트립 불일치 문제 근본 해결 |
+| `RecordUsageAsync` 해시 스탬핑 | 쓰기 시 `entry.DedupHash = hash` 설정 후 직렬화. 재시작 후 재계산 불필요 |
+| `LoadExistingHashesAsync` 개선 | 저장된 `DedupHash` 우선 사용, 레거시 엔트리는 폴백 재계산. `Task<bool>` 반환으로 실패 시 재시도 |
+| `RotateCoreAsync` 해시 백필 | 로테이션 시 레거시 엔트리에 `DedupHash` 자동 부여 후 재작성 |
 
 ### 구조 개선 Phase 9 (2026-03-18) — 차기 개선 후보 #1 해결
 | 새 파일 / 변경 내용 | 역할 / 영향 범위 |
@@ -127,6 +135,13 @@
 | #135 | MainLayout 분해 | `IThemeService` + `SidebarToolbar` + `MainToolbar` 추출. 238→~127줄(47%↓) |
 | #136 | 옵션 패턴 도입 | `IOptionsMonitor<AppSettings>` + `AppSettingsFactory` + `AppSettingsChangeNotifier`. 8개 서비스/컴포넌트 전환 |
 | #137 | 플러그인 실행 엔진 | EntryPoint 로딩/실행/샌드박싱 + hooks·skills 매니페스트 자동 등록 |
+
+### 구조 개선 Phase 11 (2026-03-18) — 신규 구조적 문제 #6 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| `MainTab` LRU 메타데이터 추가 | `LastAccessedAt`, `ContentEvicted`, `ContentSizeBytes` 프로퍼티 추가 |
+| `TabManager` LRU 퇴출 엔진 | 총 콘텐츠 예산 50MB 초과 시 가장 오래된 비활성 탭 `FileContent`를 null로 퇴출. 단일 파일 10MB 제한+절단 |
+| `MainLayout` 자동 재로딩 | 퇴출된 탭 활성화 시 디스크에서 자동 재로딩 + 로딩 UI 표시 |
 
 ### 구조 개선 Phase 10 (2026-03-18) — 신규 구조적 문제 #7 해결
 | 변경 내용 | 역할 / 영향 범위 |
@@ -1619,7 +1634,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **3** | **시스템 프롬프트·메모리 크기 제한 미흡** — 문자 수 기반 제한만, 토큰 카운팅 없음 | `MemoryService`가 `MaxMemoryPromptChars`/`MaxMemoryEntryChars` 문자 수로 절단하나, 토큰 기반이 아님. notes.md는 크기 제한 없이 프롬프트에 주입. 워크스페이스별 메모리 필터링은 `WorkspaceId == null`이면 모든 워크스페이스에 주입 | §17, §18 | 중 |
 | ~~**4**~~ | ~~**ChatView `Task.Run` fire-and-forget** — 예외 미관찰 위험~~ | ~~`ChatView.razor:295` `_ = Task.Run(() => ProcessMessageAsync(input))`. 에러 핸들링·취소 추적 없음. 스트리밍 실패 시 조용히 무시될 수 있음~~ | ~~§10~~ | ~~중~~ |
 | **5** | **GitService ParseDiff " b/" 파싱 취약** — 경로에 ` b/`가 포함된 파일 오파싱 | `GitService.cs:459` `header.LastIndexOf(" b/")`. 파일 경로에 ` b/`가 있으면 diff 어트리뷰션 오류 | §5 | 낮 |
-| **6** | **TabManager 파일 콘텐츠 무한 메모리** — 퇴출 정책 없음 | `MainTab.FileContent` 문자열이 탭 닫을 때까지 메모리에 상주. 대용량 파일(100MB+)도 보유. LRU/크기 제한 없음 | §11 | 중 |
+| **6** | ~~**TabManager 파일 콘텐츠 무한 메모리** — 퇴출 정책 없음~~ ✅ | LRU 퇴출 엔진 도입 (총 50MB 예산, 단일 10MB 제한). 퇴출 탭은 활성화 시 자동 재로딩 | §11 | 중 |
 | **7** | ~~**SessionService bare catch 블록** — `SessionService.cs:582`~~ ✅ Phase 10에서 해결 | `catch (Exception ex)` + `_logger.LogWarning` 로깅 추가 | §8 | 낮 |
 | **8** | ~~**ContextService .gitignore 중복 추가** — 행 기반이 아닌 `Contains` 체크~~ ✅ Phase 9에서 해결 | `ReadAllLinesAsync` + `line.Trim()` 정확 매칭으로 전환. AttachmentService 동일 패턴도 수정 | §17 | 낮 |
 | **9** | **~~SidebarExplorer FileSystemWatcher 레이스~~** — ✅ 해결됨 | `SidebarExplorer.razor` — `_debounceLock` 도입으로 디바운스 타이머 stop/start 및 dispose에 동시성 보호 추가 | §12 | ~~낮~~ |
@@ -1629,19 +1644,11 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
-<<<<<<< HEAD
-| **1** | **훅 엔진 개선** — 타임아웃 기본값 0 허용 + 출력 미캡처 | `HooksEngine.cs:109` — `hook.TimeoutSeconds`가 0이면 무한 대기. stdout/stderr를 redirect하지만 읽지 않음 | §14 | 중 |
-| **2** | **QuestionDetector 감지 한계** — 한국어/영어 `?` 패턴만 | `QuestionDetector.cs:9-21` — `?`로 끝나는 문장만 감지. 명령형 질문, 선택 요청 ("pick", "select"), 확인 요청 패턴 누락 | §13 | 낮 |
-| **3** | **Usage HashSet 재시작 시 리셋** — 중복 기록 가능 | `UsageService`의 `_recordedHashes` 인메모리 HashSet이 앱 재시작 시 초기화. 같은 세션의 사용량 이중 기록 가능 | §20 | 낮 |
-| **4** | **중복 제거 해시 영속화** — 재시작 후 JSONL에서 기존 해시 재로드 필요 | 10MB 로테이션은 도입되었으나, 재시작 시 기존 해시를 로드하는 로직의 일관성 검증 필요 | §20 | 낮 |
-| ~~**5**~~ | ~~**stdout 전체 메모리 로드** — GitService 대형 diff 시 메모리 문제~~ | `RunStreamingAsync` + `GetDiffSummaryAsync` 도입 — diff를 한 줄씩 스트리밍 파싱. 전체 stdout 문자열 로드 제거 | Phase 9 |
-=======
 | ~~**1**~~ | ~~**훅 엔진 개선** — 타임아웃 기본값 0 허용 + 출력 미캡처~~ | `Math.Clamp(1-300s)` 타임아웃 보호 + `HookExecutionResult` 반환으로 출력 캡처. 8개 테스트 추가 | §14 | ~~중~~ ✅ |
 | ~~**2**~~ | ~~**QuestionDetector 감지 한계** — 한국어/영어 `?` 패턴만~~ | ~~`QuestionDetector.cs:9-21` — `?`로 끝나는 문장만 감지. 명령형 질문, 선택 요청 ("pick", "select"), 확인 요청 패턴 누락~~ | ~~§13~~ | ~~낮~~ |
 | ~~**3**~~ | ~~**Usage HashSet 재시작 시 리셋** — 중복 기록 가능~~ | ~~`UsageService`의 `_seenHashes` 인메모리 HashSet이 앱 재시작 시 초기화. 같은 세션의 사용량 이중 기록 가능~~ | §20 | ~~낮~~ |
 | ~~**4**~~ | ~~**중복 제거 해시 영속화** — 재시작 후 JSONL에서 기존 해시 재로드 필요~~ | ~~10MB 로테이션은 도입되었으나, 재시작 시 기존 해시를 로드하는 로직의 일관성 검증 필요~~ | §20 | ~~낮~~ |
-| ~~**5**~~ | ~~**stdout 전체 메모리 로드** — GitService 대형 diff 시 메모리 문제~~ | ✅ **해결 완료** — `ProcessRunOptions.MaxOutputBytes`로 bounded read 도입. `ProcessRunner`가 제한 초과 시 truncate + drain. GitService의 diff/log/ls-files 계열 메서드에 1 MB 제한 적용 | §5 | 중 |
->>>>>>> origin/main
+| ~~**5**~~ | ~~**stdout 전체 메모리 로드** — GitService 대형 diff 시 메모리 문제~~ | ✅ **해결 완료** — `MaxOutputBytes` bounded read (Phase 10) + `RunStreamingAsync` + `GetDiffSummaryAsync` 스트리밍 파싱 (Phase 11) | §5 | ~~중~~ ✅ |
 
 ---
 

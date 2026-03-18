@@ -55,14 +55,13 @@ public class UsageService : IUsageService
         {
             // Load existing hashes on first write to survive restarts
             if (!_hashesLoaded)
-            {
-                await LoadExistingHashesAsync();
-                _hashesLoaded = true;
-            }
+                _hashesLoaded = await LoadExistingHashesAsync();
 
             if (!_seenHashes.Add(hash))
                 return;
 
+            // Stamp the hash into the entry so it persists in JSONL
+            entry.DedupHash = hash;
             var json = JsonSerializer.Serialize(entry);
             await AtomicFileWriter.AppendAsync(_usageFilePath, json + Environment.NewLine);
 
@@ -141,10 +140,16 @@ public class UsageService : IUsageService
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hashInput)))[..16];
     }
 
-    private async Task LoadExistingHashesAsync()
+    /// <summary>
+    /// Loads existing hashes from the JSONL file so that duplicates are detected
+    /// even after app restart. Prefers the persisted <c>dedup_hash</c> field;
+    /// falls back to recomputing for legacy entries without it.
+    /// Returns true on success, false on failure so the caller can retry on next write.
+    /// </summary>
+    private async Task<bool> LoadExistingHashesAsync()
     {
         if (!File.Exists(_usageFilePath))
-            return;
+            return true;
 
         try
         {
@@ -155,8 +160,11 @@ public class UsageService : IUsageService
                 try
                 {
                     var entry = JsonSerializer.Deserialize<UsageEntry>(line);
-                    if (entry != null)
-                        _seenHashes.Add(ComputeEntryHash(entry));
+                    if (entry == null) continue;
+
+                    // Use persisted hash when available; recompute for legacy entries
+                    var hash = entry.DedupHash ?? ComputeEntryHash(entry);
+                    _seenHashes.Add(hash);
                 }
                 catch
                 {
@@ -165,10 +173,12 @@ public class UsageService : IUsageService
             }
 
             _logger.LogInformation("Loaded {Count} usage hashes for deduplication", _seenHashes.Count);
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load existing usage hashes");
+            _logger.LogError(ex, "Failed to load existing usage hashes — will retry on next write");
+            return false;
         }
     }
 
@@ -205,17 +215,17 @@ public class UsageService : IUsageService
         if (removedCount == 0)
             return 0;
 
-        // Rewrite file atomically
+        // Ensure all kept entries have a persisted hash, then rewrite atomically
+        _seenHashes.Clear();
         var sb = new StringBuilder();
         foreach (var entry in kept)
+        {
+            entry.DedupHash ??= ComputeEntryHash(entry);
+            _seenHashes.Add(entry.DedupHash);
             sb.AppendLine(JsonSerializer.Serialize(entry));
+        }
 
         await AtomicFileWriter.WriteAsync(_usageFilePath, sb.ToString());
-
-        // Rebuild hash set with only kept entries
-        _seenHashes.Clear();
-        foreach (var entry in kept)
-            _seenHashes.Add(ComputeEntryHash(entry));
 
         return removedCount;
     }

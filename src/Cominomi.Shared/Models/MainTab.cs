@@ -10,4 +10,7 @@ public class MainTab
     public string? FilePath { get; set; }
     public FileDiff? DiffData { get; set; }
     public string? FileContent { get; set; }
+    public DateTime LastAccessedAt { get; set; } = DateTime.UtcNow;
+    public bool ContentEvicted { get; set; }
+    public long ContentSizeBytes { get; set; }
 }
