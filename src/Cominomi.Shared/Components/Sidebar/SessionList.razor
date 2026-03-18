@@ -95,24 +95,27 @@
 
                             @if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
                             {
-                                @foreach (var session in SessionListDataService.FilterSessions(sessions, _filterText))
-                                {
-                                    var isStreaming = ChatState.IsSessionStreaming(session.Id);
-                                    var currentIndex = sessionIndex;
-                                    var hasDiffStats = DataService.DiffStatsCache.TryGetValue(session.Id, out var stats);
-                                    sessionIndex++;
+                                var filteredSessions = SessionListDataService.FilterSessions(sessions, _filterText).ToList();
+                                var baseIndex = sessionIndex;
+                                sessionIndex += filteredSessions.Count;
 
+                                <Virtualize Items="filteredSessions" Context="session" ItemSize="48" OverscanCount="5">
+                                    @{
+                                        var idx = baseIndex + filteredSessions.IndexOf(session);
+                                        var isStreaming = ChatState.IsSessionStreaming(session.Id);
+                                        var hasDiffStats = DataService.DiffStatsCache.TryGetValue(session.Id, out var stats);
+                                    }
                                     <SessionItem Session="session"
                                                  IsActive="@(ChatState.CurrentSession?.Id == session.Id)"
                                                  IsStreaming="isStreaming"
                                                  StreamingStatusText="@(isStreaming ? GetStreamingStatusText(session) : null)"
                                                  DiffAdditions="@(hasDiffStats ? stats.Additions : 0)"
                                                  DiffDeletions="@(hasDiffStats ? stats.Deletions : 0)"
-                                                 ShortcutLabel="@(currentIndex < 5 ? GetShortcutLabel(currentIndex) : null)"
+                                                 ShortcutLabel="@(idx < 5 ? GetShortcutLabel(idx) : null)"
                                                  OnClick="@(() => SelectSession(session, ws))"
                                                  OnDelete="@(() => DeleteSession(session))"
                                                  OnCleanup="@(() => CleanupSession(session))" />
-                                }
+                                </Virtualize>
                             }
                         }
                     }

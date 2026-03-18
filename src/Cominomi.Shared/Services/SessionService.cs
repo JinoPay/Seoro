@@ -19,6 +19,10 @@ public partial class SessionService : ISessionService
     private readonly string _archiveDir = AppPaths.ArchivedContexts;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new();
 
+    // In-memory metadata cache: avoids re-reading all files on every call
+    private readonly ConcurrentDictionary<string, Session> _metadataCache = new();
+    private volatile bool _cacheInitialized;
+
     public SessionService(IGitService gitService, IWorkspaceService workspaceService,
         ISettingsService settingsService, IContextService contextService, IHooksEngine hooksEngine,
         ILogger<SessionService> logger)
@@ -33,13 +37,38 @@ public partial class SessionService : ISessionService
 
     public async Task<List<Session>> GetSessionsAsync()
     {
-        var sessions = new List<Session>();
-        if (!Directory.Exists(_sessionsDir))
-            return sessions;
+        await EnsureCacheLoadedAsync();
+        return _metadataCache.Values
+            .OrderByDescending(s => s.UpdatedAt)
+            .ToList();
+    }
 
-        // Only read metadata files (exclude .messages.json)
-        foreach (var file in Directory.GetFiles(_sessionsDir, "*.json")
-                     .Where(f => !f.EndsWith(".messages.json", StringComparison.OrdinalIgnoreCase)))
+    public async Task<List<Session>> GetSessionsByWorkspaceAsync(string workspaceId)
+    {
+        await EnsureCacheLoadedAsync();
+        return _metadataCache.Values
+            .Where(s => s.WorkspaceId == workspaceId)
+            .OrderByDescending(s => s.UpdatedAt)
+            .ToList();
+    }
+
+    private async Task EnsureCacheLoadedAsync()
+    {
+        if (_cacheInitialized)
+            return;
+
+        if (!Directory.Exists(_sessionsDir))
+        {
+            _cacheInitialized = true;
+            return;
+        }
+
+        var files = Directory.GetFiles(_sessionsDir, "*.json")
+            .Where(f => !f.EndsWith(".messages.json", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        // Parallel file reads for initial load
+        var tasks = files.Select(async file =>
         {
             try
             {
@@ -48,24 +77,25 @@ public partial class SessionService : ISessionService
                 if (session != null)
                 {
                     session.Model = ModelDefinitions.NormalizeModelId(session.Model);
-                    // Messages are stored separately — the metadata file has none (or empty for new format)
                     session.Messages.Clear();
-                    sessions.Add(session);
+                    return session;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Skipping corrupted session file: {File}", file);
             }
+            return null;
+        });
+
+        var results = await Task.WhenAll(tasks);
+        foreach (var session in results)
+        {
+            if (session != null)
+                _metadataCache[session.Id] = session;
         }
 
-        return sessions.OrderByDescending(s => s.UpdatedAt).ToList();
-    }
-
-    public async Task<List<Session>> GetSessionsByWorkspaceAsync(string workspaceId)
-    {
-        var all = await GetSessionsAsync();
-        return all.Where(s => s.WorkspaceId == workspaceId).ToList();
+        _cacheInitialized = true;
     }
 
     public async Task<Session> CreateSessionAsync(string model, string workspaceId, string baseBranch)
@@ -286,6 +316,14 @@ public partial class SessionService : ISessionService
             var metadataPath = Path.Combine(_sessionsDir, $"{session.Id}.json");
             await AtomicFileWriter.WriteAsync(metadataPath, metadataJson);
 
+            // Update in-memory cache with a metadata-only clone
+            var cached = JsonSerializer.Deserialize<Session>(metadataJson, JsonDefaults.Options);
+            if (cached != null)
+            {
+                cached.Model = ModelDefinitions.NormalizeModelId(cached.Model);
+                _metadataCache[session.Id] = cached;
+            }
+
             // Save messages separately (with tool output truncation)
             if (messages.Count > 0)
             {
@@ -435,6 +473,8 @@ public partial class SessionService : ISessionService
         var messagesPath = Path.Combine(_sessionsDir, $"{sessionId}.messages.json");
         if (File.Exists(messagesPath))
             File.Delete(messagesPath);
+
+        _metadataCache.TryRemove(sessionId, out _);
 
         _logger.LogInformation("Session {SessionId} deleted", sessionId);
     }
