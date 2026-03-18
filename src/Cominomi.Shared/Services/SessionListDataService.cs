@@ -1,4 +1,5 @@
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
@@ -9,6 +10,7 @@ public class SessionListDataService : IDisposable
     private readonly IGitService _gitService;
     private readonly IGhService _ghService;
     private readonly IWorkspaceService _workspaceService;
+    private readonly ILogger<SessionListDataService> _logger;
 
     public Dictionary<string, List<Session>> SessionCache { get; } = new();
     public Dictionary<string, (int Additions, int Deletions)> DiffStatsCache { get; } = new();
@@ -19,13 +21,15 @@ public class SessionListDataService : IDisposable
 
     public SessionListDataService(
         ISessionService sessionService, ISessionGitWorkflowService gitWorkflow,
-        IGitService gitService, IGhService ghService, IWorkspaceService workspaceService)
+        IGitService gitService, IGhService ghService, IWorkspaceService workspaceService,
+        ILogger<SessionListDataService> logger)
     {
         _sessionService = sessionService;
         _gitWorkflow = gitWorkflow;
         _gitService = gitService;
         _ghService = ghService;
         _workspaceService = workspaceService;
+        _logger = logger;
     }
 
     public async Task LoadWorkspacesAsync()
@@ -81,7 +85,10 @@ public class SessionListDataService : IDisposable
                     OnDataChanged?.Invoke();
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to load diff stats for session {SessionId}", session.Id);
+            }
         }
     }
 
@@ -98,7 +105,10 @@ public class SessionListDataService : IDisposable
             DiffStatsCache[sessionId] = stats;
             OnDataChanged?.Invoke();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to refresh diff stats for session {SessionId}", sessionId);
+        }
     }
 
     public async Task CheckMergeStatusesAsync(string workspaceId)
@@ -130,7 +140,10 @@ public class SessionListDataService : IDisposable
                     await CheckAndUpdatePrForSessionAsync(session);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to check merge/PR status for session {SessionId}", session.Id);
+            }
         }
     }
 

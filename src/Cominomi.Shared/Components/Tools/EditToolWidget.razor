@@ -64,7 +64,7 @@
             else
                 _newLines = [];
         }
-        catch { }
+        catch (JsonException) { /* malformed tool input — render empty */ }
     }
 
     private static string ShortenPath(string path)
