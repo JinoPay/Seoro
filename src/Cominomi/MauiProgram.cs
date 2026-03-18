@@ -110,6 +110,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISystemPromptBuilder, SystemPromptBuilder>();
         builder.Services.AddSingleton<ISessionInitializer, SessionInitializer>();
         builder.Services.AddSingleton<IChatPrWorkflowService, ChatPrWorkflowService>();
+        builder.Services.AddSingleton<IChatMessageOrchestrator, ChatMessageOrchestrator>();
         builder.Services.AddSingleton<SessionListDataService>();
         builder.Services.AddSingleton<ISessionListFacade, SessionListFacade>();
         builder.Services.AddSingleton<IThemeService, ThemeService>();
