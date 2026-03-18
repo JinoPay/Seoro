@@ -32,7 +32,6 @@ public class ActivityService : IActivityService
         var sessions = await _sessionService.GetSessionsByWorkspaceAsync(workspaceId);
         var activeSessions = sessions.Where(s =>
             s.Status != SessionStatus.Pending &&
-            s.Status != SessionStatus.Archived &&
             !string.IsNullOrEmpty(s.Git.WorktreePath) &&
             !string.IsNullOrEmpty(s.Git.BaseBranch)).ToList();
 
@@ -72,9 +71,9 @@ public class ActivityService : IActivityService
         return groups;
     }
 
-    private static ActivityEntry? ParseCommitLine(string line, Session session)
+    internal static ActivityEntry? ParseCommitLine(string line, Session session)
     {
-        var parts = line.Split('|', 5);
+        var parts = line.Split('\0', 5);
         if (parts.Length < 5) return null;
 
         if (!DateTime.TryParse(parts[3], out var timestamp))

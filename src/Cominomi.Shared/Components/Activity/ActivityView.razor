@@ -91,6 +91,7 @@
         SessionStatus.Pushed => Icons.Material.Filled.CloudUpload,
         SessionStatus.ConflictDetected => Icons.Material.Filled.Warning,
         SessionStatus.Error => Icons.Material.Filled.Error,
+        SessionStatus.Archived => Icons.Material.Filled.Archive,
         _ => Icons.Material.Filled.Commit
     };
 
@@ -100,6 +101,7 @@
         SessionStatus.PrOpen => Color.Info,
         SessionStatus.ConflictDetected => Color.Warning,
         SessionStatus.Error => Color.Error,
+        SessionStatus.Archived => Color.Default,
         _ => Color.Default
     };
 
