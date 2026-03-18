@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -32,6 +33,12 @@ public class MemoryService : IMemoryService
         }
 
         return entries.OrderByDescending(e => e.UpdatedAt).ToList();
+    }
+
+    public async Task<List<MemoryEntry>> GetForWorkspaceAsync(string? workspaceId)
+    {
+        var all = await GetAllAsync();
+        return all.Where(e => e.WorkspaceId == null || e.WorkspaceId == workspaceId).ToList();
     }
 
     public async Task<List<MemoryEntry>> GetByTypeAsync(MemoryType type)
@@ -69,17 +76,27 @@ public class MemoryService : IMemoryService
     public string BuildMemoryPrompt(IEnumerable<MemoryEntry> entries)
     {
         var sb = new StringBuilder();
+        var maxEntry = CominomiConstants.MaxMemoryEntryChars;
+        var maxTotal = CominomiConstants.MaxMemoryPromptChars;
         sb.AppendLine("## Persistent Memory");
 
         foreach (var group in entries.GroupBy(e => e.Type))
         {
+            if (sb.Length >= maxTotal) break;
             sb.AppendLine($"\n### {group.Key} Memory");
             foreach (var entry in group)
             {
-                sb.AppendLine($"- **{entry.Name}**: {entry.Content}");
+                if (sb.Length >= maxTotal) break;
+                var content = entry.Content.Length > maxEntry
+                    ? entry.Content[..maxEntry] + string.Format(CominomiConstants.TruncationMarker, entry.Content.Length)
+                    : entry.Content;
+                sb.AppendLine($"- **{entry.Name}**: {content}");
             }
         }
 
-        return sb.ToString();
+        var result = sb.ToString();
+        return result.Length <= maxTotal
+            ? result
+            : result[..maxTotal] + string.Format(CominomiConstants.TruncationMarker, result.Length);
     }
 }

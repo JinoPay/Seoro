@@ -13,6 +13,13 @@ public static class CominomiConstants
     public const string DefaultEffortLevel = "auto";
     public const string DefaultMergeStrategy = "squash";
 
+    // System prompt size limits (characters, ~4 chars ≈ 1 token)
+    public const int MaxContextPromptChars = 20_000;   // notes + todos + plans combined
+    public const int MaxContextItemChars = 8_000;      // single note/todo/plan file
+    public const int MaxMemoryPromptChars = 10_000;    // all memory entries combined
+    public const int MaxMemoryEntryChars = 4_000;      // single memory entry content
+    public const string TruncationMarker = "\n\n[...truncated, {0:N0} chars total]";
+
     // Environment variables shared by multiple process-launching services
     public static class Env
     {
