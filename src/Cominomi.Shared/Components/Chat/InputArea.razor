@@ -152,8 +152,8 @@
     [Parameter] public string EffortLevel { get; set; } = "auto";
     [Parameter] public EventCallback<string> EffortLevelChanged { get; set; }
 
-    private static readonly string[] PermissionModes = ["bypassAll", "acceptEdits", "plan"];
-    private static readonly string[] EffortLevels = ["auto", "low", "medium", "high", "max"];
+    private static readonly string[] PermissionModes = ["bypassAll", "plan"];
+    private static readonly string[] EffortLevels = ["auto", "max"];
 
     private string _inputText = string.Empty;
     private List<PendingAttachment> _pendingAttachments = [];
@@ -178,21 +178,18 @@
     private string GetPermissionModeTooltip() => PermissionMode switch
     {
         "plan" => "플랜 모드 (읽기 전용)",
-        "acceptEdits" => "편집 허용 모드",
         _ => "일반 모드 (모든 권한 우회)"
     };
 
     private string GetPermissionModeIcon() => PermissionMode switch
     {
         "plan" => Icons.Material.Filled.Description,
-        "acceptEdits" => Icons.Material.Filled.EditOff,
         _ => Icons.Material.Filled.EditNote
     };
 
     private Color GetPermissionModeColor() => PermissionMode switch
     {
         "plan" => Color.Warning,
-        "acceptEdits" => Color.Info,
         _ => Color.Default
     };
 
@@ -206,9 +203,6 @@
 
     private string GetEffortLevelTooltip() => EffortLevel switch
     {
-        "low" => "Effort: Low",
-        "medium" => "Effort: Medium",
-        "high" => "Effort: High",
         "max" => "Effort: Max (Thinking)",
         _ => "Effort: Auto"
     };
@@ -216,9 +210,6 @@
     private Color GetEffortLevelColor() => EffortLevel switch
     {
         "max" => Color.Secondary,
-        "high" => Color.Info,
-        "medium" => Color.Warning,
-        "low" => Color.Default,
         _ => Color.Default
     };
 
