@@ -26,12 +26,13 @@ public class MemoryService : IMemoryService
             try
             {
                 var json = await File.ReadAllTextAsync(file);
-                var (migrated, changed) = JsonMigrator.MigrateJson("MemoryEntry", json);
-                if (changed)
-                    await AtomicFileWriter.WriteAsync(file, migrated);
-                var entry = JsonSerializer.Deserialize<MemoryEntry>(migrated, JsonDefaults.Options);
+                var (entry, migrated, migratedJson) = MigratingJsonReader.Read<MemoryEntry>(json, JsonDefaults.Options);
                 if (entry != null)
+                {
                     entries.Add(entry);
+                    if (migrated && migratedJson != null)
+                        await AtomicFileWriter.WriteAsync(file, migratedJson);
+                }
             }
             catch (Exception ex) { _logger.LogWarning(ex, "Skipping corrupted memory file: {File}", file); }
         }
@@ -55,7 +56,7 @@ public class MemoryService : IMemoryService
     {
         entry.UpdatedAt = DateTime.UtcNow;
         var path = Path.Combine(_memoryDir, $"{entry.Id}.json");
-        var json = JsonSerializer.Serialize(entry, JsonDefaults.Options);
+        var json = MigratingJsonWriter.Write(entry, JsonDefaults.Options);
         await AtomicFileWriter.WriteAsync(path, json);
     }
 
@@ -74,10 +75,10 @@ public class MemoryService : IMemoryService
             return null;
 
         var json = await File.ReadAllTextAsync(path);
-        var (migrated, changed) = JsonMigrator.MigrateJson("MemoryEntry", json);
-        if (changed)
-            await AtomicFileWriter.WriteAsync(path, migrated);
-        return JsonSerializer.Deserialize<MemoryEntry>(migrated, JsonDefaults.Options);
+        var (entry, migrated, migratedJson) = MigratingJsonReader.Read<MemoryEntry>(json, JsonDefaults.Options);
+        if (migrated && migratedJson != null)
+            await AtomicFileWriter.WriteAsync(path, migratedJson);
+        return entry;
     }
 
     public string BuildMemoryPrompt(IEnumerable<MemoryEntry> entries)

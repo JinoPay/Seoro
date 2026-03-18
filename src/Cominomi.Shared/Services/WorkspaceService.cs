@@ -56,12 +56,13 @@ public partial class WorkspaceService : IWorkspaceService
             try
             {
                 var json = await File.ReadAllTextAsync(file);
-                var (migrated, changed) = JsonMigrator.MigrateJson("Workspace", json);
-                if (changed)
-                    await AtomicFileWriter.WriteAsync(file, migrated);
-                var workspace = JsonSerializer.Deserialize<Workspace>(migrated, JsonDefaults.Options);
+                var (workspace, migrated, migratedJson) = MigratingJsonReader.Read<Workspace>(json, JsonDefaults.Options);
                 if (workspace != null)
+                {
                     workspaces.Add(workspace);
+                    if (migrated && migratedJson != null)
+                        await AtomicFileWriter.WriteAsync(file, migratedJson);
+                }
             }
             catch (Exception ex)
             {
@@ -79,17 +80,17 @@ public partial class WorkspaceService : IWorkspaceService
             return null;
 
         var json = await File.ReadAllTextAsync(path);
-        var (migrated, changed) = JsonMigrator.MigrateJson("Workspace", json);
-        if (changed)
-            await AtomicFileWriter.WriteAsync(path, migrated);
-        return JsonSerializer.Deserialize<Workspace>(migrated, JsonDefaults.Options);
+        var (workspace, migrated, migratedJson) = MigratingJsonReader.Read<Workspace>(json, JsonDefaults.Options);
+        if (migrated && migratedJson != null)
+            await AtomicFileWriter.WriteAsync(path, migratedJson);
+        return workspace;
     }
 
     public async Task SaveWorkspaceAsync(Workspace workspace)
     {
         workspace.UpdatedAt = DateTime.UtcNow;
         var path = Path.Combine(_workspacesDir, $"{workspace.Id}.json");
-        var json = JsonSerializer.Serialize(workspace, JsonDefaults.Options);
+        var json = MigratingJsonWriter.Write(workspace, JsonDefaults.Options);
         await AtomicFileWriter.WriteAsync(path, json);
     }
 
@@ -237,9 +238,13 @@ public partial class WorkspaceService : IWorkspaceService
             try
             {
                 var json = await File.ReadAllTextAsync(file);
-                var info = JsonSerializer.Deserialize<GitRepoInfo>(json, JsonDefaults.Options);
+                var (info, migrated, migratedJson) = MigratingJsonReader.Read<GitRepoInfo>(json, JsonDefaults.Options);
                 if (info != null && NormalizeUrl(info.RemoteUrl) == normalizedUrl && Directory.Exists(info.LocalPath))
+                {
+                    if (migrated && migratedJson != null)
+                        await AtomicFileWriter.WriteAsync(file, migratedJson);
                     return info;
+                }
             }
             catch (Exception ex) { _logger.LogWarning(ex, "Failed to read repo info file: {File}", file); }
         }
@@ -250,7 +255,7 @@ public partial class WorkspaceService : IWorkspaceService
     private async Task SaveRepoInfoAsync(GitRepoInfo repoInfo)
     {
         var path = Path.Combine(_repoInfoDir, $"{repoInfo.Id}.json");
-        var json = JsonSerializer.Serialize(repoInfo, JsonDefaults.Options);
+        var json = MigratingJsonWriter.Write(repoInfo, JsonDefaults.Options);
         await AtomicFileWriter.WriteAsync(path, json);
     }
 

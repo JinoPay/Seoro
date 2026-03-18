@@ -1,7 +1,6 @@
 using Cominomi.Services;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services;
-using Cominomi.Shared.Services.Migration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MudBlazor;
@@ -106,8 +105,6 @@ public static class MauiProgram
         var modelsJsonPath = Path.Combine(AppPaths.Settings, "models.json");
         ModelDefinitions.LoadFromFileAsync(modelsJsonPath).GetAwaiter().GetResult();
 
-        // Initialize JSON schema migration registry
-        MigrationRegistry.Initialize();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

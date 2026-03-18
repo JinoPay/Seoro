@@ -1,123 +1,163 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cominomi.Shared.Models;
+using Cominomi.Shared.Services;
 using Cominomi.Shared.Services.Migration;
 
 namespace Cominomi.Shared.Tests;
 
-public class JsonMigratorTests
+public class SchemaMigrationTests
 {
-    public JsonMigratorTests()
-    {
-        // 각 테스트 전 레지스트리 초기화
-        MigrationRegistry.Initialize();
-    }
+    private static readonly JsonSerializerOptions Options = JsonDefaults.Options;
 
     [Fact]
-    public void MigrateJson_NoSchemaVersion_StampsVersion()
+    public void MigratingJsonReader_NoVersionField_TreatedAsV1_NoMigration()
     {
+        // 버전 필드 없는 파일은 v1로 간주 → 현재 버전이 v1이면 마이그레이션 불필요
         var json = """{"id": "abc", "name": "test"}""";
 
-        var (result, changed) = JsonMigrator.MigrateJson("Workspace", json);
+        var result = MigratingJsonReader.Read<Workspace>(json, Options);
 
-        Assert.True(changed);
-        var obj = JsonNode.Parse(result)!.AsObject();
-        Assert.Equal(1, obj["schemaVersion"]!.GetValue<int>());
+        Assert.False(result.WasMigrated);
+        Assert.NotNull(result.Result);
     }
 
     [Fact]
-    public void MigrateJson_AlreadyCurrentVersion_NoChange()
+    public void MigratingJsonReader_AlreadyCurrentVersion_NoMigration()
     {
-        var json = """{"schemaVersion": 1, "id": "abc"}""";
+        var json = """{"$schemaVersion": 1, "id": "abc", "name": "test"}""";
 
-        var (result, changed) = JsonMigrator.MigrateJson("Workspace", json);
+        var result = MigratingJsonReader.Read<Workspace>(json, Options);
 
-        Assert.False(changed);
-        Assert.Equal(json, result);
+        Assert.False(result.WasMigrated);
     }
 
     [Fact]
-    public void MigrateJson_UnknownModelKey_NoChange()
+    public void MigratingJsonReader_UnregisteredType_PlainDeserialize()
     {
+        // 등록되지 않은 타입은 마이그레이션 없이 역직렬화
         var json = """{"id": "abc"}""";
 
-        var (result, changed) = JsonMigrator.MigrateJson("UnknownModel", json);
+        var result = MigratingJsonReader.Read<UnregisteredModel>(json, Options);
 
-        Assert.False(changed);
-        Assert.Equal(json, result);
+        Assert.False(result.WasMigrated);
+        Assert.NotNull(result.Result);
     }
 
     [Fact]
-    public void MigrateJson_InvalidJson_ReturnsUnchanged()
+    public void MigratingJsonWriter_InjectsSchemaVersion()
     {
-        var json = "not valid json {{{";
+        var workspace = new Workspace { Id = "test-id", Name = "Test" };
 
-        var (result, changed) = JsonMigrator.MigrateJson("Workspace", json);
+        var json = MigratingJsonWriter.Write(workspace, Options);
 
-        Assert.False(changed);
-        Assert.Equal(json, result);
+        var obj = JsonNode.Parse(json)!.AsObject();
+        Assert.True(obj.ContainsKey(SchemaVersion.FieldName));
+        Assert.Equal(1, obj[SchemaVersion.FieldName]!.GetValue<int>());
     }
 
     [Fact]
-    public void MigrateJson_SequentialMigrations_Applied()
+    public void SchemaMigrator_SequentialMigrations_Applied()
     {
-        // 커스텀 모델로 v0→v1→v2 순차 마이그레이션 테스트
-        JsonMigrator.Register("TestModel", currentVersion: 3,
-            (0, node => { node["addedInV1"] = "hello"; }),
-            (1, node => { node["addedInV2"] = 42; }),
-            (2, node => { node["addedInV3"] = true; })
-        );
+        var migrations = new IJsonMigration[]
+        {
+            new TestMigration(1, 2, doc => { doc["addedInV2"] = "hello"; }),
+            new TestMigration(2, 3, doc => { doc["addedInV3"] = 42; })
+        };
+        var migrator = new SchemaMigrator(3, migrations);
 
-        var json = """{"name": "test"}""";
+        var json = """{"$schemaVersion": 1, "name": "test"}""";
 
-        var (result, changed) = JsonMigrator.MigrateJson("TestModel", json);
+        var result = migrator.DeserializeAndMigrate<TestModel>(json, Options);
 
-        Assert.True(changed);
-        var obj = JsonNode.Parse(result)!.AsObject();
-        Assert.Equal(3, obj["schemaVersion"]!.GetValue<int>());
-        Assert.Equal("hello", obj["addedInV1"]!.GetValue<string>());
-        Assert.Equal(42, obj["addedInV2"]!.GetValue<int>());
-        Assert.True(obj["addedInV3"]!.GetValue<bool>());
+        Assert.True(result.WasMigrated);
+        Assert.NotNull(result.MigratedJson);
+        var obj = JsonNode.Parse(result.MigratedJson)!.AsObject();
+        Assert.Equal(3, obj[SchemaVersion.FieldName]!.GetValue<int>());
+        Assert.Equal("hello", obj["addedInV2"]!.GetValue<string>());
+        Assert.Equal(42, obj["addedInV3"]!.GetValue<int>());
     }
 
     [Fact]
-    public void MigrateJson_PartialMigration_OnlyAppliesNeeded()
+    public void SchemaMigrator_PartialMigration_OnlyAppliesNeeded()
     {
-        JsonMigrator.Register("PartialModel", currentVersion: 3,
-            (0, node => { node["v1Field"] = "a"; }),
-            (1, node => { node["v2Field"] = "b"; }),
-            (2, node => { node["v3Field"] = "c"; })
-        );
+        var migrations = new IJsonMigration[]
+        {
+            new TestMigration(1, 2, doc => { doc["v2Field"] = "a"; }),
+            new TestMigration(2, 3, doc => { doc["v3Field"] = "b"; })
+        };
+        var migrator = new SchemaMigrator(3, migrations);
 
-        // 이미 v2인 파일 → v2→v3 마이그레이션만 적용
-        var json = """{"schemaVersion": 2, "name": "test", "v1Field": "a", "v2Field": "b"}""";
+        // 이미 v2 → v2→v3 마이그레이션만 적용
+        var json = """{"$schemaVersion": 2, "name": "test"}""";
 
-        var (result, changed) = JsonMigrator.MigrateJson("PartialModel", json);
+        var result = migrator.DeserializeAndMigrate<TestModel>(json, Options);
 
-        Assert.True(changed);
-        var obj = JsonNode.Parse(result)!.AsObject();
-        Assert.Equal(3, obj["schemaVersion"]!.GetValue<int>());
-        Assert.Equal("c", obj["v3Field"]!.GetValue<string>());
+        Assert.True(result.WasMigrated);
+        var obj = JsonNode.Parse(result.MigratedJson!)!.AsObject();
+        Assert.Equal(3, obj[SchemaVersion.FieldName]!.GetValue<int>());
+        Assert.Equal("b", obj["v3Field"]!.GetValue<string>());
+        Assert.False(obj.ContainsKey("v2Field")); // v1→v2 migration was NOT applied
     }
 
     [Fact]
-    public void MigrateJson_PreservesExistingProperties()
+    public void SchemaMigrator_PreservesExistingProperties()
     {
-        var json = """{"id": "abc-123", "name": "my workspace", "status": "Ready"}""";
+        var migrator = new SchemaMigrator(2);
+        var json = """{"$schemaVersion": 1, "name": "my workspace", "id": "abc-123"}""";
 
-        var (result, changed) = JsonMigrator.MigrateJson("Workspace", json);
+        var result = migrator.DeserializeAndMigrate<TestModel>(json, Options);
 
-        Assert.True(changed);
-        var obj = JsonNode.Parse(result)!.AsObject();
-        Assert.Equal("abc-123", obj["id"]!.GetValue<string>());
-        Assert.Equal("my workspace", obj["name"]!.GetValue<string>());
-        Assert.Equal("Ready", obj["status"]!.GetValue<string>());
+        Assert.NotNull(result.Result);
+        Assert.Equal("my workspace", result.Result!.Name);
     }
 
     [Fact]
-    public void GetCurrentVersion_ReturnsRegisteredVersion()
+    public void SchemaMigratorRegistry_ReturnsRegisteredMigrators()
     {
-        Assert.Equal(1, JsonMigrator.GetCurrentVersion("Session"));
-        Assert.Equal(1, JsonMigrator.GetCurrentVersion("Workspace"));
-        Assert.Equal(0, JsonMigrator.GetCurrentVersion("NonExistent"));
+        Assert.NotNull(SchemaMigratorRegistry.GetMigrator<Session>());
+        Assert.NotNull(SchemaMigratorRegistry.GetMigrator<Workspace>());
+        Assert.NotNull(SchemaMigratorRegistry.GetMigrator<AppSettings>());
+        Assert.NotNull(SchemaMigratorRegistry.GetMigrator<MemoryEntry>());
+        Assert.NotNull(SchemaMigratorRegistry.GetMigrator<TaskItem>());
+    }
+
+    [Fact]
+    public void SchemaMigratorRegistry_SessionVersionIs2()
+    {
+        var migrator = SchemaMigratorRegistry.GetMigrator<Session>();
+        Assert.NotNull(migrator);
+        Assert.Equal(2, migrator!.CurrentVersion);
+    }
+
+    // Test helpers
+    private class TestModel
+    {
+        public string Name { get; set; } = "";
+    }
+
+    private class UnregisteredModel
+    {
+        public string Id { get; set; } = "";
+    }
+
+    private class TestMigration : IJsonMigration
+    {
+        private readonly Action<JsonObject> _action;
+        public int FromVersion { get; }
+        public int ToVersion { get; }
+
+        public TestMigration(int from, int to, Action<JsonObject> action)
+        {
+            FromVersion = from;
+            ToVersion = to;
+            _action = action;
+        }
+
+        public JsonObject Migrate(JsonObject document)
+        {
+            _action(document);
+            return document;
+        }
     }
 }

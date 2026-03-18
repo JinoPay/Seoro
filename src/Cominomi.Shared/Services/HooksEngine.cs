@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -37,7 +38,23 @@ public class HooksEngine : IHooksEngine
         try
         {
             var json = await File.ReadAllTextAsync(_hooksFile);
-            _hooks = JsonSerializer.Deserialize<List<HookDefinition>>(json, JsonOptions) ?? [];
+            var node = JsonNode.Parse(json);
+
+            if (node is JsonArray)
+            {
+                // Legacy bare-array format — migrate to envelope
+                _hooks = JsonSerializer.Deserialize<List<HookDefinition>>(json, JsonOptions) ?? [];
+                await SaveAsync(); // Write back in new envelope format
+            }
+            else if (node is JsonObject obj)
+            {
+                var envelope = JsonSerializer.Deserialize<HooksFileEnvelope>(json, JsonOptions);
+                _hooks = envelope?.Hooks ?? [];
+            }
+            else
+            {
+                _hooks = [];
+            }
         }
         catch (Exception ex)
         {
@@ -49,7 +66,8 @@ public class HooksEngine : IHooksEngine
     public async Task SaveAsync()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_hooksFile)!);
-        var json = JsonSerializer.Serialize(_hooks, JsonOptions);
+        var envelope = new HooksFileEnvelope { Hooks = _hooks };
+        var json = JsonSerializer.Serialize(envelope, JsonOptions);
         await AtomicFileWriter.WriteAsync(_hooksFile, json);
     }
 
