@@ -6,6 +6,7 @@ namespace Cominomi.Shared.Tests;
 public class SessionStatusMachineTests
 {
     [Theory]
+    [InlineData(SessionStatus.Initializing, SessionStatus.Pending, true)]
     [InlineData(SessionStatus.Initializing, SessionStatus.Ready, true)]
     [InlineData(SessionStatus.Initializing, SessionStatus.Error, true)]
     [InlineData(SessionStatus.Initializing, SessionStatus.Merged, false)]

@@ -6,7 +6,7 @@ public static class SessionStatusMachine
 {
     private static readonly Dictionary<SessionStatus, HashSet<SessionStatus>> ValidTransitions = new()
     {
-        [SessionStatus.Initializing] = [SessionStatus.Ready, SessionStatus.Error],
+        [SessionStatus.Initializing] = [SessionStatus.Pending, SessionStatus.Ready, SessionStatus.Error],
         [SessionStatus.Pending] = [SessionStatus.Initializing, SessionStatus.Ready, SessionStatus.Error],
         [SessionStatus.Ready] = [SessionStatus.Pushed, SessionStatus.PrOpen, SessionStatus.Merged, SessionStatus.Error, SessionStatus.Archived],
         [SessionStatus.Pushed] = [SessionStatus.PrOpen, SessionStatus.Merged, SessionStatus.Error, SessionStatus.Archived],

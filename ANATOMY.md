@@ -143,6 +143,15 @@
 | #136 | 옵션 패턴 도입 | `IOptionsMonitor<AppSettings>` + `AppSettingsFactory` + `AppSettingsChangeNotifier`. 8개 서비스/컴포넌트 전환 |
 | #137 | 플러그인 실행 엔진 | EntryPoint 로딩/실행/샌드박싱 + hooks·skills 매니페스트 자동 등록 |
 
+### 구조 개선 Phase 14 (2026-03-19) — 신규 구조적 문제 #2 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| `GitServiceTests.cs` (신규, 25개 테스트) | `StubProcessRunner`로 GitService 전 메서드 테스트. 캐시 동작, 파싱 로직, 자동 abort, 캐시 무효화 검증 |
+| `ClaudeArgumentBuilderTests.cs` (신규, 20개 테스트) | 정적 `Build()` 메서드 전 매개변수 조합 검증. 권한 모드, 노력 수준, resume/continue, 시스템 프롬프트 이스케이프 |
+| `SessionServiceTests.cs` (신규, 15개 테스트) | 6개 Fake 의존성으로 SessionService 테스트. CRUD 라운드트립, 제목 폴백, 도구 출력 절단, 워크스페이스 필터 검증 |
+| `ClaudeServiceTests.cs` (신규, 5개 테스트) | Cancel/Dispose 안전성 + DetectCliAsync 경로 해석 검증 |
+| `SessionStatusMachine` 수정 | `Initializing → Pending` 전이 누락 수정 (CreatePendingSessionAsync가 필요로 하는 전이) |
+
 ### 구조 개선 Phase 13 (2026-03-19) — 신규 구조적 문제 #3 해결 + Continue 기능
 | 변경 내용 | 역할 / 영향 범위 |
 |-----------|-----------------|
@@ -1589,7 +1598,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
 | **1** | **ChatView 697줄 재비대화** — Phase 13 Continue 기능 추가로 548→697줄 재성장. 서비스 주입 13개 유지 | 유지보수성 저하, 테스트 불가, SRP 위반 | §10 | 중 |
-| **2** | **테스트 커버리지 부족** — 12개 테스트 파일 / 75+개 서비스. ClaudeService·GitService·SessionService 등 핵심 서비스 테스트 부재 | 회귀 방지 불가, 리팩토링 안전망 없음 | §25 | 높 |
+| **~~2~~** | **~~테스트 커버리지 부족~~** — ~~12개 테스트 파일 / 75+개 서비스~~ → Phase 14에서 핵심 서비스 4종 테스트 추가 (16→228 테스트). `GitServiceTests`·`SessionServiceTests`·`ClaudeArgumentBuilderTests`·`ClaudeServiceTests` | ~~회귀 방지 불가~~ → 핵심 서비스 커버리지 확보 | §25 | ~~높~~ ✅ |
 | **3** | **StreamEventProcessor 516줄 switch 아키텍처** — 20+개 case 중첩 switch문. 새 이벤트 타입 추가 시 OCP 위반 | 확장성, 유지보수성 | §10.5 | 중 |
 | **4** | **GitService ParseDiff " b/" 파싱 취약** — `LastIndexOf(" b/")` 패턴이 `ParseDiff`(정적)과 `GetDiffSummaryAsync`(스트리밍) 양쪽에 존재. 경로에 " b/" 포함 시 오파싱 | diff 표시 오류 | §5 | 낮 |
 | ~~**5**~~ | ~~**SessionService 캐시 무한 성장**~~ ✅ — `_sessionCache` TTL 스캐벤징 + 최대 64 엔트리 용량 제한, `DeleteSessionAsync` try/finally 견고화 | ~~장기 실행 시 메모리 누수~~ | ~~§8~~ | ~~완료~~ |
