@@ -120,8 +120,8 @@ public class AttachmentService : IAttachmentService
 
         if (File.Exists(gitignorePath))
         {
-            var content = await File.ReadAllTextAsync(gitignorePath);
-            if (content.Contains(entry))
+            var lines = await File.ReadAllLinesAsync(gitignorePath);
+            if (lines.Any(line => line.Trim() == entry))
                 return;
             await AtomicFileWriter.AppendAsync(gitignorePath, $"\n{entry}\n");
         }

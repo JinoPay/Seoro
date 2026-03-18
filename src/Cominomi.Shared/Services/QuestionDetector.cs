@@ -20,6 +20,24 @@ public static partial class QuestionDetector
         "which", "what approach", "what method", "how should"
     ];
 
+    private static readonly string[] ConfirmPatterns =
+    [
+        "확인해 주세요", "확인해주세요", "확인 부탁", "알려주세요", "알려 주세요",
+        "선택해 주세요", "선택해주세요", "골라 주세요", "골라주세요",
+        "결정해 주세요", "결정해주세요", "답변 부탁",
+        "please confirm", "let me know", "please select", "please choose",
+        "please pick", "pick one", "choose one", "select one"
+    ];
+
+    private static readonly string[] ImperativeQuestionPatterns =
+    [
+        "괜찮을까", "될까", "맞을까", "좋을까", "나을까",
+        "괜찮겠", "되겠", "맞겠", "좋겠",
+        "을까요", "ㄹ까요", "는지요", "인지요", "건지요",
+        "is that ok", "is this ok", "does that work", "sound good",
+        "make sense", "look good", "that correct", "is that right"
+    ];
+
     [GeneratedRegex(@"^\s*(\d+)[.)]\s+(.+)$", RegexOptions.Multiline)]
     private static partial Regex NumberedListRegex();
 
@@ -32,7 +50,7 @@ public static partial class QuestionDetector
             return (false, []);
 
         var text = message.Text?.TrimEnd() ?? "";
-        if (string.IsNullOrEmpty(text) || !text.EndsWith('?'))
+        if (string.IsNullOrEmpty(text))
             return (false, []);
 
         var lower = text.ToLowerInvariant();
@@ -54,8 +72,23 @@ public static partial class QuestionDetector
             }
         }
 
-        // Generic question
-        return (true, [Strings.Suggest_Yes, Strings.Suggest_No]);
+        foreach (var pattern in ConfirmPatterns)
+        {
+            if (lower.Contains(pattern))
+                return (true, [Strings.Suggest_Proceed, Strings.Suggest_No, Strings.Suggest_Alternative]);
+        }
+
+        foreach (var pattern in ImperativeQuestionPatterns)
+        {
+            if (lower.Contains(pattern))
+                return (true, [Strings.Suggest_Yes, Strings.Suggest_No]);
+        }
+
+        // Generic question ending with ?
+        if (text.EndsWith('?'))
+            return (true, [Strings.Suggest_Yes, Strings.Suggest_No]);
+
+        return (false, []);
     }
 
     private static List<string> ExtractChoices(string text)

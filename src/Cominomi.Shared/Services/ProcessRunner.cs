@@ -29,15 +29,27 @@ public class ProcessRunner : IProcessRunner
         {
             process.Start();
 
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(timeoutCts.Token);
+            // Write stdin if provided, then close the stream
+            if (options.StandardInput != null)
+            {
+                await process.StandardInput.WriteAsync(options.StandardInput);
+                process.StandardInput.Close();
+            }
+
+            var stdoutTask = options.MaxOutputBytes is { } maxBytes
+                ? ReadBoundedAsync(process.StandardOutput, maxBytes, timeoutCts.Token)
+                : ReadUnboundedAsync(process.StandardOutput, timeoutCts.Token);
             var stderrTask = process.StandardError.ReadToEndAsync(timeoutCts.Token);
 
-            var stdout = await stdoutTask;
+            var (stdout, truncated) = await stdoutTask;
             var stderr = await stderrTask;
             await process.WaitForExitAsync(timeoutCts.Token);
 
+            if (truncated)
+                _logger.LogDebug("{FileName} stdout truncated at {MaxBytes} bytes", options.FileName, options.MaxOutputBytes);
+
             _logger.LogDebug("{FileName} exited with code {ExitCode}", options.FileName, process.ExitCode);
-            return new ProcessResult(process.ExitCode == 0, stdout.Trim(), stderr.Trim(), process.ExitCode);
+            return new ProcessResult(process.ExitCode == 0, stdout.Trim(), stderr.Trim(), process.ExitCode, truncated);
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
         {
@@ -81,7 +93,7 @@ public class ProcessRunner : IProcessRunner
         }
     }
 
-    private ProcessStartInfo CreateProcessStartInfo(ProcessRunOptions options)
+    private static ProcessStartInfo CreateProcessStartInfo(ProcessRunOptions options)
     {
         var psi = new ProcessStartInfo
         {
@@ -90,6 +102,7 @@ public class ProcessRunner : IProcessRunner
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = options.StandardInput != null,
             CreateNoWindow = true,
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8,
@@ -105,6 +118,47 @@ public class ProcessRunner : IProcessRunner
         }
 
         return psi;
+    }
+
+    /// <summary>
+    /// Reads up to <paramref name="maxBytes"/> from the stream, then discards the rest.
+    /// Returns the captured text and whether the output was truncated.
+    /// </summary>
+    private static async Task<(string Text, bool Truncated)> ReadBoundedAsync(
+        StreamReader reader, int maxBytes, CancellationToken ct)
+    {
+        var buffer = new char[8192];
+        var sb = new StringBuilder(Math.Min(maxBytes, 65536));
+        int totalBytes = 0;
+        bool truncated = false;
+
+        while (true)
+        {
+            int remaining = maxBytes - totalBytes;
+            if (remaining <= 0)
+            {
+                truncated = true;
+                // Drain remaining output so the process doesn't block on a full pipe
+                while (await reader.ReadAsync(buffer.AsMemory(), ct) > 0) { }
+                break;
+            }
+
+            int toRead = Math.Min(buffer.Length, remaining);
+            int read = await reader.ReadAsync(buffer.AsMemory(0, toRead), ct);
+            if (read == 0) break;
+
+            sb.Append(buffer, 0, read);
+            totalBytes += Encoding.UTF8.GetByteCount(buffer, 0, read);
+        }
+
+        return (sb.ToString(), truncated);
+    }
+
+    private static async Task<(string Text, bool Truncated)> ReadUnboundedAsync(
+        StreamReader reader, CancellationToken ct)
+    {
+        var text = await reader.ReadToEndAsync(ct);
+        return (text, false);
     }
 
     private void KillProcess(Process process, bool entireTree)

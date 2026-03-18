@@ -50,6 +50,7 @@
     // FileSystemWatcher for throttled change detection
     private FileSystemWatcher? _watcher;
     private System.Timers.Timer? _debounceTimer;
+    private readonly object _debounceLock = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -136,8 +137,11 @@
                 e.FullPath.EndsWith(Path.DirectorySeparatorChar + ".git"))
                 return;
 
-            _debounceTimer.Stop();
-            _debounceTimer.Start();
+            lock (_debounceLock)
+            {
+                _debounceTimer?.Stop();
+                _debounceTimer?.Start();
+            }
         }
 
         _watcher.Changed += OnChange;
@@ -154,8 +158,11 @@
             _watcher.Dispose();
             _watcher = null;
         }
-        _debounceTimer?.Dispose();
-        _debounceTimer = null;
+        lock (_debounceLock)
+        {
+            _debounceTimer?.Dispose();
+            _debounceTimer = null;
+        }
     }
 
     private async Task LoadFilesAsync(bool preserveExpanded = false)

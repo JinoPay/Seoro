@@ -118,4 +118,93 @@ public class QuestionDetectorTests
         Assert.True(isQuestion);
         Assert.Equal(3, responses.Count);
     }
+
+    [Fact]
+    public void Detect_NoQuestionMark_WithYesNoPattern_ReturnsTrue()
+    {
+        var msg = AssistantMessage("이 변경사항을 적용할까요.");
+        var (isQuestion, responses) = QuestionDetector.Detect(msg);
+
+        Assert.True(isQuestion);
+        Assert.Equal(3, responses.Count);
+        Assert.Contains("네, 진행해주세요", responses);
+    }
+
+    [Fact]
+    public void Detect_ConfirmPattern_Korean_ReturnsTrue()
+    {
+        var msg = AssistantMessage("어떤 방법을 사용할지 선택해주세요.");
+        var (isQuestion, responses) = QuestionDetector.Detect(msg);
+
+        Assert.True(isQuestion);
+        Assert.Equal(3, responses.Count);
+    }
+
+    [Fact]
+    public void Detect_ConfirmPattern_English_ReturnsTrue()
+    {
+        var msg = AssistantMessage("Please confirm the changes.");
+        var (isQuestion, responses) = QuestionDetector.Detect(msg);
+
+        Assert.True(isQuestion);
+        Assert.Equal(3, responses.Count);
+    }
+
+    [Fact]
+    public void Detect_ImperativePattern_Korean_ReturnsTrue()
+    {
+        var msg = AssistantMessage("이렇게 하면 괜찮을까요.");
+        var (isQuestion, responses) = QuestionDetector.Detect(msg);
+
+        Assert.True(isQuestion);
+        Assert.Equal(2, responses.Count);
+    }
+
+    [Fact]
+    public void Detect_ImperativePattern_English_ReturnsTrue()
+    {
+        var msg = AssistantMessage("Does that work for you.");
+        var (isQuestion, responses) = QuestionDetector.Detect(msg);
+
+        Assert.True(isQuestion);
+        Assert.Equal(2, responses.Count);
+    }
+
+    [Fact]
+    public void Detect_LetMeKnow_ReturnsTrue()
+    {
+        var msg = AssistantMessage("Please let me know which option you prefer.");
+        var (isQuestion, responses) = QuestionDetector.Detect(msg);
+
+        Assert.True(isQuestion);
+        Assert.Equal(3, responses.Count);
+    }
+
+    [Fact]
+    public void Detect_PickOne_WithList_ReturnsTrue()
+    {
+        var msg = AssistantMessage("Please pick one:\n1. Option A\n2. Option B");
+        var (isQuestion, responses) = QuestionDetector.Detect(msg);
+
+        Assert.True(isQuestion);
+        Assert.True(responses.Count >= 2);
+    }
+
+    [Fact]
+    public void Detect_PlainStatement_NoPatterns_ReturnsFalse()
+    {
+        var msg = AssistantMessage("작업을 완료했습니다.");
+        var (isQuestion, _) = QuestionDetector.Detect(msg);
+        Assert.False(isQuestion);
+    }
+
+    [Fact]
+    public void Detect_SoundGood_ReturnsTrue()
+    {
+        var msg = AssistantMessage("I'll refactor the service layer. Sound good to you.");
+        var (isQuestion, responses) = QuestionDetector.Detect(msg);
+
+        Assert.True(isQuestion);
+        Assert.Equal(2, responses.Count);
+    }
 }
