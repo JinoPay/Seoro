@@ -4,6 +4,9 @@ namespace Cominomi.Shared.Services;
 
 public class TabManager
 {
+    public const long MaxSingleFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+    public const long MaxTotalContentBytes = 50 * 1024 * 1024;   // 50 MB
+
     public List<MainTab> OpenTabs { get; private set; } = new();
     public MainTab? ActiveTab { get; private set; }
 
@@ -39,6 +42,7 @@ public class TabManager
         var tab = OpenTabs.FirstOrDefault(t => t.Id == tabId);
         if (tab != null)
         {
+            tab.LastAccessedAt = DateTime.UtcNow;
             ActiveTab = tab;
             OnTabChanged?.Invoke();
         }
@@ -62,10 +66,22 @@ public class TabManager
 
     public void OpenFileContentTab(string filePath, string content)
     {
+        var sizeBytes = (long)content.Length * 2; // UTF-16
+
+        if (sizeBytes > MaxSingleFileSizeBytes)
+        {
+            var truncated = content[..(int)(MaxSingleFileSizeBytes / 2)];
+            content = truncated + $"\n\n--- File truncated (original: {sizeBytes / 1024 / 1024} MB, limit: {MaxSingleFileSizeBytes / 1024 / 1024} MB) ---";
+            sizeBytes = (long)content.Length * 2;
+        }
+
         var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileContent && t.FilePath == filePath);
         if (existing != null)
         {
             existing.FileContent = content;
+            existing.ContentSizeBytes = sizeBytes;
+            existing.ContentEvicted = false;
+            existing.LastAccessedAt = DateTime.UtcNow;
             ActiveTab = existing;
         }
         else
@@ -76,11 +92,15 @@ public class TabManager
                 Type = MainTabType.FileContent,
                 Title = fileName,
                 FilePath = filePath,
-                FileContent = content
+                FileContent = content,
+                ContentSizeBytes = sizeBytes,
+                LastAccessedAt = DateTime.UtcNow
             };
             OpenTabs.Add(tab);
             ActiveTab = tab;
         }
+
+        EvictLruContent();
         OnTabChanged?.Invoke();
     }
 
@@ -89,6 +109,7 @@ public class TabManager
         var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileContent && t.FilePath == filePath);
         if (existing != null)
         {
+            existing.LastAccessedAt = DateTime.UtcNow;
             ActiveTab = existing;
         }
         else
@@ -98,7 +119,8 @@ public class TabManager
             {
                 Type = MainTabType.FileContent,
                 Title = fileName,
-                FilePath = filePath
+                FilePath = filePath,
+                LastAccessedAt = DateTime.UtcNow
             };
             OpenTabs.Add(tab);
             ActiveTab = tab;
@@ -112,6 +134,7 @@ public class TabManager
         if (existing != null)
         {
             existing.DiffData = diff;
+            existing.LastAccessedAt = DateTime.UtcNow;
             ActiveTab = existing;
         }
         else
@@ -122,7 +145,8 @@ public class TabManager
                 Type = MainTabType.FileDiff,
                 Title = fileName,
                 FilePath = filePath,
-                DiffData = diff
+                DiffData = diff,
+                LastAccessedAt = DateTime.UtcNow
             };
             OpenTabs.Add(tab);
             ActiveTab = tab;
@@ -151,5 +175,28 @@ public class TabManager
         var chatTab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.Chat);
         if (chatTab != null) chatTab.Title = title;
         OnTabChanged?.Invoke();
+    }
+
+    private void EvictLruContent()
+    {
+        var totalBytes = OpenTabs
+            .Where(t => t.FileContent != null && !t.ContentEvicted)
+            .Sum(t => t.ContentSizeBytes);
+
+        if (totalBytes <= MaxTotalContentBytes) return;
+
+        var candidates = OpenTabs
+            .Where(t => t.Type == MainTabType.FileContent && t.FileContent != null && !t.ContentEvicted && t.Id != ActiveTab?.Id)
+            .OrderBy(t => t.LastAccessedAt)
+            .ToList();
+
+        foreach (var tab in candidates)
+        {
+            if (totalBytes <= MaxTotalContentBytes) break;
+
+            totalBytes -= tab.ContentSizeBytes;
+            tab.FileContent = null;
+            tab.ContentEvicted = true;
+        }
     }
 }
