@@ -55,7 +55,7 @@ Rules:
 
         try
         {
-            var memories = await _memoryService.GetAllAsync();
+            var memories = await _memoryService.GetForWorkspaceAsync(workspace?.Id);
             if (memories.Count > 0)
             {
                 var memoryPrompt = _memoryService.BuildMemoryPrompt(memories);

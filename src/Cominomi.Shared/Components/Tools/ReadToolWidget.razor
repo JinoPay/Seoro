@@ -70,7 +70,7 @@
             if (doc.RootElement.TryGetProperty("path", out var p))
                 return ShortenPath(p.GetString() ?? "");
         }
-        catch { }
+        catch (JsonException) { /* malformed tool input — return empty */ }
         return "";
     }
 

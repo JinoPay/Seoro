@@ -21,7 +21,7 @@ public class AttachmentService : IAttachmentService
         Guard.NotNullOrWhiteSpace(sourceFilePath, nameof(sourceFilePath));
         Guard.NotNullOrWhiteSpace(worktreePath, nameof(worktreePath));
 
-        var dir = EnsureAttachmentsDir(worktreePath);
+        var dir = await EnsureAttachmentsDirAsync(worktreePath);
         var originalName = Path.GetFileName(sourceFilePath);
         var ext = Path.GetExtension(originalName);
         var storedName = $"{Guid.NewGuid():N}{ext}";
@@ -48,7 +48,7 @@ public class AttachmentService : IAttachmentService
         Guard.NotNullOrWhiteSpace(contentType, nameof(contentType));
         Guard.NotNullOrWhiteSpace(worktreePath, nameof(worktreePath));
 
-        var dir = EnsureAttachmentsDir(worktreePath);
+        var dir = await EnsureAttachmentsDirAsync(worktreePath);
         var ext = Path.GetExtension(fileName);
         if (string.IsNullOrEmpty(ext) && contentType.StartsWith("image/"))
         {
@@ -105,29 +105,29 @@ public class AttachmentService : IAttachmentService
         return sb.ToString();
     }
 
-    private string EnsureAttachmentsDir(string worktreePath)
+    private async Task<string> EnsureAttachmentsDirAsync(string worktreePath)
     {
         var dir = Path.Combine(worktreePath, AttachmentsDir);
         Directory.CreateDirectory(dir);
-        EnsureGitignore(worktreePath);
+        await EnsureGitignoreAsync(worktreePath);
         return dir;
     }
 
-    private static void EnsureGitignore(string worktreePath)
+    private static async Task EnsureGitignoreAsync(string worktreePath)
     {
         var gitignorePath = Path.Combine(worktreePath, ".gitignore");
         var entry = AttachmentsDir + "/";
 
         if (File.Exists(gitignorePath))
         {
-            var content = File.ReadAllText(gitignorePath);
+            var content = await File.ReadAllTextAsync(gitignorePath);
             if (content.Contains(entry))
                 return;
-            File.AppendAllText(gitignorePath, $"\n{entry}\n");
+            await AtomicFileWriter.AppendAsync(gitignorePath, $"\n{entry}\n");
         }
         else
         {
-            File.WriteAllText(gitignorePath, $"{entry}\n");
+            await AtomicFileWriter.WriteAsync(gitignorePath, $"{entry}\n");
         }
     }
 

@@ -169,7 +169,7 @@ public class ClaudeService : IClaudeService, IDisposable
             };
         }
 
-        try { process.Dispose(); } catch { }
+        try { process.Dispose(); } catch { /* process may already be disposed */ }
         _agents.TryRemove(agentKey, out _);
     }
 
@@ -213,7 +213,7 @@ public class ClaudeService : IClaudeService, IDisposable
                 if (!string.IsNullOrWhiteSpace(errLine))
                     sb.Append(errLine);
             }
-            catch { /* cancelled or stream disposed */ }
+            catch (Exception) { /* expected: stream cancelled or disposed during shutdown */ }
         }, token);
     }
 
@@ -223,14 +223,14 @@ public class ClaudeService : IClaudeService, IDisposable
         {
             if (token.IsCancellationRequested && process is { HasExited: false })
             {
-                try { process.Kill(entireProcessTree: true); } catch { }
+                try { process.Kill(entireProcessTree: true); } catch { /* best-effort: process may have already exited */ }
             }
 
             if (process is { HasExited: false })
             {
                 using var exitCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                 try { await process.WaitForExitAsync(exitCts.Token); }
-                catch (OperationCanceledException) { try { process.Kill(entireProcessTree: true); } catch { } }
+                catch (OperationCanceledException) { try { process.Kill(entireProcessTree: true); } catch { /* best-effort: process may have already exited */ } }
             }
         }
         catch { /* process already disposed by cancellation */ }
@@ -333,7 +333,7 @@ public class ClaudeService : IClaudeService, IDisposable
             var output = await process.StandardOutput.ReadToEndAsync();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(settings.SummarizationTimeoutSeconds));
             try { await process.WaitForExitAsync(cts.Token); }
-            catch (OperationCanceledException) { try { process.Kill(entireProcessTree: true); } catch { } }
+            catch (OperationCanceledException) { try { process.Kill(entireProcessTree: true); } catch { /* best-effort: process may have already exited */ } }
             process.Dispose();
 
             var summary = output.Trim();
@@ -386,7 +386,7 @@ public class ClaudeService : IClaudeService, IDisposable
             try
             {
                 if (_process is { HasExited: false })
-                    try { _process.Kill(entireProcessTree: true); } catch { }
+                    try { _process.Kill(entireProcessTree: true); } catch { /* best-effort: process may have already exited */ }
             }
             catch { /* process already disposed */ }
         }
@@ -394,7 +394,7 @@ public class ClaudeService : IClaudeService, IDisposable
         public void Dispose()
         {
             _cts.Dispose();
-            try { _process.Dispose(); } catch { }
+            try { _process.Dispose(); } catch { /* best-effort cleanup */ }
         }
     }
 }

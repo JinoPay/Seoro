@@ -21,7 +21,17 @@ public static class AtomicFileWriter
         finally
         {
             // Clean up temp file if move failed
-            try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { }
+            try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { /* best-effort: temp file cleanup is non-critical */ }
         }
+    }
+
+    /// <summary>
+    /// Atomically appends content to a file by reading existing content, appending, then writing atomically.
+    /// Creates the file if it doesn't exist.
+    /// </summary>
+    public static async Task AppendAsync(string targetPath, string content)
+    {
+        var existing = File.Exists(targetPath) ? await File.ReadAllTextAsync(targetPath) : "";
+        await WriteAsync(targetPath, existing + content);
     }
 }

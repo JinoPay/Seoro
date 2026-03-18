@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using Cominomi.Shared;
@@ -10,6 +11,15 @@ public class GitService : IGitService
 {
     private readonly ILogger<GitService> _logger;
     private readonly IProcessRunner _processRunner;
+
+    // Cache: DetectDefaultBranch rarely changes → 5 min TTL
+    private readonly ConcurrentDictionary<string, (string? Branch, DateTime LoadedAt)> _defaultBranchCache = new();
+    private static readonly TimeSpan DefaultBranchCacheTtl = TimeSpan.FromMinutes(5);
+
+    // Cache: ListBranches changes more often → 30 sec TTL
+    private readonly ConcurrentDictionary<string, (List<string> Branches, DateTime LoadedAt)> _branchListCache = new();
+    private readonly ConcurrentDictionary<string, (List<BranchGroup> Groups, DateTime LoadedAt)> _branchGroupCache = new();
+    private static readonly TimeSpan BranchListCacheTtl = TimeSpan.FromSeconds(30);
 
     public GitService(ILogger<GitService> logger, IProcessRunner processRunner)
     {
@@ -121,6 +131,13 @@ public class GitService : IGitService
 
     public async Task<string?> DetectDefaultBranchAsync(string repoDir)
     {
+        var key = Path.GetFullPath(repoDir);
+        if (_defaultBranchCache.TryGetValue(key, out var cached) &&
+            DateTime.UtcNow - cached.LoadedAt < DefaultBranchCacheTtl)
+        {
+            return cached.Branch;
+        }
+
         // Try symbolic-ref first
         var result = await RunGitAsync(repoDir, default, "symbolic-ref", "refs/remotes/origin/HEAD");
         if (result.Success)
@@ -128,17 +145,28 @@ public class GitService : IGitService
             var refPath = result.Output.Trim();
             var branch = refPath.Replace("refs/remotes/", "");
             if (!string.IsNullOrEmpty(branch))
+            {
+                _defaultBranchCache[key] = (branch, DateTime.UtcNow);
                 return branch;
+            }
         }
 
         // Fallback: check if main or master exists
         if (await BranchExistsAsync(repoDir, "main"))
+        {
+            _defaultBranchCache[key] = ("origin/main", DateTime.UtcNow);
             return "origin/main";
+        }
         if (await BranchExistsAsync(repoDir, "master"))
+        {
+            _defaultBranchCache[key] = ("origin/master", DateTime.UtcNow);
             return "origin/master";
+        }
 
         // Last resort: get current branch
-        return await GetCurrentBranchAsync(repoDir);
+        var current = await GetCurrentBranchAsync(repoDir);
+        _defaultBranchCache[key] = (current, DateTime.UtcNow);
+        return current;
     }
 
     public async Task<bool> IsGitRepoAsync(string path)
@@ -158,15 +186,25 @@ public class GitService : IGitService
 
     public async Task<List<string>> ListBranchesAsync(string repoDir)
     {
+        var key = Path.GetFullPath(repoDir);
+        if (_branchListCache.TryGetValue(key, out var cached) &&
+            DateTime.UtcNow - cached.LoadedAt < BranchListCacheTtl)
+        {
+            return cached.Branches;
+        }
+
         var result = await RunGitAsync(repoDir, default, "branch", "--format=%(refname:short)");
         if (!result.Success)
             return [];
 
-        return result.Output
+        var branches = result.Output
             .Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Select(b => b.Trim())
             .Where(b => !string.IsNullOrEmpty(b))
             .ToList();
+
+        _branchListCache[key] = (branches, DateTime.UtcNow);
+        return branches;
     }
 
     public async Task<bool> BranchExistsAsync(string repoDir, string branchName)
@@ -227,12 +265,16 @@ public class GitService : IGitService
 
     public async Task<GitResult> FetchAsync(string repoDir, CancellationToken ct = default)
     {
-        return await RunGitAsync(repoDir, ct, "fetch", "origin");
+        var result = await RunGitAsync(repoDir, ct, "fetch", "origin");
+        if (result.Success) InvalidateBranchCaches(repoDir);
+        return result;
     }
 
     public async Task<GitResult> FetchAllAsync(string repoDir, CancellationToken ct = default)
     {
-        return await RunGitAsync(repoDir, ct, "fetch", "--all", "--prune");
+        var result = await RunGitAsync(repoDir, ct, "fetch", "--all", "--prune");
+        if (result.Success) InvalidateBranchCaches(repoDir);
+        return result;
     }
 
     public async Task<GitResult> RebaseAsync(string workingDir, string baseBranch, CancellationToken ct = default)
@@ -248,6 +290,13 @@ public class GitService : IGitService
 
     public async Task<List<BranchGroup>> ListAllBranchesGroupedAsync(string repoDir)
     {
+        var key = Path.GetFullPath(repoDir);
+        if (_branchGroupCache.TryGetValue(key, out var cached) &&
+            DateTime.UtcNow - cached.LoadedAt < BranchListCacheTtl)
+        {
+            return cached.Groups;
+        }
+
         var groups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
         // Get remote branches
@@ -293,6 +342,7 @@ public class GitService : IGitService
         if (localBranches.Count > 0)
             result.Add(new BranchGroup("로컬", localBranches));
 
+        _branchGroupCache[key] = (result, DateTime.UtcNow);
         return result;
     }
 
@@ -317,7 +367,7 @@ public class GitService : IGitService
 
     public async Task<GitResult> GetFormattedCommitLogAsync(string repoDir, string baseBranch, int maxCount = 50, CancellationToken ct = default)
     {
-        return await RunGitAsync(repoDir, ct, "log", $"{baseBranch}..HEAD", "--format=%H|%h|%an|%aI|%s", "-n", maxCount.ToString());
+        return await RunGitAsync(repoDir, ct, "log", $"{baseBranch}..HEAD", "--format=%H%x00%h%x00%an%x00%aI%x00%s", "-n", maxCount.ToString());
     }
 
     public async Task<List<string>> ListTrackedFilesAsync(string workingDir, CancellationToken ct = default)
@@ -432,6 +482,14 @@ public class GitService : IGitService
         }
 
         return summary;
+    }
+
+    private void InvalidateBranchCaches(string repoDir)
+    {
+        var key = Path.GetFullPath(repoDir);
+        _defaultBranchCache.TryRemove(key, out _);
+        _branchListCache.TryRemove(key, out _);
+        _branchGroupCache.TryRemove(key, out _);
     }
 
     /// <summary>

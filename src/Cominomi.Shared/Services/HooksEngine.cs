@@ -56,46 +56,52 @@ public class HooksEngine : IHooksEngine
     public async Task FireAsync(HookEvent hookEvent, Dictionary<string, string>? env = null)
     {
         var hooks = _hooks.Where(h => h.Event == hookEvent && h.Enabled).ToList();
-        if (hooks.Count > 0)
-            _logger.LogInformation("Firing hook event {Event} ({Count} hooks)", hookEvent, hooks.Count);
+        if (hooks.Count == 0) return;
 
-        foreach (var hook in hooks)
+        _logger.LogInformation("Firing hook event {Event} ({Count} hooks)", hookEvent, hooks.Count);
+
+        var shell = await _shellService.GetShellAsync();
+        var tasks = hooks.Select(hook => ExecuteHookAsync(hook, hookEvent, shell, env));
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task ExecuteHookAsync(
+        HookDefinition hook, HookEvent hookEvent, ShellInfo shell, Dictionary<string, string>? env)
+    {
+        try
         {
-            try
+            var envVars = new Dictionary<string, string>
             {
-                var shell = await _shellService.GetShellAsync();
-                var escapedCommand = hook.Command.Replace("\"", "\\\"");
-
-                var shellArg = shell.Type == ShellType.Cmd
-                    ? $"/c \"{escapedCommand}\""
-                    : $"-c \"{escapedCommand}\"";
-
-                var envVars = new Dictionary<string, string>
-                {
-                    [CominomiConstants.Env.HookEvent] = hookEvent.ToString()
-                };
-                if (env != null)
-                {
-                    foreach (var (key, value) in env)
-                        envVars[key] = value;
-                }
-
-                await _processRunner.RunAsync(new ProcessRunOptions
-                {
-                    FileName = shell.FileName,
-                    // Shell commands must be passed as a single argument string via ArgumentList
-                    Arguments = shell.Type == ShellType.Cmd
-                        ? ["/c", escapedCommand]
-                        : ["-c", escapedCommand],
-                    WorkingDirectory = hook.WorkingDirectory ?? ".",
-                    EnvironmentVariables = envVars,
-                    Timeout = TimeSpan.FromSeconds(5)
-                });
-            }
-            catch (Exception ex)
+                [CominomiConstants.Env.HookEvent] = hookEvent.ToString()
+            };
+            if (env != null)
             {
-                _logger.LogWarning(ex, "Hook '{Command}' for event {Event} failed", hook.Command, hookEvent);
+                foreach (var (key, value) in env)
+                    envVars[key] = value;
             }
+
+            var result = await _processRunner.RunAsync(new ProcessRunOptions
+            {
+                FileName = shell.FileName,
+                Arguments = shell.Type == ShellType.Cmd
+                    ? ["/c", hook.Command]
+                    : ["-c", hook.Command],
+                WorkingDirectory = hook.WorkingDirectory ?? ".",
+                EnvironmentVariables = envVars,
+                Timeout = TimeSpan.FromSeconds(hook.TimeoutSeconds)
+            });
+
+            if (!string.IsNullOrWhiteSpace(result.Stdout))
+                _logger.LogDebug("Hook '{Command}' stdout: {Stdout}", hook.Command, result.Stdout.TrimEnd());
+            if (!string.IsNullOrWhiteSpace(result.Stderr))
+                _logger.LogWarning("Hook '{Command}' stderr: {Stderr}", hook.Command, result.Stderr.TrimEnd());
+            if (!result.Success)
+                _logger.LogWarning("Hook '{Command}' for event {Event} exited with code {ExitCode}",
+                    hook.Command, hookEvent, result.ExitCode);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Hook '{Command}' for event {Event} failed", hook.Command, hookEvent);
         }
     }
 
