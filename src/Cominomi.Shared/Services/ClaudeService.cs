@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
-public class ClaudeService : IClaudeService
+public class ClaudeService : IClaudeService, IDisposable
 {
     private readonly ISettingsService _settingsService;
     private readonly ILogger<ClaudeService> _logger;
@@ -17,6 +17,7 @@ public class ClaudeService : IClaudeService
     private readonly ConcurrentDictionary<string, AgentProcess> _agents = new();
     private CliCapabilities? _capabilities;
     private readonly SemaphoreSlim _capLock = new(1, 1);
+    private bool _disposed;
 
     private const string DefaultAgentKey = "__default__";
 
@@ -349,7 +350,25 @@ public class ClaudeService : IClaudeService
         }
     }
 
-    private sealed class AgentProcess
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        foreach (var key in _agents.Keys.ToList())
+        {
+            if (_agents.TryRemove(key, out var agent))
+            {
+                _logger.LogInformation("Shutting down Claude process for session {AgentKey}", key);
+                agent.Cancel();
+                agent.Dispose();
+            }
+        }
+
+        _capLock.Dispose();
+    }
+
+    private sealed class AgentProcess : IDisposable
     {
         private readonly Process _process;
         private readonly CancellationTokenSource _cts;
@@ -369,6 +388,12 @@ public class ClaudeService : IClaudeService
                     try { _process.Kill(entireProcessTree: true); } catch { }
             }
             catch { /* process already disposed */ }
+        }
+
+        public void Dispose()
+        {
+            _cts.Dispose();
+            try { _process.Dispose(); } catch { }
         }
     }
 }
