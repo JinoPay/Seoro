@@ -1,6 +1,7 @@
 @using Cominomi.Shared.Models
 @inject ChatState ChatState
 @inject IGitService GitService
+@implements IDisposable
 
 <div class="sidebar-explorer">
     <div class="tree-header">
@@ -37,15 +38,24 @@
 
 @code {
     private List<FileNode> _tree = new();
-    private HashSet<string> _expandedDirs = new();
     private bool _loading;
     private string? _error;
     private DiffSummary? _diff;
     private string? _lastSessionId;
 
+    // Per-session expanded dirs state
+    private Dictionary<string, HashSet<string>> _sessionExpandedDirs = new();
+    private HashSet<string> _expandedDirs = new();
+
+    // FileSystemWatcher for throttled change detection
+    private FileSystemWatcher? _watcher;
+    private System.Timers.Timer? _debounceTimer;
+
     protected override async Task OnInitializedAsync()
     {
+        ChatState.OnChange += HandleStateChanged;
         await LoadFilesAsync();
+        StartWatching();
     }
 
     protected override async Task OnParametersSetAsync()
@@ -53,13 +63,102 @@
         var sessionId = ChatState.CurrentSession?.Id;
         if (sessionId != _lastSessionId)
         {
+            // Save current session's expanded state
+            if (_lastSessionId != null)
+                _sessionExpandedDirs[_lastSessionId] = _expandedDirs;
+
             _lastSessionId = sessionId;
-            _expandedDirs.Clear();
+
+            // Restore or initialize expanded state for this session
+            if (sessionId != null && _sessionExpandedDirs.TryGetValue(sessionId, out var saved))
+            {
+                _expandedDirs = saved;
+            }
+            else
+            {
+                _expandedDirs = new HashSet<string>();
+            }
+
             await LoadFilesAsync();
+            StartWatching();
+
+            // Only expand all if first time seeing this session (empty state)
+            if (sessionId != null && !_sessionExpandedDirs.ContainsKey(sessionId))
+            {
+                ExpandAllDirs(_tree);
+                _sessionExpandedDirs[sessionId] = _expandedDirs;
+            }
         }
     }
 
-    private async Task LoadFilesAsync()
+    private void StartWatching()
+    {
+        StopWatching();
+
+        var path = ChatState.CurrentSession?.WorktreePath;
+        if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+            return;
+
+        _watcher = new FileSystemWatcher(path)
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+            EnableRaisingEvents = true
+        };
+
+        _debounceTimer = new System.Timers.Timer(2000) { AutoReset = false };
+        _debounceTimer.Elapsed += async (_, _) =>
+        {
+            try
+            {
+                await InvokeAsync(async () =>
+                {
+                    var prevDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? new HashSet<string>();
+                    await LoadFilesAsync(preserveExpanded: true);
+                    var newDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? new HashSet<string>();
+
+                    // Auto-expand directories of newly changed files
+                    var newlyChanged = newDiffFiles.Except(prevDiffFiles).ToList();
+                    if (newlyChanged.Count > 0)
+                    {
+                        foreach (var filePath in newlyChanged)
+                            ExpandParentDirs(filePath);
+                        StateHasChanged();
+                    }
+                });
+            }
+            catch { /* component may be disposed */ }
+        };
+
+        void OnChange(object sender, FileSystemEventArgs e)
+        {
+            if (e.FullPath.Contains(Path.DirectorySeparatorChar + ".git" + Path.DirectorySeparatorChar) ||
+                e.FullPath.EndsWith(Path.DirectorySeparatorChar + ".git"))
+                return;
+
+            _debounceTimer.Stop();
+            _debounceTimer.Start();
+        }
+
+        _watcher.Changed += OnChange;
+        _watcher.Created += OnChange;
+        _watcher.Deleted += OnChange;
+        _watcher.Renamed += (s, e) => OnChange(s, e);
+    }
+
+    private void StopWatching()
+    {
+        if (_watcher != null)
+        {
+            _watcher.EnableRaisingEvents = false;
+            _watcher.Dispose();
+            _watcher = null;
+        }
+        _debounceTimer?.Dispose();
+        _debounceTimer = null;
+    }
+
+    private async Task LoadFilesAsync(bool preserveExpanded = false)
     {
         var session = ChatState.CurrentSession;
         if (session == null || string.IsNullOrEmpty(session.WorktreePath)) return;
@@ -82,7 +181,20 @@
             catch { _diff = null; }
 
             _tree = BuildTree(files);
-            ExpandAllDirs(_tree);
+
+            if (!preserveExpanded)
+            {
+                // Only expand all on initial load (not on watcher refresh)
+                if (_expandedDirs.Count == 0)
+                    ExpandAllDirs(_tree);
+            }
+
+            // Always ensure diff file parents are expanded
+            if (_diff != null)
+            {
+                foreach (var file in _diff.Files)
+                    ExpandParentDirs(file.FilePath);
+            }
         }
         catch (Exception ex)
         {
@@ -95,6 +207,9 @@
         }
     }
 
+    // Parameterless overload for button click
+    private Task LoadFilesAsync() => LoadFilesAsync(preserveExpanded: false);
+
     private RenderFragment RenderNodes(List<FileNode> nodes, int depth) => builder =>
     {
         foreach (var node in nodes)
@@ -103,15 +218,16 @@
             if (node.IsDirectory)
             {
                 var expanded = _expandedDirs.Contains(node.FullPath);
+                var hasDiff = _diff != null && _diff.Files.Any(f => f.FilePath.StartsWith(node.FullPath + "/"));
                 builder.OpenElement(0, "div");
-                builder.AddAttribute(1, "class", "sidebar-file-item dir");
+                builder.AddAttribute(1, "class", $"sidebar-file-item dir{(hasDiff ? " has-diff" : "")}");
                 builder.AddAttribute(2, "style", $"padding-left: {indent + 8}px;");
                 builder.AddAttribute(3, "onclick", EventCallback.Factory.Create(this, () => ToggleDir(node.FullPath)));
 
                 builder.OpenComponent<MudIcon>(4);
                 builder.AddComponentParameter(5, "Icon", expanded ? Icons.Material.Filled.FolderOpen : Icons.Material.Filled.Folder);
                 builder.AddComponentParameter(6, "Size", Size.Small);
-                builder.AddComponentParameter(7, "Style", "width: 14px; height: 14px; opacity: 0.6;");
+                builder.AddComponentParameter(7, "Style", $"width: 14px; height: 14px; {(hasDiff ? "opacity: 0.8; color: #89b4fa;" : "opacity: 0.6;")}");
                 builder.CloseComponent();
 
                 builder.OpenElement(8, "span");
@@ -170,6 +286,17 @@
     {
         if (!_expandedDirs.Remove(path))
             _expandedDirs.Add(path);
+    }
+
+    private void ExpandParentDirs(string filePath)
+    {
+        var parts = filePath.Split('/');
+        var currentPath = "";
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            currentPath = i == 0 ? parts[i] : $"{currentPath}/{parts[i]}";
+            _expandedDirs.Add(currentPath);
+        }
     }
 
     private static string GetFileIcon(FileDiff? diff)
@@ -242,6 +369,21 @@
         }
 
         return root;
+    }
+
+    private async void HandleStateChanged()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= HandleStateChanged;
+        StopWatching();
+
+        // Save current session state before dispose
+        if (_lastSessionId != null)
+            _sessionExpandedDirs[_lastSessionId] = _expandedDirs;
     }
 
     private class FileNode
