@@ -14,9 +14,16 @@ public record ProcessRunOptions
     /// and the content is written then the stream is closed.
     /// </summary>
     public string? StandardInput { get; init; }
+
+    /// <summary>
+    /// Maximum bytes to read from stdout. When exceeded, output is truncated and
+    /// <see cref="ProcessResult.Truncated"/> is set to <c>true</c>.
+    /// Null (default) means unlimited — the entire stream is buffered.
+    /// </summary>
+    public int? MaxOutputBytes { get; init; }
 }
 
-public record ProcessResult(bool Success, string Stdout, string Stderr, int ExitCode);
+public record ProcessResult(bool Success, string Stdout, string Stderr, int ExitCode, bool Truncated = false);
 
 public interface IProcessRunner
 {

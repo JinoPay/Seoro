@@ -48,8 +48,7 @@ public class UsageService : IUsageService
 
     public async Task RecordUsageAsync(UsageEntry entry)
     {
-        var hashInput = $"{entry.SessionId}|{entry.Timestamp:O}|{entry.InputTokens}|{entry.OutputTokens}";
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hashInput)))[..16];
+        var hash = ComputeEntryHash(entry);
 
         await _writeLock.WaitAsync();
         try
@@ -136,6 +135,12 @@ public class UsageService : IUsageService
 
     // --- private helpers ---
 
+    private static string ComputeEntryHash(UsageEntry entry)
+    {
+        var hashInput = $"{entry.SessionId}|{entry.Timestamp:O}|{entry.InputTokens}|{entry.OutputTokens}";
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hashInput)))[..16];
+    }
+
     private async Task LoadExistingHashesAsync()
     {
         if (!File.Exists(_usageFilePath))
@@ -151,11 +156,7 @@ public class UsageService : IUsageService
                 {
                     var entry = JsonSerializer.Deserialize<UsageEntry>(line);
                     if (entry != null)
-                    {
-                        var hashInput = $"{entry.SessionId}|{entry.Timestamp:O}|{entry.InputTokens}|{entry.OutputTokens}";
-                        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hashInput)))[..16];
-                        _seenHashes.Add(hash);
-                    }
+                        _seenHashes.Add(ComputeEntryHash(entry));
                 }
                 catch
                 {
@@ -214,11 +215,7 @@ public class UsageService : IUsageService
         // Rebuild hash set with only kept entries
         _seenHashes.Clear();
         foreach (var entry in kept)
-        {
-            var hashInput = $"{entry.SessionId}|{entry.Timestamp:O}|{entry.InputTokens}|{entry.OutputTokens}";
-            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hashInput)))[..16];
-            _seenHashes.Add(hash);
-        }
+            _seenHashes.Add(ComputeEntryHash(entry));
 
         return removedCount;
     }
