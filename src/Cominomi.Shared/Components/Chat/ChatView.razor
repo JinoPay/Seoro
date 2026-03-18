@@ -302,7 +302,7 @@
 
         if (session.Status == SessionStatus.Pending)
         {
-            if (string.IsNullOrEmpty(_selectedBranch))
+            if (string.IsNullOrEmpty(_selectedBranch) || _isInitializingWorktree)
                 return;
 
             try

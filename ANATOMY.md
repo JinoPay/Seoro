@@ -85,6 +85,15 @@
 | #136 | 옵션 패턴 도입 | `IOptionsMonitor<AppSettings>` + `AppSettingsFactory` + `AppSettingsChangeNotifier`. 8개 서비스/컴포넌트 전환 |
 | #137 | 플러그인 실행 엔진 | EntryPoint 로딩/실행/샌드박싱 + hooks·skills 매니페스트 자동 등록 |
 
+### 구조 개선 Phase 8 (2026-03-18) — 신규 구조적 문제 #2 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| `AtomicFileWriter.AppendAsync()` 추가 | 기존 파일 내용을 읽고 append 후 원자적 쓰기. .gitignore, JSONL 등 append 패턴 지원 |
+| `SpotlightService` 원자적 쓰기 | `PersistStateAsync()`의 `File.WriteAllTextAsync` → `AtomicFileWriter.WriteAsync` |
+| `ContextService` 원자적 쓰기 | notes/todos/plans 저장 + .gitignore append 총 6곳 → `AtomicFileWriter` 전환 |
+| `AttachmentService` 원자적 쓰기 + async 전환 | `EnsureGitignore` sync → `EnsureGitignoreAsync` + `AtomicFileWriter` 전환 |
+| `UsageService` 원자적 쓰기 | JSONL append → `AtomicFileWriter.AppendAsync` 전환 |
+
 ### 구조 개선 Phase 7 (2026-03-18) — 차기 개선 후보 #3 해결
 | 변경 내용 | 역할 / 영향 범위 |
 |-----------|-----------------|
@@ -571,7 +580,7 @@ ChatView.ProcessMessageAsync()
 - **세션 수 제한 없음**: 워크스페이스당 수백 개 워크트리 생성 가능. git 성능 저하
 - ~~**상태 전이 검증 없음**: Archived에서 Ready로 직접 변경해도 에러 없음~~ → ✅ **해결**: Phase 4에서 `SessionStatusMachine` 도입. 무효 전이 시 `InvalidOperationException`. `session.Status = X` 직접 할당 전부 `session.TransitionStatus(X)`로 교체
 - ~~**GetSessionsAsync O(n)** (`:31-78`): 파일 수 만큼 직렬화. 페이지네이션 없음~~ → ✅ **해결**: `ConcurrentDictionary` 인메모리 캐시 + 1회 로드 + 병렬 I/O
-- **워크트리 초기화 레이스 컨디션**: Pending 세션에 메시지 전송 시 `InitializeWorktreeAsync`가 호출되는데, 빠르게 두 번 전송하면 워크트리 이중 생성 시도 가능
+- ~~**워크트리 초기화 레이스 컨디션**: Pending 세션에 메시지 전송 시 `InitializeWorktreeAsync`가 호출되는데, 빠르게 두 번 전송하면 워크트리 이중 생성 시도 가능~~ → ✅ **해결**: `SessionService`에 per-session `SemaphoreSlim` (`_worktreeInitLocks`) 추가하여 동시 호출 직렬화 + 락 획득 후 상태 재확인(Pending이 아니면 즉시 반환). `ChatView`에서도 `_isInitializingWorktree` 플래그로 UI-level 이중 진입 방지
 - **CityName 아카이브 경로**: `CityNames.GetRandom()` (46개 도시)으로 이름 생성, 하지만 파일 경로에 부적합한 문자 없음을 보장하지 않음
 
 ---
@@ -1528,12 +1537,12 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
 | **1** | ~~**빈 catch 블록 14곳**~~ ✅ — 로깅 추가 또는 의도적 무시 주석 완료 | SessionListDataService·ChatView·SessionWorkflowBar에 로깅 추가, ClaudeService·AtomicFileWriter에 의도 주석, 도구 위젯 5개에 `JsonException` 한정, InputArea에 `JSDisconnectedException` 한정 | §10, §13, §7 | 낮 |
-| **2** | **비원자적 파일 쓰기 5곳** — `AtomicFileWriter` 미사용 | `SpotlightService` 상태, `ContextService` notes/todos/plans, `AttachmentService` .gitignore, `UsageService` JSONL — 앱 크래시 시 데이터 손상 가능 | §19, §17, §20 | 낮 |
+| ~~**2**~~ | ~~**비원자적 파일 쓰기 5곳** — `AtomicFileWriter` 미사용~~ | ~~`SpotlightService` 상태, `ContextService` notes/todos/plans, `AttachmentService` .gitignore, `UsageService` JSONL — 앱 크래시 시 데이터 손상 가능~~ | §19, §17, §20 | ✅ 해결 |
 | **3** | **ClaudeService 재시도 60줄 복붙** — `--verbose` 재시도 시 스트리밍 루프 전체 복사 | 유지보수 시 두 곳을 동시 수정해야 함. 하나만 수정 시 동작 불일치 | §7 | 중 |
 | **4** | **데이터 모델 불변성 부재** — 모든 모델이 `public set`, 가변 참조 공유 | `ChatState`와 `Session`이 같은 `ChatMessage` 객체 참조. `AppendText()`가 `Text` + `Parts` 양쪽 수정. 상태 추적 불가 | §3, §23 | 높 |
 | **5** | **Git/Activity 캐싱 없음** — 매번 프로세스 생성 | `DetectDefaultBranchAsync`, `ListBranchesAsync`가 매 호출마다 git 프로세스. 탭 전환마다 모든 세션의 `git log` 재실행 | §5, §19.5 | 중 |
 | **6** | **시스템 프롬프트·메모리 크기 제한 없음** — 무제한 토큰 소비 | notes.md 10만줄이 그대로 프롬프트에 주입. 메모리도 전체 JSON 로드 + 워크스페이스별 필터링 없음 | §17, §18 | 중 |
-| **7** | **app.css 3,169줄 모놀리스** — 토큰·컴포넌트 스타일 혼재 | 디자인 토큰 변경 시 전체 파일 탐색 필요. `tokens.css` 미분리. 테마 확장 어려움 | §11 | 낮 |
+| **7** | ~~**app.css 3,169줄 모놀리스** — 토큰·컴포넌트 스타일 혼재~~ ✅ **해결** | `tokens.css` 분리 완료 (73줄). `app.css` → 3,095줄 (컴포넌트 전용). `index.html`에서 `tokens.css` → `app.css` 순서 로드 | §11 | 낮 |
 | **8** | **SessionList 가상화 없음** — 전체 DOM 렌더링 | 세션 수십 개 이상에서 사이드바 렌더 성능 저하. `<Virtualize>` 미적용 | §12 | 낮 |
 | **9** | **입력 검증 전면 부재** — 설정/세션/플러그인 경계에서 | 빈 `WorkspaceId`로 Session 생성 가능, 음수 토큰 허용, 잘못된 경로의 설정 저장 가능. 5+ public 메서드에 null 체크 없음 | §3, §22 | 중 |
 | **10** | **JSONL 사용량 로그 무한 성장** — 로테이션/정리 없음 | `usage.jsonl` 무한 증가. 중복 제거 `HashSet` 앱 재시작 시 리셋 → 이중 기록. 내보내기 기능도 없음 | §20 | 낮 |
@@ -1545,7 +1554,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **1** | **훅 엔진 개선** | 5초 타임아웃 하드코딩 + 직렬 실행 + 출력 미캡처 + 커맨드 이스케이핑 최소 | §14 | 중 |
 | **2** | **패널 크기 조절 불가** | CSS 고정 너비. 사이드바·디테일 패널 리사이즈 불가 + 키보드 네비게이션 없음 | §11 | 중 |
 | **3** | **JSON 스키마 마이그레이션 없음** | 스키마 변경 시 기존 파일 역직렬화 실패 → 데이터 손실. 버전 필드 없음 | §2 | 높 |
-| **4** | **워크트리 레이스 컨디션** | Pending 세션에 빠르게 2번 전송 시 워크트리 이중 생성 시도 가능 | §8 | 중 |
+| **4** | **~~워크트리 레이스 컨디션~~** | ~~Pending 세션에 빠르게 2번 전송 시 워크트리 이중 생성 시도 가능~~ ✅ 해결: per-session SemaphoreSlim + UI 가드 | §8 | 중 |
 | **5** | **활동 서비스 파이프 구분자 취약** | 커밋 메시지에 `\|`가 포함되면 파싱 실패. 아카이브 세션 활동 조회 불가 | §19.5 | 낮 |
 
 ---
