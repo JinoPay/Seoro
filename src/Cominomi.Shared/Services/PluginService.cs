@@ -73,7 +73,7 @@ public class PluginService : IPluginService
     /// <summary>
     /// Late-bind the execution engine to avoid circular DI.
     /// </summary>
-    internal void SetExecutionEngine(IPluginExecutionEngine engine) => _executionEngine = engine;
+    public void SetExecutionEngine(IPluginExecutionEngine engine) => _executionEngine = engine;
 
     public async Task EnsurePluginsDirectoryAsync()
     {
