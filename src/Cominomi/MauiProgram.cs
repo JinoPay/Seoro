@@ -1,4 +1,5 @@
 using Cominomi.Services;
+using Cominomi.Shared.Models;
 using Cominomi.Shared.Services;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -85,6 +86,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<IActivityService, ActivityService>();
         builder.Services.AddSingleton<IStreamEventProcessor, StreamEventProcessor>();
         builder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
+
+        // Load external model definitions (pricing, model names) if present
+        var modelsJsonPath = Path.Combine(AppPaths.Settings, "models.json");
+        ModelDefinitions.LoadFromFileAsync(modelsJsonPath).GetAwaiter().GetResult();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

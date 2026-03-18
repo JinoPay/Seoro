@@ -1,4 +1,5 @@
 using System.Text;
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
@@ -12,7 +13,7 @@ public static class ClaudeArgumentBuilder
         CliCapabilities caps,
         string? conversationId = null,
         string? systemPrompt = null,
-        string effortLevel = "auto",
+        string effortLevel = CominomiConstants.DefaultEffortLevel,
         bool continueMode = false,
         bool forkSession = false,
         int? maxTurns = null,

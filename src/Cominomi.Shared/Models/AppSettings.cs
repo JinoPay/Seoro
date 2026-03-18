@@ -1,3 +1,5 @@
+using Cominomi.Shared;
+
 namespace Cominomi.Shared.Models;
 
 public class AppSettings
@@ -6,8 +8,8 @@ public class AppSettings
     public string Theme { get; set; } = "dark";
     public string? ClaudePath { get; set; }
     public string? DefaultCloneDirectory { get; set; }
-    public string DefaultEffortLevel { get; set; } = "auto";
-    public string DefaultPermissionMode { get; set; } = "bypassAll";
+    public string DefaultEffortLevel { get; set; } = CominomiConstants.DefaultEffortLevel;
+    public string DefaultPermissionMode { get; set; } = CominomiConstants.DefaultPermissionMode;
     public int? DefaultMaxTurns { get; set; }
     public decimal? DefaultMaxBudgetUsd { get; set; }
     public string? FallbackModel { get; set; }
@@ -16,8 +18,18 @@ public class AppSettings
     public bool NotificationsEnabled { get; set; } = true;
     public bool NotificationSound { get; set; } = true;
     public Dictionary<string, string> EnvironmentVariables { get; set; } = [];
-    public string DefaultMergeStrategy { get; set; } = "squash";
+    public string DefaultMergeStrategy { get; set; } = CominomiConstants.DefaultMergeStrategy;
     public string? DefaultPrBodyTemplate { get; set; }
     public string LastWorkspaceId { get; set; } = "";
     public string LastSessionId { get; set; } = "";
+
+    // Summarization
+    public string SummarizationModel { get; set; } = "haiku";
+    public string SummarizationPrompt { get; set; } = "Generate a short, natural title for this chat (3-7 words). Use the same language as the user's message. Use Title Case (capitalize each word). Output only the title text, nothing else.";
+
+    // Timeouts (seconds)
+    public int DefaultProcessTimeoutSeconds { get; set; } = 30;
+    public int HookTimeoutSeconds { get; set; } = 5;
+    public int SummarizationTimeoutSeconds { get; set; } = 15;
+    public int VersionCheckTimeoutSeconds { get; set; } = 5;
 }

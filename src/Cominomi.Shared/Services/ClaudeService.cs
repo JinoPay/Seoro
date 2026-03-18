@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -19,19 +20,19 @@ public class ClaudeService : IClaudeService
 
     private const string DefaultAgentKey = "__default__";
 
-    public ClaudeService(ISettingsService settingsService, IShellService shellService, ILogger<ClaudeService> logger)
+    public ClaudeService(ISettingsService settingsService, IShellService shellService, IProcessRunner processRunner, ILogger<ClaudeService> logger)
     {
         _settingsService = settingsService;
         _logger = logger;
-        _cliResolver = new ClaudeCliResolver(shellService, logger);
+        _cliResolver = new ClaudeCliResolver(shellService, processRunner, logger);
     }
 
     public async IAsyncEnumerable<StreamEvent> SendMessageAsync(
         string message,
         string workingDir,
         string model,
-        string permissionMode = "bypassAll",
-        string effortLevel = "auto",
+        string permissionMode = CominomiConstants.DefaultPermissionMode,
+        string effortLevel = CominomiConstants.DefaultEffortLevel,
         string? sessionId = null,
         string? conversationId = null,
         string? systemPrompt = null,
@@ -299,9 +300,9 @@ public class ClaudeService : IClaudeService
 
             var sb = new StringBuilder(baseArgs);
             sb.Append("--print --output-format text ");
-            sb.Append("--model haiku ");
+            sb.Append($"--model {settings.SummarizationModel} ");
             sb.Append("--dangerously-skip-permissions ");
-            sb.Append("--append-system-prompt \"Generate a short, natural title for this chat (3-7 words). Use the same language as the user's message. Use Title Case (capitalize each word). Output only the title text, nothing else.\"");
+            sb.Append($"--append-system-prompt \"{settings.SummarizationPrompt}\"");
 
             var process = new Process
             {
@@ -328,7 +329,7 @@ public class ClaudeService : IClaudeService
             process.StandardInput.Close();
 
             var output = await process.StandardOutput.ReadToEndAsync();
-            using var cts = new CancellationTokenSource(15000);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(settings.SummarizationTimeoutSeconds));
             try { await process.WaitForExitAsync(cts.Token); }
             catch (OperationCanceledException) { try { process.Kill(entireProcessTree: true); } catch { } }
             process.Dispose();

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
@@ -15,16 +14,16 @@ public class HooksEngine : IHooksEngine
 
     private readonly ILogger<HooksEngine> _logger;
     private readonly IShellService _shellService;
+    private readonly IProcessRunner _processRunner;
     private readonly string _hooksFile;
     private List<HookDefinition> _hooks = [];
 
-    public HooksEngine(ILogger<HooksEngine> logger, IShellService shellService)
+    public HooksEngine(ILogger<HooksEngine> logger, IShellService shellService, IProcessRunner processRunner)
     {
         _logger = logger;
         _shellService = shellService;
-        _hooksFile = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Cominomi", "hooks.json");
+        _processRunner = processRunner;
+        _hooksFile = Path.Combine(AppPaths.Settings, "hooks.json");
     }
 
     public async Task LoadAsync()
@@ -66,42 +65,32 @@ public class HooksEngine : IHooksEngine
             {
                 var shell = await _shellService.GetShellAsync();
                 var escapedCommand = hook.Command.Replace("\"", "\\\"");
-                var psi = new ProcessStartInfo
+
+                var shellArg = shell.Type == ShellType.Cmd
+                    ? $"/c \"{escapedCommand}\""
+                    : $"-c \"{escapedCommand}\"";
+
+                var envVars = new Dictionary<string, string>
                 {
-                    FileName = shell.FileName,
-                    Arguments = shell.Type == ShellType.Cmd
-                        ? $"/c \"{escapedCommand}\""
-                        : $"-c \"{escapedCommand}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
+                    [CominomiConstants.Env.HookEvent] = hookEvent.ToString()
                 };
-
-                if (!string.IsNullOrEmpty(hook.WorkingDirectory))
-                    psi.WorkingDirectory = hook.WorkingDirectory;
-
                 if (env != null)
                 {
                     foreach (var (key, value) in env)
-                        psi.Environment[key] = value;
+                        envVars[key] = value;
                 }
 
-                psi.Environment["COMINOMI_HOOK_EVENT"] = hookEvent.ToString();
-
-                using var process = Process.Start(psi);
-                if (process != null)
+                await _processRunner.RunAsync(new ProcessRunOptions
                 {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                    try
-                    {
-                        await process.WaitForExitAsync(cts.Token);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        try { process.Kill(); } catch { }
-                    }
-                }
+                    FileName = shell.FileName,
+                    // Shell commands must be passed as a single argument string via ArgumentList
+                    Arguments = shell.Type == ShellType.Cmd
+                        ? ["/c", escapedCommand]
+                        : ["-c", escapedCommand],
+                    WorkingDirectory = hook.WorkingDirectory ?? ".",
+                    EnvironmentVariables = envVars,
+                    Timeout = TimeSpan.FromSeconds(5)
+                });
             }
             catch (Exception ex)
             {

@@ -1,3 +1,4 @@
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
@@ -8,8 +9,8 @@ public interface IClaudeService
         string message,
         string workingDir,
         string model,
-        string permissionMode = "bypassAll",
-        string effortLevel = "auto",
+        string permissionMode = CominomiConstants.DefaultPermissionMode,
+        string effortLevel = CominomiConstants.DefaultEffortLevel,
         string? sessionId = null,
         string? conversationId = null,
         string? systemPrompt = null,

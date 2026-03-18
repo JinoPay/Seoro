@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 
@@ -8,11 +7,13 @@ public class DependencyCheckService : IDependencyCheckService
 {
     private readonly ILogger<DependencyCheckService> _logger;
     private readonly IShellService _shellService;
+    private readonly IProcessRunner _processRunner;
 
-    public DependencyCheckService(ILogger<DependencyCheckService> logger, IShellService shellService)
+    public DependencyCheckService(ILogger<DependencyCheckService> logger, IShellService shellService, IProcessRunner processRunner)
     {
         _logger = logger;
         _shellService = shellService;
+        _processRunner = processRunner;
     }
 
     public async Task<List<DependencyResult>> CheckAllAsync()
@@ -98,21 +99,14 @@ public class DependencyCheckService : IDependencyCheckService
     {
         try
         {
-            var proc = new Process
+            var result = await _processRunner.RunAsync(new ProcessRunOptions
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = executablePath,
-                    Arguments = "--version",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true
-                }
-            };
-            proc.Start();
-            var output = await proc.StandardOutput.ReadLineAsync();
-            await proc.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
-            return output?.Trim();
+                FileName = executablePath,
+                Arguments = ["--version"],
+                Timeout = TimeSpan.FromSeconds(5)
+            });
+            var firstLine = result.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            return firstLine?.Trim();
         }
         catch (Exception ex)
         {

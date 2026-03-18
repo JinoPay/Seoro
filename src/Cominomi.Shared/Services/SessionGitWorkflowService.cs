@@ -1,3 +1,4 @@
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -130,7 +131,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         return session;
     }
 
-    public async Task<Session> MergePrAsync(string sessionId, string mergeMethod = "squash", CancellationToken ct = default)
+    public async Task<Session> MergePrAsync(string sessionId, string mergeMethod = CominomiConstants.DefaultMergeStrategy, CancellationToken ct = default)
     {
         var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
 
@@ -174,7 +175,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         return session;
     }
 
-    public async Task<Session> MergeAllAsync(string sessionId, string mergeMethod = "squash", string? prBodyTemplate = null, CancellationToken ct = default)
+    public async Task<Session> MergeAllAsync(string sessionId, string mergeMethod = CominomiConstants.DefaultMergeStrategy, string? prBodyTemplate = null, CancellationToken ct = default)
     {
         var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
 

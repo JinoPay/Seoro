@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -91,7 +92,7 @@ public partial class SessionService : ISessionService
         if (workspace == null)
             throw new InvalidOperationException($"Workspace '{workspaceId}' not found.");
 
-        var branchName = $"cominomi/{DateTime.Now:yyyyMMdd-HHmmss}";
+        var branchName = $"{CominomiConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
         var worktreesDir = await _workspaceService.GetWorktreesDirAsync();
 
         var session = new Session
@@ -206,7 +207,7 @@ public partial class SessionService : ISessionService
         if (workspace == null)
             throw new InvalidOperationException($"Workspace '{session.WorkspaceId}' not found.");
 
-        var branchName = $"cominomi/{DateTime.Now:yyyyMMdd-HHmmss}";
+        var branchName = $"{CominomiConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
         var worktreesDir = await _workspaceService.GetWorktreesDirAsync();
 
         session.BranchName = branchName;
@@ -398,7 +399,7 @@ public partial class SessionService : ISessionService
         if (slug.Length > 40)
             slug = slug[..40].TrimEnd('-');
 
-        return $"cominomi/{(string.IsNullOrEmpty(slug) ? DateTime.Now.ToString("yyyyMMdd-HHmmss") : slug)}";
+        return $"{CominomiConstants.BranchPrefix}{(string.IsNullOrEmpty(slug) ? DateTime.Now.ToString("yyyyMMdd-HHmmss") : slug)}";
     }
 
     [GeneratedRegex(@"\s+")]

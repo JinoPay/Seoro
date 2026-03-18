@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -13,34 +14,25 @@ public class UsageService : IUsageService
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private readonly HashSet<string> _seenHashes = new();
 
-    // Pricing per 1M tokens
-    private static readonly Dictionary<string, (decimal Input, decimal Output, decimal CacheWrite, decimal CacheRead)> Pricing = new()
-    {
-        ["opus"] = (15.0m, 75.0m, 18.75m, 1.50m),
-        ["sonnet"] = (3.0m, 15.0m, 3.75m, 0.30m),
-        ["haiku"] = (0.80m, 4.0m, 1.0m, 0.08m),
-    };
-
     public UsageService(ILogger<UsageService> logger)
     {
         _logger = logger;
         var appDataDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Cominomi");
+            CominomiConstants.AppName);
         Directory.CreateDirectory(appDataDir);
         _usageFilePath = Path.Combine(appDataDir, "usage.jsonl");
     }
 
     public decimal CalculateCost(string model, long inputTokens, long outputTokens, long cacheCreationTokens, long cacheReadTokens)
     {
-        var normalized = ModelDefinitions.NormalizeModelId(model);
-        if (!Pricing.TryGetValue(normalized, out var prices))
-            prices = Pricing["sonnet"]; // fallback
+        var pricing = ModelDefinitions.GetPricing(model);
+        if (pricing == null) return 0m;
 
-        return (inputTokens * prices.Input / 1_000_000m)
-             + (outputTokens * prices.Output / 1_000_000m)
-             + (cacheCreationTokens * prices.CacheWrite / 1_000_000m)
-             + (cacheReadTokens * prices.CacheRead / 1_000_000m);
+        return (inputTokens * pricing.Input / 1_000_000m)
+             + (outputTokens * pricing.Output / 1_000_000m)
+             + (cacheCreationTokens * pricing.CacheWrite / 1_000_000m)
+             + (cacheReadTokens * pricing.CacheRead / 1_000_000m);
     }
 
     public async Task RecordUsageAsync(UsageEntry entry)

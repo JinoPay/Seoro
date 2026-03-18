@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Cominomi.Shared;
 
 namespace Cominomi.Shared.Models;
 
@@ -25,8 +26,8 @@ public class Session
     public string BaseBranch { get; set; } = "";
     public string Model { get; set; } = ModelDefinitions.Default.Id;
     public string WorkspaceId { get; set; } = "default";
-    public string PermissionMode { get; set; } = "bypassAll";
-    public string EffortLevel { get; set; } = "auto";
+    public string PermissionMode { get; set; } = CominomiConstants.DefaultPermissionMode;
+    public string EffortLevel { get; set; } = CominomiConstants.DefaultEffortLevel;
     public AgentType AgentType { get; set; } = AgentType.Code;
     public string CityName { get; set; } = "";
     public SessionStatus Status { get; set; } = SessionStatus.Initializing;

@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Cominomi.Shared;
 using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
@@ -7,15 +7,17 @@ namespace Cominomi.Shared.Services;
 public class ClaudeCliResolver
 {
     private readonly IShellService _shellService;
+    private readonly IProcessRunner _processRunner;
     private readonly ILogger _logger;
 
     private (string fileName, string argPrefix)? _resolvedCommand;
     private string? _resolvedCommandPath;
     private readonly SemaphoreSlim _resolveLock = new(1, 1);
 
-    public ClaudeCliResolver(IShellService shellService, ILogger logger)
+    public ClaudeCliResolver(IShellService shellService, IProcessRunner processRunner, ILogger logger)
     {
         _shellService = shellService;
+        _processRunner = processRunner;
         _logger = logger;
     }
 
@@ -88,24 +90,18 @@ public class ClaudeCliResolver
         _logger.LogDebug("Executing: {FileName} {Arguments}", fileName, arguments);
         try
         {
-            var proc = new Process
+            // arguments may contain a baseArgs prefix (e.g., '/c "claude.exe" ') followed by the flag.
+            // Split on whitespace while preserving quoted segments.
+            var args = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            var result = await _processRunner.RunAsync(new ProcessRunOptions
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = fileName,
-                    Arguments = arguments,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    Environment = { ["NO_COLOR"] = "1" }
-                }
-            };
-            proc.Start();
-            var output = await proc.StandardOutput.ReadToEndAsync();
-            await proc.WaitForExitAsync();
-            proc.Dispose();
-            return output;
+                FileName = fileName,
+                Arguments = args,
+                EnvironmentVariables = CominomiConstants.Env.NoColorEnv,
+                Timeout = TimeSpan.FromSeconds(10)
+            });
+            return result.Stdout;
         }
         catch (Exception ex)
         {

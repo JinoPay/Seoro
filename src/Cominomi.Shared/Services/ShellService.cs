@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 
@@ -7,12 +6,14 @@ namespace Cominomi.Shared.Services;
 public class ShellService : IShellService
 {
     private readonly ILogger<ShellService> _logger;
+    private readonly IProcessRunner _processRunner;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private ShellInfo? _cached;
 
-    public ShellService(ILogger<ShellService> logger)
+    public ShellService(ILogger<ShellService> logger, IProcessRunner processRunner)
     {
         _logger = logger;
+        _processRunner = processRunner;
     }
 
     public async Task<ShellInfo> GetShellAsync()
@@ -45,65 +46,44 @@ public class ShellService : IShellService
 
         try
         {
-            Process proc;
+            ProcessRunOptions options;
 
             switch (shell.Type)
             {
                 case ShellType.Cmd:
-                    proc = new Process
+                    options = new ProcessRunOptions
                     {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = "where.exe",
-                            Arguments = executableName,
-                            UseShellExecute = false,
-                            RedirectStandardOutput = true,
-                            CreateNoWindow = true
-                        }
+                        FileName = "where.exe",
+                        Arguments = [executableName],
+                        Timeout = TimeSpan.FromSeconds(3)
                     };
                     break;
 
                 case ShellType.Bash:
                     // Windows Git Bash: convert Unix path to Windows path via cygpath
-                    proc = new Process
+                    options = new ProcessRunOptions
                     {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = shell.FileName,
-                            Arguments = $"-c \"cygpath -w \\\"$(which {executableName})\\\"\"",
-                            UseShellExecute = false,
-                            RedirectStandardOutput = true,
-                            CreateNoWindow = true
-                        }
+                        FileName = shell.FileName,
+                        Arguments = ["-c", $"cygpath -w \"$(which {executableName})\""],
+                        Timeout = TimeSpan.FromSeconds(3)
                     };
                     break;
 
                 default: // ShellType.Sh — macOS/Linux
-                    proc = new Process
+                    options = new ProcessRunOptions
                     {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = shell.FileName,
-                            Arguments = $"-c \"which {executableName}\"",
-                            UseShellExecute = false,
-                            RedirectStandardOutput = true,
-                            CreateNoWindow = true
-                        }
+                        FileName = shell.FileName,
+                        Arguments = ["-c", $"which {executableName}"],
+                        Timeout = TimeSpan.FromSeconds(3)
                     };
                     break;
             }
 
-            proc.Start();
-            var output = (await proc.StandardOutput.ReadLineAsync())?.Trim();
+            var result = await _processRunner.RunAsync(options);
+            var firstLine = result.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim();
 
-            using var cts = new CancellationTokenSource(3000);
-            try { await proc.WaitForExitAsync(cts.Token); }
-            catch (OperationCanceledException) { try { proc.Kill(); } catch { } }
-
-            if (proc.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
-            {
-                return output;
-            }
+            if (result.Success && !string.IsNullOrWhiteSpace(firstLine))
+                return firstLine;
         }
         catch (Exception ex)
         {
@@ -135,25 +115,16 @@ public class ShellService : IShellService
         // Strategy 1: Find git via where.exe, then resolve bash.exe relative to it
         try
         {
-            var proc = new Process
+            var result = await _processRunner.RunAsync(new ProcessRunOptions
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "where.exe",
-                    Arguments = "git",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true
-                }
-            };
-            proc.Start();
-            var gitPath = (await proc.StandardOutput.ReadLineAsync())?.Trim();
+                FileName = "where.exe",
+                Arguments = ["git"],
+                Timeout = TimeSpan.FromSeconds(3)
+            });
 
-            using var cts = new CancellationTokenSource(3000);
-            try { await proc.WaitForExitAsync(cts.Token); }
-            catch (OperationCanceledException) { try { proc.Kill(); } catch { } }
+            var gitPath = result.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim();
 
-            if (proc.ExitCode == 0 && !string.IsNullOrWhiteSpace(gitPath))
+            if (result.Success && !string.IsNullOrWhiteSpace(gitPath))
             {
                 // git.exe is typically at <GitRoot>/cmd/git.exe or <GitRoot>/bin/git.exe
                 var gitDir = Path.GetDirectoryName(gitPath);

@@ -9,12 +9,14 @@ public class McpService : IMcpService
 {
     private readonly IShellService _shellService;
     private readonly IClaudeService _claudeService;
+    private readonly IProcessRunner _processRunner;
     private readonly ILogger<McpService> _logger;
 
-    public McpService(IShellService shellService, IClaudeService claudeService, ILogger<McpService> logger)
+    public McpService(IShellService shellService, IClaudeService claudeService, IProcessRunner processRunner, ILogger<McpService> logger)
     {
         _shellService = shellService;
         _claudeService = claudeService;
+        _processRunner = processRunner;
         _logger = logger;
     }
 
@@ -167,31 +169,23 @@ public class McpService : IMcpService
             return null;
         }
 
-        var process = new System.Diagnostics.Process
+        var shellCommand = $"{claudePath} {subCommand}";
+        var result = await _processRunner.RunAsync(new ProcessRunOptions
         {
-            StartInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = shell.FileName,
-                Arguments = $"{shell.ArgumentPrefix}\"{claudePath} {subCommand}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            }
-        };
+            FileName = shell.FileName,
+            Arguments = shell.Type == ShellType.Cmd
+                ? ["/c", shellCommand]
+                : ["-c", shellCommand],
+            Timeout = TimeSpan.FromSeconds(30)
+        });
 
-        process.Start();
-        var output = await process.StandardOutput.ReadToEndAsync();
-        var error = await process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-
-        if (process.ExitCode != 0)
+        if (!result.Success)
         {
-            _logger.LogWarning("Claude MCP command failed: {Error}", error);
+            _logger.LogWarning("Claude MCP command failed: {Error}", result.Stderr);
             return null;
         }
 
-        return output;
+        return result.Stdout;
     }
 
     private static string EscapeArg(string arg)

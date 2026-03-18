@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Cominomi.Shared;
 using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
@@ -8,11 +9,7 @@ public class GhService : IGhService
     private readonly IProcessRunner _processRunner;
     private readonly ILogger<GhService> _logger;
 
-    private static readonly Dictionary<string, string> GhEnv = new()
-    {
-        ["GH_NO_UPDATE_NOTIFIER"] = "1",
-        ["NO_COLOR"] = "1"
-    };
+    private static readonly Dictionary<string, string> GhEnv = CominomiConstants.Env.GhEnv;
 
     public GhService(IProcessRunner processRunner, ILogger<GhService> logger)
     {
@@ -30,7 +27,7 @@ public class GhService : IGhService
             "--body", body);
     }
 
-    public async Task<GitResult> MergePrAsync(string repoDir, int prNumber, string mergeMethod = "squash", CancellationToken ct = default)
+    public async Task<GitResult> MergePrAsync(string repoDir, int prNumber, string mergeMethod = CominomiConstants.DefaultMergeStrategy, CancellationToken ct = default)
     {
         return await RunGhAsync(repoDir, ct,
             "pr", "merge", prNumber.ToString(), $"--{mergeMethod}");

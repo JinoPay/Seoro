@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -8,10 +9,12 @@ namespace Cominomi.Shared.Services;
 public class GitService : IGitService
 {
     private readonly ILogger<GitService> _logger;
+    private readonly IProcessRunner _processRunner;
 
-    public GitService(ILogger<GitService> logger)
+    public GitService(ILogger<GitService> logger, IProcessRunner processRunner)
     {
         _logger = logger;
+        _processRunner = processRunner;
     }
 
     public async Task<GitResult> CloneAsync(string url, string targetDir, IProgress<string>? progress = null, CancellationToken ct = default)
@@ -21,7 +24,7 @@ public class GitService : IGitService
             Directory.CreateDirectory(parentDir);
 
         _logger.LogDebug("git clone --progress {Url} -> {TargetDir}", url, targetDir);
-        var process = CreateGitProcess($"clone --progress \"{url}\" \"{targetDir}\"", parentDir ?? ".");
+        var process = CreateStreamingGitProcess(["clone", "--progress", url, targetDir], parentDir ?? ".");
         process.Start();
 
         var stdoutBuilder = new StringBuilder();
@@ -93,15 +96,15 @@ public class GitService : IGitService
         // Check if branch already exists
         if (await BranchExistsAsync(repoDir, branchName))
         {
-            return await RunGitAsync($"worktree add \"{worktreePath}\" \"{branchName}\"", repoDir, ct);
+            return await RunGitAsync(repoDir, ct, "worktree", "add", worktreePath, branchName);
         }
 
-        return await RunGitAsync($"worktree add -b \"{branchName}\" \"{worktreePath}\" \"{baseBranch}\"", repoDir, ct);
+        return await RunGitAsync(repoDir, ct, "worktree", "add", "-b", branchName, worktreePath, baseBranch);
     }
 
     public async Task<GitResult> RemoveWorktreeAsync(string repoDir, string worktreePath, CancellationToken ct = default)
     {
-        var result = await RunGitAsync($"worktree remove \"{worktreePath}\" --force", repoDir, ct);
+        var result = await RunGitAsync(repoDir, ct, "worktree", "remove", worktreePath, "--force");
 
         // Clean up directory if it still exists
         if (Directory.Exists(worktreePath))
@@ -111,7 +114,7 @@ public class GitService : IGitService
         }
 
         // Prune stale worktree entries
-        await RunGitAsync("worktree prune", repoDir, ct);
+        await RunGitAsync(repoDir, ct, "worktree", "prune");
 
         return result;
     }
@@ -119,7 +122,7 @@ public class GitService : IGitService
     public async Task<string?> DetectDefaultBranchAsync(string repoDir)
     {
         // Try symbolic-ref first
-        var result = await RunGitAsync("symbolic-ref refs/remotes/origin/HEAD", repoDir);
+        var result = await RunGitAsync(repoDir, default, "symbolic-ref", "refs/remotes/origin/HEAD");
         if (result.Success)
         {
             var refPath = result.Output.Trim();
@@ -143,19 +146,19 @@ public class GitService : IGitService
         if (!Directory.Exists(path))
             return false;
 
-        var result = await RunGitAsync("rev-parse --is-inside-work-tree", path);
+        var result = await RunGitAsync(path, default, "rev-parse", "--is-inside-work-tree");
         return result.Success && result.Output.Trim() == "true";
     }
 
     public async Task<string?> GetCurrentBranchAsync(string repoDir)
     {
-        var result = await RunGitAsync("rev-parse --abbrev-ref HEAD", repoDir);
+        var result = await RunGitAsync(repoDir, default, "rev-parse", "--abbrev-ref", "HEAD");
         return result.Success ? result.Output.Trim() : null;
     }
 
     public async Task<List<string>> ListBranchesAsync(string repoDir)
     {
-        var result = await RunGitAsync("branch --format=%(refname:short)", repoDir);
+        var result = await RunGitAsync(repoDir, default, "branch", "--format=%(refname:short)");
         if (!result.Success)
             return [];
 
@@ -169,67 +172,67 @@ public class GitService : IGitService
     public async Task<bool> BranchExistsAsync(string repoDir, string branchName)
     {
         // Check local branches
-        var result = await RunGitAsync($"show-ref --verify --quiet refs/heads/{branchName}", repoDir);
+        var result = await RunGitAsync(repoDir, default, "show-ref", "--verify", "--quiet", $"refs/heads/{branchName}");
         if (result.Success) return true;
 
         // Check remote branches
-        result = await RunGitAsync($"show-ref --verify --quiet refs/remotes/origin/{branchName}", repoDir);
+        result = await RunGitAsync(repoDir, default, "show-ref", "--verify", "--quiet", $"refs/remotes/origin/{branchName}");
         return result.Success;
     }
 
     public async Task<GitResult> RunAsync(string arguments, string workingDir, CancellationToken ct = default)
-        => await RunGitAsync(arguments, workingDir, ct);
-
-    private async Task<GitResult> RunGitAsync(string arguments, string workingDir, CancellationToken ct = default)
     {
-        _logger.LogDebug("git {Arguments}", arguments);
-        var process = CreateGitProcess(arguments, workingDir);
-        process.Start();
+        var args = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return await RunGitAsync(workingDir, ct, args);
+    }
 
-        var stdout = await process.StandardOutput.ReadToEndAsync(ct);
-        var stderr = await process.StandardError.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
-
-        _logger.LogDebug("git exited with code {ExitCode}", process.ExitCode);
-        var result = new GitResult(process.ExitCode == 0, stdout.Trim(), stderr.Trim());
-        process.Dispose();
-        return result;
+    private async Task<GitResult> RunGitAsync(string workingDir, CancellationToken ct, params string[] args)
+    {
+        _logger.LogDebug("git {Arguments}", string.Join(" ", args));
+        var result = await _processRunner.RunAsync(new ProcessRunOptions
+        {
+            FileName = "git",
+            Arguments = args,
+            WorkingDirectory = workingDir,
+            EnvironmentVariables = CominomiConstants.Env.GitEnv,
+        }, ct);
+        return new GitResult(result.Success, result.Stdout, result.Stderr);
     }
 
     public async Task<GitResult> RenameBranchAsync(string workingDir, string oldName, string newName, CancellationToken ct = default)
     {
-        return await RunGitAsync($"branch -m \"{oldName}\" \"{newName}\"", workingDir, ct);
+        return await RunGitAsync(workingDir, ct, "branch", "-m", oldName, newName);
     }
 
     public async Task<GitResult> DeleteBranchAsync(string repoDir, string branchName, CancellationToken ct = default)
     {
-        return await RunGitAsync($"branch -D \"{branchName}\"", repoDir, ct);
+        return await RunGitAsync(repoDir, ct, "branch", "-D", branchName);
     }
 
     public async Task<bool> IsBranchMergedAsync(string repoDir, string branchName, string baseBranch, CancellationToken ct = default)
     {
-        var result = await RunGitAsync($"merge-base --is-ancestor \"{branchName}\" \"{baseBranch}\"", repoDir, ct);
+        var result = await RunGitAsync(repoDir, ct, "merge-base", "--is-ancestor", branchName, baseBranch);
         return result.Success;
     }
 
     public async Task<GitResult> PushBranchAsync(string repoDir, string branchName, CancellationToken ct = default)
     {
-        return await RunGitAsync($"push -u origin \"{branchName}\"", repoDir, ct);
+        return await RunGitAsync(repoDir, ct, "push", "-u", "origin", branchName);
     }
 
     public async Task<GitResult> PushForceBranchAsync(string repoDir, string branchName, CancellationToken ct = default)
     {
-        return await RunGitAsync($"push --force-with-lease origin \"{branchName}\"", repoDir, ct);
+        return await RunGitAsync(repoDir, ct, "push", "--force-with-lease", "origin", branchName);
     }
 
     public async Task<GitResult> FetchAsync(string repoDir, CancellationToken ct = default)
     {
-        return await RunGitAsync("fetch origin", repoDir, ct);
+        return await RunGitAsync(repoDir, ct, "fetch", "origin");
     }
 
     public async Task<GitResult> FetchAllAsync(string repoDir, CancellationToken ct = default)
     {
-        return await RunGitAsync("fetch --all --prune", repoDir, ct);
+        return await RunGitAsync(repoDir, ct, "fetch", "--all", "--prune");
     }
 
     public async Task<List<BranchGroup>> ListAllBranchesGroupedAsync(string repoDir)
@@ -237,7 +240,7 @@ public class GitService : IGitService
         var groups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
         // Get remote branches
-        var remoteResult = await RunGitAsync("branch -r --format=%(refname:short)", repoDir);
+        var remoteResult = await RunGitAsync(repoDir, default, "branch", "-r", "--format=%(refname:short)");
         if (remoteResult.Success)
         {
             foreach (var line in remoteResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
@@ -256,7 +259,7 @@ public class GitService : IGitService
         }
 
         // Get local branches
-        var localResult = await RunGitAsync("branch --format=%(refname:short)", repoDir);
+        var localResult = await RunGitAsync(repoDir, default, "branch", "--format=%(refname:short)");
         var localBranches = new List<string>();
         if (localResult.Success)
         {
@@ -285,30 +288,30 @@ public class GitService : IGitService
     public async Task<string> GetNameStatusAsync(string workingDir, string baseBranch, CancellationToken ct = default)
     {
         // Use baseBranch (not baseBranch...HEAD) to include uncommitted working tree changes
-        var result = await RunGitAsync($"diff --name-status {baseBranch}", workingDir, ct);
+        var result = await RunGitAsync(workingDir, ct, "diff", "--name-status", baseBranch);
         return result.Success ? result.Output : "";
     }
 
     public async Task<string> GetUnifiedDiffAsync(string workingDir, string baseBranch, CancellationToken ct = default)
     {
         // Use baseBranch (not baseBranch...HEAD) to include uncommitted working tree changes
-        var result = await RunGitAsync($"diff {baseBranch}", workingDir, ct);
+        var result = await RunGitAsync(workingDir, ct, "diff", baseBranch);
         return result.Success ? result.Output : "";
     }
 
     public async Task<GitResult> GetCommitLogAsync(string repoDir, string baseBranch, CancellationToken ct = default)
     {
-        return await RunGitAsync($"log {baseBranch}..HEAD --oneline", repoDir, ct);
+        return await RunGitAsync(repoDir, ct, "log", $"{baseBranch}..HEAD", "--oneline");
     }
 
     public async Task<GitResult> GetFormattedCommitLogAsync(string repoDir, string baseBranch, int maxCount = 50, CancellationToken ct = default)
     {
-        return await RunGitAsync($"log {baseBranch}..HEAD --format=\"%H|%h|%an|%aI|%s\" -n {maxCount}", repoDir, ct);
+        return await RunGitAsync(repoDir, ct, "log", $"{baseBranch}..HEAD", "--format=%H|%h|%an|%aI|%s", "-n", maxCount.ToString());
     }
 
     public async Task<List<string>> ListTrackedFilesAsync(string workingDir, CancellationToken ct = default)
     {
-        var result = await RunGitAsync("ls-files", workingDir, ct);
+        var result = await RunGitAsync(workingDir, ct, "ls-files");
         if (!result.Success) return new List<string>();
         return result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
     }
@@ -321,7 +324,7 @@ public class GitService : IGitService
 
     public async Task<(int Additions, int Deletions)> GetDiffStatAsync(string workingDir, string baseBranch, CancellationToken ct = default)
     {
-        var result = await RunGitAsync($"diff --shortstat {baseBranch}", workingDir, ct);
+        var result = await RunGitAsync(workingDir, ct, "diff", "--shortstat", baseBranch);
         if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
             return (0, 0);
 
@@ -420,25 +423,25 @@ public class GitService : IGitService
         return summary;
     }
 
-    private static Process CreateGitProcess(string arguments, string workingDir)
+    /// <summary>
+    /// Creates a git process for CloneAsync which needs character-by-character stderr streaming.
+    /// All other git commands use IProcessRunner via RunGitAsync.
+    /// </summary>
+    private static Process CreateStreamingGitProcess(string[] args, string workingDir)
     {
-        return new Process
+        var psi = new ProcessStartInfo
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "git",
-                Arguments = arguments,
-                WorkingDirectory = workingDir,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                Environment =
-                {
-                    ["GIT_TERMINAL_PROMPT"] = "0",
-                    ["NO_COLOR"] = "1"
-                }
-            }
+            FileName = "git",
+            WorkingDirectory = workingDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
         };
+        foreach (var arg in args)
+            psi.ArgumentList.Add(arg);
+        foreach (var (key, value) in CominomiConstants.Env.GitEnv)
+            psi.Environment[key] = value;
+        return new Process { StartInfo = psi };
     }
 }

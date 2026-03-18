@@ -1,0 +1,45 @@
+namespace Cominomi.Shared;
+
+/// <summary>
+/// Shared constants used across multiple services and models.
+/// </summary>
+public static class CominomiConstants
+{
+    public const string AppName = "Cominomi";
+    public const string BranchPrefix = "cominomi/";
+
+    // Default values duplicated across AppSettings, Session, ClaudeService, etc.
+    public const string DefaultPermissionMode = "bypassAll";
+    public const string DefaultEffortLevel = "auto";
+    public const string DefaultMergeStrategy = "squash";
+
+    // Environment variables shared by multiple process-launching services
+    public static class Env
+    {
+        public const string NoColor = "NO_COLOR";
+        public const string GitTerminalPrompt = "GIT_TERMINAL_PROMPT";
+        public const string GhNoUpdateNotifier = "GH_NO_UPDATE_NOTIFIER";
+        public const string HookEvent = "COMINOMI_HOOK_EVENT";
+
+        /// <summary>
+        /// Common environment block that suppresses interactive prompts and color codes.
+        /// Used by GitService, GhService, ClaudeCliResolver, etc.
+        /// </summary>
+        public static readonly Dictionary<string, string> NoColorEnv = new()
+        {
+            [NoColor] = "1"
+        };
+
+        public static readonly Dictionary<string, string> GitEnv = new()
+        {
+            [GitTerminalPrompt] = "0",
+            [NoColor] = "1"
+        };
+
+        public static readonly Dictionary<string, string> GhEnv = new()
+        {
+            [GhNoUpdateNotifier] = "1",
+            [NoColor] = "1"
+        };
+    }
+}
