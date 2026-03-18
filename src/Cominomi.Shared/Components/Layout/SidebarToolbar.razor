@@ -1,0 +1,37 @@
+@inject IThemeService ThemeService
+
+<div class="sidebar-toolbar">
+    <span class="sidebar-brand">
+        <svg width="20" height="20" viewBox="0 0 456 456" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="68" y="78" width="320" height="240" rx="40" ry="40" fill="currentColor" opacity="0.8" />
+            <polygon points="108,318 68,378 168,318" fill="currentColor" opacity="0.8" />
+            <polyline points="148,158 208,198 148,238" fill="none" stroke="var(--mud-palette-surface)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" />
+            <line x1="228" y1="238" x2="308" y2="238" stroke="var(--mud-palette-surface)" stroke-width="30" stroke-linecap="round" />
+        </svg>
+        Cominomi
+    </span>
+    <div style="display: flex; align-items: center; gap: 2px;">
+        <MudIconButton Icon="@(ThemeService.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                       Color="Color.Inherit" Size="Size.Small" OnClick="@ToggleDarkMode"
+                       Style="width: 28px; height: 28px; opacity: 0.5;" />
+        <MudIconButton Icon="@Icons.Material.Filled.Timeline" Color="Color.Inherit"
+                       Size="Size.Small" OnClick="@OnOpenActivity"
+                       Style="width: 28px; height: 28px; opacity: 0.5;"
+                       Title="Activity" />
+        <MudIconButton Icon="@Icons.Material.Filled.Analytics" Color="Color.Inherit"
+                       Size="Size.Small" OnClick="@OnOpenUsageDashboard"
+                       Style="width: 28px; height: 28px; opacity: 0.5;"
+                       Title="사용량 대시보드" />
+        <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit"
+                       Size="Size.Small" OnClick="@OnOpenSettings"
+                       Style="width: 28px; height: 28px; opacity: 0.5;" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnOpenActivity { get; set; }
+    [Parameter] public EventCallback OnOpenUsageDashboard { get; set; }
+    [Parameter] public EventCallback OnOpenSettings { get; set; }
+
+    private async Task ToggleDarkMode() => await ThemeService.ToggleDarkModeAsync();
+}

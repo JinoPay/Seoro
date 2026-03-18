@@ -1,0 +1,57 @@
+@inject IChatState ChatState
+
+<div class="main-toolbar">
+    <MudIconButton Icon="@(SidebarOpen ? Icons.Material.Filled.MenuOpen : Icons.Material.Filled.Menu)"
+                   Color="Color.Inherit" Size="Size.Small" OnClick="@OnToggleSidebar"
+                   Style="width: 28px; height: 28px; opacity: 0.6;" />
+
+    @if (ChatState.CurrentSession != null)
+    {
+        <span class="toolbar-title">@(ChatState.CurrentSession.Title ?? "새 대화")</span>
+
+        @if (!string.IsNullOrEmpty(ChatState.CurrentSession.Git.BranchName))
+        {
+            <span class="toolbar-branch-badge">
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
+                         Style="width: 12px; height: 12px; opacity: 0.6;" />
+                @ChatState.CurrentSession.Git.BranchName
+            </span>
+        }
+
+        @if (ChatState.CurrentSession.PermissionMode == "plan")
+        {
+            <span class="toolbar-mode-badge plan">플랜</span>
+        }
+    }
+    else
+    {
+        <span class="toolbar-title" style="opacity: 0.4;">대화를 선택하세요</span>
+    }
+
+    <div style="flex: 1;"></div>
+
+    <StatusBar />
+
+    @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status != SessionStatus.Pending)
+    {
+        <MudTooltip Text="파일 탐색기">
+            <MudIconButton Icon="@Icons.Material.Filled.FolderOpen"
+                           Color="@(ChatState.RightPanel == RightPanelMode.Explorer ? Color.Primary : Color.Inherit)"
+                           Size="Size.Small"
+                           Style="width: 28px; height: 28px;"
+                           OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Explorer))" />
+        </MudTooltip>
+        <MudTooltip Text="변경사항">
+            <MudIconButton Icon="@Icons.Material.Filled.Difference"
+                           Color="@(ChatState.RightPanel == RightPanelMode.Changes ? Color.Primary : Color.Inherit)"
+                           Size="Size.Small"
+                           Style="width: 28px; height: 28px;"
+                           OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Changes))" />
+        </MudTooltip>
+    }
+</div>
+
+@code {
+    [Parameter] public bool SidebarOpen { get; set; }
+    [Parameter] public EventCallback OnToggleSidebar { get; set; }
+}
