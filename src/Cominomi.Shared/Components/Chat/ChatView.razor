@@ -1,19 +1,14 @@
 @using Cominomi.Shared.Models
 @using Microsoft.Extensions.Logging
-@using System.Text.Json
 @inject IChatState ChatState
+@inject IChatMessageOrchestrator Orchestrator
 @inject IClaudeService ClaudeService
 @inject ISessionService SessionService
-@inject IChatPrWorkflowService PrWorkflow
-@inject IAttachmentService AttachmentService
-@inject ISystemPromptBuilder SystemPromptBuilder
 @inject ISessionInitializer SessionInitializer
-@inject IHooksEngine HooksEngine
 @inject IJSRuntime JSRuntime
 @inject ILogger<ChatView> Logger
 @inject ISnackbar Snackbar
 @inject INotificationService NotificationService
-@inject IStreamEventProcessor StreamProcessor
 @implements IDisposable
 
 <div class="chat-container">
@@ -71,7 +66,7 @@
         <InputArea OnSend="HandleSend" OnCancel="HandleCancel" OnContinue="HandleContinue"
                    IsStreaming="ChatState.IsStreaming"
                    CanContinue="@(!string.IsNullOrEmpty(ChatState.CurrentSession.ConversationId))"
-                   Disabled="@(ChatState.CurrentSession.Status == SessionStatus.Archived || _isInitializingWorktree)"
+                   Disabled="@(ChatState.CurrentSession.Status == SessionStatus.Archived)"
                    PermissionMode="@(ChatState.CurrentSession.PermissionMode ?? "bypassAll")"
                    PermissionModeChanged="HandlePermissionModeChanged"
                    EffortLevel="@(ChatState.CurrentSession.EffortLevel ?? "auto")"
@@ -88,14 +83,12 @@
 @code {
     private List<BranchGroup> _branchGroups = [];
     private string _selectedBranch = "";
-    private bool _isInitializingWorktree;
     private bool _linkIssueDialogOpen;
     private bool _quickResponseVisible;
     private List<string> _quickResponseOptions = [];
     private bool _planReviewVisible;
     private string? _planFilePath;
     private string? _planContent;
-    private DateTime _streamStartTime;
     private string? _lastPrCheckedSessionId;
     private bool _shouldAutoScroll;
     private bool _isLoadingBranches;
@@ -160,7 +153,7 @@
                     && !string.IsNullOrEmpty(ChatState.CurrentSession.Git.BranchName))
                 {
                     _lastPrCheckedSessionId = ChatState.CurrentSession.Id;
-                    _ = CheckAndUpdatePrStatus(ChatState.CurrentSession);
+                    _ = Orchestrator.CheckAndUpdatePrStatusAsync(ChatState.CurrentSession);
                 }
             }
             catch (Exception ex)
@@ -288,7 +281,8 @@
 
     private Task HandleSend(ChatInputMessage input)
     {
-        if (ChatState.CurrentSession == null || (string.IsNullOrWhiteSpace(input.Text) && input.Attachments.Count == 0))
+        if (ChatState.CurrentSession == null || ChatState.IsStreaming
+            || (string.IsNullOrWhiteSpace(input.Text) && input.Attachments.Count == 0))
             return Task.CompletedTask;
 
         _quickResponseVisible = false;
@@ -299,235 +293,79 @@
         _messageCts?.Dispose();
         _messageCts = new CancellationTokenSource();
         var ct = _messageCts.Token;
+        var session = ChatState.CurrentSession;
+        var workspace = ChatState.CurrentWorkspace;
+        var branch = _selectedBranch;
 
         _ = Task.Run(async () =>
         {
             try
             {
-                await ProcessMessageAsync(input, ct);
+                var result = await Orchestrator.SendAsync(session, input, branch, workspace, ct);
+                await ApplyResultAsync(result, session);
             }
-            catch (OperationCanceledException)
-            {
-                // Cancellation is expected — no action needed
-            }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Unhandled exception in ProcessMessageAsync for session {SessionId}",
-                    ChatState.CurrentSession?.Id);
+                Logger.LogError(ex, "Unhandled exception in SendAsync for session {SessionId}", session.Id);
             }
         });
         return Task.CompletedTask;
     }
 
-    private async Task ProcessMessageAsync(ChatInputMessage input, CancellationToken ct = default)
+    private Task HandleContinue()
     {
-        var session = ChatState.CurrentSession!;
+        if (ChatState.CurrentSession == null || ChatState.IsStreaming
+            || string.IsNullOrEmpty(ChatState.CurrentSession.ConversationId))
+            return Task.CompletedTask;
 
-        if (session.Status == SessionStatus.Pending)
+        _quickResponseVisible = false;
+        _quickResponseOptions = [];
+        _planReviewVisible = false;
+
+        _messageCts?.Cancel();
+        _messageCts?.Dispose();
+        _messageCts = new CancellationTokenSource();
+        var ct = _messageCts.Token;
+        var session = ChatState.CurrentSession;
+        var workspace = ChatState.CurrentWorkspace;
+
+        _ = Task.Run(async () =>
         {
-            if (string.IsNullOrEmpty(_selectedBranch) || _isInitializingWorktree)
-                return;
-
             try
             {
-                _isInitializingWorktree = true;
-                await InvokeAsync(StateHasChanged);
-
-                var updated = await SessionService.InitializeWorktreeAsync(session.Id, _selectedBranch);
-                session.Git.WorktreePath = updated.Git.WorktreePath;
-                session.Git.BranchName = updated.Git.BranchName;
-                session.Git.BaseBranch = updated.Git.BaseBranch;
-                session.SetInitialStatus(updated.Status);
-                session.Error = updated.Error;
-
-                if (session.Status == SessionStatus.Error)
-                {
-                    ChatState.NotifyStateChanged();
-                    return;
-                }
+                var result = await Orchestrator.ContinueAsync(session, workspace, ct);
+                await ApplyResultAsync(result, session);
             }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                session.TransitionStatus(SessionStatus.Error);
-                session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
-                ChatState.NotifyStateChanged();
-                return;
+                Logger.LogError(ex, "Unhandled exception in ContinueAsync for session {SessionId}", session.Id);
             }
-            finally
-            {
-                _isInitializingWorktree = false;
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-
-        ct.ThrowIfCancellationRequested();
-
-        var isFirstMessage = session.Messages.Count(m => m.Role == MessageRole.User) == 0;
-
-        var fileAttachments = new List<FileAttachment>();
-        foreach (var pending in input.Attachments)
-        {
-            FileAttachment attachment;
-            if (pending.FilePath != null && pending.Data.Length == 0)
-            {
-                attachment = await AttachmentService.CopyFileToWorktreeAsync(pending.FilePath, session.Git.WorktreePath);
-            }
-            else
-            {
-                attachment = await AttachmentService.SaveBytesToWorktreeAsync(
-                    pending.Data, pending.FileName, pending.ContentType, session.Git.WorktreePath);
-            }
-            fileAttachments.Add(attachment);
-        }
-
-        var messageForClaude = AttachmentService.BuildMessageWithAttachments(input.Text, fileAttachments);
-
-        if (fileAttachments.Count > 0)
-            ChatState.AddUserMessage(session, input.Text, fileAttachments);
-        else
-            ChatState.AddUserMessage(session, input.Text);
-
-        await SessionService.SaveSessionAsync(session);
-        ChatState.RegisterActiveSession(session);
-
-        ChatState.SetStreaming(true, session.Id);
-        ChatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
-        var assistantMsg = ChatState.StartAssistantMessage(session);
-
-        if (isFirstMessage && session.Status == SessionStatus.Ready && !string.IsNullOrWhiteSpace(input.Text))
-        {
-            ChatState.SetPhase(StreamingPhase.Preparing, sessionId: session.Id);
-            var (title, newBranch) = await SessionInitializer.SummarizeAndRenameBranchAsync(session, input.Text);
-            if (!string.IsNullOrEmpty(title))
-            {
-                session.Title = title;
-                if (newBranch != null)
-                    session.Git.BranchName = newBranch;
-
-                ChatState.Tabs.UpdateChatTabTitle(title);
-
-                var branchInfo = session.Git.IsLocalDir ? "" : $" · 브랜치: {session.Git.BranchName}";
-                ChatState.AddSystemMessage(session, $"제목이 \"{title}\"(으)로 설정됨{branchInfo}");
-
-                await SessionService.SaveSessionAsync(session);
-            }
-            ChatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
-        }
-        bool firstEvent = true;
-        _streamStartTime = DateTime.UtcNow;
-        var streamCtx = new StreamProcessingContext
-        {
-            Session = session,
-            AssistantMessage = assistantMsg,
-            StreamStartTime = _streamStartTime
-        };
-
-        try
-        {
-            ct.ThrowIfCancellationRequested();
-
-            var conversationId = session.ConversationId;
-            var systemPrompt = await SystemPromptBuilder.BuildAsync(session, ChatState.CurrentWorkspace);
-
-            await foreach (var evt in ClaudeService.SendMessageAsync(
-                messageForClaude,
-                session.Git.WorktreePath,
-                session.Model,
-                session.PermissionMode,
-                effortLevel: session.EffortLevel ?? "auto",
-                sessionId: session.Id,
-                conversationId: conversationId,
-                systemPrompt: systemPrompt).WithCancellation(ct))
-            {
-                if (firstEvent)
-                {
-                    ChatState.SetPhase(StreamingPhase.Thinking, sessionId: session.Id);
-                    firstEvent = false;
-                }
-
-                await StreamProcessor.ProcessEventAsync(evt, streamCtx);
-            }
-
-            await StreamProcessor.FinalizeAsync(streamCtx);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            Logger.LogInformation("Message processing cancelled for session {SessionId}", session.Id);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error during message processing for session {SessionId}", session.Id);
-            if (string.IsNullOrEmpty(assistantMsg.Text))
-                ChatState.AppendText(assistantMsg, $"Error: {ex.Message}");
-            await InvokeAsync(() => Snackbar.StreamingError(ex.Message));
-        }
-        finally
-        {
-            ChatState.FinishMessage(assistantMsg);
-            ChatState.SetStreaming(false, session.Id);
-            _shouldAutoScroll = true;
-
-            _planFilePath = streamCtx.PlanFilePath;
-            _planContent = streamCtx.PlanContent;
-            _planReviewVisible = streamCtx.PlanReviewVisible;
-            _quickResponseVisible = streamCtx.QuickResponseVisible;
-            _quickResponseOptions = streamCtx.QuickResponseOptions;
-
-            if (streamCtx.PlanReviewVisible)
-                _ = SendNotificationIfNeeded(session, "Plan ready for review", NotificationType.PlanReview);
-            else if (streamCtx.QuickResponseVisible)
-                _ = SendNotificationIfNeeded(session, "Response needed", NotificationType.Question);
-
-            await InvokeAsync(StateHasChanged);
-            await SessionService.SaveSessionAsync(session);
-            ChatState.UnregisterActiveSession(session.Id);
-
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await HooksEngine.FireAsync(HookEvent.OnMessageComplete, new Dictionary<string, string>
-                    {
-                        ["COMINOMI_SESSION_ID"] = session.Id,
-                        ["COMINOMI_CITY_NAME"] = session.CityName
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning(ex, "Hook fire failed for OnMessageComplete");
-                }
-            });
-
-            if (session.Status == SessionStatus.Pushed && !string.IsNullOrEmpty(session.Git.BranchName))
-            {
-                _ = CheckAndUpdatePrStatus(session);
-            }
-
-            if (!_quickResponseVisible && !_planReviewVisible)
-            {
-                _ = SendNotificationIfNeeded(session, "Task completed", NotificationType.Info);
-            }
-        }
+        });
+        return Task.CompletedTask;
     }
 
-    private async Task CheckAndUpdatePrStatus(Session session)
+    private async Task ApplyResultAsync(StreamResult result, Session session)
     {
-        try
-        {
-            var result = await PrWorkflow.CheckPrStatusAsync(session);
-            if (result is var (prNumber, prUrl))
-            {
-                session.TransitionStatus(SessionStatus.PrOpen);
-                session.Pr.PrUrl = prUrl;
-                session.Pr.PrNumber = prNumber;
-                await SessionService.SaveSessionAsync(session);
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "PR status check failed for session {SessionId}", session.Id);
-        }
+        _planFilePath = result.PlanFilePath;
+        _planContent = result.PlanContent;
+        _planReviewVisible = result.PlanReviewVisible;
+        _quickResponseVisible = result.QuickResponseVisible;
+        _quickResponseOptions = result.QuickResponseOptions;
+        _shouldAutoScroll = true;
+
+        if (result.ErrorMessage != null)
+            await InvokeAsync(() => Snackbar.StreamingError(result.ErrorMessage));
+
+        if (result.PlanReviewVisible)
+            _ = SendNotificationIfNeeded(session, "Plan ready for review", NotificationType.PlanReview);
+        else if (result.QuickResponseVisible)
+            _ = SendNotificationIfNeeded(session, "Response needed", NotificationType.Question);
+        else
+            _ = SendNotificationIfNeeded(session, "Task completed", NotificationType.Info);
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleEffortLevelChanged(string level)
@@ -555,9 +393,7 @@
             var isCurrentSession = ChatState.CurrentSession?.Id == session.Id;
 
             if (!isFocused || !isCurrentSession)
-            {
                 await NotificationService.SendAsync(session.CityName, body, type);
-            }
         }
         catch (Exception ex)
         {
@@ -568,115 +404,6 @@
     private void HandleCancel()
     {
         ClaudeService.Cancel(ChatState.CurrentSession?.Id);
-    }
-
-    private Task HandleContinue()
-    {
-        if (ChatState.CurrentSession == null || string.IsNullOrEmpty(ChatState.CurrentSession.ConversationId))
-            return Task.CompletedTask;
-
-        _quickResponseVisible = false;
-        _quickResponseOptions = [];
-        _planReviewVisible = false;
-
-        _messageCts?.Cancel();
-        _messageCts?.Dispose();
-        _messageCts = new CancellationTokenSource();
-        var ct = _messageCts.Token;
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await ProcessContinueAsync(ct);
-            }
-            catch (OperationCanceledException)
-            {
-                // Cancellation is expected — no action needed
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Unhandled exception in ProcessContinueAsync for session {SessionId}",
-                    ChatState.CurrentSession?.Id);
-            }
-        });
-        return Task.CompletedTask;
-    }
-
-    private async Task ProcessContinueAsync(CancellationToken ct = default)
-    {
-        var session = ChatState.CurrentSession!;
-
-        ChatState.AddSystemMessage(session, "계속 진행 중...");
-        ChatState.SetStreaming(true, session.Id);
-        ChatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
-        var assistantMsg = ChatState.StartAssistantMessage(session);
-        ChatState.RegisterActiveSession(session);
-
-        bool firstEvent = true;
-        _streamStartTime = DateTime.UtcNow;
-        var streamCtx = new StreamProcessingContext
-        {
-            Session = session,
-            AssistantMessage = assistantMsg,
-            StreamStartTime = _streamStartTime
-        };
-
-        try
-        {
-            ct.ThrowIfCancellationRequested();
-
-            var systemPrompt = await SystemPromptBuilder.BuildAsync(session, ChatState.CurrentWorkspace);
-
-            await foreach (var evt in ClaudeService.SendMessageAsync(
-                string.Empty,
-                session.Git.WorktreePath,
-                session.Model,
-                session.PermissionMode,
-                effortLevel: session.EffortLevel ?? "auto",
-                sessionId: session.Id,
-                conversationId: session.ConversationId,
-                systemPrompt: systemPrompt,
-                continueMode: true).WithCancellation(ct))
-            {
-                if (firstEvent)
-                {
-                    ChatState.SetPhase(StreamingPhase.Thinking, sessionId: session.Id);
-                    firstEvent = false;
-                }
-
-                await StreamProcessor.ProcessEventAsync(evt, streamCtx);
-            }
-
-            await StreamProcessor.FinalizeAsync(streamCtx);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            Logger.LogInformation("Continue cancelled for session {SessionId}", session.Id);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error during continue for session {SessionId}", session.Id);
-            if (string.IsNullOrEmpty(assistantMsg.Text))
-                ChatState.AppendText(assistantMsg, $"Error: {ex.Message}");
-            await InvokeAsync(() => Snackbar.StreamingError(ex.Message));
-        }
-        finally
-        {
-            ChatState.FinishMessage(assistantMsg);
-            ChatState.SetStreaming(false, session.Id);
-            _shouldAutoScroll = true;
-
-            _planFilePath = streamCtx.PlanFilePath;
-            _planContent = streamCtx.PlanContent;
-            _planReviewVisible = streamCtx.PlanReviewVisible;
-            _quickResponseVisible = streamCtx.QuickResponseVisible;
-            _quickResponseOptions = streamCtx.QuickResponseOptions;
-
-            await InvokeAsync(StateHasChanged);
-            await SessionService.SaveSessionAsync(session);
-            ChatState.UnregisterActiveSession(session.Id);
-        }
     }
 
     private async Task HandleIssueLinked(IssueInfo issue)

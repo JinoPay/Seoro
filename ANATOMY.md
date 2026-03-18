@@ -136,6 +136,14 @@
 | #136 | 옵션 패턴 도입 | `IOptionsMonitor<AppSettings>` + `AppSettingsFactory` + `AppSettingsChangeNotifier`. 8개 서비스/컴포넌트 전환 |
 | #137 | 플러그인 실행 엔진 | EntryPoint 로딩/실행/샌드박싱 + hooks·skills 매니페스트 자동 등록 |
 
+### 구조 개선 Phase 14 (2026-03-19) — 미해결 구조적 문제 #1 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| `IChatMessageOrchestrator` (신규) | 메시지 전송/Continue 오케스트레이션 인터페이스 + `StreamResult` DTO |
+| `ChatMessageOrchestrator` (신규) | `ProcessMessageAsync`·`ProcessContinueAsync` 비즈니스 로직 추출. 워크트리 초기화, 첨부파일, 스트리밍 루프, Finalize, 훅, PR 체크 담당 |
+| `ChatView.razor` 경량화 | 697→424줄 (39% 감소). 서비스 주입 13→10개. 중복 스트리밍 코드 제거, UI 이벤트 핸들링만 담당 |
+| `MauiProgram.cs` | `IChatMessageOrchestrator` DI 등록 |
+
 ### 구조 개선 Phase 13 (2026-03-19) — 신규 구조적 문제 #3 해결 + Continue 기능
 | 변경 내용 | 역할 / 영향 범위 |
 |-----------|-----------------|
@@ -740,23 +748,23 @@ ChatView UI 버튼
 ### 관련 파일
 | 파일 | 줄수 | 역할 |
 |------|------|------|
-| `Shared/Components/Chat/ChatView.razor` | ~548 | 오케스트레이터 (Phase 3+6에서 994→899→548줄 감소) |
+| `Shared/Components/Chat/ChatView.razor` | ~424 | UI 오케스트레이터 (Phase 14에서 697→424줄. 비즈니스 로직은 ChatMessageOrchestrator로 추출) |
+| `Shared/Services/ChatMessageOrchestrator.cs` | ~230 | 메시지 전송/Continue 비즈니스 로직 (Phase 14 추출) |
+| `Shared/Services/IChatMessageOrchestrator.cs` | ~52 | 인터페이스 + StreamResult DTO |
 | `Shared/Components/Chat/BranchSelector.razor` | ~106 | 브랜치 선택 UI (Phase 6 추출) |
 | `Shared/Components/Chat/SessionWorkflowBar.razor` | ~205 | PR/워크플로우 바 (Phase 6 추출) |
 | `Shared/Components/Chat/LandingPage.razor` | ~93 | 랜딩 페이지 (Phase 6 추출) |
 
 ### 현재 동작
 
-**주입 서비스 13개** (Phase 3에서 18→14, Phase 6에서 14→13개 축소):
+**주입 서비스 10개** (Phase 14에서 13→10개 축소):
 ```
-IChatState, ClaudeService, SessionService, AttachmentService,
-HooksEngine, JSRuntime, Logger, Snackbar,
-NotificationService, StreamEventProcessor,
-SystemPromptBuilder, SessionInitializer, ChatPrWorkflowService
+IChatState, IChatMessageOrchestrator, ClaudeService,
+SessionService, SessionInitializer, JSRuntime,
+Logger, Snackbar, NotificationService
 ```
-> Phase 3 제거: ContextService, MemoryService, IGhService, IGitService, IWorkspaceService, ISettingsService, ISessionGitWorkflowService
-> Phase 6 제거: UsageService (StreamEventProcessor로 위임)
-> → `SystemPromptBuilder`, `SessionInitializer`, `ChatPrWorkflowService`로 위임
+> Phase 14 제거: AttachmentService, HooksEngine, StreamEventProcessor, SystemPromptBuilder, ChatPrWorkflowService → `IChatMessageOrchestrator`로 통합
+> Phase 14 추가: IChatMessageOrchestrator (메시지 전송/Continue 오케스트레이션)
 
 **이 컴포넌트가 담당하는 것들**:
 
@@ -767,8 +775,9 @@ SystemPromptBuilder, SessionInitializer, ChatPrWorkflowService
 | 워크플로우 바 | (추출됨) | `SessionWorkflowBar.razor` — PR 생성/병합/충돌 해결/강제 푸시 버튼 |
 | 메시지 렌더링 | 마크업 영역 | MessageBubble 루프 + 스트리밍 인디케이터 |
 | 입력 영역 | 마크업 영역 | InputArea 래핑 + 이벤트 핸들링 |
-| 메시지 전송 | `HandleSend` | 워크트리 초기화 + 첨부파일 + 스킬 확장 |
-| 스트림 처리 | `ProcessMessageAsync` | `StreamEventProcessor`에 위임 (1줄 호출) |
+| 메시지 전송 | `HandleSend` | `IChatMessageOrchestrator.SendAsync()`에 위임 |
+| Continue | `HandleContinue` | `IChatMessageOrchestrator.ContinueAsync()`에 위임 |
+| 스트림 처리 | (추출됨) | `ChatMessageOrchestrator` → `StreamEventProcessor` 위임 체인 |
 | 사용량 추적 | (추출됨) | `StreamEventProcessor.FinalizeAsync()`로 캡슐화 |
 | 플랜 모드 | (추출됨) | `StreamEventProcessor.FinalizeAsync()`로 캡슐화 |
 | 질문 감지 | finally 블록 | QuestionDetector → QuickResponseBar |
@@ -798,7 +807,7 @@ case "error"                            → 에러 메시지 추가
 ```
 
 ### 빠진 것 / 문제점
-- ~~**God Component (1,461줄, 18개 서비스)**~~ → ✅ **해결**: Phase 1에서 `StreamEventProcessor`(516줄) 추출, Phase 3에서 `SystemPromptBuilder`, `SessionInitializer`, `ChatPrWorkflowService` 추출, Phase 6에서 `BranchSelector`(106줄), `SessionWorkflowBar`(205줄), `LandingPage`(93줄) 추출. **1,461→994→899→548줄, 18→14→13개 서비스**로 62% 감소.
+- ~~**God Component (1,461줄, 18개 서비스)**~~ → ✅ **해결**: Phase 1~6에서 순차 추출, Phase 14에서 `ChatMessageOrchestrator` 추출. **1,461→994→899→548→697→424줄, 18→14→13→10개 서비스**로 71% 감소.
 - ~~**스트림 처리 300줄 switch**~~ → ✅ **해결**: `StreamEventProcessor` 서비스로 분리
 - ~~**사용량 추적 4단계 폴백**~~ → ✅ **해결**: `StreamEventProcessor.FinalizeAsync()`로 캡슐화
 - ~~**플랜 모드 3계층 감지**~~ → ✅ **해결**: `StreamEventProcessor.FinalizeAsync()`로 캡슐화
@@ -1580,7 +1589,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
-| **1** | **ChatView 697줄 재비대화** — Phase 13 Continue 기능 추가로 548→697줄 재성장. 서비스 주입 13개 유지 | 유지보수성 저하, 테스트 불가, SRP 위반 | §10 | 중 |
+| ~~**1**~~ | ~~**ChatView 697줄 재비대화**~~ → ✅ Phase 14에서 `ChatMessageOrchestrator` 추출. 697→424줄, 서비스 13→10개 | ~~유지보수성 저하~~ | §10 | — |
 | **2** | **테스트 커버리지 부족** — 12개 테스트 파일 / 75+개 서비스. ClaudeService·GitService·SessionService 등 핵심 서비스 테스트 부재 | 회귀 방지 불가, 리팩토링 안전망 없음 | §25 | 높 |
 | **3** | **StreamEventProcessor 516줄 switch 아키텍처** — 20+개 case 중첩 switch문. 새 이벤트 타입 추가 시 OCP 위반 | 확장성, 유지보수성 | §10.5 | 중 |
 | **4** | **GitService ParseDiff " b/" 파싱 취약** — `LastIndexOf(" b/")` 패턴이 `ParseDiff`(정적)과 `GetDiffSummaryAsync`(스트리밍) 양쪽에 존재. 경로에 " b/" 포함 시 오파싱 | diff 표시 오류 | §5 | 낮 |
