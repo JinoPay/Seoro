@@ -10,14 +10,14 @@ public interface IChatPrWorkflowService
     Task<string> BuildCreatePrPromptAsync(Session session);
 
     /// <summary>
-    /// Merge an existing PR. Returns (status, errorMessage).
+    /// Merge an existing PR. Returns (status, error).
     /// </summary>
-    Task<(SessionStatus Status, string? Error)> MergePrAsync(Session session);
+    Task<(SessionStatus Status, AppError? Error)> MergePrAsync(Session session);
 
     /// <summary>
-    /// Force-push the branch. Returns (status, errorMessage).
+    /// Force-push the branch. Returns (status, error).
     /// </summary>
-    Task<(SessionStatus Status, string? Error)> ForcePushAsync(Session session);
+    Task<(SessionStatus Status, AppError? Error)> ForcePushAsync(Session session);
 
     /// <summary>
     /// Reset conflict state and load full session for rebase prompt.

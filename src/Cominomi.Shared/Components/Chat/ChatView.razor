@@ -315,7 +315,7 @@
                 session.Git.BranchName = updated.Git.BranchName;
                 session.Git.BaseBranch = updated.Git.BaseBranch;
                 session.SetInitialStatus(updated.Status);
-                session.ErrorMessage = updated.ErrorMessage;
+                session.Error = updated.Error;
 
                 if (session.Status == SessionStatus.Error)
                 {
@@ -326,7 +326,7 @@
             catch (Exception ex)
             {
                 session.TransitionStatus(SessionStatus.Error);
-                session.ErrorMessage = ex.Message;
+                session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
                 ChatState.NotifyStateChanged();
                 return;
             }

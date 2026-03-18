@@ -26,7 +26,15 @@ public class SessionJsonConverter : JsonConverter<Session>
         if (root.TryGet("permissionMode", out var pm)) session.PermissionMode = pm;
         if (root.TryGet("effortLevel", out var el)) session.EffortLevel = el;
         if (root.TryGet("cityName", out var cn)) session.CityName = cn;
-        if (root.TryGet("errorMessage", out var em)) session.ErrorMessage = em;
+        // Error: try new structured "error" object first, then legacy "errorMessage" string
+        if (root.TryGetProperty("error", out var errEl) && errEl.ValueKind == JsonValueKind.Object)
+        {
+            session.Error = JsonSerializer.Deserialize<AppError>(errEl.GetRawText(), options);
+        }
+        else if (root.TryGet("errorMessage", out var em))
+        {
+            session.Error = AppError.General(em);
+        }
         if (root.TryGet("conversationId", out var cid)) session.ConversationId = cid;
         if (root.TryGet("planFilePath", out var pfp)) session.PlanFilePath = pfp;
 
@@ -127,8 +135,11 @@ public class SessionJsonConverter : JsonConverter<Session>
         writer.WriteString("cityName", value.CityName);
         writer.WriteString("status", value.Status.ToString());
 
-        if (value.ErrorMessage != null)
-            writer.WriteString("errorMessage", value.ErrorMessage);
+        if (value.Error != null)
+        {
+            writer.WritePropertyName("error");
+            JsonSerializer.Serialize(writer, value.Error, options);
+        }
         if (value.ConversationId != null)
             writer.WriteString("conversationId", value.ConversationId);
 

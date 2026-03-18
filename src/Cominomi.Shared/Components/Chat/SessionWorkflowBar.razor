@@ -73,13 +73,13 @@
                     break;
             }
 
-            @if (!string.IsNullOrEmpty(Session.ErrorMessage))
+            @if (Session.Error != null)
             {
-                <MudTooltip Text="@Session.ErrorMessage">
+                <MudTooltip Text="@Session.Error.Message">
                     <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Error"
                              Style="width: 14px; height: 14px;" />
                 </MudTooltip>
-                @if (Session.ErrorMessage.Contains("rejected", StringComparison.OrdinalIgnoreCase))
+                @if (Session.Error.Code == ErrorCode.BranchPushRejected)
                 {
                     <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
                                OnClick="@(() => ForcePushAndMerge(Session))"
@@ -121,7 +121,7 @@
         {
             var (status, error) = await PrWorkflow.MergePrAsync(session);
             session.TransitionStatus(status);
-            session.ErrorMessage = error;
+            session.Error = error;
 
             if (status == SessionStatus.Merged)
             {
@@ -130,13 +130,13 @@
             }
             else if (status == SessionStatus.ConflictDetected)
                 Snackbar.ConflictDetected(session.Git.BranchName);
-            else if (!string.IsNullOrEmpty(error))
-                Snackbar.MergeError(error);
+            else if (error != null)
+                Snackbar.MergeError(error.Message);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "MergePr failed for session {SessionId}", session.Id);
-            session.ErrorMessage = ex.Message;
+            session.Error = AppError.FromException(ErrorCode.PrMergeFailed, ex);
             Snackbar.MergeError(ex.Message);
         }
         finally { _operatingSessionId = null; StateHasChanged(); }
@@ -150,22 +150,22 @@
         {
             var (status, error) = await PrWorkflow.ForcePushAsync(session);
             session.TransitionStatus(status);
-            session.ErrorMessage = error;
+            session.Error = error;
 
             if (status != SessionStatus.Pushed)
             {
-                if (!string.IsNullOrEmpty(error))
-                    Snackbar.PushError(error);
+                if (error != null)
+                    Snackbar.PushError(error.Message);
                 return;
             }
 
-            session.ErrorMessage = null;
+            session.Error = null;
             Snackbar.Add("강제 푸시 완료. PR을 생성하세요.", Severity.Success);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "ForcePushAndMerge failed for session {SessionId}", session.Id);
-            session.ErrorMessage = ex.Message;
+            session.Error = AppError.FromException(ErrorCode.BranchPushFailed, ex);
             Snackbar.MergeError(ex.Message);
         }
         finally { _operatingSessionId = null; StateHasChanged(); }
@@ -174,7 +174,7 @@
     private async Task ResolveConflicts(Session session)
     {
         session.TransitionStatus(SessionStatus.Ready);
-        session.ErrorMessage = null;
+        session.Error = null;
         session.Pr.ConflictFiles = null;
 
         var (fullSession, prompt) = await PrWorkflow.ResolveConflictsAsync(session);

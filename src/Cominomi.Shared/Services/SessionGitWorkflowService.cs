@@ -166,7 +166,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             ?? throw new InvalidOperationException($"Session '{sessionId}' not found.");
 
         session.TransitionStatus(SessionStatus.Ready);
-        session.ErrorMessage = null;
+        session.Error = null;
         session.Pr.ConflictFiles = null;
         await _sessionService.SaveSessionAsync(session);
     }
@@ -184,7 +184,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         if (result.Success)
         {
             session.TransitionStatus(SessionStatus.Pushed);
-            session.ErrorMessage = null;
+            session.Error = null;
 
             _ = Task.Run(async () =>
             {
@@ -204,7 +204,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         }
         else
         {
-            session.ErrorMessage = result.Error;
+            session.Error = AppError.ClassifyPushError(result.Error);
         }
 
         await _sessionService.SaveSessionAsync(session);
@@ -222,7 +222,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         if (result.Success)
         {
             session.TransitionStatus(SessionStatus.PrOpen);
-            session.ErrorMessage = null;
+            session.Error = null;
 
             // Parse PR URL from output (gh pr create prints the URL)
             session.Pr.PrUrl = result.Output.Trim();
@@ -237,7 +237,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         }
         else
         {
-            session.ErrorMessage = result.Error;
+            session.Error = AppError.PrCreation(result.Error);
         }
 
         await _sessionService.SaveSessionAsync(session);
@@ -252,7 +252,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.Git.BranchName, ct);
             if (prInfo == null)
             {
-                session.ErrorMessage = "PR not found for this branch.";
+                session.Error = AppError.PrNotFoundError("PR not found for this branch.");
                 await _sessionService.SaveSessionAsync(session);
                 return session;
             }
@@ -265,20 +265,15 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         if (result.Success)
         {
             session.TransitionStatus(SessionStatus.Merged);
-            session.ErrorMessage = null;
+            session.Error = null;
         }
         else
         {
-            var errorLower = (result.Error + result.Output).ToLowerInvariant();
-            if (errorLower.Contains("conflict") || errorLower.Contains("not mergeable") || errorLower.Contains("merge conflict"))
-            {
+            var error = AppError.ClassifyMergeError(result.Error, result.Output);
+            session.Error = error;
+
+            if (error.Code == ErrorCode.PrMergeConflict)
                 session.TransitionStatus(SessionStatus.ConflictDetected);
-                session.ErrorMessage = result.Error;
-            }
-            else
-            {
-                session.ErrorMessage = result.Error;
-            }
         }
 
         await _sessionService.SaveSessionAsync(session);
@@ -300,13 +295,13 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         {
             _logger.LogInformation("Rebase succeeded for session {SessionId}", session.Id);
             session.TransitionStatus(SessionStatus.Ready);
-            session.ErrorMessage = null;
+            session.Error = null;
             session.Pr.ConflictFiles = null;
         }
         else
         {
             _logger.LogWarning("Rebase failed for session {SessionId}: {Error}", session.Id, result.Error);
-            session.ErrorMessage = $"Rebase failed: {result.Error}";
+            session.Error = AppError.General($"Rebase failed: {result.Error}");
         }
 
         await _sessionService.SaveSessionAsync(session);
@@ -320,7 +315,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.Git.BranchName, ct);
             if (prInfo == null)
             {
-                session.ErrorMessage = "PR not found for this branch.";
+                session.Error = AppError.PrNotFoundError("PR not found for this branch.");
                 await _sessionService.SaveSessionAsync(session);
                 return session;
             }
@@ -334,12 +329,12 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             session.TransitionStatus(SessionStatus.Ready);
             session.Pr.PrUrl = null;
             session.Pr.PrNumber = null;
-            session.ErrorMessage = null;
+            session.Error = null;
             _logger.LogInformation("PR #{PrNumber} closed for session {SessionId}", session.Pr.PrNumber, session.Id);
         }
         else
         {
-            session.ErrorMessage = $"Failed to close PR: {result.Error}";
+            session.Error = AppError.General($"Failed to close PR: {result.Error}");
         }
 
         await _sessionService.SaveSessionAsync(session);
