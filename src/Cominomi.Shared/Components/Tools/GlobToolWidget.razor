@@ -39,28 +39,38 @@
     private List<string> _files = [];
     private int _fileCount;
     private bool _collapsed = true;
+    private string? _lastInput;
+    private string? _lastOutput;
 
     protected override void OnParametersSet()
     {
-        if (!string.IsNullOrEmpty(Tool.Input))
+        if (!ReferenceEquals(_lastInput, Tool.Input))
         {
-            try
+            _lastInput = Tool.Input;
+            if (!string.IsNullOrEmpty(Tool.Input))
             {
-                using var doc = JsonDocument.Parse(Tool.Input);
-                if (doc.RootElement.TryGetProperty("pattern", out var p))
-                    _pattern = p.GetString() ?? "";
+                try
+                {
+                    using var doc = JsonDocument.Parse(Tool.Input);
+                    if (doc.RootElement.TryGetProperty("pattern", out var p))
+                        _pattern = p.GetString() ?? "";
+                }
+                catch (JsonException) { /* malformed tool input — render empty */ }
             }
-            catch (JsonException) { /* malformed tool input — render empty */ }
         }
 
-        _files = string.IsNullOrEmpty(Tool.Output)
-            ? []
-            : Tool.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                .Select(l => l.Trim())
-                .Where(l => !string.IsNullOrEmpty(l))
-                .ToList();
-        _fileCount = _files.Count;
-        _collapsed = _files.Count > 10;
+        if (!ReferenceEquals(_lastOutput, Tool.Output))
+        {
+            _lastOutput = Tool.Output;
+            _files = string.IsNullOrEmpty(Tool.Output)
+                ? []
+                : Tool.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim())
+                    .Where(l => !string.IsNullOrEmpty(l))
+                    .ToList();
+            _fileCount = _files.Count;
+            _collapsed = _files.Count > 10;
+        }
     }
 
     private static string GetFileIcon(string path)

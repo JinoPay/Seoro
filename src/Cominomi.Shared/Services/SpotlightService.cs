@@ -11,6 +11,7 @@ public class SpotlightService : ISpotlightService, IDisposable
     private readonly ILogger<SpotlightService> _logger;
     private readonly ConcurrentDictionary<string, SpotlightSession> _sessions = new();
     private static readonly string StateFilePath = Path.Combine(AppPaths.Settings, "spotlight-state.json");
+    private const int ThrottleMs = 500;
 
     public SpotlightService(IGitService gitService, ILogger<SpotlightService> logger)
     {
@@ -130,6 +131,7 @@ public class SpotlightService : ISpotlightService, IDisposable
         {
             IncludeSubdirectories = true,
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+            InternalBufferSize = 65_536, // 64 KB (default 8 KB overflows during rapid changes on Windows)
             EnableRaisingEvents = true
         };
 
@@ -142,12 +144,19 @@ public class SpotlightService : ISpotlightService, IDisposable
             Watcher = watcher
         };
 
-        // Debounced sync on file changes
-        var debounceTimer = new System.Timers.Timer(500) { AutoReset = false };
-        debounceTimer.Elapsed += async (_, _) =>
+        // Throttled sync: periodic timer checks a dirty flag instead of
+        // restarting a timer per event (avoids Stop/Start storm on burst changes).
+        var syncTimer = new Timer(async _ =>
         {
+            if (Interlocked.Exchange(ref spotlightSession.Dirty, 0) == 0)
+                return;
+
             if (!spotlightSession.SyncLock.Wait(0))
-                return; // Another sync is in progress; next change will trigger a fresh sync
+            {
+                // Another sync in progress; re-mark so next tick retries
+                Volatile.Write(ref spotlightSession.Dirty, 1);
+                return;
+            }
             try
             {
                 await SyncFilesAsync(spotlightSession.WorktreePath, spotlightSession.RepoDir);
@@ -160,8 +169,8 @@ public class SpotlightService : ISpotlightService, IDisposable
             {
                 spotlightSession.SyncLock.Release();
             }
-        };
-        spotlightSession.DebounceTimer = debounceTimer;
+        }, null, ThrottleMs, ThrottleMs);
+        spotlightSession.SyncTimer = syncTimer;
 
         void OnChange(object sender, FileSystemEventArgs e)
         {
@@ -170,14 +179,15 @@ public class SpotlightService : ISpotlightService, IDisposable
                 e.FullPath.EndsWith(Path.DirectorySeparatorChar + ".git"))
                 return;
 
-            debounceTimer.Stop();
-            debounceTimer.Start();
+            Volatile.Write(ref spotlightSession.Dirty, 1);
         }
 
         watcher.Changed += OnChange;
         watcher.Created += OnChange;
         watcher.Deleted += OnChange;
         watcher.Renamed += (s, e) => OnChange(s, e);
+        watcher.Error += (_, e) =>
+            _logger.LogWarning(e.GetException(), "FileSystemWatcher buffer overflow for session {SessionId}", session.Id);
 
         _sessions[session.Id] = spotlightSession;
         _logger.LogInformation("Spotlight started for session {SessionId}", session.Id);
@@ -191,7 +201,7 @@ public class SpotlightService : ISpotlightService, IDisposable
         // Stop watching
         session.Watcher.EnableRaisingEvents = false;
         session.Watcher.Dispose();
-        session.DebounceTimer?.Dispose();
+        session.SyncTimer?.Dispose();
         session.SyncLock.Dispose();
 
         // Discard changes in repo root and restore original branch
@@ -284,7 +294,7 @@ public class SpotlightService : ISpotlightService, IDisposable
         foreach (var session in _sessions.Values)
         {
             session.Watcher.Dispose();
-            session.DebounceTimer?.Dispose();
+            session.SyncTimer?.Dispose();
             session.SyncLock.Dispose();
         }
         _sessions.Clear();
@@ -297,7 +307,8 @@ public class SpotlightService : ISpotlightService, IDisposable
         public required string RepoDir { get; init; }
         public required string WorktreePath { get; init; }
         public required FileSystemWatcher Watcher { get; init; }
-        public System.Timers.Timer? DebounceTimer { get; set; }
+        public Timer? SyncTimer { get; set; }
+        public int Dirty; // 0 = clean, 1 = needs sync; accessed via Volatile/Interlocked
         public SemaphoreSlim SyncLock { get; } = new(1, 1);
     }
 

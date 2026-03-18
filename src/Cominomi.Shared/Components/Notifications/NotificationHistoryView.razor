@@ -1,0 +1,161 @@
+@inject INotificationHistoryService History
+@inject IChatState ChatState
+@inject ISessionService SessionService
+@implements IDisposable
+
+<div class="notification-history-view">
+    <div class="notification-history-header">
+        <span class="notification-history-title">Notifications</span>
+        <div style="display: flex; align-items: center; gap: 4px;">
+            @if (History.UnreadCount > 0)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                           Style="font-size: var(--text-xs); text-transform: none; min-width: auto; padding: 2px 8px;"
+                           OnClick="@History.MarkAllAsRead">
+                    모두 읽음
+                </MudButton>
+            }
+        </div>
+    </div>
+
+    @if (_entries.Count == 0)
+    {
+        <div class="notification-history-empty">
+            <MudIcon Icon="@Icons.Material.Filled.NotificationsNone" Size="Size.Large" Style="opacity: 0.15;" />
+            <MudText Typo="Typo.body2" Style="opacity: 0.4;">알림이 없습니다</MudText>
+        </div>
+    }
+    else
+    {
+        <div class="notification-history-list">
+            @foreach (var group in _groups)
+            {
+                <div class="notification-date-header">@group.Label</div>
+
+                @foreach (var entry in group.Entries)
+                {
+                    <div class="notification-entry @(entry.IsRead ? "" : "unread")"
+                         @key="entry.Id"
+                         @onclick="@(() => HandleClick(entry))">
+                        <MudIcon Icon="@GetTypeIcon(entry.Type)"
+                                 Size="Size.Small"
+                                 Color="@GetTypeColor(entry.Type)"
+                                 Style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;" />
+
+                        <div class="notification-entry-content">
+                            <span class="notification-message">@entry.Body</span>
+                            <div class="notification-meta">
+                                <span class="notification-session-badge">@entry.Title</span>
+                                <span class="notification-time">@FormatRelativeTime(entry.Timestamp)</span>
+                            </div>
+                        </div>
+
+                        @if (!entry.IsRead)
+                        {
+                            <div class="notification-unread-dot"></div>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<NotificationRecord> _entries = [];
+    private List<NotificationDateGroup> _groups = [];
+
+    protected override void OnInitialized()
+    {
+        History.OnChange += HandleChange;
+        Refresh();
+    }
+
+    private void Refresh()
+    {
+        _entries = History.Entries;
+        _groups = GroupByDate(_entries);
+    }
+
+    private async Task HandleClick(NotificationRecord entry)
+    {
+        if (!entry.IsRead)
+            History.MarkAsRead(entry.Id);
+
+        if (entry.SessionId != null)
+        {
+            var session = await SessionService.LoadSessionAsync(entry.SessionId);
+            if (session != null)
+            {
+                ChatState.SetSession(session);
+                ChatState.Tabs.SetActiveTab("chat");
+            }
+        }
+    }
+
+    private void HandleChange()
+    {
+        _ = InvokeAsync(() =>
+        {
+            Refresh();
+            StateHasChanged();
+        });
+    }
+
+    private static string GetTypeIcon(NotificationType type) => type switch
+    {
+        NotificationType.Success => Icons.Material.Filled.CheckCircle,
+        NotificationType.Error => Icons.Material.Filled.Error,
+        NotificationType.Question => Icons.Material.Filled.QuestionAnswer,
+        NotificationType.PlanReview => Icons.Material.Filled.RateReview,
+        _ => Icons.Material.Filled.Info
+    };
+
+    private static Color GetTypeColor(NotificationType type) => type switch
+    {
+        NotificationType.Success => Color.Success,
+        NotificationType.Error => Color.Error,
+        NotificationType.Question => Color.Warning,
+        NotificationType.PlanReview => Color.Info,
+        _ => Color.Default
+    };
+
+    private static string FormatRelativeTime(DateTime utcTime)
+    {
+        var diff = DateTime.UtcNow - utcTime;
+        if (diff.TotalMinutes < 1) return "방금 전";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}분 전";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}시간 전";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}일 전";
+        return utcTime.ToLocalTime().ToString("M월 d일");
+    }
+
+    private static List<NotificationDateGroup> GroupByDate(IReadOnlyList<NotificationRecord> entries)
+    {
+        var today = DateTime.UtcNow.Date;
+        var yesterday = today.AddDays(-1);
+
+        return entries
+            .GroupBy(e => e.Timestamp.ToLocalTime().Date)
+            .OrderByDescending(g => g.Key)
+            .Select(g => new NotificationDateGroup
+            {
+                Label = g.Key == today ? "Today"
+                    : g.Key == yesterday ? "Yesterday"
+                    : g.Key.ToString("yyyy년 M월 d일"),
+                Entries = g.ToList()
+            })
+            .ToList();
+    }
+
+    public void Dispose()
+    {
+        History.OnChange -= HandleChange;
+    }
+
+    private class NotificationDateGroup
+    {
+        public string Label { get; init; } = "";
+        public List<NotificationRecord> Entries { get; init; } = [];
+    }
+}

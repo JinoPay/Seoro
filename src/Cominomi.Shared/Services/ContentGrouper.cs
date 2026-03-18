@@ -6,15 +6,6 @@ namespace Cominomi.Shared.Services;
 
 public static partial class ContentGrouper
 {
-    private static readonly string[] IntermediatePatterns =
-    [
-        "확인", "살펴보", "읽어보", "검색", "찾아보", "분석",
-        "조사", "탐색", "코드베이스", "파일을", "디렉토리",
-        "let me", "i'll", "i will", "let's", "looking at",
-        "checking", "reading", "searching", "examining",
-        "explore", "investigate", "review", "understand"
-    ];
-
     [GeneratedRegex(@"^\d+\.", RegexOptions.Multiline)]
     private static partial Regex NumberedListRegex();
 
@@ -143,13 +134,17 @@ public static partial class ContentGrouper
 
     private static bool IsIntermediateText(string text)
     {
-        var lower = text.ToLowerInvariant();
-        foreach (var pattern in IntermediatePatterns)
-        {
-            if (lower.Contains(pattern))
-                return true;
-        }
-        return false;
+        // Language-agnostic structural heuristic:
+        // Text containing code, markdown formatting, or links is substantive
+        if (text.Contains('`') || text.Contains("](") || text.Contains("**") || text.Contains("## "))
+            return false;
+
+        // Multi-paragraph text likely contains substance
+        if (text.Contains("\n\n"))
+            return false;
+
+        // Short, unformatted, single-block text is likely transitional
+        return true;
     }
 
     private static bool IsLikelyVerboseText(string text)

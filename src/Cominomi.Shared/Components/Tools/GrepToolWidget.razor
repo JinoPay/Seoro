@@ -49,13 +49,24 @@
     private Dictionary<string, List<GrepLine>> _fileGroups = new();
     private int _totalResults;
     private bool _collapsed = true;
+    private string? _lastInput;
+    private string? _lastOutput;
 
     private record GrepLine(string LineNumber, string Content);
 
     protected override void OnParametersSet()
     {
-        ParseInput();
-        ParseOutput();
+        if (!ReferenceEquals(_lastInput, Tool.Input))
+        {
+            _lastInput = Tool.Input;
+            ParseInput();
+        }
+
+        if (!ReferenceEquals(_lastOutput, Tool.Output))
+        {
+            _lastOutput = Tool.Output;
+            ParseOutput();
+        }
     }
 
     private void ParseInput()

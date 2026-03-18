@@ -5,6 +5,7 @@
 @inject ISessionService SessionService
 @inject ISnackbar Snackbar
 @inject INotificationService NotificationService
+@inject INotificationHistoryService NotificationHistory
 @inject IJSRuntime JSRuntime
 @inject ILogger<SessionWorkflowBar> Logger
 
@@ -191,6 +192,8 @@
     {
         try
         {
+            NotificationHistory.Record(session.CityName, body, type, session.Id);
+
             var isFocused = await JSRuntime.InvokeAsync<bool>("isWindowFocused");
             var isCurrentSession = ChatState.CurrentSession?.Id == session.Id;
 
