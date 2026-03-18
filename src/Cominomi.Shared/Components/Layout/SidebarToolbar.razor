@@ -1,4 +1,6 @@
 @inject IThemeService ThemeService
+@inject INotificationHistoryService NotificationHistory
+@implements IDisposable
 
 <div class="sidebar-toolbar">
     <span class="sidebar-brand">
@@ -18,6 +20,13 @@
                        Size="Size.Small" OnClick="@OnOpenActivity"
                        Style="width: 28px; height: 28px; opacity: 0.5;"
                        Title="Activity" />
+        <MudBadge Content="@_unreadCount" Visible="@(_unreadCount > 0)" Color="Color.Error"
+                  Overlap="true" Dot="@(_unreadCount <= 0)" Class="notification-badge">
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit"
+                           Size="Size.Small" OnClick="@OnOpenNotifications"
+                           Style="width: 28px; height: 28px; opacity: 0.5;"
+                           Title="알림 히스토리" />
+        </MudBadge>
         <MudIconButton Icon="@Icons.Material.Filled.Analytics" Color="Color.Inherit"
                        Size="Size.Small" OnClick="@OnOpenUsageDashboard"
                        Style="width: 28px; height: 28px; opacity: 0.5;"
@@ -30,8 +39,31 @@
 
 @code {
     [Parameter] public EventCallback OnOpenActivity { get; set; }
+    [Parameter] public EventCallback OnOpenNotifications { get; set; }
     [Parameter] public EventCallback OnOpenUsageDashboard { get; set; }
     [Parameter] public EventCallback OnOpenSettings { get; set; }
 
+    private int _unreadCount;
+
+    protected override void OnInitialized()
+    {
+        NotificationHistory.OnChange += HandleNotificationChange;
+        _unreadCount = NotificationHistory.UnreadCount;
+    }
+
+    private void HandleNotificationChange()
+    {
+        _ = InvokeAsync(() =>
+        {
+            _unreadCount = NotificationHistory.UnreadCount;
+            StateHasChanged();
+        });
+    }
+
     private async Task ToggleDarkMode() => await ThemeService.ToggleDarkModeAsync();
+
+    public void Dispose()
+    {
+        NotificationHistory.OnChange -= HandleNotificationChange;
+    }
 }
