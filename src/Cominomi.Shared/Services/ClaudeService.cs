@@ -80,25 +80,10 @@ public class ClaudeService : IClaudeService, IDisposable
         var reader = process.StandardOutput;
         bool anyEvents = false;
 
-        while (!reader.EndOfStream && !token.IsCancellationRequested)
+        await foreach (var evt in ReadStreamEventsAsync(reader, token))
         {
-            string? line;
-            try { line = await reader.ReadLineAsync(token); }
-            catch (OperationCanceledException) { break; }
-
-            if (string.IsNullOrWhiteSpace(line)) continue;
-
-            _logger.LogDebug("Claude raw line: {Line}", line);
-
-            StreamEvent? evt = null;
-            try { evt = JsonSerializer.Deserialize<StreamEvent>(line); }
-            catch (JsonException) { _logger.LogDebug("Skipping non-JSON line from Claude CLI"); }
-
-            if (evt != null)
-            {
-                anyEvents = true;
-                yield return evt;
-            }
+            anyEvents = true;
+            yield return evt;
         }
 
         await FinishProcess(process, token);
@@ -129,20 +114,9 @@ public class ClaudeService : IClaudeService, IDisposable
             stderrTask = CollectStderrAsync(process, stderrBuilder, token);
             reader = process.StandardOutput;
 
-            while (!reader.EndOfStream && !token.IsCancellationRequested)
+            await foreach (var evt in ReadStreamEventsAsync(reader, token))
             {
-                string? line;
-                try { line = await reader.ReadLineAsync(token); }
-                catch (OperationCanceledException) { break; }
-
-                if (string.IsNullOrWhiteSpace(line)) continue;
-
-                StreamEvent? evt = null;
-                try { evt = JsonSerializer.Deserialize<StreamEvent>(line); }
-                catch (JsonException) { _logger.LogDebug("Skipping non-JSON line from Claude CLI (retry)"); }
-
-                if (evt != null)
-                    yield return evt;
+                yield return evt;
             }
 
             await FinishProcess(process, token);
@@ -234,6 +208,29 @@ public class ClaudeService : IClaudeService, IDisposable
             }
         }
         catch { /* process already disposed by cancellation */ }
+    }
+
+    private async IAsyncEnumerable<StreamEvent> ReadStreamEventsAsync(
+        StreamReader reader,
+        [EnumeratorCancellation] CancellationToken token)
+    {
+        while (!reader.EndOfStream && !token.IsCancellationRequested)
+        {
+            string? line;
+            try { line = await reader.ReadLineAsync(token); }
+            catch (OperationCanceledException) { break; }
+
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            _logger.LogDebug("Claude raw line: {Line}", line);
+
+            StreamEvent? evt = null;
+            try { evt = JsonSerializer.Deserialize<StreamEvent>(line); }
+            catch (JsonException) { _logger.LogDebug("Skipping non-JSON line from Claude CLI"); }
+
+            if (evt != null)
+                yield return evt;
+        }
     }
 
     private async Task<CliCapabilities> DetectCapabilitiesAsync(string fileName, string baseArgs)

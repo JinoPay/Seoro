@@ -1558,7 +1558,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
 | **1** | **데이터 모델 불변성 부재** — 7개 핵심 모델에 81개 `public set` 프로퍼티 | `ChatState`와 `Session`이 같은 `ChatMessage` 객체 가변 참조 공유. `AppendText()`가 `Text` + `Parts` 양쪽 수정. 어디서든 조용히 상태 변경 가능. Session(18), ChatMessage(8), Workspace(12), AppSettings(22), MemoryEntry(8), ActivityEntry(8), MainTab(5) | §3, §23 | 높 |
-| **2** | **ClaudeService 재시도 ~35줄 복붙** — `--verbose` 재시도 시 스트리밍 루프 전체 복사 | `ClaudeService.cs:83-102` (첫 루프)와 `:132-146` (재시도 루프)가 거의 동일. 하나만 수정 시 동작 불일치 | §7 | 중 |
+| ~~**2**~~ | ~~**ClaudeService 재시도 ~35줄 복붙** — `--verbose` 재시도 시 스트리밍 루프 전체 복사~~ | ✅ `ReadStreamEventsAsync()` 헬퍼로 스트리밍 루프 통합. 첫 루프·재시도 루프 모두 동일 메서드 호출 | §7 | — |
 | **3** | **시스템 프롬프트·메모리 크기 제한 미흡** — 문자 수 기반 제한만, 토큰 카운팅 없음 | `MemoryService`가 `MaxMemoryPromptChars`/`MaxMemoryEntryChars` 문자 수로 절단하나, 토큰 기반이 아님. notes.md는 크기 제한 없이 프롬프트에 주입. 워크스페이스별 메모리 필터링은 `WorkspaceId == null`이면 모든 워크스페이스에 주입 | §17, §18 | 중 |
 | **4** | **ChatView `Task.Run` fire-and-forget** — 예외 미관찰 위험 | `ChatView.razor:295` `_ = Task.Run(() => ProcessMessageAsync(input))`. 에러 핸들링·취소 추적 없음. 스트리밍 실패 시 조용히 무시될 수 있음 | §10 | 중 |
 | **5** | **GitService ParseDiff " b/" 파싱 취약** — 경로에 ` b/`가 포함된 파일 오파싱 | `GitService.cs:459` `header.LastIndexOf(" b/")`. 파일 경로에 ` b/`가 있으면 diff 어트리뷰션 오류 | §5 | 낮 |
