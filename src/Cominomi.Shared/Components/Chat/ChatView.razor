@@ -274,6 +274,7 @@
     private string? _planFilePath;
     private string? _planContent;
     private DateTime _streamStartTime;
+    private string? _lastPrCheckedSessionId;
 
     private List<Session> _recentSessions = [];
 
@@ -357,6 +358,18 @@
 
             if (ChatState.CurrentSession == null)
                 _ = LoadRecentSessions().ContinueWith(_ => InvokeAsync(StateHasChanged));
+
+            // 세션 전환 시 GitHub PR 상태 자동 확인
+            if (ChatState.CurrentSession != null
+                && !ChatState.CurrentSession.IsLocalDir
+                && ChatState.CurrentSession.Id != _lastPrCheckedSessionId
+                && ChatState.CurrentSession.Status is SessionStatus.Ready or SessionStatus.Pushed
+                && ChatState.CurrentSession.PrNumber == null
+                && !string.IsNullOrEmpty(ChatState.CurrentSession.BranchName))
+            {
+                _lastPrCheckedSessionId = ChatState.CurrentSession.Id;
+                _ = CheckAndUpdatePrStatus(ChatState.CurrentSession);
+            }
         });
     }
 
