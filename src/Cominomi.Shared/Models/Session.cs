@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Cominomi.Shared;
+using Cominomi.Shared.Services;
 
 namespace Cominomi.Shared.Models;
 
@@ -30,7 +31,27 @@ public class Session
     public string EffortLevel { get; set; } = CominomiConstants.DefaultEffortLevel;
     public AgentType AgentType { get; set; } = AgentType.Code;
     public string CityName { get; set; } = "";
-    public SessionStatus Status { get; set; } = SessionStatus.Initializing;
+    public SessionStatus Status { get; private set; } = SessionStatus.Initializing;
+
+    /// <summary>
+    /// Validates and applies a status transition. Throws on invalid transitions.
+    /// </summary>
+    public void TransitionStatus(SessionStatus target)
+    {
+        if (Status == target)
+            return;
+
+        if (!SessionStatusMachine.IsValidTransition(Status, target))
+            throw new InvalidOperationException(
+                $"Invalid session status transition: {Status} → {target} (session {Id})");
+
+        Status = target;
+    }
+
+    /// <summary>
+    /// Initializes Status for deserialization or test setup. Bypasses validation.
+    /// </summary>
+    public void SetInitialStatus(SessionStatus status) => Status = status;
     public string? ErrorMessage { get; set; }
     public List<ChatMessage> Messages { get; set; } = [];
     public string? PrUrl { get; set; }
