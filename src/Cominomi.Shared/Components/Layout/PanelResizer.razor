@@ -1,0 +1,71 @@
+@inject IJSRuntime JS
+
+<div class="panel-resizer @(_dragging ? "dragging" : "")"
+     @ref="_element"
+     role="separator"
+     aria-orientation="vertical"
+     aria-valuenow="@CurrentSize"
+     tabindex="0"
+     @onkeydown="HandleKeyDown" />
+
+@code {
+    [Parameter] public string PanelId { get; set; } = "";
+    [Parameter] public int CurrentSize { get; set; }
+    [Parameter] public int MinSize { get; set; } = 180;
+    [Parameter] public int MaxSize { get; set; } = 600;
+    [Parameter] public EventCallback<int> OnResize { get; set; }
+    [Parameter] public bool Reverse { get; set; }
+
+    private ElementReference _element;
+    private bool _dragging;
+    private DotNetObjectReference<PanelResizer>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("registerPanelResizer", _element, _dotNetRef, MinSize, MaxSize, Reverse);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnDragResize(int newSize)
+    {
+        _dragging = true;
+        await OnResize.InvokeAsync(newSize);
+    }
+
+    [JSInvokable]
+    public void OnDragEnd()
+    {
+        _dragging = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        var delta = e.ShiftKey ? 50 : 10;
+        var newSize = CurrentSize;
+
+        if (e.Key == "ArrowLeft")
+            newSize = Reverse ? CurrentSize + delta : CurrentSize - delta;
+        else if (e.Key == "ArrowRight")
+            newSize = Reverse ? CurrentSize - delta : CurrentSize + delta;
+        else
+            return;
+
+        newSize = Math.Clamp(newSize, MinSize, MaxSize);
+        await OnResize.InvokeAsync(newSize);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("unregisterPanelResizer", _element);
+        }
+        catch { /* Component may already be disposed */ }
+        _dotNetRef?.Dispose();
+    }
+}

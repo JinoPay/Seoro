@@ -235,6 +235,91 @@
                 window._sessionShortcutHandler = null;
             }
         };
+
+        // --- Panel Resizer ---
+        window.registerPanelResizer = function(element, dotNetRef, minSize, maxSize, reverse) {
+            if (!element) return;
+            element._resizerData = { dotNetRef, minSize, maxSize, reverse };
+
+            element._onMouseDown = function(e) {
+                e.preventDefault();
+                var data = element._resizerData;
+                var startX = e.clientX;
+                var shell = element.closest('.cominomi-shell');
+                if (!shell) return;
+
+                // Get current computed size of the adjacent panel
+                var panel = reverse
+                    ? element.nextElementSibling
+                    : element.previousElementSibling;
+                if (!panel) return;
+                var startWidth = panel.getBoundingClientRect().width;
+
+                var onMouseMove = function(e2) {
+                    var dx = e2.clientX - startX;
+                    var newSize = reverse ? startWidth - dx : startWidth + dx;
+                    newSize = Math.round(Math.max(data.minSize, Math.min(data.maxSize, newSize)));
+
+                    // Update CSS variable on the shell
+                    if (reverse) {
+                        shell.style.setProperty('--detail-width', newSize + 'px');
+                    } else {
+                        shell.style.setProperty('--sidebar-width', newSize + 'px');
+                    }
+
+                    data.dotNetRef.invokeMethodAsync('OnDragResize', newSize);
+                };
+
+                var onMouseUp = function() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    data.dotNetRef.invokeMethodAsync('OnDragEnd');
+                };
+
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            };
+
+            element.addEventListener('mousedown', element._onMouseDown);
+        };
+
+        window.unregisterPanelResizer = function(element) {
+            if (!element || !element._onMouseDown) return;
+            element.removeEventListener('mousedown', element._onMouseDown);
+            element._resizerData = null;
+        };
+
+        // --- Keyboard Navigation: Ctrl/Cmd+B toggle sidebar, Ctrl/Cmd+] toggle detail ---
+        window.registerPanelShortcuts = function(dotNetRef) {
+            if (window._panelShortcutHandler) {
+                document.removeEventListener('keydown', window._panelShortcutHandler);
+            }
+            window._panelShortcutHandler = function(e) {
+                var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                var modifier = isMac ? e.metaKey : e.ctrlKey;
+                if (!modifier) return;
+
+                if (e.key === 'b' || e.key === 'B') {
+                    e.preventDefault();
+                    dotNetRef.invokeMethodAsync('OnToggleSidebarShortcut');
+                } else if (e.key === ']') {
+                    e.preventDefault();
+                    dotNetRef.invokeMethodAsync('OnToggleDetailShortcut');
+                }
+            };
+            document.addEventListener('keydown', window._panelShortcutHandler);
+        };
+
+        window.unregisterPanelShortcuts = function() {
+            if (window._panelShortcutHandler) {
+                document.removeEventListener('keydown', window._panelShortcutHandler);
+                window._panelShortcutHandler = null;
+            }
+        };
     </script>
 
 </body>

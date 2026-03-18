@@ -3,7 +3,7 @@
 @inject IJSRuntime JS
 @inject IThemeService ThemeService
 @inject IDependencyCheckService DependencyCheckService
-@implements IDisposable
+@implements IAsyncDisposable
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="ThemeService.Theme" />
 <MudPopoverProvider />
@@ -24,6 +24,13 @@ else
                             OnOpenSettings="@(() => ChatState.OpenSettings())" />
             <SessionList />
         </aside>
+
+        @* === Sidebar ↔ Main Resizer === *@
+        @if (_sidebarOpen)
+        {
+            <PanelResizer PanelId="sidebar" CurrentSize="_sidebarWidth" MinSize="180" MaxSize="480"
+                          OnResize="HandleSidebarResize" />
+        }
 
         @* === Center Panel: Chat === *@
         <main class="cominomi-main">
@@ -55,9 +62,13 @@ else
             </div>
         </main>
 
-        @* === Right Panel: Detail (Context) === *@
+        @* === Main ↔ Detail Resizer === *@
         @if (ChatState.RightPanel != RightPanelMode.None)
         {
+            <PanelResizer PanelId="detail" CurrentSize="_detailWidth" MinSize="280" MaxSize="700"
+                          Reverse="true" OnResize="HandleDetailResize" />
+
+            @* === Right Panel: Detail (Context) === *@
             <aside class="cominomi-detail">
                 <DetailPanel />
             </aside>
@@ -73,6 +84,9 @@ else
     private bool _isDarkMode = true;
     private bool _setupOpen;
     private bool _usageDashboardOpen;
+    private int _sidebarWidth = 260;
+    private int _detailWidth = 400;
+    private DotNetObjectReference<MainLayout>? _panelShortcutRef;
 
     protected override async Task OnInitializedAsync()
     {
@@ -95,7 +109,34 @@ else
         {
             var effectiveTheme = _isDarkMode ? "dark" : "light";
             await JS.InvokeVoidAsync("setTheme", effectiveTheme);
+
+            _panelShortcutRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("registerPanelShortcuts", _panelShortcutRef);
         }
+    }
+
+    private void HandleSidebarResize(int newWidth)
+    {
+        _sidebarWidth = newWidth;
+    }
+
+    private void HandleDetailResize(int newWidth)
+    {
+        _detailWidth = newWidth;
+    }
+
+    [JSInvokable]
+    public void OnToggleSidebarShortcut()
+    {
+        _sidebarOpen = !_sidebarOpen;
+        InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public void OnToggleDetailShortcut()
+    {
+        var current = ChatState.RightPanel != RightPanelMode.None ? ChatState.RightPanel : RightPanelMode.Explorer;
+        ChatState.ToggleRightPanel(current);
     }
 
     private void HandleThemeChanged()
@@ -119,9 +160,15 @@ else
 
     private void OpenActivity() => ChatState.Tabs.OpenActivityTab();
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         ChatState.OnChange -= HandleStateChanged;
         ThemeService.OnThemeChanged -= HandleThemeChanged;
+        try
+        {
+            await JS.InvokeVoidAsync("unregisterPanelShortcuts");
+        }
+        catch { /* May already be disposed */ }
+        _panelShortcutRef?.Dispose();
     }
 }
