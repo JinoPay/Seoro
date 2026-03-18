@@ -85,7 +85,7 @@ public class ContentGrouperTests
     }
 
     [Fact]
-    public void Group_IntermediateEnglishText_MarkedAsIntermediate()
+    public void Group_IntermediatePlainText_MarkedAsIntermediate()
     {
         var parts = new List<ContentPart>
         {
@@ -100,15 +100,13 @@ public class ContentGrouperTests
     }
 
     [Fact]
-    public void Group_LastTextBeforeTools_LongWithoutPattern_BecomesFinalText()
+    public void Group_LastTextBeforeTools_WithCodeMarkers_BecomesFinalText()
     {
-        // When the only text is the last text and has tools after it,
-        // it needs BOTH <=80 chars AND intermediate pattern to collapse.
-        // Without pattern match, it becomes FinalText.
+        // Text with substantive markers (inline code, formatting) is never intermediate
         var parts = new List<ContentPart>
         {
             ToolPart("Read"),
-            TextPart("This is a substantive analysis of the code architecture."),
+            TextPart("The fix is in `main.py` on line 42."),
             ToolPart("Write")
         };
         var result = ContentGrouper.Group(parts, isStreaming: false);
@@ -116,6 +114,55 @@ public class ContentGrouperTests
         var textGroup = result[1];
         Assert.Equal(ContentGroupType.FinalText, textGroup.Type);
         Assert.False(textGroup.IsIntermediate);
+    }
+
+    [Fact]
+    public void Group_LastTextBeforeTools_WithMultiParagraph_BecomesFinalText()
+    {
+        // Multi-paragraph text is substantive even when short
+        var parts = new List<ContentPart>
+        {
+            ToolPart("Read"),
+            TextPart("Found the issue.\n\nThe config is missing a required field."),
+            ToolPart("Write")
+        };
+        var result = ContentGrouper.Group(parts, isStreaming: false);
+
+        var textGroup = result[1];
+        Assert.Equal(ContentGroupType.FinalText, textGroup.Type);
+        Assert.False(textGroup.IsIntermediate);
+    }
+
+    [Fact]
+    public void Group_LastTextBeforeTools_WithBoldFormatting_BecomesFinalText()
+    {
+        var parts = new List<ContentPart>
+        {
+            ToolPart("Read"),
+            TextPart("The **critical** change is here."),
+            ToolPart("Write")
+        };
+        var result = ContentGrouper.Group(parts, isStreaming: false);
+
+        var textGroup = result[1];
+        Assert.Equal(ContentGroupType.FinalText, textGroup.Type);
+        Assert.False(textGroup.IsIntermediate);
+    }
+
+    [Fact]
+    public void Group_LastTextBeforeTools_PlainShortText_IsIntermediate()
+    {
+        // Plain short text without any markers is transitional
+        var parts = new List<ContentPart>
+        {
+            ToolPart("Read"),
+            TextPart("Voy a verificar el archivo."),
+            ToolPart("Write")
+        };
+        var result = ContentGrouper.Group(parts, isStreaming: false);
+
+        var textGroup = result[1];
+        Assert.True(textGroup.IsIntermediate);
     }
 
     [Fact]
