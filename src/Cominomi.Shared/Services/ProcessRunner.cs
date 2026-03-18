@@ -25,6 +25,7 @@ public class ProcessRunner : IProcessRunner
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = options.StandardInput != null,
             CreateNoWindow = true,
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8,
@@ -48,6 +49,13 @@ public class ProcessRunner : IProcessRunner
         try
         {
             process.Start();
+
+            // Write stdin if provided, then close the stream
+            if (options.StandardInput != null)
+            {
+                await process.StandardInput.WriteAsync(options.StandardInput);
+                process.StandardInput.Close();
+            }
 
             var stdoutTask = process.StandardOutput.ReadToEndAsync(timeoutCts.Token);
             var stderrTask = process.StandardError.ReadToEndAsync(timeoutCts.Token);

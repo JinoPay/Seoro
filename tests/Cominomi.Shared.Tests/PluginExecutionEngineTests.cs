@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services;
 using Microsoft.Extensions.Logging;
@@ -139,6 +140,83 @@ public class PluginExecutionEngineTests
         Assert.Equal("env-test", env["COMINOMI_PLUGIN_ID"]);
         Assert.Equal("custom-action", env["COMINOMI_PLUGIN_ACTION"]);
         Assert.Equal("bar", env["COMINOMI_PARAM_FOO"]);
+        Assert.Equal("json/1", env["COMINOMI_PROTOCOL"]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SendsJsonRequestViaStdin()
+    {
+        _processRunner.NextResult = new ProcessResult(true, "ok", "", 0);
+
+        var engine = CreateEngine();
+        var plugin = MakePlugin("stdin-test", PluginStatus.Valid, entryPoint: "main.js");
+        await engine.LoadPluginAsync(plugin);
+
+        var ctx = new PluginExecutionContext
+        {
+            Action = "transform",
+            Parameters = new() { ["input"] = "hello" }
+        };
+        await engine.ExecuteAsync("stdin-test", ctx);
+
+        var stdin = _processRunner.LastOptions!.StandardInput;
+        Assert.NotNull(stdin);
+
+        using var doc = JsonDocument.Parse(stdin);
+        var root = doc.RootElement;
+        Assert.Equal("stdin-test", root.GetProperty("pluginId").GetString());
+        Assert.Equal("transform", root.GetProperty("action").GetString());
+        Assert.Equal("hello", root.GetProperty("parameters").GetProperty("input").GetString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ParsesJsonResponse()
+    {
+        var jsonResponse = """{"success": true, "message": "done", "data": {"count": 42}}""";
+        _processRunner.NextResult = new ProcessResult(true, jsonResponse, "", 0);
+
+        var engine = CreateEngine();
+        var plugin = MakePlugin("json-resp", PluginStatus.Valid, entryPoint: "main.js");
+        await engine.LoadPluginAsync(plugin);
+
+        var result = await engine.ExecuteAsync("json-resp");
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Data);
+        Assert.True(result.Data!.Success);
+        Assert.Equal("done", result.Data.Message);
+        Assert.Equal(42, result.Data.Data!.Value.GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PlainTextStdout_DataIsNull()
+    {
+        _processRunner.NextResult = new ProcessResult(true, "just plain text", "", 0);
+
+        var engine = CreateEngine();
+        var plugin = MakePlugin("plain-out", PluginStatus.Valid, entryPoint: "main.sh");
+        await engine.LoadPluginAsync(plugin);
+
+        var result = await engine.ExecuteAsync("plain-out");
+
+        Assert.True(result.Success);
+        Assert.Equal("just plain text", result.Output);
+        Assert.Null(result.Data);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_InvalidJsonStdout_DataIsNull()
+    {
+        _processRunner.NextResult = new ProcessResult(true, "{invalid json", "", 0);
+
+        var engine = CreateEngine();
+        var plugin = MakePlugin("bad-json", PluginStatus.Valid, entryPoint: "main.js");
+        await engine.LoadPluginAsync(plugin);
+
+        var result = await engine.ExecuteAsync("bad-json");
+
+        Assert.True(result.Success);
+        Assert.Null(result.Data);
     }
 
     [Fact]
