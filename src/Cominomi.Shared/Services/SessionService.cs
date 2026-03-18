@@ -19,6 +19,7 @@ public partial class SessionService : ISessionService
     private readonly string _sessionsDir = AppPaths.Sessions;
     private readonly string _archiveDir = AppPaths.ArchivedContexts;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _worktreeInitLocks = new();
 
     // In-memory metadata cache: avoids re-reading all files on every call
     private readonly ConcurrentDictionary<string, Session> _metadataCache = new();
@@ -214,49 +215,68 @@ public partial class SessionService : ISessionService
 
     public async Task<Session> InitializeWorktreeAsync(string sessionId, string baseBranch)
     {
-        var session = await LoadSessionAsync(sessionId);
-        if (session == null)
-            throw new InvalidOperationException($"Session '{sessionId}' not found.");
-
-        var workspace = await _workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
-        if (workspace == null)
-            throw new InvalidOperationException($"Workspace '{session.WorkspaceId}' not found.");
-
-        var branchName = $"{CominomiConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
-        var worktreesDir = await _workspaceService.GetWorktreesDirAsync();
-
-        session.Git.BranchName = branchName;
-        session.Git.BaseBranch = baseBranch;
-        session.Git.WorktreePath = Path.Combine(worktreesDir, session.Id);
-        session.TransitionStatus(SessionStatus.Initializing);
-
+        var semaphore = _worktreeInitLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync();
         try
         {
-            var result = await _gitService.AddWorktreeAsync(
-                workspace.RepoLocalPath, session.Git.WorktreePath, branchName, baseBranch);
+            // Invalidate cache so we read the latest state from disk after waiting on the lock
+            _sessionCache.TryRemove(sessionId, out _);
 
-            if (!result.Success)
+            var session = await LoadSessionAsync(sessionId);
+            if (session == null)
+                throw new InvalidOperationException($"Session '{sessionId}' not found.");
+
+            // Guard: if another call already initialized this session, return as-is
+            if (session.Status != SessionStatus.Pending)
             {
+                _logger.LogDebug("Skipping worktree init for session {SessionId}: status is {Status}", sessionId, session.Status);
+                return session;
+            }
+
+            var workspace = await _workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
+            if (workspace == null)
+                throw new InvalidOperationException($"Workspace '{session.WorkspaceId}' not found.");
+
+            var branchName = $"{CominomiConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
+            var worktreesDir = await _workspaceService.GetWorktreesDirAsync();
+
+            session.Git.BranchName = branchName;
+            session.Git.BaseBranch = baseBranch;
+            session.Git.WorktreePath = Path.Combine(worktreesDir, session.Id);
+            session.TransitionStatus(SessionStatus.Initializing);
+
+            try
+            {
+                var result = await _gitService.AddWorktreeAsync(
+                    workspace.RepoLocalPath, session.Git.WorktreePath, branchName, baseBranch);
+
+                if (!result.Success)
+                {
+                    session.TransitionStatus(SessionStatus.Error);
+                    session.Error = AppError.WorktreeCreation(result.Error);
+                }
+                else
+                {
+                    session.TransitionStatus(SessionStatus.Ready);
+                    // Initialize .context/ directory for collaboration
+                    await _contextService.EnsureContextDirectoryAsync(session.Git.WorktreePath);
+                    _logger.LogInformation("Worktree initialized for session {SessionId} on branch {Branch}", sessionId, branchName);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to initialize worktree for session {SessionId}", sessionId);
                 session.TransitionStatus(SessionStatus.Error);
-                session.Error = AppError.WorktreeCreation(result.Error);
+                session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
             }
-            else
-            {
-                session.TransitionStatus(SessionStatus.Ready);
-                // Initialize .context/ directory for collaboration
-                await _contextService.EnsureContextDirectoryAsync(session.Git.WorktreePath);
-                _logger.LogInformation("Worktree initialized for session {SessionId} on branch {Branch}", sessionId, branchName);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to initialize worktree for session {SessionId}", sessionId);
-            session.TransitionStatus(SessionStatus.Error);
-            session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
-        }
 
-        await SaveSessionAsync(session);
-        return session;
+            await SaveSessionAsync(session);
+            return session;
+        }
+        finally
+        {
+            semaphore.Release();
+        }
     }
 
     public async Task<Session?> LoadSessionAsync(string sessionId)

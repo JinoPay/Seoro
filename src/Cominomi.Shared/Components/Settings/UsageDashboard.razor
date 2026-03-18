@@ -1,5 +1,6 @@
 @using Cominomi.Shared.Models
 @inject IUsageService UsageService
+@inject IJSRuntime JS
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
@@ -172,6 +173,11 @@
         </div>
     </DialogContent>
     <DialogActions>
+        <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download"
+                   Disabled="_exporting">
+            @(_exporting ? "내보내는 중..." : "CSV 내보내기")
+        </MudButton>
+        <MudSpacer />
         <MudButton OnClick="Close">닫기</MudButton>
     </DialogActions>
 </MudDialog>
@@ -182,6 +188,7 @@
 
     private UsageStats? _stats;
     private bool _loading;
+    private bool _exporting;
     private string _selectedRange = "30";
 
     private readonly DialogOptions _dialogOptions = new()
@@ -236,6 +243,32 @@
         {
             IsOpen = visible;
             await IsOpenChanged.InvokeAsync(visible);
+        }
+    }
+
+    private async Task ExportCsv()
+    {
+        _exporting = true;
+        StateHasChanged();
+
+        try
+        {
+            int? days = _selectedRange == "all" ? null : int.Parse(_selectedRange);
+            var csv = await UsageService.ExportCsvAsync(days);
+            var fileName = $"usage-export-{DateTime.Now:yyyyMMdd-HHmmss}.csv";
+            var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+            var base64 = Convert.ToBase64String(bytes);
+            await JS.InvokeVoidAsync("eval",
+                $"var a=document.createElement('a');a.href='data:text/csv;base64,{base64}';a.download='{fileName}';document.body.appendChild(a);a.click();a.remove();");
+        }
+        catch
+        {
+            // Download failure is visible to the user
+        }
+        finally
+        {
+            _exporting = false;
+            StateHasChanged();
         }
     }
 

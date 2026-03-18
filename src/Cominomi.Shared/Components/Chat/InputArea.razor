@@ -327,7 +327,7 @@
 
         // JS safety net: clear textarea DOM directly
         try { await JSRuntime.InvokeVoidAsync("clearInputArea", "input-area"); }
-        catch { }
+        catch (JSDisconnectedException) { /* expected during circuit disposal */ }
 
         _suppressInputUpdates = false;  // Unblock
     }
@@ -337,7 +337,7 @@
         if (_handlersRegistered)
         {
             try { await JSRuntime.InvokeVoidAsync("unregisterInputHandlers", "input-area"); }
-            catch { }
+            catch (JSDisconnectedException) { /* expected during circuit disposal */ }
         }
         _dotNetRef?.Dispose();
     }

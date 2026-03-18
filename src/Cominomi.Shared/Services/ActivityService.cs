@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -9,6 +10,10 @@ public class ActivityService : IActivityService
     private readonly IGitService _gitService;
     private readonly ILogger<ActivityService> _logger;
 
+    // Cache: avoid re-running git log on every tab switch → 10 sec TTL
+    private readonly ConcurrentDictionary<string, (List<ActivityDateGroup> Groups, DateTime LoadedAt)> _activityCache = new();
+    private static readonly TimeSpan ActivityCacheTtl = TimeSpan.FromSeconds(10);
+
     public ActivityService(ISessionService sessionService, IGitService gitService, ILogger<ActivityService> logger)
     {
         _sessionService = sessionService;
@@ -18,10 +23,15 @@ public class ActivityService : IActivityService
 
     public async Task<List<ActivityDateGroup>> GetWorkspaceActivityAsync(string workspaceId, CancellationToken ct = default)
     {
+        if (_activityCache.TryGetValue(workspaceId, out var cached) &&
+            DateTime.UtcNow - cached.LoadedAt < ActivityCacheTtl)
+        {
+            return cached.Groups;
+        }
+
         var sessions = await _sessionService.GetSessionsByWorkspaceAsync(workspaceId);
         var activeSessions = sessions.Where(s =>
             s.Status != SessionStatus.Pending &&
-            s.Status != SessionStatus.Archived &&
             !string.IsNullOrEmpty(s.Git.WorktreePath) &&
             !string.IsNullOrEmpty(s.Git.BaseBranch)).ToList();
 
@@ -56,12 +66,14 @@ public class ActivityService : IActivityService
 
         allEntries.Sort((a, b) => b.Timestamp.CompareTo(a.Timestamp));
 
-        return GroupByDate(allEntries);
+        var groups = GroupByDate(allEntries);
+        _activityCache[workspaceId] = (groups, DateTime.UtcNow);
+        return groups;
     }
 
-    private static ActivityEntry? ParseCommitLine(string line, Session session)
+    internal static ActivityEntry? ParseCommitLine(string line, Session session)
     {
-        var parts = line.Split('|', 5);
+        var parts = line.Split('\0', 5);
         if (parts.Length < 5) return null;
 
         if (!DateTime.TryParse(parts[3], out var timestamp))
