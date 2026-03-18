@@ -15,113 +15,89 @@
                             FilterText="@_filterText"
                             OnToggleFilter="ToggleFilter"
                             OnCreateWorkspace="@(() => _createDialogOpen = true)"
-                            FilterTextChanged="@(v => _filterText = v)" />
+                            FilterTextChanged="@(v => { _filterText = v; RebuildFlatRows(); })" />
 
-        @* Tree body *@
+        @* Tree body — single Virtualize over flat list *@
         <div class="tree-body">
-            @{ var sessionIndex = 0; }
-            @foreach (var group in DataService.GetFilteredWorkspaces(_filterText).GroupBy(SessionListDataService.GetProjectName))
-            {
-                var projectName = group.Key;
-                var isExpanded = _expandedProjects.Contains(projectName);
-                var workspacesInGroup = group.OrderByDescending(w => w.UpdatedAt).ToList();
-
-                <div @key="projectName">
-                    @* Project header *@
-                    <div class="project-header" @onclick="@(() => ToggleProject(projectName))">
-                        <span class="project-letter">@projectName[0]</span>
-                        <span class="project-name">@projectName</span>
-                        @if (isExpanded)
-                        {
-                            <div class="project-actions">
-                                @{
-                                    var readyWs = workspacesInGroup.FirstOrDefault(w => w.Status == WorkspaceStatus.Ready);
-                                }
-                                @if (readyWs != null)
-                                {
-                                    <MudMenu Icon="@Icons.Material.Filled.Add" Size="Size.Small"
-                                             Dense="true" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter"
-                                             Style="width: 20px; height: 20px; opacity: 0.5;"
-                                             ActivationEvent="@MouseEvent.LeftClick">
-                                        <MudMenuItem OnClick="@(() => CreateNewChat(readyWs))"
-                                                     Icon="@Icons.Material.Filled.AccountTree">새 세션</MudMenuItem>
-                                        <MudMenuItem OnClick="@(() => CreateLocalDirChat(readyWs))"
-                                                     Icon="@Icons.Material.Filled.Folder">로컬 디렉토리</MudMenuItem>
-                                    </MudMenu>
-                                }
-                                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                         Dense="true"
-                                         AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
-                                         Style="width: 20px; height: 20px; opacity: 0.5;"
-                                         ActivationEvent="@MouseEvent.LeftClick">
-                                    <MudMenuItem OnClick="@(() => ChatState.OpenSettings("ws-general", workspacesInGroup.First().Id))"
-                                                 Icon="@Icons.Material.Filled.Settings">
-                                        워크스페이스 설정
-                                    </MudMenuItem>
-                                </MudMenu>
-                            </div>
-                        }
-                    </div>
-
-                    @* Expanded content *@
-                    @if (isExpanded)
-                    {
-                        var showSubheaders = workspacesInGroup.Count > 1;
-
-                        @foreach (var ws in workspacesInGroup)
-                        {
-                            @if (showSubheaders)
+            <Virtualize Items="_flatRows" Context="row" ItemSize="48" OverscanCount="5">
+                @switch (row.Kind)
+                {
+                    case SidebarRowKind.ProjectHeader:
+                        <div @key="@($"ph-{row.ProjectName}")" class="project-header" @onclick="@(() => ToggleProject(row.ProjectName!))">
+                            <span class="project-letter">@row.ProjectName![0]</span>
+                            <span class="project-name">@row.ProjectName</span>
+                            @if (_expandedProjects.Contains(row.ProjectName!))
                             {
-                                <div class="workspace-subheader">
-                                    <span>@ws.Name</span>
-                                    @if (ws.Status == WorkspaceStatus.Error)
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
-                                                 Style="width: 12px; height: 12px;" />
+                                <div class="project-actions">
+                                    @{
+                                        var readyWs = row.WorkspacesInGroup!.FirstOrDefault(w => w.Status == WorkspaceStatus.Ready);
                                     }
-                                    @if (ws.Status == WorkspaceStatus.Ready && !_isCreatingSession)
+                                    @if (readyWs != null)
                                     {
                                         <MudMenu Icon="@Icons.Material.Filled.Add" Size="Size.Small"
                                                  Dense="true" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter"
-                                                 Style="width: 16px; height: 16px; opacity: 0.4;"
+                                                 Style="width: 20px; height: 20px; opacity: 0.5;"
                                                  ActivationEvent="@MouseEvent.LeftClick">
-                                            <MudMenuItem OnClick="@(() => CreateNewChat(ws))"
+                                            <MudMenuItem OnClick="@(() => CreateNewChat(readyWs))"
                                                          Icon="@Icons.Material.Filled.AccountTree">새 세션</MudMenuItem>
-                                            <MudMenuItem OnClick="@(() => CreateLocalDirChat(ws))"
+                                            <MudMenuItem OnClick="@(() => CreateLocalDirChat(readyWs))"
                                                          Icon="@Icons.Material.Filled.Folder">로컬 디렉토리</MudMenuItem>
                                         </MudMenu>
                                     }
+                                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                             Dense="true"
+                                             AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                                             Style="width: 20px; height: 20px; opacity: 0.5;"
+                                             ActivationEvent="@MouseEvent.LeftClick">
+                                        <MudMenuItem OnClick="@(() => ChatState.OpenSettings("ws-general", row.WorkspacesInGroup!.First().Id))"
+                                                     Icon="@Icons.Material.Filled.Settings">
+                                            워크스페이스 설정
+                                        </MudMenuItem>
+                                    </MudMenu>
                                 </div>
                             }
+                        </div>
+                        break;
 
-                            @if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
+                    case SidebarRowKind.WorkspaceSubheader:
+                        <div @key="@($"ws-{row.Workspace!.Id}")" class="workspace-subheader">
+                            <span>@row.Workspace!.Name</span>
+                            @if (row.Workspace.Status == WorkspaceStatus.Error)
                             {
-                                var filteredSessions = SessionListDataService.FilterSessions(sessions, _filterText).ToList();
-                                var baseIndex = sessionIndex;
-                                sessionIndex += filteredSessions.Count;
-
-                                <Virtualize Items="filteredSessions" Context="session" ItemSize="48" OverscanCount="5">
-                                    @{
-                                        var idx = baseIndex + filteredSessions.IndexOf(session);
-                                        var isStreaming = ChatState.IsSessionStreaming(session.Id);
-                                        var hasDiffStats = DataService.DiffStatsCache.TryGetValue(session.Id, out var stats);
-                                    }
-                                    <SessionItem Session="session"
-                                                 IsActive="@(ChatState.CurrentSession?.Id == session.Id)"
-                                                 IsStreaming="isStreaming"
-                                                 StreamingStatusText="@(isStreaming ? GetStreamingStatusText(session) : null)"
-                                                 DiffAdditions="@(hasDiffStats ? stats.Additions : 0)"
-                                                 DiffDeletions="@(hasDiffStats ? stats.Deletions : 0)"
-                                                 ShortcutLabel="@(idx < 5 ? GetShortcutLabel(idx) : null)"
-                                                 OnClick="@(() => SelectSession(session, ws))"
-                                                 OnDelete="@(() => DeleteSession(session))"
-                                                 OnCleanup="@(() => CleanupSession(session))" />
-                                </Virtualize>
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
+                                         Style="width: 12px; height: 12px;" />
                             }
-                        }
-                    }
-                </div>
-            }
+                            @if (row.Workspace.Status == WorkspaceStatus.Ready && !_isCreatingSession)
+                            {
+                                <MudMenu Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                                         Dense="true" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter"
+                                         Style="width: 16px; height: 16px; opacity: 0.4;"
+                                         ActivationEvent="@MouseEvent.LeftClick">
+                                    <MudMenuItem OnClick="@(() => CreateNewChat(row.Workspace))"
+                                                 Icon="@Icons.Material.Filled.AccountTree">새 세션</MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => CreateLocalDirChat(row.Workspace))"
+                                                 Icon="@Icons.Material.Filled.Folder">로컬 디렉토리</MudMenuItem>
+                                </MudMenu>
+                            }
+                        </div>
+                        break;
+
+                    case SidebarRowKind.Session:
+                        var isStreaming = ChatState.IsSessionStreaming(row.Session!.Id);
+                        var hasDiffStats = DataService.DiffStatsCache.TryGetValue(row.Session!.Id, out var stats);
+                        <SessionItem Session="row.Session!"
+                                     IsActive="@(ChatState.CurrentSession?.Id == row.Session!.Id)"
+                                     IsStreaming="isStreaming"
+                                     StreamingStatusText="@(isStreaming ? GetStreamingStatusText(row.Session!) : null)"
+                                     DiffAdditions="@(hasDiffStats ? stats.Additions : 0)"
+                                     DiffDeletions="@(hasDiffStats ? stats.Deletions : 0)"
+                                     ShortcutLabel="@(row.SessionIndex < 5 ? GetShortcutLabel(row.SessionIndex) : null)"
+                                     OnClick="@(() => SelectSession(row.Session!, row.Workspace))"
+                                     OnDelete="@(() => DeleteSession(row.Session!))"
+                                     OnCleanup="@(() => CleanupSession(row.Session!))" />
+                        break;
+                }
+            </Virtualize>
         </div>
     }
     else
@@ -150,6 +126,55 @@
     private bool _filterVisible;
     private string? _filterText;
     private DotNetObjectReference<SessionList>? _dotNetRef;
+    private List<SidebarRow> _flatRows = new();
+
+    private enum SidebarRowKind { ProjectHeader, WorkspaceSubheader, Session }
+
+    private sealed record SidebarRow(
+        SidebarRowKind Kind,
+        string? ProjectName = null,
+        List<Workspace>? WorkspacesInGroup = null,
+        Workspace? Workspace = null,
+        Session? Session = null,
+        int SessionIndex = 0);
+
+    private void RebuildFlatRows()
+    {
+        var rows = new List<SidebarRow>();
+        var sessionIndex = 0;
+
+        foreach (var group in DataService.GetFilteredWorkspaces(_filterText)
+                     .GroupBy(SessionListDataService.GetProjectName))
+        {
+            var projectName = group.Key;
+            var workspacesInGroup = group.OrderByDescending(w => w.UpdatedAt).ToList();
+
+            rows.Add(new SidebarRow(SidebarRowKind.ProjectHeader,
+                ProjectName: projectName, WorkspacesInGroup: workspacesInGroup));
+
+            if (!_expandedProjects.Contains(projectName)) continue;
+
+            var showSubheaders = workspacesInGroup.Count > 1;
+
+            foreach (var ws in workspacesInGroup)
+            {
+                if (showSubheaders)
+                    rows.Add(new SidebarRow(SidebarRowKind.WorkspaceSubheader, Workspace: ws));
+
+                if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
+                {
+                    foreach (var session in SessionListDataService.FilterSessions(sessions, _filterText))
+                    {
+                        rows.Add(new SidebarRow(SidebarRowKind.Session,
+                            Session: session, Workspace: ws, SessionIndex: sessionIndex));
+                        sessionIndex++;
+                    }
+                }
+            }
+        }
+
+        _flatRows = rows;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -182,6 +207,7 @@
         }
 
         DataService.RebuildOrderedSessions();
+        RebuildFlatRows();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -233,6 +259,7 @@
         _filterVisible = !_filterVisible;
         if (!_filterVisible)
             _filterText = "";
+        RebuildFlatRows();
     }
 
     private async Task ToggleProject(string projectName)
@@ -246,6 +273,7 @@
             _expandedProjects.Add(projectName);
             await DataService.LoadSessionsForProjectAsync(projectName);
         }
+        RebuildFlatRows();
     }
 
     private async Task ReloadWorkspaces()
@@ -256,6 +284,7 @@
         foreach (var p in invalidProjects) _expandedProjects.Remove(p);
 
         await DataService.ReloadWorkspacesAsync(_expandedProjects);
+        RebuildFlatRows();
     }
 
     private async Task CreateNewChat(Workspace ws)
@@ -280,6 +309,7 @@
             await SettingsService.SaveAsync(settings);
 
             DataService.RebuildOrderedSessions();
+            RebuildFlatRows();
         }
         finally
         {
@@ -310,6 +340,7 @@
             await SettingsService.SaveAsync(settings);
 
             DataService.RebuildOrderedSessions();
+            RebuildFlatRows();
         }
         finally
         {
@@ -372,6 +403,7 @@
 
             DataService.DiffStatsCache.Remove(session.Id);
             DataService.RebuildOrderedSessions();
+            RebuildFlatRows();
             Snackbar.SessionDeleted();
         }
         catch (Exception ex)
@@ -429,7 +461,11 @@
 
     private void OnDataServiceChanged()
     {
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(() =>
+        {
+            RebuildFlatRows();
+            StateHasChanged();
+        });
     }
 
     public void Dispose()
