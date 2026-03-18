@@ -27,12 +27,23 @@
     private string _command = "";
     private int _lineCount;
     private bool _collapsed = true;
+    private string? _lastInput;
+    private string? _lastOutput;
 
     protected override void OnParametersSet()
     {
-        _command = ParseCommand(Tool.Input);
-        _lineCount = string.IsNullOrEmpty(Tool.Output) ? 0 : Tool.Output.Split('\n').Length;
-        _collapsed = _lineCount > 30;
+        if (!ReferenceEquals(_lastInput, Tool.Input))
+        {
+            _lastInput = Tool.Input;
+            _command = ParseCommand(Tool.Input);
+        }
+
+        if (!ReferenceEquals(_lastOutput, Tool.Output))
+        {
+            _lastOutput = Tool.Output;
+            _lineCount = string.IsNullOrEmpty(Tool.Output) ? 0 : Tool.Output.Split('\n').Length;
+            _collapsed = _lineCount > 30;
+        }
     }
 
     private static string ParseCommand(string? input)

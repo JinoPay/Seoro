@@ -18,8 +18,8 @@
                      Style="width: 16px; height: 16px;" />
         }
         <MudIcon Icon="@GetToolIcon()" Size="Size.Small" Style="width: 16px; height: 16px; opacity: 0.6;" />
-        <span class="tool-card-name">@ToolDisplayHelper.GetHeaderLabel(Tool)</span>
-        @if (Tool.IsComplete && ToolDisplayHelper.GetCompactResult(Tool) is string hint)
+        <span class="tool-card-name">@_headerLabel</span>
+        @if (Tool.IsComplete && _compactResult is string hint)
         {
             <span class="tool-card-hint">@hint</span>
         }
@@ -97,6 +97,29 @@
     private bool _expanded;
     private bool _inputExpanded;
     private bool _outputExpanded;
+
+    // Cached header values to avoid JSON re-parsing on every render
+    private string _headerLabel = "";
+    private string? _compactResult;
+    private string? _lastInput;
+    private string? _lastOutput;
+    private bool _lastIsComplete;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_lastInput, Tool.Input))
+        {
+            _lastInput = Tool.Input;
+            _headerLabel = ToolDisplayHelper.GetHeaderLabel(Tool);
+        }
+
+        if (!ReferenceEquals(_lastOutput, Tool.Output) || _lastIsComplete != Tool.IsComplete)
+        {
+            _lastOutput = Tool.Output;
+            _lastIsComplete = Tool.IsComplete;
+            _compactResult = ToolDisplayHelper.GetCompactResult(Tool);
+        }
+    }
 
     private enum WidgetType { Generic, Read, Edit, Bash, Grep, Glob }
 
