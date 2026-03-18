@@ -1,4 +1,5 @@
 using System.Text;
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
@@ -127,29 +128,41 @@ public class ContextService : IContextService
     public string BuildContextPrompt(ContextInfo context)
     {
         var sb = new StringBuilder();
+        var maxItem = CominomiConstants.MaxContextItemChars;
+        var maxTotal = CominomiConstants.MaxContextPromptChars;
 
         if (!string.IsNullOrWhiteSpace(context.Notes))
         {
             sb.AppendLine("## Workspace Notes");
-            sb.AppendLine(context.Notes);
+            sb.AppendLine(Truncate(context.Notes, maxItem));
             sb.AppendLine();
         }
 
         if (!string.IsNullOrWhiteSpace(context.Todos))
         {
             sb.AppendLine("## Workspace Todos");
-            sb.AppendLine(context.Todos);
+            sb.AppendLine(Truncate(context.Todos, maxItem));
             sb.AppendLine();
         }
 
         foreach (var plan in context.Plans)
         {
+            if (sb.Length >= maxTotal) break;
             sb.AppendLine($"## Plan: {plan.Name}");
-            sb.AppendLine(plan.Content);
+            sb.AppendLine(Truncate(plan.Content, maxItem));
             sb.AppendLine();
         }
 
-        return sb.ToString();
+        var result = sb.ToString();
+        return result.Length <= maxTotal
+            ? result
+            : result[..maxTotal] + string.Format(CominomiConstants.TruncationMarker, result.Length);
+    }
+
+    private static string Truncate(string text, int maxChars)
+    {
+        if (text.Length <= maxChars) return text;
+        return text[..maxChars] + string.Format(CominomiConstants.TruncationMarker, text.Length);
     }
 
     private static async Task CopyDirectoryAsync(string source, string dest)
