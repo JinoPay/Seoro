@@ -4,6 +4,7 @@
 @inject ISettingsService SettingsService
 @inject IWorkspaceService WorkspaceService
 @inject IGitService GitService
+@inject IGhService GhService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
@@ -460,19 +461,50 @@
     {
         if (!_sessionCache.TryGetValue(workspaceId, out var sessions)) return;
 
-        var readySessions = sessions.Where(s => s.Status == SessionStatus.Ready).ToList();
-        foreach (var session in readySessions)
+        var targetSessions = sessions
+            .Where(s => s.Status is SessionStatus.Ready or SessionStatus.Pushed)
+            .ToList();
+
+        foreach (var session in targetSessions)
         {
             try
             {
-                var merged = await GitWorkflow.CheckMergeStatusAsync(session.Id);
-                if (merged)
+                // Ready 세션: 이미 merge 됐는지 확인
+                if (session.Status == SessionStatus.Ready)
                 {
-                    session.Status = SessionStatus.Merged;
-                    await InvokeAsync(StateHasChanged);
+                    var merged = await GitWorkflow.CheckMergeStatusAsync(session.Id);
+                    if (merged)
+                    {
+                        session.Status = SessionStatus.Merged;
+                        await InvokeAsync(StateHasChanged);
+                        continue;
+                    }
+                }
+
+                // PR이 아직 연결 안 된 세션: GitHub에 PR이 있는지 확인
+                if (session.PrNumber == null && !session.IsLocalDir
+                    && !string.IsNullOrEmpty(session.BranchName))
+                {
+                    await CheckAndUpdatePrForSession(session);
                 }
             }
             catch { }
+        }
+    }
+
+    private async Task CheckAndUpdatePrForSession(Session session)
+    {
+        var workspace = _workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);
+        if (workspace == null) return;
+
+        var prInfo = await GhService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName);
+        if (prInfo != null && prInfo.State is "OPEN" or "open")
+        {
+            session.Status = SessionStatus.PrOpen;
+            session.PrUrl = prInfo.Url;
+            session.PrNumber = prInfo.Number;
+            await SessionService.SaveSessionAsync(session);
+            await InvokeAsync(StateHasChanged);
         }
     }
 
