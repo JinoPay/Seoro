@@ -1,3 +1,4 @@
+using Cominomi.Shared.Resources;
 using MudBlazor;
 
 namespace Cominomi.Shared.Services;
@@ -5,41 +6,41 @@ namespace Cominomi.Shared.Services;
 public static class SnackbarExtensions
 {
     public static void PushSuccess(this ISnackbar snackbar, string branchName)
-        => snackbar.Add($"'{branchName}' 브랜치가 푸시되었습니다.", Severity.Success);
+        => snackbar.Add(Strings.Snackbar_PushSuccess(branchName), Severity.Success);
 
     public static void PushError(this ISnackbar snackbar, string error)
-        => snackbar.Add($"푸시 실패: {error}", Severity.Error);
+        => snackbar.Add(Strings.Snackbar_PushError(error), Severity.Error);
 
     public static void PrCreated(this ISnackbar snackbar, int prNumber)
-        => snackbar.Add($"PR #{prNumber} 생성 완료", Severity.Success);
+        => snackbar.Add(Strings.Snackbar_PrCreated(prNumber), Severity.Success);
 
     public static void PrCreateError(this ISnackbar snackbar, string error)
-        => snackbar.Add($"PR 생성 실패: {error}", Severity.Error);
+        => snackbar.Add(Strings.Snackbar_PrCreateError(error), Severity.Error);
 
     public static void MergeSuccess(this ISnackbar snackbar, string branchName)
-        => snackbar.Add($"'{branchName}' PR이 병합되었습니다.", Severity.Success);
+        => snackbar.Add(Strings.Snackbar_MergeSuccess(branchName), Severity.Success);
 
     public static void MergeError(this ISnackbar snackbar, string error)
-        => snackbar.Add($"병합 실패: {error}", Severity.Error);
+        => snackbar.Add(Strings.Snackbar_MergeError(error), Severity.Error);
 
     public static void WorkspaceCreated(this ISnackbar snackbar, string name)
-        => snackbar.Add($"'{name}' 워크스페이스가 생성되었습니다.", Severity.Success);
+        => snackbar.Add(Strings.Snackbar_WorkspaceCreated(name), Severity.Success);
 
     public static void SettingsSaved(this ISnackbar snackbar)
-        => snackbar.Add("설정이 저장되었습니다.", Severity.Success);
+        => snackbar.Add(Strings.Snackbar_SettingsSaved, Severity.Success);
 
     public static void SessionDeleted(this ISnackbar snackbar)
-        => snackbar.Add("세션이 삭제되었습니다.", Severity.Info);
+        => snackbar.Add(Strings.Snackbar_SessionDeleted, Severity.Info);
 
     public static void ConflictDetected(this ISnackbar snackbar, string branchName)
-        => snackbar.Add($"'{branchName}' 브랜치에서 병합 충돌이 감지되었습니다.", Severity.Warning);
+        => snackbar.Add(Strings.Snackbar_ConflictDetected(branchName), Severity.Warning);
 
     public static void StreamingError(this ISnackbar snackbar, string error)
-        => snackbar.Add($"응답 오류: {error}", Severity.Error);
+        => snackbar.Add(Strings.Snackbar_StreamingError(error), Severity.Error);
 
     public static void IssueLinked(this ISnackbar snackbar, int number)
-        => snackbar.Add($"Issue #{number} 연결됨", Severity.Success);
+        => snackbar.Add(Strings.Snackbar_IssueLinked(number), Severity.Success);
 
     public static void IssueCreated(this ISnackbar snackbar, int number)
-        => snackbar.Add($"Issue #{number} 생성 완료", Severity.Success);
+        => snackbar.Add(Strings.Snackbar_IssueCreated(number), Severity.Success);
 }

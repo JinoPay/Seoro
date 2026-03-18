@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Cominomi.Shared.Models;
+using Cominomi.Shared.Resources;
 
 namespace Cominomi.Shared.Services;
 
@@ -16,8 +17,7 @@ public static class ToolDisplayHelper
     }
 
     /// <summary>
-    /// Returns a compact result hint like "50줄 읽음" or "3개 파일 일치".
-    /// Returns null if no meaningful hint is available.
+    /// Returns a compact result hint. Returns null if no meaningful hint is available.
     /// </summary>
     public static string? GetCompactResult(ToolCall tool)
     {
@@ -35,7 +35,7 @@ public static class ToolDisplayHelper
     }
 
     /// <summary>
-    /// Builds a descriptive summary for a tool group like "3개 파일 읽음, 2개의 패턴 검색됨".
+    /// Builds a descriptive summary for a tool group.
     /// </summary>
     public static string BuildDescriptiveSummary(List<ContentPart> toolParts)
     {
@@ -51,18 +51,18 @@ public static class ToolDisplayHelper
         {
             segments.Add(name switch
             {
-                "Read" => $"{count}개 파일 읽음",
-                "Write" => count == 1 ? "1개 파일 작성됨" : $"{count}개 파일 작성됨",
-                "Edit" => count == 1 ? "1개 파일 수정됨" : $"{count}개 파일 수정됨",
-                "Grep" => count == 1 ? "패턴 검색됨" : $"{count}개의 패턴 검색됨",
-                "Glob" => "파일 검색됨",
-                "Bash" => count == 1 ? "명령 실행됨" : $"명령 {count}회 실행됨",
-                "Agent" => count == 1 ? "에이전트 실행됨" : $"에이전트 {count}회 실행됨",
-                "WebFetch" => count == 1 ? "웹 페이지 조회됨" : $"웹 페이지 {count}개 조회됨",
-                "WebSearch" => count == 1 ? "웹 검색됨" : $"웹 검색 {count}회",
-                "NotebookEdit" => count == 1 ? "노트북 수정됨" : $"노트북 {count}회 수정됨",
-                "TodoWrite" => "할일 목록 업데이트됨",
-                _ => count > 1 ? $"{name} {count}회" : name
+                "Read" => Strings.Tool_FilesRead(count),
+                "Write" => count == 1 ? Strings.Tool_FileWrittenSingle : Strings.Tool_FileWrittenMultiple(count),
+                "Edit" => count == 1 ? Strings.Tool_FileEditedSingle : Strings.Tool_FileEditedMultiple(count),
+                "Grep" => count == 1 ? Strings.Tool_GrepSingle : Strings.Tool_GrepMultiple(count),
+                "Glob" => Strings.Tool_GlobDone,
+                "Bash" => count == 1 ? Strings.Tool_BashSingle : Strings.Tool_BashMultiple(count),
+                "Agent" => count == 1 ? Strings.Tool_AgentSingle : Strings.Tool_AgentMultiple(count),
+                "WebFetch" => count == 1 ? Strings.Tool_WebFetchSingle : Strings.Tool_WebFetchMultiple(count),
+                "WebSearch" => count == 1 ? Strings.Tool_WebSearchSingle : Strings.Tool_WebSearchMultiple(count),
+                "NotebookEdit" => count == 1 ? Strings.Tool_NotebookSingle : Strings.Tool_NotebookMultiple(count),
+                "TodoWrite" => Strings.Tool_TodoWriteDone,
+                _ => count > 1 ? Strings.Tool_DefaultMultiple(name, count) : name
             });
         }
 
@@ -159,22 +159,21 @@ public static class ToolDisplayHelper
     private static string? GetReadHint(string output)
     {
         var lineCount = CountLines(output);
-        return lineCount > 0 ? $"{lineCount}줄 읽음" : null;
+        return lineCount > 0 ? Strings.Tool_ReadHint(lineCount) : null;
     }
 
     private static string? GetGrepHint(string output)
     {
         var lineCount = CountLines(output);
         if (lineCount <= 0) return null;
-        // Grep output: each non-empty line is typically a match or file path
-        return $"{lineCount}개 결과";
+        return Strings.Tool_GrepHint(lineCount);
     }
 
     private static string? GetGlobHint(string output)
     {
         var lineCount = CountLines(output);
         if (lineCount <= 0) return null;
-        return $"{lineCount}개 파일 발견";
+        return Strings.Tool_GlobHint(lineCount);
     }
 
     private static int CountLines(string text)

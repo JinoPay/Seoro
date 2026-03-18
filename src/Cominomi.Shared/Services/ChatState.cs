@@ -9,7 +9,7 @@ public class SessionStreamingState
     public string? ActiveToolName { get; set; }
 }
 
-public class ChatState : IDisposable
+public class ChatState : IChatState
 {
     // Sub-managers (composition)
     public MessageManager Messages { get; }

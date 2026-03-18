@@ -1,5 +1,5 @@
 @using Cominomi.Shared.Models
-@inject ChatState ChatState
+@inject IChatState ChatState
 @inject IGitService GitService
 @implements IDisposable
 
@@ -85,7 +85,7 @@
     {
         StopWatching();
 
-        var path = ChatState.CurrentSession?.WorktreePath;
+        var path = ChatState.CurrentSession?.Git.WorktreePath;
         if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
             return;
 
@@ -141,7 +141,7 @@
     {
         var session = ChatState.CurrentSession;
         if (session == null || session.Status == SessionStatus.Pending ||
-            string.IsNullOrEmpty(session.WorktreePath))
+            string.IsNullOrEmpty(session.Git.WorktreePath))
         {
             _diff = null;
             _error = null;
@@ -155,9 +155,9 @@
 
         try
         {
-            var diffBase = !string.IsNullOrEmpty(session.BaseBranch) ? session.BaseBranch : "HEAD";
-            var nameStatus = await GitService.GetNameStatusAsync(session.WorktreePath, diffBase);
-            var rawDiff = await GitService.GetUnifiedDiffAsync(session.WorktreePath, diffBase);
+            var diffBase = !string.IsNullOrEmpty(session.Git.BaseBranch) ? session.Git.BaseBranch : "HEAD";
+            var nameStatus = await GitService.GetNameStatusAsync(session.Git.WorktreePath, diffBase);
+            var rawDiff = await GitService.GetUnifiedDiffAsync(session.Git.WorktreePath, diffBase);
             _diff = Services.GitService.ParseDiff(nameStatus, rawDiff);
         }
         catch (Exception ex)

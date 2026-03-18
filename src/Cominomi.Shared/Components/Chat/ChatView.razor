@@ -1,7 +1,7 @@
 @using Cominomi.Shared.Models
 @using Microsoft.Extensions.Logging
 @using System.Text.Json
-@inject ChatState ChatState
+@inject IChatState ChatState
 @inject IClaudeService ClaudeService
 @inject ISessionService SessionService
 @inject IChatPrWorkflowService PrWorkflow
@@ -125,8 +125,8 @@
                 if (ChatState.CurrentSession is { PlanCompleted: true, PermissionMode: "plan" } && !ChatState.IsStreaming)
                 {
                     _planReviewVisible = true;
-                    if (_planContent == null && !string.IsNullOrEmpty(ChatState.CurrentSession.WorktreePath))
-                        _ = RestorePlanContentAsync(ChatState.CurrentSession.WorktreePath, ChatState.CurrentSession.PlanFilePath);
+                    if (_planContent == null && !string.IsNullOrEmpty(ChatState.CurrentSession.Git.WorktreePath))
+                        _ = RestorePlanContentAsync(ChatState.CurrentSession.Git.WorktreePath, ChatState.CurrentSession.PlanFilePath);
                 }
                 else if (ChatState.CurrentSession?.PermissionMode != "plan" || ChatState.IsStreaming)
                 {
@@ -150,11 +150,11 @@
 
                 // 세션 전환 시 GitHub PR 상태 자동 확인
                 if (ChatState.CurrentSession != null
-                    && !ChatState.CurrentSession.IsLocalDir
+                    && !ChatState.CurrentSession.Git.IsLocalDir
                     && ChatState.CurrentSession.Id != _lastPrCheckedSessionId
                     && ChatState.CurrentSession.Status is SessionStatus.Ready or SessionStatus.Pushed
-                    && ChatState.CurrentSession.PrNumber == null
-                    && !string.IsNullOrEmpty(ChatState.CurrentSession.BranchName))
+                    && ChatState.CurrentSession.Pr.PrNumber == null
+                    && !string.IsNullOrEmpty(ChatState.CurrentSession.Git.BranchName))
                 {
                     _lastPrCheckedSessionId = ChatState.CurrentSession.Id;
                     _ = CheckAndUpdatePrStatus(ChatState.CurrentSession);
@@ -311,9 +311,9 @@
                 await InvokeAsync(StateHasChanged);
 
                 var updated = await SessionService.InitializeWorktreeAsync(session.Id, _selectedBranch);
-                session.WorktreePath = updated.WorktreePath;
-                session.BranchName = updated.BranchName;
-                session.BaseBranch = updated.BaseBranch;
+                session.Git.WorktreePath = updated.Git.WorktreePath;
+                session.Git.BranchName = updated.Git.BranchName;
+                session.Git.BaseBranch = updated.Git.BaseBranch;
                 session.SetInitialStatus(updated.Status);
                 session.ErrorMessage = updated.ErrorMessage;
 
@@ -345,12 +345,12 @@
             FileAttachment attachment;
             if (pending.FilePath != null && pending.Data.Length == 0)
             {
-                attachment = await AttachmentService.CopyFileToWorktreeAsync(pending.FilePath, session.WorktreePath);
+                attachment = await AttachmentService.CopyFileToWorktreeAsync(pending.FilePath, session.Git.WorktreePath);
             }
             else
             {
                 attachment = await AttachmentService.SaveBytesToWorktreeAsync(
-                    pending.Data, pending.FileName, pending.ContentType, session.WorktreePath);
+                    pending.Data, pending.FileName, pending.ContentType, session.Git.WorktreePath);
             }
             fileAttachments.Add(attachment);
         }
@@ -377,11 +377,11 @@
             {
                 session.Title = title;
                 if (newBranch != null)
-                    session.BranchName = newBranch;
+                    session.Git.BranchName = newBranch;
 
                 ChatState.Tabs.UpdateChatTabTitle(title);
 
-                var branchInfo = session.IsLocalDir ? "" : $" · 브랜치: {session.BranchName}";
+                var branchInfo = session.Git.IsLocalDir ? "" : $" · 브랜치: {session.Git.BranchName}";
                 ChatState.AddSystemMessage(session, $"제목이 \"{title}\"(으)로 설정됨{branchInfo}");
 
                 await SessionService.SaveSessionAsync(session);
@@ -404,7 +404,7 @@
 
             await foreach (var evt in ClaudeService.SendMessageAsync(
                 messageForClaude,
-                session.WorktreePath,
+                session.Git.WorktreePath,
                 session.Model,
                 session.PermissionMode,
                 effortLevel: session.EffortLevel ?? "auto",
@@ -467,7 +467,7 @@
                 }
             });
 
-            if (session.Status == SessionStatus.Pushed && !string.IsNullOrEmpty(session.BranchName))
+            if (session.Status == SessionStatus.Pushed && !string.IsNullOrEmpty(session.Git.BranchName))
             {
                 _ = CheckAndUpdatePrStatus(session);
             }
@@ -485,8 +485,8 @@
         if (result is var (prNumber, prUrl))
         {
             session.TransitionStatus(SessionStatus.PrOpen);
-            session.PrUrl = prUrl;
-            session.PrNumber = prNumber;
+            session.Pr.PrUrl = prUrl;
+            session.Pr.PrNumber = prNumber;
             await SessionService.SaveSessionAsync(session);
             await InvokeAsync(StateHasChanged);
         }
@@ -532,8 +532,8 @@
     private async Task HandleIssueLinked(IssueInfo issue)
     {
         if (ChatState.CurrentSession == null) return;
-        ChatState.CurrentSession.IssueNumber = issue.Number;
-        ChatState.CurrentSession.IssueUrl = issue.Url;
+        ChatState.CurrentSession.Pr.IssueNumber = issue.Number;
+        ChatState.CurrentSession.Pr.IssueUrl = issue.Url;
         await SessionService.SaveSessionAsync(ChatState.CurrentSession);
         StateHasChanged();
     }

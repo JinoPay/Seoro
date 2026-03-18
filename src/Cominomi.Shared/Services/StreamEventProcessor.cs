@@ -6,12 +6,12 @@ namespace Cominomi.Shared.Services;
 
 public class StreamEventProcessor : IStreamEventProcessor
 {
-    private readonly ChatState _chatState;
+    private readonly IChatState _chatState;
     private readonly ISessionService _sessionService;
     private readonly IUsageService _usageService;
     private readonly ILogger<StreamEventProcessor> _logger;
 
-    public StreamEventProcessor(ChatState chatState, ISessionService sessionService,
+    public StreamEventProcessor(IChatState chatState, ISessionService sessionService,
         IUsageService usageService, ILogger<StreamEventProcessor> logger)
     {
         _chatState = chatState;
@@ -158,7 +158,7 @@ public class StreamEventProcessor : IStreamEventProcessor
             }
 
             // Layer 3: file system detection
-            if (!ctx.ExitPlanModeDetected && !string.IsNullOrEmpty(ctx.Session.WorktreePath))
+            if (!ctx.ExitPlanModeDetected && !string.IsNullOrEmpty(ctx.Session.Git.WorktreePath))
             {
                 DetectPlanFile(ctx);
                 if (ctx.PlanContent != null)
@@ -403,7 +403,7 @@ public class StreamEventProcessor : IStreamEventProcessor
                 CacheCreationTokens = usage.CacheCreationInputTokens ?? 0,
                 CacheReadTokens = usage.CacheReadInputTokens ?? 0,
                 SessionId = session.Id,
-                ProjectPath = session.WorktreePath
+                ProjectPath = session.Git.WorktreePath
             };
             entry.CostUsd = costOverride ?? _usageService.CalculateCost(
                 model, entry.InputTokens, entry.OutputTokens,
@@ -424,7 +424,7 @@ public class StreamEventProcessor : IStreamEventProcessor
     {
         ctx.PlanFilePath = null;
         ctx.PlanContent = null;
-        var plansDir = Path.Combine(ctx.Session.WorktreePath, ".claude", "plans");
+        var plansDir = Path.Combine(ctx.Session.Git.WorktreePath, ".claude", "plans");
         if (!Directory.Exists(plansDir)) return;
 
         var cutoff = ctx.StreamStartTime.AddSeconds(-5);

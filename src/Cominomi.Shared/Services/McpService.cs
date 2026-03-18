@@ -1,5 +1,5 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
+using System.Text.Json.Serialization;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +11,12 @@ public class McpService : IMcpService
     private readonly IClaudeService _claudeService;
     private readonly IProcessRunner _processRunner;
     private readonly ILogger<McpService> _logger;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        ReadCommentHandling = JsonCommentHandling.Skip
+    };
 
     public McpService(IShellService shellService, IClaudeService claudeService, IProcessRunner processRunner, ILogger<McpService> logger)
     {
@@ -25,33 +31,16 @@ public class McpService : IMcpService
         var servers = new List<McpServer>();
         try
         {
-            var (claudePath, _) = await _claudeService.DetectCliAsync();
-            if (!claudePath) return servers;
+            // Read user-scope config: ~/.claude/mcp.json
+            var userConfigPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".claude", "mcp.json");
+            await LoadServersFromConfigAsync(servers, userConfigPath, "user");
 
-            var shell = await _shellService.GetShellAsync();
-            var output = await RunClaudeCommandAsync(shell, "mcp list");
-            if (string.IsNullOrEmpty(output)) return servers;
-
-            // Parse output: each line is typically "name  transport  scope"
-            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var trimmed = line.Trim();
-                if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("─") || trimmed.StartsWith("Name"))
-                    continue;
-
-                var parts = Regex.Split(trimmed, @"\s{2,}");
-                if (parts.Length >= 2)
-                {
-                    servers.Add(new McpServer
-                    {
-                        Name = parts[0].Trim(),
-                        Transport = parts.Length > 1 ? parts[1].Trim().ToLower() : "stdio",
-                        Scope = parts.Length > 2 ? parts[2].Trim().ToLower() : "user",
-                        IsActive = true,
-                        Status = new McpServerStatus { Running = true, LastChecked = DateTime.UtcNow }
-                    });
-                }
-            }
+            // Read project-scope config: <project>/.claude/mcp.json
+            var projectConfigPath = Path.Combine(
+                Directory.GetCurrentDirectory(), ".claude", "mcp.json");
+            await LoadServersFromConfigAsync(servers, projectConfigPath, "project");
         }
         catch (Exception ex)
         {
@@ -59,6 +48,63 @@ public class McpService : IMcpService
         }
 
         return servers;
+    }
+
+    private async Task LoadServersFromConfigAsync(List<McpServer> servers, string configPath, string scope)
+    {
+        if (!File.Exists(configPath)) return;
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(configPath);
+            var config = JsonSerializer.Deserialize<McpConfigFile>(json, JsonOptions);
+            if (config?.McpServers == null) return;
+
+            foreach (var (name, entry) in config.McpServers)
+            {
+                var transport = entry.Type?.ToLower() ?? "stdio";
+                servers.Add(new McpServer
+                {
+                    Name = name,
+                    Transport = transport,
+                    Command = entry.Command,
+                    Args = entry.Args ?? [],
+                    Env = entry.Env ?? new(),
+                    Url = entry.Url,
+                    Scope = scope,
+                    IsActive = true,
+                    Status = new McpServerStatus { Running = true, LastChecked = DateTime.UtcNow }
+                });
+            }
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse MCP config at {Path}", configPath);
+        }
+    }
+
+    private sealed class McpConfigFile
+    {
+        [JsonPropertyName("mcpServers")]
+        public Dictionary<string, McpServerEntry>? McpServers { get; set; }
+    }
+
+    private sealed class McpServerEntry
+    {
+        [JsonPropertyName("type")]
+        public string? Type { get; set; }
+
+        [JsonPropertyName("command")]
+        public string? Command { get; set; }
+
+        [JsonPropertyName("args")]
+        public List<string>? Args { get; set; }
+
+        [JsonPropertyName("env")]
+        public Dictionary<string, string>? Env { get; set; }
+
+        [JsonPropertyName("url")]
+        public string? Url { get; set; }
     }
 
     public async Task<bool> AddServerAsync(string name, string transport, string? command, List<string>? args, Dictionary<string, string>? env, string? url, string scope)

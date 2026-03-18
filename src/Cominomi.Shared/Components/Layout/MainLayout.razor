@@ -1,5 +1,5 @@
 @inherits LayoutComponentBase
-@inject ChatState ChatState
+@inject IChatState ChatState
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -58,12 +58,12 @@ else
                 {
                     <span class="toolbar-title">@(ChatState.CurrentSession.Title ?? "새 대화")</span>
 
-                    @if (!string.IsNullOrEmpty(ChatState.CurrentSession.BranchName))
+                    @if (!string.IsNullOrEmpty(ChatState.CurrentSession.Git.BranchName))
                     {
                         <span class="toolbar-branch-badge">
                             <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
                                      Style="width: 12px; height: 12px; opacity: 0.6;" />
-                            @ChatState.CurrentSession.BranchName
+                            @ChatState.CurrentSession.Git.BranchName
                         </span>
                     }
 

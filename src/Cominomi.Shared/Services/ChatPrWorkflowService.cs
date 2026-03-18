@@ -35,8 +35,8 @@ public class ChatPrWorkflowService : IChatPrWorkflowService
 
         var prompt = "PR을 생성해주세요. diff를 확인하고, 커밋 상태를 점검하고, 브랜치를 푸시한 뒤 `gh pr create`로 PR을 만들어주세요.";
 
-        if (session.IssueNumber != null)
-            prompt += $"\n\n연결된 이슈: #{session.IssueNumber}";
+        if (session.Pr.IssueNumber != null)
+            prompt += $"\n\n연결된 이슈: #{session.Pr.IssueNumber}";
 
         if (!string.IsNullOrEmpty(preferences))
             prompt += $"\n\n## PR 생성 지침\n{preferences}";
@@ -64,7 +64,7 @@ public class ChatPrWorkflowService : IChatPrWorkflowService
         await _gitWorkflow.RetryAfterConflictResolveAsync(session.Id);
 
         var fullSession = await _sessionService.LoadSessionAsync(session.Id);
-        var baseBranch = !string.IsNullOrEmpty(fullSession?.BaseBranch) ? fullSession!.BaseBranch : "main";
+        var baseBranch = !string.IsNullOrEmpty(fullSession?.Git.BaseBranch) ? fullSession!.Git.BaseBranch : "main";
         var prompt = $"{baseBranch} 브랜치와의 충돌로 PR 병합에 실패했습니다. 이 브랜치를 origin/{baseBranch}에 리베이스하고 충돌을 해결한 후 결과를 커밋해 주세요.";
 
         return (fullSession, prompt);
@@ -77,7 +77,7 @@ public class ChatPrWorkflowService : IChatPrWorkflowService
             var workspace = await _workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
             if (workspace == null) return null;
 
-            var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName);
+            var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.Git.BranchName);
             if (prInfo != null && prInfo.State is "OPEN" or "open")
                 return (prInfo.Number, prInfo.Url);
 

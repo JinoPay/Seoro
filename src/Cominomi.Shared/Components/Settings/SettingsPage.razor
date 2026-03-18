@@ -1,4 +1,4 @@
-@inject ChatState ChatState
+@inject IChatState ChatState
 @inject IWorkspaceService WorkspaceService
 @implements IDisposable
 
@@ -29,6 +29,11 @@
                     @onclick="@(() => SetSection("mcp"))">
                 <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small" />
                 MCP 서버
+            </button>
+            <button class="settings-nav-item @ActiveClass("plugins")"
+                    @onclick="@(() => SetSection("plugins"))">
+                <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small" />
+                플러그인
             </button>
             <button class="settings-nav-item @ActiveClass("commands")"
                     @onclick="@(() => SetSection("commands"))">

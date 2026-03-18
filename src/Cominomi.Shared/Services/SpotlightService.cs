@@ -92,7 +92,7 @@ public class SpotlightService : ISpotlightService, IDisposable
             await StopAsync(existingId);
         }
 
-        if (session.IsLocalDir || string.IsNullOrEmpty(session.BranchName))
+        if (session.Git.IsLocalDir || string.IsNullOrEmpty(session.Git.BranchName))
             throw new InvalidOperationException("Spotlight is not supported for local directory sessions.");
 
         var repoDir = workspace.RepoLocalPath;
@@ -113,7 +113,7 @@ public class SpotlightService : ISpotlightService, IDisposable
         await RunGitAsync($"stash push -m \"{stashMarker}\"", repoDir);
 
         // Checkout the session branch in the repo root
-        var checkoutResult = await RunGitAsync($"checkout \"{session.BranchName}\"", repoDir);
+        var checkoutResult = await RunGitAsync($"checkout \"{session.Git.BranchName}\"", repoDir);
         if (!checkoutResult.Success)
         {
             // Restore stash if checkout failed
@@ -123,10 +123,10 @@ public class SpotlightService : ISpotlightService, IDisposable
         }
 
         // Sync uncommitted changes from worktree to repo root
-        await SyncFilesAsync(session.WorktreePath, repoDir);
+        await SyncFilesAsync(session.Git.WorktreePath, repoDir);
 
         // Start watching worktree for changes
-        var watcher = new FileSystemWatcher(session.WorktreePath)
+        var watcher = new FileSystemWatcher(session.Git.WorktreePath)
         {
             IncludeSubdirectories = true,
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
@@ -138,7 +138,7 @@ public class SpotlightService : ISpotlightService, IDisposable
             SessionId = session.Id,
             OriginalBranch = originalBranch,
             RepoDir = repoDir,
-            WorktreePath = session.WorktreePath,
+            WorktreePath = session.Git.WorktreePath,
             Watcher = watcher
         };
 

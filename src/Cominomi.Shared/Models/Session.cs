@@ -18,13 +18,11 @@ public enum SessionStatus
     Error
 }
 
+[JsonConverter(typeof(SessionJsonConverter))]
 public class Session
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Title { get; set; } = "New Chat";
-    public string WorktreePath { get; set; } = string.Empty;
-    public string BranchName { get; set; } = "";
-    public string BaseBranch { get; set; } = "";
     public string Model { get; set; } = ModelDefinitions.Default.Id;
     public string WorkspaceId { get; set; } = "default";
     public string PermissionMode { get; set; } = CominomiConstants.DefaultPermissionMode;
@@ -54,20 +52,18 @@ public class Session
     public void SetInitialStatus(SessionStatus status) => Status = status;
     public string? ErrorMessage { get; set; }
     public List<ChatMessage> Messages { get; set; } = [];
-    public string? PrUrl { get; set; }
-    public int? PrNumber { get; set; }
-    public int? IssueNumber { get; set; }
-    public string? IssueUrl { get; set; }
-    public List<string>? ConflictFiles { get; set; }
+
+    // Git 관심사 (worktree, branch)
+    public GitContext Git { get; set; } = new();
+
+    // PR/이슈 관심사
+    public PrContext Pr { get; set; } = new();
+
     public string? ConversationId { get; set; }
     public int? MaxTurns { get; set; }
     public decimal? MaxBudgetUsd { get; set; }
     public long TotalInputTokens { get; set; }
     public long TotalOutputTokens { get; set; }
-    public List<string> AdditionalDirs { get; set; } = [];
-    public List<string> AllowedTools { get; set; } = [];
-    public List<string> DisallowedTools { get; set; } = [];
-    public bool IsLocalDir { get; set; }
     public bool PlanCompleted { get; set; }
     public string? PlanFilePath { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

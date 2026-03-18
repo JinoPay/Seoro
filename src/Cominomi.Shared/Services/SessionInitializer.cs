@@ -41,16 +41,16 @@ public class SessionInitializer : ISessionInitializer
     {
         try
         {
-            var summary = await _claudeService.SummarizeAsync(userText, session.WorktreePath);
+            var summary = await _claudeService.SummarizeAsync(userText, session.Git.WorktreePath);
             if (string.IsNullOrEmpty(summary))
                 return (null, null);
 
             string? newBranchName = null;
-            if (!session.IsLocalDir)
+            if (!session.Git.IsLocalDir)
             {
                 var candidate = SessionService.GenerateBranchName(summary);
                 var renameResult = await _gitService.RenameBranchAsync(
-                    session.WorktreePath, session.BranchName, candidate);
+                    session.Git.WorktreePath, session.Git.BranchName, candidate);
                 if (renameResult.Success)
                     newBranchName = candidate;
             }

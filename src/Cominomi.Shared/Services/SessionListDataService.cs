@@ -68,13 +68,13 @@ public class SessionListDataService : IDisposable
     {
         foreach (var session in sessions)
         {
-            if (session.Status == SessionStatus.Pending || session.IsLocalDir
-                || string.IsNullOrEmpty(session.WorktreePath) || string.IsNullOrEmpty(session.BaseBranch))
+            if (session.Status == SessionStatus.Pending || session.Git.IsLocalDir
+                || string.IsNullOrEmpty(session.Git.WorktreePath) || string.IsNullOrEmpty(session.Git.BaseBranch))
                 continue;
 
             try
             {
-                var stats = await _gitService.GetDiffStatAsync(session.WorktreePath, session.BaseBranch);
+                var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.BaseBranch);
                 if (stats.Additions > 0 || stats.Deletions > 0)
                 {
                     DiffStatsCache[session.Id] = stats;
@@ -88,13 +88,13 @@ public class SessionListDataService : IDisposable
     public async Task RefreshDiffStatsAsync(string sessionId)
     {
         var session = OrderedSessions.FirstOrDefault(o => o.Session.Id == sessionId).Session;
-        if (session == null || session.IsLocalDir
-            || string.IsNullOrEmpty(session.WorktreePath) || string.IsNullOrEmpty(session.BaseBranch))
+        if (session == null || session.Git.IsLocalDir
+            || string.IsNullOrEmpty(session.Git.WorktreePath) || string.IsNullOrEmpty(session.Git.BaseBranch))
             return;
 
         try
         {
-            var stats = await _gitService.GetDiffStatAsync(session.WorktreePath, session.BaseBranch);
+            var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.BaseBranch);
             DiffStatsCache[sessionId] = stats;
             OnDataChanged?.Invoke();
         }
@@ -124,8 +124,8 @@ public class SessionListDataService : IDisposable
                     }
                 }
 
-                if (session.PrNumber == null && !session.IsLocalDir
-                    && !string.IsNullOrEmpty(session.BranchName))
+                if (session.Pr.PrNumber == null && !session.Git.IsLocalDir
+                    && !string.IsNullOrEmpty(session.Git.BranchName))
                 {
                     await CheckAndUpdatePrForSessionAsync(session);
                 }
@@ -139,12 +139,12 @@ public class SessionListDataService : IDisposable
         var workspace = Workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);
         if (workspace == null) return;
 
-        var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName);
+        var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.Git.BranchName);
         if (prInfo != null && prInfo.State is "OPEN" or "open")
         {
             session.TransitionStatus(SessionStatus.PrOpen);
-            session.PrUrl = prInfo.Url;
-            session.PrNumber = prInfo.Number;
+            session.Pr.PrUrl = prInfo.Url;
+            session.Pr.PrNumber = prInfo.Number;
             await _sessionService.SaveSessionAsync(session);
             OnDataChanged?.Invoke();
         }
@@ -203,7 +203,7 @@ public class SessionListDataService : IDisposable
                 return true;
             if (SessionCache.TryGetValue(w.Id, out var sessions))
                 return sessions.Any(s => s.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)
-                    || s.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                    || s.Git.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
                     || s.CityName.Contains(filter, StringComparison.OrdinalIgnoreCase));
             return false;
         });
@@ -217,7 +217,7 @@ public class SessionListDataService : IDisposable
         var filter = filterText.Trim();
         return sessions.Where(s =>
             s.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)
-            || s.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || s.Git.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
             || s.CityName.Contains(filter, StringComparison.OrdinalIgnoreCase));
     }
 

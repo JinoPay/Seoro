@@ -19,6 +19,10 @@ public partial class SessionService : ISessionService
     private readonly string _archiveDir = AppPaths.ArchivedContexts;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new();
 
+    // In-memory metadata cache: avoids re-reading all files on every call
+    private readonly ConcurrentDictionary<string, Session> _metadataCache = new();
+    private volatile bool _cacheInitialized;
+
     public SessionService(IGitService gitService, IWorkspaceService workspaceService,
         ISettingsService settingsService, IContextService contextService, IHooksEngine hooksEngine,
         ILogger<SessionService> logger)
@@ -33,13 +37,38 @@ public partial class SessionService : ISessionService
 
     public async Task<List<Session>> GetSessionsAsync()
     {
-        var sessions = new List<Session>();
-        if (!Directory.Exists(_sessionsDir))
-            return sessions;
+        await EnsureCacheLoadedAsync();
+        return _metadataCache.Values
+            .OrderByDescending(s => s.UpdatedAt)
+            .ToList();
+    }
 
-        // Only read metadata files (exclude .messages.json)
-        foreach (var file in Directory.GetFiles(_sessionsDir, "*.json")
-                     .Where(f => !f.EndsWith(".messages.json", StringComparison.OrdinalIgnoreCase)))
+    public async Task<List<Session>> GetSessionsByWorkspaceAsync(string workspaceId)
+    {
+        await EnsureCacheLoadedAsync();
+        return _metadataCache.Values
+            .Where(s => s.WorkspaceId == workspaceId)
+            .OrderByDescending(s => s.UpdatedAt)
+            .ToList();
+    }
+
+    private async Task EnsureCacheLoadedAsync()
+    {
+        if (_cacheInitialized)
+            return;
+
+        if (!Directory.Exists(_sessionsDir))
+        {
+            _cacheInitialized = true;
+            return;
+        }
+
+        var files = Directory.GetFiles(_sessionsDir, "*.json")
+            .Where(f => !f.EndsWith(".messages.json", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        // Parallel file reads for initial load
+        var tasks = files.Select(async file =>
         {
             try
             {
@@ -48,24 +77,25 @@ public partial class SessionService : ISessionService
                 if (session != null)
                 {
                     session.Model = ModelDefinitions.NormalizeModelId(session.Model);
-                    // Messages are stored separately — the metadata file has none (or empty for new format)
                     session.Messages.Clear();
-                    sessions.Add(session);
+                    return session;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Skipping corrupted session file: {File}", file);
             }
+            return null;
+        });
+
+        var results = await Task.WhenAll(tasks);
+        foreach (var session in results)
+        {
+            if (session != null)
+                _metadataCache[session.Id] = session;
         }
 
-        return sessions.OrderByDescending(s => s.UpdatedAt).ToList();
-    }
-
-    public async Task<List<Session>> GetSessionsByWorkspaceAsync(string workspaceId)
-    {
-        var all = await GetSessionsAsync();
-        return all.Where(s => s.WorkspaceId == workspaceId).ToList();
+        _cacheInitialized = true;
     }
 
     public async Task<Session> CreateSessionAsync(string model, string workspaceId, string baseBranch)
@@ -81,17 +111,16 @@ public partial class SessionService : ISessionService
         {
             Model = model,
             WorkspaceId = workspaceId,
-            BranchName = branchName,
-            BaseBranch = baseBranch
+            Git = { BranchName = branchName, BaseBranch = baseBranch }
         };
         session.TransitionStatus(SessionStatus.Initializing);
 
-        session.WorktreePath = Path.Combine(worktreesDir, session.Id);
+        session.Git.WorktreePath = Path.Combine(worktreesDir, session.Id);
 
         try
         {
             var result = await _gitService.AddWorktreeAsync(
-                workspace.RepoLocalPath, session.WorktreePath, branchName, baseBranch);
+                workspace.RepoLocalPath, session.Git.WorktreePath, branchName, baseBranch);
 
             if (!result.Success)
             {
@@ -159,8 +188,7 @@ public partial class SessionService : ISessionService
             WorkspaceId = workspaceId,
             CityName = cityName,
             Title = cityName,
-            IsLocalDir = true,
-            WorktreePath = workspace.RepoLocalPath,
+            Git = { IsLocalDir = true, WorktreePath = workspace.RepoLocalPath },
             EffortLevel = settings.DefaultEffortLevel,
             PermissionMode = settings.DefaultPermissionMode
         };
@@ -192,15 +220,15 @@ public partial class SessionService : ISessionService
         var branchName = $"{CominomiConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
         var worktreesDir = await _workspaceService.GetWorktreesDirAsync();
 
-        session.BranchName = branchName;
-        session.BaseBranch = baseBranch;
-        session.WorktreePath = Path.Combine(worktreesDir, session.Id);
+        session.Git.BranchName = branchName;
+        session.Git.BaseBranch = baseBranch;
+        session.Git.WorktreePath = Path.Combine(worktreesDir, session.Id);
         session.TransitionStatus(SessionStatus.Initializing);
 
         try
         {
             var result = await _gitService.AddWorktreeAsync(
-                workspace.RepoLocalPath, session.WorktreePath, branchName, baseBranch);
+                workspace.RepoLocalPath, session.Git.WorktreePath, branchName, baseBranch);
 
             if (!result.Success)
             {
@@ -211,7 +239,7 @@ public partial class SessionService : ISessionService
             {
                 session.TransitionStatus(SessionStatus.Ready);
                 // Initialize .context/ directory for collaboration
-                await _contextService.EnsureContextDirectoryAsync(session.WorktreePath);
+                await _contextService.EnsureContextDirectoryAsync(session.Git.WorktreePath);
                 _logger.LogInformation("Worktree initialized for session {SessionId} on branch {Branch}", sessionId, branchName);
             }
         }
@@ -286,6 +314,14 @@ public partial class SessionService : ISessionService
             var metadataPath = Path.Combine(_sessionsDir, $"{session.Id}.json");
             await AtomicFileWriter.WriteAsync(metadataPath, metadataJson);
 
+            // Update in-memory cache with a metadata-only clone
+            var cached = JsonSerializer.Deserialize<Session>(metadataJson, JsonDefaults.Options);
+            if (cached != null)
+            {
+                cached.Model = ModelDefinitions.NormalizeModelId(cached.Model);
+                _metadataCache[session.Id] = cached;
+            }
+
             // Save messages separately (with tool output truncation)
             if (messages.Count > 0)
             {
@@ -349,14 +385,14 @@ public partial class SessionService : ISessionService
         if (session == null || session.Status != SessionStatus.Ready)
             return;
 
-        var oldBranch = session.BranchName;
+        var oldBranch = session.Git.BranchName;
         if (oldBranch == newBranchName)
             return;
 
-        var result = await _gitService.RenameBranchAsync(session.WorktreePath, oldBranch, newBranchName);
+        var result = await _gitService.RenameBranchAsync(session.Git.WorktreePath, oldBranch, newBranchName);
         if (result.Success)
         {
-            session.BranchName = newBranchName;
+            session.Git.BranchName = newBranchName;
             await SaveSessionAsync(session);
         }
     }
@@ -372,38 +408,38 @@ public partial class SessionService : ISessionService
             return;
 
         // Archive .context/ before removing worktree
-        if (!string.IsNullOrEmpty(session.WorktreePath) && Directory.Exists(session.WorktreePath))
+        if (!string.IsNullOrEmpty(session.Git.WorktreePath) && Directory.Exists(session.Git.WorktreePath))
         {
             try
             {
                 var archiveName = !string.IsNullOrEmpty(session.CityName) ? session.CityName : session.Id;
                 var archivePath = Path.Combine(_archiveDir, workspace.Name, archiveName);
-                await _contextService.ArchiveContextAsync(session.WorktreePath, archivePath);
+                await _contextService.ArchiveContextAsync(session.Git.WorktreePath, archivePath);
             }
             catch (Exception ex) { _logger.LogWarning(ex, "Failed to archive context for session {SessionId}", sessionId); }
         }
 
         // Skip worktree/branch cleanup for local-dir sessions (the directory is the user's real repo)
-        if (!session.IsLocalDir)
+        if (!session.Git.IsLocalDir)
         {
             // Remove worktree
-            if (!string.IsNullOrEmpty(session.WorktreePath))
+            if (!string.IsNullOrEmpty(session.Git.WorktreePath))
             {
                 try
                 {
-                    await _gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, session.WorktreePath);
+                    await _gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, session.Git.WorktreePath);
                 }
                 catch (Exception ex) { _logger.LogWarning(ex, "Failed to remove worktree for session {SessionId}", sessionId); }
             }
 
             // Delete branch
-            if (!string.IsNullOrEmpty(session.BranchName))
+            if (!string.IsNullOrEmpty(session.Git.BranchName))
             {
                 try
                 {
-                    await _gitService.DeleteBranchAsync(workspace.RepoLocalPath, session.BranchName);
+                    await _gitService.DeleteBranchAsync(workspace.RepoLocalPath, session.Git.BranchName);
                 }
-                catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete branch {Branch} for session {SessionId}", session.BranchName, sessionId); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete branch {Branch} for session {SessionId}", session.Git.BranchName, sessionId); }
             }
         }
 
@@ -435,6 +471,8 @@ public partial class SessionService : ISessionService
         var messagesPath = Path.Combine(_sessionsDir, $"{sessionId}.messages.json");
         if (File.Exists(messagesPath))
             File.Delete(messagesPath);
+
+        _metadataCache.TryRemove(sessionId, out _);
 
         _logger.LogInformation("Session {SessionId} deleted", sessionId);
     }

@@ -33,6 +33,12 @@ public class GhService : IGhService
             "pr", "merge", prNumber.ToString(), $"--{mergeMethod}");
     }
 
+    public async Task<GitResult> ClosePrAsync(string repoDir, int prNumber, CancellationToken ct = default)
+    {
+        return await RunGhAsync(repoDir, ct,
+            "pr", "close", prNumber.ToString());
+    }
+
     public async Task<PrInfo?> GetPrForBranchAsync(string repoDir, string branchName, CancellationToken ct = default)
     {
         var result = await RunGhAsync(repoDir, ct,

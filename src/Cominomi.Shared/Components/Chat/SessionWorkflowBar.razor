@@ -1,6 +1,6 @@
 @using Cominomi.Shared.Models
 @using Microsoft.Extensions.Logging
-@inject ChatState ChatState
+@inject IChatState ChatState
 @inject IChatPrWorkflowService PrWorkflow
 @inject ISessionService SessionService
 @inject ISnackbar Snackbar
@@ -8,16 +8,16 @@
 @inject IJSRuntime JSRuntime
 @inject ILogger<SessionWorkflowBar> Logger
 
-@if (Session != null && !Session.IsLocalDir
+@if (Session != null && !Session.Git.IsLocalDir
      && Session.Status is SessionStatus.Ready
      or SessionStatus.Pushed or SessionStatus.PrOpen or SessionStatus.ConflictDetected)
 {
     <div class="session-workflow" style="padding: var(--space-1) var(--space-4); border-bottom: 1px solid var(--border-subtle); justify-content: flex-end;">
-        @if (Session.IssueNumber != null)
+        @if (Session.Pr.IssueNumber != null)
         {
-            <MudLink Href="@Session.IssueUrl" Target="_blank" Typo="Typo.caption"
+            <MudLink Href="@Session.Pr.IssueUrl" Target="_blank" Typo="Typo.caption"
                      Style="font-size: var(--text-xs); margin-right: auto;">
-                Issue #@Session.IssueNumber
+                Issue #@Session.Pr.IssueNumber
             </MudLink>
         }
         else
@@ -55,11 +55,11 @@
                                Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
                         병합
                     </MudButton>
-                    @if (!string.IsNullOrEmpty(Session.PrUrl))
+                    @if (!string.IsNullOrEmpty(Session.Pr.PrUrl))
                     {
-                        <MudLink Href="@Session.PrUrl" Target="_blank" Typo="Typo.caption"
+                        <MudLink Href="@Session.Pr.PrUrl" Target="_blank" Typo="Typo.caption"
                                  Style="font-size: var(--text-xs);">
-                            #@Session.PrNumber
+                            #@Session.Pr.PrNumber
                         </MudLink>
                     }
                     break;
@@ -125,11 +125,11 @@
 
             if (status == SessionStatus.Merged)
             {
-                Snackbar.MergeSuccess(session.BranchName);
-                _ = SendNotificationIfNeeded(session, $"Branch {session.BranchName} merged", NotificationType.Success);
+                Snackbar.MergeSuccess(session.Git.BranchName);
+                _ = SendNotificationIfNeeded(session, $"Branch {session.Git.BranchName} merged", NotificationType.Success);
             }
             else if (status == SessionStatus.ConflictDetected)
-                Snackbar.ConflictDetected(session.BranchName);
+                Snackbar.ConflictDetected(session.Git.BranchName);
             else if (!string.IsNullOrEmpty(error))
                 Snackbar.MergeError(error);
         }
@@ -175,7 +175,7 @@
     {
         session.TransitionStatus(SessionStatus.Ready);
         session.ErrorMessage = null;
-        session.ConflictFiles = null;
+        session.Pr.ConflictFiles = null;
 
         var (fullSession, prompt) = await PrWorkflow.ResolveConflictsAsync(session);
         if (fullSession != null)
