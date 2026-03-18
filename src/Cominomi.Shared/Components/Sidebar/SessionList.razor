@@ -13,32 +13,11 @@
 <div class="sidebar-tree">
     @if (_workspaces.Count > 0)
     {
-        @* Header *@
-        <div class="tree-header">
-            <span class="tree-header-label">Workspaces</span>
-            <div class="tree-header-actions">
-                <MudIconButton Icon="@(_filterVisible ? Icons.Material.Filled.FilterListOff : Icons.Material.Filled.FilterList)"
-                               Size="Size.Small"
-                               Style="width: 24px; height: 24px; opacity: 0.5;"
-                               OnClick="@(() => ToggleFilter())" />
-                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
-                               Style="width: 24px; height: 24px; opacity: 0.5;"
-                               OnClick="@(() => _createDialogOpen = true)" />
-            </div>
-        </div>
-
-        @if (_filterVisible)
-        {
-            <div class="tree-filter">
-                <MudTextField @bind-Value="_filterText" Placeholder="검색..."
-                              Variant="Variant.Outlined" Margin="Margin.Dense"
-                              Adornment="Adornment.End"
-                              AdornmentIcon="@(_filterText?.Length > 0 ? Icons.Material.Filled.Close : "")"
-                              OnAdornmentClick="@(() => _filterText = "")"
-                              Immediate="true"
-                              Style="font-size: var(--text-xs);" />
-            </div>
-        }
+        <SessionListToolbar FilterVisible="_filterVisible"
+                            FilterText="@_filterText"
+                            OnToggleFilter="ToggleFilter"
+                            OnCreateWorkspace="@(() => _createDialogOpen = true)"
+                            FilterTextChanged="@(v => _filterText = v)" />
 
         @* Tree body *@
         <div class="tree-body">
@@ -121,75 +100,21 @@
                             {
                                 @foreach (var session in FilterSessions(sessions))
                                 {
-                                    var isActive = ChatState.CurrentSession?.Id == session.Id;
-                                    var isArchived = session.Status == SessionStatus.Archived;
                                     var isStreaming = ChatState.IsSessionStreaming(session.Id);
                                     var currentIndex = sessionIndex;
+                                    var hasDiffStats = _diffStatsCache.TryGetValue(session.Id, out var stats);
                                     sessionIndex++;
 
-                                    <div @key="session.Id"
-                                         class="tree-session @(isActive ? "active" : "") @(isArchived ? "archived" : "")"
-                                         @onclick="@(() => SelectSession(session, ws))">
-
-                                        <div class="tree-session-actions">
-                                            @if (session.Status == SessionStatus.Merged)
-                                            {
-                                                <MudIconButton Icon="@Icons.Material.Filled.CleaningServices" Size="Size.Small"
-                                                               Color="Color.Success" Style="width: 20px; height: 20px;"
-                                                               OnClick="@(() => CleanupSession(session))"
-                                                               OnClickStopPropagation="true" />
-                                            }
-                                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                                                           Style="width: 20px; height: 20px; opacity: 0.4;"
-                                                           OnClick="@(() => DeleteSession(session))"
-                                                           OnClickStopPropagation="true" />
-                                        </div>
-
-                                        <span class="status-dot @GetStatusDotClass(session.Status) @(isStreaming ? "streaming" : "")"></span>
-
-                                        <div class="tree-session-info">
-                                            <span class="tree-session-title">@session.Title</span>
-                                            <div class="tree-session-meta">
-                                                @if (session.IsLocalDir)
-                                                {
-                                                    <span class="tree-session-branch" style="opacity: 0.5;">로컬</span>
-                                                }
-                                                else if (!string.IsNullOrEmpty(session.BranchName))
-                                                {
-                                                    <span class="tree-session-branch">@session.BranchName</span>
-                                                }
-
-                                                @if (session.IssueNumber != null)
-                                                {
-                                                    <span style="opacity: 0.6; font-size: 0.65rem;">#@session.IssueNumber</span>
-                                                }
-
-                                                @if (_diffStatsCache.TryGetValue(session.Id, out var stats) && (stats.Additions > 0 || stats.Deletions > 0))
-                                                {
-                                                    <span class="tree-session-diff-stats">
-                                                        @if (stats.Additions > 0)
-                                                        {
-                                                            <span class="diff-add">+@stats.Additions</span>
-                                                        }
-                                                        @if (stats.Deletions > 0)
-                                                        {
-                                                            <span class="diff-del">-@stats.Deletions</span>
-                                                        }
-                                                    </span>
-                                                }
-                                            </div>
-
-                                            @if (isStreaming)
-                                            {
-                                                <span class="tree-session-status">@GetStreamingStatusText(session)</span>
-                                            }
-                                        </div>
-
-                                        @if (currentIndex < 5)
-                                        {
-                                            <span class="tree-session-shortcut">@GetShortcutLabel(currentIndex)</span>
-                                        }
-                                    </div>
+                                    <SessionItem Session="session"
+                                                 IsActive="@(ChatState.CurrentSession?.Id == session.Id)"
+                                                 IsStreaming="isStreaming"
+                                                 StreamingStatusText="@(isStreaming ? GetStreamingStatusText(session) : null)"
+                                                 DiffAdditions="@(hasDiffStats ? stats.Additions : 0)"
+                                                 DiffDeletions="@(hasDiffStats ? stats.Deletions : 0)"
+                                                 ShortcutLabel="@(currentIndex < 5 ? GetShortcutLabel(currentIndex) : null)"
+                                                 OnClick="@(() => SelectSession(session, ws))"
+                                                 OnDelete="@(() => DeleteSession(session))"
+                                                 OnCleanup="@(() => CleanupSession(session))" />
                                 }
                             }
                         }
@@ -656,51 +581,41 @@
         }
     }
 
-    private static string GetStatusDotClass(SessionStatus status) => status switch
-    {
-        SessionStatus.Ready => "ready",
-        SessionStatus.Pushed => "pushed",
-        SessionStatus.PrOpen => "pr-open",
-        SessionStatus.Merged => "merged",
-        SessionStatus.ConflictDetected => "conflict",
-        SessionStatus.Error => "error",
-        SessionStatus.Pending => "pending",
-        SessionStatus.Archived => "archived",
-        _ => "pending"
-    };
-
     private string? _lastSessionId;
     private bool _lastHasStreaming;
     private int _lastStreamingHash;
 
-    private async void OnStateChanged()
+    private void OnStateChanged()
     {
-        var currentId = ChatState.CurrentSession?.Id;
-        var hasStreaming = ChatState.HasAnyStreaming();
-
-        // Compute a hash of streaming phases to detect phase changes
-        var streamingHash = 0;
-        foreach (var sid in ChatState.GetStreamingSessionIds())
+        _ = InvokeAsync(() =>
         {
-            streamingHash ^= sid.GetHashCode() ^ ChatState.GetSessionPhase(sid).GetHashCode();
-        }
+            var currentId = ChatState.CurrentSession?.Id;
+            var hasStreaming = ChatState.HasAnyStreaming();
 
-        if (currentId == _lastSessionId && hasStreaming == _lastHasStreaming && streamingHash == _lastStreamingHash)
-            return;
-
-        // If a session stopped streaming, refresh its diff stats
-        if (_lastHasStreaming && !hasStreaming)
-        {
-            foreach (var ordered in _orderedSessions)
+            // Compute a hash of streaming phases to detect phase changes
+            var streamingHash = 0;
+            foreach (var sid in ChatState.GetStreamingSessionIds())
             {
-                _ = RefreshDiffStats(ordered.Session.Id);
+                streamingHash ^= sid.GetHashCode() ^ ChatState.GetSessionPhase(sid).GetHashCode();
             }
-        }
 
-        _lastSessionId = currentId;
-        _lastHasStreaming = hasStreaming;
-        _lastStreamingHash = streamingHash;
-        await InvokeAsync(StateHasChanged);
+            if (currentId == _lastSessionId && hasStreaming == _lastHasStreaming && streamingHash == _lastStreamingHash)
+                return;
+
+            // If a session stopped streaming, refresh its diff stats
+            if (_lastHasStreaming && !hasStreaming)
+            {
+                foreach (var ordered in _orderedSessions)
+                {
+                    _ = RefreshDiffStats(ordered.Session.Id);
+                }
+            }
+
+            _lastSessionId = currentId;
+            _lastHasStreaming = hasStreaming;
+            _lastStreamingHash = streamingHash;
+            StateHasChanged();
+        });
     }
 
     private void HandleCreateWorkspaceRequest()

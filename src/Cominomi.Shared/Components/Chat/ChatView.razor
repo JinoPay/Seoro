@@ -4,20 +4,16 @@
 @inject ChatState ChatState
 @inject IClaudeService ClaudeService
 @inject ISessionService SessionService
-@inject ISessionGitWorkflowService GitWorkflow
-@inject IGitService GitService
-@inject IGhService GhService
-@inject IWorkspaceService WorkspaceService
+@inject IChatPrWorkflowService PrWorkflow
 @inject IAttachmentService AttachmentService
-@inject IContextService ContextService
-@inject IMemoryService MemoryService
+@inject ISystemPromptBuilder SystemPromptBuilder
+@inject ISessionInitializer SessionInitializer
 @inject IHooksEngine HooksEngine
 @inject IJSRuntime JSRuntime
 @inject ILogger<ChatView> Logger
 @inject ISnackbar Snackbar
 @inject IUsageService UsageService
 @inject INotificationService NotificationService
-@inject ISettingsService SettingsService
 @inject IStreamEventProcessor StreamProcessor
 @implements IDisposable
 
@@ -318,58 +314,65 @@
         _branchSearchText = "";
     }
 
-    private async void HandleStateChanged()
+    private void HandleStateChanged()
     {
-        await InvokeAsync(() =>
+        _ = InvokeAsync(() =>
         {
-            bool needsBranches = ChatState.CurrentSession?.Status == SessionStatus.Pending
-                                 && _branchGroups.Count == 0 && !_isLoadingBranches;
-
-            var pendingMsg = ChatState.ConsumePendingMessage();
-            if (pendingMsg != null && ChatState.CurrentSession != null && !ChatState.IsStreaming)
+            try
             {
+                bool needsBranches = ChatState.CurrentSession?.Status == SessionStatus.Pending
+                                     && _branchGroups.Count == 0 && !_isLoadingBranches;
+
+                var pendingMsg = ChatState.ConsumePendingMessage();
+                if (pendingMsg != null && ChatState.CurrentSession != null && !ChatState.IsStreaming)
+                {
+                    StateHasChanged();
+                    _ = HandleSend(new ChatInputMessage { Text = pendingMsg });
+                    return;
+                }
+
+                // Restore plan review state when switching to a session with completed plan
+                if (ChatState.CurrentSession is { PlanCompleted: true, PermissionMode: "plan" } && !ChatState.IsStreaming)
+                {
+                    _planReviewVisible = true;
+                    if (_planContent == null && !string.IsNullOrEmpty(ChatState.CurrentSession.WorktreePath))
+                        _ = RestorePlanContentAsync(ChatState.CurrentSession.WorktreePath, ChatState.CurrentSession.PlanFilePath);
+                }
+                else if (ChatState.CurrentSession?.PermissionMode != "plan" || ChatState.IsStreaming)
+                {
+                    if (!ChatState.IsStreaming)
+                        _planReviewVisible = false;
+                }
+
+                if (ChatState.IsStreaming)
+                    _shouldAutoScroll = true;
+
+                if (needsBranches)
+                    _isLoadingBranches = true;
+
                 StateHasChanged();
-                _ = HandleSend(new ChatInputMessage { Text = pendingMsg });
-                return;
+
+                if (needsBranches)
+                    _ = LoadBranchesInBackground();
+
+                if (ChatState.CurrentSession == null)
+                    _ = LoadRecentSessions().ContinueWith(_ => InvokeAsync(StateHasChanged));
+
+                // 세션 전환 시 GitHub PR 상태 자동 확인
+                if (ChatState.CurrentSession != null
+                    && !ChatState.CurrentSession.IsLocalDir
+                    && ChatState.CurrentSession.Id != _lastPrCheckedSessionId
+                    && ChatState.CurrentSession.Status is SessionStatus.Ready or SessionStatus.Pushed
+                    && ChatState.CurrentSession.PrNumber == null
+                    && !string.IsNullOrEmpty(ChatState.CurrentSession.BranchName))
+                {
+                    _lastPrCheckedSessionId = ChatState.CurrentSession.Id;
+                    _ = CheckAndUpdatePrStatus(ChatState.CurrentSession);
+                }
             }
-
-            // Restore plan review state when switching to a session with completed plan
-            if (ChatState.CurrentSession is { PlanCompleted: true, PermissionMode: "plan" } && !ChatState.IsStreaming)
+            catch (Exception ex)
             {
-                _planReviewVisible = true;
-                if (_planContent == null && !string.IsNullOrEmpty(ChatState.CurrentSession.WorktreePath))
-                    _ = RestorePlanContentAsync(ChatState.CurrentSession.WorktreePath, ChatState.CurrentSession.PlanFilePath);
-            }
-            else if (ChatState.CurrentSession?.PermissionMode != "plan" || ChatState.IsStreaming)
-            {
-                if (!ChatState.IsStreaming)
-                    _planReviewVisible = false;
-            }
-
-            if (ChatState.IsStreaming)
-                _shouldAutoScroll = true;
-
-            if (needsBranches)
-                _isLoadingBranches = true;
-
-            StateHasChanged();
-
-            if (needsBranches)
-                _ = LoadBranchesInBackground();
-
-            if (ChatState.CurrentSession == null)
-                _ = LoadRecentSessions().ContinueWith(_ => InvokeAsync(StateHasChanged));
-
-            // 세션 전환 시 GitHub PR 상태 자동 확인
-            if (ChatState.CurrentSession != null
-                && !ChatState.CurrentSession.IsLocalDir
-                && ChatState.CurrentSession.Id != _lastPrCheckedSessionId
-                && ChatState.CurrentSession.Status is SessionStatus.Ready or SessionStatus.Pushed
-                && ChatState.CurrentSession.PrNumber == null
-                && !string.IsNullOrEmpty(ChatState.CurrentSession.BranchName))
-            {
-                _lastPrCheckedSessionId = ChatState.CurrentSession.Id;
-                _ = CheckAndUpdatePrStatus(ChatState.CurrentSession);
+                Logger.LogError(ex, "HandleStateChanged failed");
             }
         });
     }
@@ -412,19 +415,9 @@
             var ws = ChatState.CurrentWorkspace;
             if (ws == null || string.IsNullOrEmpty(ws.RepoLocalPath)) return;
 
-            // Fetch all remotes to get latest branches
-            try { await GitService.FetchAllAsync(ws.RepoLocalPath); }
-            catch { /* Continue with cached branches if offline */ }
-
-            var branchGroupsTask = GitService.ListAllBranchesGroupedAsync(ws.RepoLocalPath);
-            var defaultBranchTask = GitService.DetectDefaultBranchAsync(ws.RepoLocalPath);
-            await Task.WhenAll(branchGroupsTask, defaultBranchTask);
-
-            _branchGroups = branchGroupsTask.Result;
-            var defaultBranch = defaultBranchTask.Result;
-            _selectedBranch = defaultBranch
-                ?? _branchGroups.SelectMany(g => g.Branches).FirstOrDefault()
-                ?? "";
+            var (groups, defaultBranch) = await SessionInitializer.LoadBranchesAsync(ws.RepoLocalPath);
+            _branchGroups = groups;
+            _selectedBranch = defaultBranch;
         }
         finally
         {
@@ -599,34 +592,19 @@
         if (isFirstMessage && session.Status == SessionStatus.Ready && !string.IsNullOrWhiteSpace(input.Text))
         {
             ChatState.SetPhase(StreamingPhase.Preparing, sessionId: session.Id);
-            try
+            var (title, newBranch) = await SessionInitializer.SummarizeAndRenameBranchAsync(session, input.Text);
+            if (!string.IsNullOrEmpty(title))
             {
-                var summary = await ClaudeService.SummarizeAsync(input.Text, session.WorktreePath);
-                if (!string.IsNullOrEmpty(summary))
-                {
-                    session.Title = summary;
-                    if (!session.IsLocalDir)
-                    {
-                        var newBranchName = Services.SessionService.GenerateBranchName(summary);
-                        var renameResult = await GitService.RenameBranchAsync(
-                            session.WorktreePath, session.BranchName, newBranchName);
-                        if (renameResult.Success)
-                            session.BranchName = newBranchName;
-                    }
-                    // Sync the chat tab title
-                    ChatState.Tabs.UpdateChatTabTitle(summary);
+                session.Title = title;
+                if (newBranch != null)
+                    session.BranchName = newBranch;
 
-                    // Show in-chat notification
-                    var branchInfo = session.IsLocalDir ? "" : $" · 브랜치: {session.BranchName}";
-                    ChatState.AddSystemMessage(session, $"제목이 \"{summary}\"(으)로 설정됨{branchInfo}");
+                ChatState.Tabs.UpdateChatTabTitle(title);
 
-                    // Save once with both title and branch name updated on the same object
-                    await SessionService.SaveSessionAsync(session);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogDebug(ex, "Haiku summarization failed, will use fallback title");
+                var branchInfo = session.IsLocalDir ? "" : $" · 브랜치: {session.BranchName}";
+                ChatState.AddSystemMessage(session, $"제목이 \"{title}\"(으)로 설정됨{branchInfo}");
+
+                await SessionService.SaveSessionAsync(session);
             }
             ChatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
         }
@@ -642,7 +620,7 @@
         try
         {
             var conversationId = session.ConversationId;
-            var systemPrompt = await BuildSystemPromptAsync(session);
+            var systemPrompt = await SystemPromptBuilder.BuildAsync(session, ChatState.CurrentWorkspace);
 
             await foreach (var evt in ClaudeService.SendMessageAsync(
                 messageForClaude,
@@ -725,23 +703,14 @@
 
     private async Task CheckAndUpdatePrStatus(Session session)
     {
-        try
+        var result = await PrWorkflow.CheckPrStatusAsync(session);
+        if (result is var (prNumber, prUrl))
         {
-            var workspace = await WorkspaceService.LoadWorkspaceAsync(session.WorkspaceId);
-            if (workspace == null) return;
-            var prInfo = await GhService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName);
-            if (prInfo != null && prInfo.State is "OPEN" or "open")
-            {
-                session.Status = SessionStatus.PrOpen;
-                session.PrUrl = prInfo.Url;
-                session.PrNumber = prInfo.Number;
-                await SessionService.SaveSessionAsync(session);
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Failed to check PR status for session {SessionId}", session.Id);
+            session.Status = SessionStatus.PrOpen;
+            session.PrUrl = prUrl;
+            session.PrNumber = prNumber;
+            await SessionService.SaveSessionAsync(session);
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -762,53 +731,6 @@
         }
     }
 
-    private async Task<string?> BuildSystemPromptAsync(Session session)
-    {
-        var parts = new List<string>();
-
-        var wsPrompt = ChatState.CurrentWorkspace?.SystemPrompt;
-        if (!string.IsNullOrWhiteSpace(wsPrompt))
-            parts.Add(wsPrompt);
-
-        if (session.PermissionMode == "plan")
-        {
-            parts.Add(@"You are in Plan mode. Your goal is to explore the codebase thoroughly and create a detailed implementation plan.
-
-Rules:
-- Use read-only tools (Read, Grep, Glob, Bash for read-only commands) to explore the codebase
-- Create a detailed implementation plan and save it to .claude/plans/ directory
-- Do NOT modify any source files — only create/update plan files
-- When your plan is complete and ready for review, call the ExitPlanMode tool to signal completion
-- Structure your plan with: Context, Changes (specific files and what to change), and Verification steps");
-        }
-        else if (session.AgentType == AgentType.Explore)
-            parts.Add("You are in Explore mode. Only read and search — do not modify any files.");
-
-        if (!string.IsNullOrEmpty(session.WorktreePath) && Directory.Exists(session.WorktreePath))
-        {
-            try
-            {
-                var context = await ContextService.LoadContextAsync(session.WorktreePath);
-                var contextPrompt = ContextService.BuildContextPrompt(context);
-                if (!string.IsNullOrWhiteSpace(contextPrompt))
-                    parts.Add(contextPrompt);
-            }
-            catch (Exception ex) { Logger.LogDebug(ex, "Failed to load context for system prompt"); }
-        }
-
-        try
-        {
-            var memories = await MemoryService.GetAllAsync();
-            if (memories.Count > 0)
-            {
-                var memoryPrompt = MemoryService.BuildMemoryPrompt(memories);
-                parts.Add(memoryPrompt);
-            }
-        }
-        catch (Exception ex) { Logger.LogDebug(ex, "Failed to load memory for system prompt"); }
-
-        return parts.Count > 0 ? string.Join("\n\n", parts) : null;
-    }
 
     private async Task SendNotificationIfNeeded(Session session, string body, NotificationType type)
     {
@@ -831,22 +753,12 @@ Rules:
         ClaudeService.Cancel(ChatState.CurrentSession?.Id);
     }
 
-    // Workflow: send PR creation request to AI — let AI handle diff check, commit, push, and gh pr create
+    // Workflow: send PR creation request to AI
     private async Task CreatePr(Session session)
     {
         try
         {
-            var workspace = await WorkspaceService.LoadWorkspaceAsync(session.WorkspaceId);
-            var preferences = workspace?.CreatePrPreferences;
-
-            var prompt = "PR을 생성해주세요. diff를 확인하고, 커밋 상태를 점검하고, 브랜치를 푸시한 뒤 `gh pr create`로 PR을 만들어주세요.";
-
-            if (session.IssueNumber != null)
-                prompt += $"\n\n연결된 이슈: #{session.IssueNumber}";
-
-            if (!string.IsNullOrEmpty(preferences))
-                prompt += $"\n\n## PR 생성 지침\n{preferences}";
-
+            var prompt = await PrWorkflow.BuildCreatePrPromptAsync(session);
             _ = HandleSend(new ChatInputMessage { Text = prompt });
         }
         catch (Exception ex)
@@ -863,22 +775,19 @@ Rules:
         StateHasChanged();
         try
         {
-            var settings = await SettingsService.LoadAsync();
-            var mergeMethod = settings.DefaultMergeStrategy ?? "squash";
+            var (status, error) = await PrWorkflow.MergePrAsync(session);
+            session.Status = status;
+            session.ErrorMessage = error;
 
-            var updated = await GitWorkflow.MergePrAsync(session.Id, mergeMethod);
-            session.Status = updated.Status;
-            session.ErrorMessage = updated.ErrorMessage;
-
-            if (updated.Status == SessionStatus.Merged)
+            if (status == SessionStatus.Merged)
             {
                 Snackbar.MergeSuccess(session.BranchName);
                 _ = SendNotificationIfNeeded(session, $"Branch {session.BranchName} merged", NotificationType.Success);
             }
-            else if (updated.Status == SessionStatus.ConflictDetected)
+            else if (status == SessionStatus.ConflictDetected)
                 Snackbar.ConflictDetected(session.BranchName);
-            else if (!string.IsNullOrEmpty(updated.ErrorMessage))
-                Snackbar.MergeError(updated.ErrorMessage);
+            else if (!string.IsNullOrEmpty(error))
+                Snackbar.MergeError(error);
         }
         catch (Exception ex)
         {
@@ -895,18 +804,17 @@ Rules:
         StateHasChanged();
         try
         {
-            // Force push first
-            var pushed = await GitWorkflow.PushBranchAsync(session.Id, force: true);
-            if (pushed.Status != SessionStatus.Pushed)
+            var (status, error) = await PrWorkflow.ForcePushAsync(session);
+            session.Status = status;
+            session.ErrorMessage = error;
+
+            if (status != SessionStatus.Pushed)
             {
-                session.Status = pushed.Status;
-                session.ErrorMessage = pushed.ErrorMessage;
-                if (!string.IsNullOrEmpty(pushed.ErrorMessage))
-                    Snackbar.PushError(pushed.ErrorMessage);
+                if (!string.IsNullOrEmpty(error))
+                    Snackbar.PushError(error);
                 return;
             }
 
-            session.Status = pushed.Status;
             session.ErrorMessage = null;
             Snackbar.Add("강제 푸시 완료. PR을 생성하세요.", Severity.Success);
         }
@@ -921,17 +829,14 @@ Rules:
 
     private async Task ResolveConflicts(Session session)
     {
-        await GitWorkflow.RetryAfterConflictResolveAsync(session.Id);
         session.Status = SessionStatus.Ready;
         session.ErrorMessage = null;
         session.ConflictFiles = null;
 
-        var fullSession = await SessionService.LoadSessionAsync(session.Id);
+        var (fullSession, prompt) = await PrWorkflow.ResolveConflictsAsync(session);
         if (fullSession != null)
         {
-            var baseBranch = !string.IsNullOrEmpty(fullSession.BaseBranch) ? fullSession.BaseBranch : "main";
-            ChatState.SetPendingMessage(
-                $"{baseBranch} 브랜치와의 충돌로 PR 병합에 실패했습니다. 이 브랜치를 origin/{baseBranch}에 리베이스하고 충돌을 해결한 후 결과를 커밋해 주세요.");
+            ChatState.SetPendingMessage(prompt);
             ChatState.SetSession(fullSession);
         }
 
