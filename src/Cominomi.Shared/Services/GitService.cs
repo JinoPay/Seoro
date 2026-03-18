@@ -235,6 +235,17 @@ public class GitService : IGitService
         return await RunGitAsync(repoDir, ct, "fetch", "--all", "--prune");
     }
 
+    public async Task<GitResult> RebaseAsync(string workingDir, string baseBranch, CancellationToken ct = default)
+    {
+        var result = await RunGitAsync(workingDir, ct, "rebase", $"origin/{baseBranch}");
+        if (!result.Success)
+        {
+            // Abort failed rebase to leave worktree clean
+            await RunGitAsync(workingDir, ct, "rebase", "--abort");
+        }
+        return result;
+    }
+
     public async Task<List<BranchGroup>> ListAllBranchesGroupedAsync(string repoDir)
     {
         var groups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);

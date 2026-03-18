@@ -39,9 +39,8 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         if (workspace == null)
             return false;
 
-        var baseBranch = !string.IsNullOrEmpty(session.BaseBranch)
-            ? session.BaseBranch
-            : await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath) ?? "main";
+        var baseBranch = ResolveBaseBranch(session,
+            await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath));
 
         var isMerged = await _gitService.IsBranchMergedAsync(
             workspace.RepoLocalPath, session.BranchName, baseBranch);
@@ -58,7 +57,124 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
     public async Task<Session> PushBranchAsync(string sessionId, bool force = false, CancellationToken ct = default)
     {
         var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
+        return await PushBranchInternalAsync(session, workspace, force, ct);
+    }
 
+    public async Task<Session> CreatePrAsync(string sessionId, string title, string body, CancellationToken ct = default)
+    {
+        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
+        return await CreatePrInternalAsync(session, workspace, title, body, ct);
+    }
+
+    public async Task<Session> MergePrAsync(string sessionId, string mergeMethod = CominomiConstants.DefaultMergeStrategy, CancellationToken ct = default)
+    {
+        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
+        return await MergePrInternalAsync(session, workspace, mergeMethod, ct);
+    }
+
+    public async Task<Session> RebaseOntoBaseAsync(string sessionId, CancellationToken ct = default)
+    {
+        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
+        return await RebaseInternalAsync(session, workspace, ct);
+    }
+
+    public async Task<Session> ClosePrAsync(string sessionId, CancellationToken ct = default)
+    {
+        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
+        return await ClosePrInternalAsync(session, workspace, ct);
+    }
+
+    public async Task<Session> MergeAllAsync(string sessionId, string mergeMethod = CominomiConstants.DefaultMergeStrategy, string? prBodyTemplate = null, CancellationToken ct = default)
+    {
+        // Single load for the entire pipeline
+        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
+
+        // Step 1: Push (if not already pushed)
+        if (session.Status == SessionStatus.Ready)
+        {
+            session = await PushBranchInternalAsync(session, workspace, force: false, ct);
+            if (session.Status != SessionStatus.Pushed)
+                return session; // push failed, ErrorMessage set
+        }
+
+        // Step 2: Create PR (if not already created)
+        if (session.Status == SessionStatus.Pushed)
+        {
+            var baseBranch = ResolveBaseBranch(session,
+                await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath));
+
+            var title = session.Title is "New Chat" or "" ? session.BranchName : session.Title;
+
+            string body;
+            if (!string.IsNullOrEmpty(prBodyTemplate))
+            {
+                body = prBodyTemplate
+                    .Replace("{branchName}", session.BranchName)
+                    .Replace("{baseBranch}", baseBranch)
+                    .Replace("{sessionTitle}", session.Title);
+            }
+            else
+            {
+                var logResult = await _gitService.GetCommitLogAsync(workspace.RepoLocalPath, baseBranch, ct);
+                body = logResult.Success ? logResult.Output.Trim() : "";
+            }
+
+            if (session.IssueNumber != null && !body.Contains($"#{session.IssueNumber}"))
+            {
+                body = $"Closes #{session.IssueNumber}\n\n{body}";
+            }
+
+            session = await CreatePrInternalAsync(session, workspace, title, body, ct);
+            if (session.Status != SessionStatus.PrOpen)
+                return session; // PR creation failed
+        }
+
+        // Step 3: Merge
+        if (session.Status == SessionStatus.PrOpen)
+        {
+            session = await MergePrInternalAsync(session, workspace, mergeMethod, ct);
+
+            // Step 3b: Auto-rebase on conflict, then retry merge
+            if (session.Status == SessionStatus.ConflictDetected)
+            {
+                _logger.LogInformation("Merge conflict detected for session {SessionId}, attempting auto-rebase", sessionId);
+
+                session = await RebaseInternalAsync(session, workspace, ct);
+
+                if (session.Status == SessionStatus.Ready)
+                {
+                    // Rebase succeeded — re-push and retry merge
+                    session = await PushBranchInternalAsync(session, workspace, force: true, ct);
+                    if (session.Status == SessionStatus.Pushed)
+                    {
+                        // Transition back to PrOpen since PR already exists
+                        session.TransitionStatus(SessionStatus.PrOpen);
+                        await _sessionService.SaveSessionAsync(session);
+
+                        session = await MergePrInternalAsync(session, workspace, mergeMethod, ct);
+                    }
+                }
+            }
+        }
+
+        return session;
+    }
+
+    public async Task RetryAfterConflictResolveAsync(string sessionId)
+    {
+        var session = await _sessionService.LoadSessionAsync(sessionId)
+            ?? throw new InvalidOperationException($"Session '{sessionId}' not found.");
+
+        session.TransitionStatus(SessionStatus.Ready);
+        session.ErrorMessage = null;
+        session.ConflictFiles = null;
+        await _sessionService.SaveSessionAsync(session);
+    }
+
+    // ── Internal methods that accept pre-loaded session/workspace ──
+
+    private async Task<Session> PushBranchInternalAsync(Session session, Workspace workspace, bool force, CancellationToken ct)
+    {
         GitResult result;
         if (force)
             result = await _gitService.PushForceBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
@@ -95,13 +211,10 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         return session;
     }
 
-    public async Task<Session> CreatePrAsync(string sessionId, string title, string body, CancellationToken ct = default)
+    private async Task<Session> CreatePrInternalAsync(Session session, Workspace workspace, string title, string body, CancellationToken ct)
     {
-        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
-
-        var baseBranch = !string.IsNullOrEmpty(session.BaseBranch)
-            ? session.BaseBranch
-            : await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath) ?? "main";
+        var baseBranch = ResolveBaseBranch(session,
+            await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath));
 
         var result = await _ghService.CreatePrAsync(
             workspace.RepoLocalPath, session.BranchName, baseBranch, title, body, ct);
@@ -131,10 +244,8 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         return session;
     }
 
-    public async Task<Session> MergePrAsync(string sessionId, string mergeMethod = CominomiConstants.DefaultMergeStrategy, CancellationToken ct = default)
+    private async Task<Session> MergePrInternalAsync(Session session, Workspace workspace, string mergeMethod, CancellationToken ct)
     {
-        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
-
         if (session.PrNumber == null)
         {
             // Try to find PR by branch name
@@ -158,9 +269,8 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         }
         else
         {
-            // Check if it's a conflict error
             var errorLower = (result.Error + result.Output).ToLowerInvariant();
-            if (errorLower.Contains("conflict") || errorLower.Contains("merge") || errorLower.Contains("not mergeable"))
+            if (errorLower.Contains("conflict") || errorLower.Contains("not mergeable") || errorLower.Contains("merge conflict"))
             {
                 session.TransitionStatus(SessionStatus.ConflictDetected);
                 session.ErrorMessage = result.Error;
@@ -175,69 +285,72 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         return session;
     }
 
-    public async Task<Session> MergeAllAsync(string sessionId, string mergeMethod = CominomiConstants.DefaultMergeStrategy, string? prBodyTemplate = null, CancellationToken ct = default)
+    private async Task<Session> RebaseInternalAsync(Session session, Workspace workspace, CancellationToken ct)
     {
-        var (session, workspace) = await LoadSessionAndWorkspaceAsync(sessionId);
+        var baseBranch = ResolveBaseBranch(session,
+            await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath));
 
-        // Step 1: Push (if not already pushed)
-        if (session.Status == SessionStatus.Ready)
+        // Fetch latest before rebase
+        await _gitService.FetchAsync(workspace.RepoLocalPath, ct);
+
+        var worktreePath = session.WorktreePath ?? workspace.RepoLocalPath;
+        var result = await _gitService.RebaseAsync(worktreePath, baseBranch, ct);
+
+        if (result.Success)
         {
-            session = await PushBranchAsync(sessionId, force: false, ct);
-            if (session.Status != SessionStatus.Pushed)
-                return session; // push failed, ErrorMessage set
+            _logger.LogInformation("Rebase succeeded for session {SessionId}", session.Id);
+            session.TransitionStatus(SessionStatus.Ready);
+            session.ErrorMessage = null;
+            session.ConflictFiles = null;
+        }
+        else
+        {
+            _logger.LogWarning("Rebase failed for session {SessionId}: {Error}", session.Id, result.Error);
+            session.ErrorMessage = $"Rebase failed: {result.Error}";
         }
 
-        // Step 2: Create PR (if not already created)
-        if (session.Status == SessionStatus.Pushed)
-        {
-            var baseBranch = !string.IsNullOrEmpty(session.BaseBranch)
-                ? session.BaseBranch
-                : await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath) ?? "main";
-
-            var title = session.Title is "New Chat" or "" ? session.BranchName : session.Title;
-
-            string body;
-            if (!string.IsNullOrEmpty(prBodyTemplate))
-            {
-                body = prBodyTemplate
-                    .Replace("{branchName}", session.BranchName)
-                    .Replace("{baseBranch}", baseBranch)
-                    .Replace("{sessionTitle}", session.Title);
-            }
-            else
-            {
-                var logResult = await _gitService.GetCommitLogAsync(workspace.RepoLocalPath, baseBranch, ct);
-                body = logResult.Success ? logResult.Output.Trim() : "";
-            }
-
-            if (session.IssueNumber != null && !body.Contains($"#{session.IssueNumber}"))
-            {
-                body = $"Closes #{session.IssueNumber}\n\n{body}";
-            }
-
-            session = await CreatePrAsync(sessionId, title, body, ct);
-            if (session.Status != SessionStatus.PrOpen)
-                return session; // PR creation failed
-        }
-
-        // Step 3: Merge
-        if (session.Status == SessionStatus.PrOpen)
-        {
-            session = await MergePrAsync(sessionId, mergeMethod, ct);
-        }
-
+        await _sessionService.SaveSessionAsync(session);
         return session;
     }
 
-    public async Task RetryAfterConflictResolveAsync(string sessionId)
+    private async Task<Session> ClosePrInternalAsync(Session session, Workspace workspace, CancellationToken ct)
     {
-        var session = await _sessionService.LoadSessionAsync(sessionId)
-            ?? throw new InvalidOperationException($"Session '{sessionId}' not found.");
+        if (session.PrNumber == null)
+        {
+            var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
+            if (prInfo == null)
+            {
+                session.ErrorMessage = "PR not found for this branch.";
+                await _sessionService.SaveSessionAsync(session);
+                return session;
+            }
+            session.PrNumber = prInfo.Number;
+        }
 
-        session.TransitionStatus(SessionStatus.Ready);
-        session.ErrorMessage = null;
-        session.ConflictFiles = null;
+        var result = await _ghService.ClosePrAsync(workspace.RepoLocalPath, session.PrNumber.Value, ct);
+
+        if (result.Success)
+        {
+            session.TransitionStatus(SessionStatus.Ready);
+            session.PrUrl = null;
+            session.PrNumber = null;
+            session.ErrorMessage = null;
+            _logger.LogInformation("PR #{PrNumber} closed for session {SessionId}", session.PrNumber, session.Id);
+        }
+        else
+        {
+            session.ErrorMessage = $"Failed to close PR: {result.Error}";
+        }
+
         await _sessionService.SaveSessionAsync(session);
+        return session;
+    }
+
+    private static string ResolveBaseBranch(Session session, string? detectedDefault)
+    {
+        return !string.IsNullOrEmpty(session.BaseBranch)
+            ? session.BaseBranch
+            : detectedDefault ?? "main";
     }
 
     private async Task<(Session session, Workspace workspace)> LoadSessionAndWorkspaceAsync(string sessionId)

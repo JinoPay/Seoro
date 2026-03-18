@@ -9,6 +9,7 @@ public interface IGhService
 {
     Task<GitResult> CreatePrAsync(string repoDir, string head, string baseBranch, string title, string body, CancellationToken ct = default);
     Task<GitResult> MergePrAsync(string repoDir, int prNumber, string mergeMethod = CominomiConstants.DefaultMergeStrategy, CancellationToken ct = default);
+    Task<GitResult> ClosePrAsync(string repoDir, int prNumber, CancellationToken ct = default);
     Task<PrInfo?> GetPrForBranchAsync(string repoDir, string branchName, CancellationToken ct = default);
     Task<bool> IsAuthenticatedAsync(CancellationToken ct = default);
     Task<GitResult> CreateIssueAsync(string repoDir, string title, string body, CancellationToken ct = default);
