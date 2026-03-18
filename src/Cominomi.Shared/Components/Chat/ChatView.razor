@@ -52,10 +52,17 @@
                 {
                     case SessionStatus.Ready:
                     case SessionStatus.Pushed:
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.RocketLaunch"
+                                   OnClick="@(() => CreatePr(ChatState.CurrentSession))"
+                                   Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
+                            PR 생성
+                        </MudButton>
+                        break;
                     case SessionStatus.PrOpen:
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
                                    StartIcon="@Icons.Material.Filled.MergeType"
-                                   OnClick="@(() => MergeAll(ChatState.CurrentSession))"
+                                   OnClick="@(() => MergePr(ChatState.CurrentSession))"
                                    Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
                             병합
                         </MudButton>
@@ -1157,8 +1164,75 @@ Rules:
         ClaudeService.Cancel(ChatState.CurrentSession?.Id);
     }
 
-    // Workflow: single merge-all action (push + PR + merge)
-    private async Task MergeAll(Session session)
+    // Workflow: push + create PR (does NOT merge)
+    private async Task CreatePr(Session session)
+    {
+        _operatingSessionId = session.Id;
+        StateHasChanged();
+        try
+        {
+            // Step 1: Push
+            if (session.Status == SessionStatus.Ready)
+            {
+                var pushed = await GitWorkflow.PushBranchAsync(session.Id);
+                session.Status = pushed.Status;
+                session.ErrorMessage = pushed.ErrorMessage;
+                if (pushed.Status != SessionStatus.Pushed)
+                {
+                    if (!string.IsNullOrEmpty(pushed.ErrorMessage))
+                        Snackbar.PushError(pushed.ErrorMessage);
+                    return;
+                }
+            }
+
+            // Step 2: Create PR
+            var settings = await SettingsService.LoadAsync();
+            var bodyTemplate = settings.DefaultPrBodyTemplate;
+            var title = session.Title is "New Chat" or "" ? session.BranchName : session.Title;
+            var workspace = await WorkspaceService.LoadWorkspaceAsync(session.WorkspaceId);
+            var baseBranch = !string.IsNullOrEmpty(session.BaseBranch)
+                ? session.BaseBranch
+                : await GitService.DetectDefaultBranchAsync(workspace!.RepoLocalPath) ?? "main";
+
+            string body;
+            if (!string.IsNullOrEmpty(bodyTemplate))
+            {
+                body = bodyTemplate
+                    .Replace("{branchName}", session.BranchName)
+                    .Replace("{baseBranch}", baseBranch)
+                    .Replace("{sessionTitle}", session.Title);
+            }
+            else
+            {
+                var logResult = await GitService.GetCommitLogAsync(workspace.RepoLocalPath, baseBranch);
+                body = logResult.Success ? logResult.Output.Trim() : "";
+            }
+
+            if (session.IssueNumber != null && !body.Contains($"#{session.IssueNumber}"))
+                body = $"Closes #{session.IssueNumber}\n\n{body}";
+
+            var updated = await GitWorkflow.CreatePrAsync(session.Id, title, body);
+            session.Status = updated.Status;
+            session.ErrorMessage = updated.ErrorMessage;
+            session.PrUrl = updated.PrUrl;
+            session.PrNumber = updated.PrNumber;
+
+            if (updated.Status == SessionStatus.PrOpen)
+                Snackbar.Add("PR이 생성되었습니다.", Severity.Success);
+            else if (!string.IsNullOrEmpty(updated.ErrorMessage))
+                Snackbar.MergeError(updated.ErrorMessage);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "CreatePr failed for session {SessionId}", session.Id);
+            session.ErrorMessage = ex.Message;
+            Snackbar.MergeError(ex.Message);
+        }
+        finally { _operatingSessionId = null; StateHasChanged(); }
+    }
+
+    // Workflow: merge an existing PR
+    private async Task MergePr(Session session)
     {
         _operatingSessionId = session.Id;
         StateHasChanged();
@@ -1166,13 +1240,10 @@ Rules:
         {
             var settings = await SettingsService.LoadAsync();
             var mergeMethod = settings.DefaultMergeStrategy ?? "squash";
-            var bodyTemplate = settings.DefaultPrBodyTemplate;
 
-            var updated = await GitWorkflow.MergeAllAsync(session.Id, mergeMethod, bodyTemplate);
+            var updated = await GitWorkflow.MergePrAsync(session.Id, mergeMethod);
             session.Status = updated.Status;
             session.ErrorMessage = updated.ErrorMessage;
-            session.PrUrl = updated.PrUrl;
-            session.PrNumber = updated.PrNumber;
 
             if (updated.Status == SessionStatus.Merged)
             {
@@ -1186,7 +1257,7 @@ Rules:
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "MergeAll failed for session {SessionId}", session.Id);
+            Logger.LogError(ex, "MergePr failed for session {SessionId}", session.Id);
             session.ErrorMessage = ex.Message;
             Snackbar.MergeError(ex.Message);
         }
@@ -1212,24 +1283,7 @@ Rules:
 
             session.Status = pushed.Status;
             session.ErrorMessage = null;
-
-            // Continue with PR + merge
-            var settings = await SettingsService.LoadAsync();
-            var mergeMethod = settings.DefaultMergeStrategy ?? "squash";
-            var bodyTemplate = settings.DefaultPrBodyTemplate;
-
-            var updated = await GitWorkflow.MergeAllAsync(session.Id, mergeMethod, bodyTemplate);
-            session.Status = updated.Status;
-            session.ErrorMessage = updated.ErrorMessage;
-            session.PrUrl = updated.PrUrl;
-            session.PrNumber = updated.PrNumber;
-
-            if (updated.Status == SessionStatus.Merged)
-                Snackbar.MergeSuccess(session.BranchName);
-            else if (updated.Status == SessionStatus.ConflictDetected)
-                Snackbar.ConflictDetected(session.BranchName);
-            else if (!string.IsNullOrEmpty(updated.ErrorMessage))
-                Snackbar.MergeError(updated.ErrorMessage);
+            Snackbar.Add("강제 푸시 완료. PR을 생성하세요.", Severity.Success);
         }
         catch (Exception ex)
         {
