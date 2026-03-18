@@ -1426,7 +1426,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 
 ---
 
-# 구조적 문제 Top 10 (영향도 순위) — 현재 미해결
+# 구조적 문제 Top 9 (영향도 순위) — 현재 미해결
 
 | 순위 | 문제 | 영향 | 관련 섹션 / 파일 | 난이도 |
 |------|------|------|------------------|--------|
@@ -1439,7 +1439,12 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **7** | **Graceful shutdown 없음** | 스트리밍 중 앱 종료 시 Claude CLI 고아 프로세스 가능. 서비스 Dispose 패턴 미구현 | §1, §7 | 중 |
 | **8** | **Git 워크플로우 롤백/리베이스 없음** | PR 생성 후 병합 실패 시 PR 열린 채 방치. 자동 리베이스 없음. 같은 세션 파이프라인에서 3-4회 로드 | §9 `SessionGitWorkflowService.cs` | 중 |
 | **9** | **플러그인 시스템 미구현** | 매니페스트 파싱만 하고 실행 메커니즘 없음. 디렉토리 없으면 사용자에게 알리지 않음 | §15.5 `PluginService.cs` | 중 |
-| **10** | **MCP 서비스 텍스트 테이블 regex 파싱** | `claude mcp list` 텍스트 출력을 regex로 파싱. CLI 출력 형식 변경 시 즉시 깨짐. 기존 서버 수정 불가 | §16 `McpService.cs` | 낮 |
+
+### 해결 완료
+
+| 문제 | 해결 방법 | PR |
+|------|-----------|-----|
+| **MCP 서비스 텍스트 테이블 regex 파싱** | `claude mcp list` CLI 출력 regex 파싱 → `~/.claude/mcp.json` + `.claude/mcp.json` JSON 설정 파일 직접 읽기로 교체. Command, Args, Env, Url 등 전체 서버 정보 획득 가능 | - |
 
 ---
 
