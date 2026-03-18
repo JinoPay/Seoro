@@ -49,7 +49,7 @@ public class UsageService : IUsageService
         await _writeLock.WaitAsync();
         try
         {
-            await File.AppendAllTextAsync(_usageFilePath, json + Environment.NewLine);
+            await AtomicFileWriter.AppendAsync(_usageFilePath, json + Environment.NewLine);
         }
         catch (Exception ex)
         {
