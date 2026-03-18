@@ -181,9 +181,7 @@
             try
             {
                 var diffBase = !string.IsNullOrEmpty(session.Git.BaseBranch) ? session.Git.BaseBranch : "HEAD";
-                var nameStatus = await GitService.GetNameStatusAsync(session.Git.WorktreePath, diffBase);
-                var rawDiff = await GitService.GetUnifiedDiffAsync(session.Git.WorktreePath, diffBase);
-                _diff = Services.GitService.ParseDiff(nameStatus, rawDiff);
+                _diff = await GitService.GetDiffSummaryAsync(session.Git.WorktreePath, diffBase);
             }
             catch { _diff = null; }
 

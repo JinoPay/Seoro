@@ -51,6 +51,16 @@
 | `AttachmentChips.razor` (신규, ~30줄) | InputArea에서 첨부파일 칩 표시 추출 — 순수 표시 컴포넌트 |
 | `InputArea.razor` 분해 | 460→~340줄(26%↓). 모델 선택 관련 상태/메서드 5개 + 첨부 칩 마크업을 자식 컴포넌트로 추출 |
 
+### 구조 개선 Phase 11 (2026-03-19) — 차기 개선 후보 #5 해결 (스트리밍)
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| `IProcessRunner.cs` 변경 | `StreamingProcess` 클래스 + `RunStreamingAsync` 메서드 추가 — stdout 스트리밍 읽기 지원 |
+| `ProcessRunner.cs` 변경 | `RunStreamingAsync` 구현 — Process 시작 후 stdout StreamReader를 호출자에게 위임, stderr는 백그라운드 캡처 |
+| `IGitService.cs` 변경 | `GetDiffSummaryAsync` 메서드 추가 — name-status + unified diff를 스트리밍 파싱하여 `DiffSummary` 반환 |
+| `GitService.cs` 변경 | `GetDiffSummaryAsync` 구현 — `RunStreamingAsync`로 diff 출력을 한 줄씩 읽으며 `FileDiff` 구축. 전체 diff를 메모리에 로드하지 않음 |
+| `SidebarChanges.razor` 변경 | `GetNameStatusAsync` + `GetUnifiedDiffAsync` + `ParseDiff` 3단계 → `GetDiffSummaryAsync` 단일 호출로 교체 |
+| `SidebarExplorer.razor` 변경 | 동일 패턴 교체 |
+
 ### 구조 개선 Phase 10 (2026-03-18) — 차기 개선 후보 #3+#4 해결
 | 변경 내용 | 역할 / 영향 범위 |
 |-----------|-----------------|
@@ -1646,7 +1656,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | ~~**2**~~ | ~~**QuestionDetector 감지 한계** — 한국어/영어 `?` 패턴만~~ | ~~`QuestionDetector.cs:9-21` — `?`로 끝나는 문장만 감지. 명령형 질문, 선택 요청 ("pick", "select"), 확인 요청 패턴 누락~~ | ~~§13~~ | ~~낮~~ |
 | ~~**3**~~ | ~~**Usage HashSet 재시작 시 리셋** — 중복 기록 가능~~ | ~~`UsageService`의 `_seenHashes` 인메모리 HashSet이 앱 재시작 시 초기화. 같은 세션의 사용량 이중 기록 가능~~ | §20 | ~~낮~~ |
 | ~~**4**~~ | ~~**중복 제거 해시 영속화** — 재시작 후 JSONL에서 기존 해시 재로드 필요~~ | ~~10MB 로테이션은 도입되었으나, 재시작 시 기존 해시를 로드하는 로직의 일관성 검증 필요~~ | §20 | ~~낮~~ |
-| ~~**5**~~ | ~~**stdout 전체 메모리 로드** — GitService 대형 diff 시 메모리 문제~~ | ✅ **해결 완료** — `ProcessRunOptions.MaxOutputBytes`로 bounded read 도입. `ProcessRunner`가 제한 초과 시 truncate + drain. GitService의 diff/log/ls-files 계열 메서드에 1 MB 제한 적용 | §5 | 중 |
+| ~~**5**~~ | ~~**stdout 전체 메모리 로드** — GitService 대형 diff 시 메모리 문제~~ | ✅ **해결 완료** — `MaxOutputBytes` bounded read (Phase 10) + `RunStreamingAsync` + `GetDiffSummaryAsync` 스트리밍 파싱 (Phase 11) | §5 | ~~중~~ ✅ |
 
 ---
 

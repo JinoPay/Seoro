@@ -360,6 +360,11 @@ public class PluginExecutionEngineTests
             LastOptions = options;
             return Task.FromResult(NextResult);
         }
+
+        public Task<StreamingProcess> RunStreamingAsync(ProcessRunOptions options, CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     private class FakeShellService : IShellService

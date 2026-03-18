@@ -133,6 +133,11 @@ public class HooksEngineTests
             if (ThrowOnRun != null) throw ThrowOnRun;
             return Task.FromResult(NextResult);
         }
+
+        public Task<StreamingProcess> RunStreamingAsync(ProcessRunOptions options, CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     private class StubShellService : IShellService

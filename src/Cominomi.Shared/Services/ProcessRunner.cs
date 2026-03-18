@@ -18,28 +18,7 @@ public class ProcessRunner : IProcessRunner
     {
         _logger.LogDebug("Running: {FileName} {Args}", options.FileName, string.Join(" ", options.Arguments));
 
-        var psi = new ProcessStartInfo
-        {
-            FileName = options.FileName,
-            WorkingDirectory = options.WorkingDirectory,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = options.StandardInput != null,
-            CreateNoWindow = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
-        };
-
-        foreach (var arg in options.Arguments)
-            psi.ArgumentList.Add(arg);
-
-        if (options.EnvironmentVariables != null)
-        {
-            foreach (var (key, value) in options.EnvironmentVariables)
-                psi.Environment[key] = value;
-        }
-
+        var psi = CreateProcessStartInfo(options);
         using var process = new Process { StartInfo = psi };
 
         var timeout = options.Timeout ?? DefaultTimeout;
@@ -85,6 +64,60 @@ public class ProcessRunner : IProcessRunner
             KillProcess(process, options.KillEntireProcessTree);
             throw;
         }
+    }
+
+    public Task<StreamingProcess> RunStreamingAsync(ProcessRunOptions options, CancellationToken ct = default)
+    {
+        _logger.LogDebug("Running (streaming): {FileName} {Args}", options.FileName, string.Join(" ", options.Arguments));
+
+        try
+        {
+            var psi = CreateProcessStartInfo(options);
+            var process = new Process { StartInfo = psi };
+            process.Start();
+
+            // Capture stderr in background so the caller only needs to read stdout
+            var stderrTask = process.StandardError.ReadToEndAsync(ct);
+
+            return Task.FromResult(new StreamingProcess(process, stderrTask, options.KillEntireProcessTree));
+        }
+        catch (FileNotFoundException ex)
+        {
+            _logger.LogError(ex, "Executable not found: {FileName}", options.FileName);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start process: {FileName}", options.FileName);
+            throw;
+        }
+    }
+
+    private static ProcessStartInfo CreateProcessStartInfo(ProcessRunOptions options)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = options.FileName,
+            WorkingDirectory = options.WorkingDirectory,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            RedirectStandardInput = options.StandardInput != null,
+            CreateNoWindow = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
+        };
+
+        foreach (var arg in options.Arguments)
+            psi.ArgumentList.Add(arg);
+
+        if (options.EnvironmentVariables != null)
+        {
+            foreach (var (key, value) in options.EnvironmentVariables)
+                psi.Environment[key] = value;
+        }
+
+        return psi;
     }
 
     /// <summary>

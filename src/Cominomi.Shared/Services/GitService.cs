@@ -428,14 +428,78 @@ public class GitService : IGitService
         return (additions, deletions);
     }
 
-    public static DiffSummary ParseDiff(string nameStatus, string rawDiff)
+    public async Task<DiffSummary> GetDiffSummaryAsync(string workingDir, string baseBranch, CancellationToken ct = default)
     {
-        var summary = new DiffSummary();
-        if (string.IsNullOrWhiteSpace(nameStatus))
-            return summary;
+        // Fetch name-status and stream diff in parallel
+        var nameStatusTask = GetNameStatusAsync(workingDir, baseBranch, ct);
 
-        // Parse name-status lines: "M\tfile.cs", "A\tnewfile.cs", etc.
+        _logger.LogDebug("git diff {BaseBranch} (streaming)", baseBranch);
+        var streamingTask = _processRunner.RunStreamingAsync(new ProcessRunOptions
+        {
+            FileName = "git",
+            Arguments = ["diff", baseBranch],
+            WorkingDirectory = workingDir,
+            EnvironmentVariables = CominomiConstants.Env.GitEnv,
+        }, ct);
+
+        var nameStatus = await nameStatusTask;
+        var streaming = await streamingTask;
+
+        // Parse name-status into file map
+        var summary = new DiffSummary();
+        var fileMap = ParseNameStatusIntoFileMap(nameStatus, summary);
+
+        // Stream unified diff and parse incrementally (never loads full diff into memory)
+        await using (streaming)
+        {
+            string? currentFile = null;
+            var currentDiff = new StringBuilder();
+            int additions = 0, deletions = 0;
+
+            while (await streaming.ReadLineAsync(ct) is { } line)
+            {
+                if (line.StartsWith("diff --git "))
+                {
+                    // Flush previous file
+                    FlushFileDiff(fileMap, currentFile, currentDiff, additions, deletions);
+
+                    // Extract file path from "diff --git a/path b/path"
+                    var bIndex = line.LastIndexOf(" b/");
+                    currentFile = bIndex >= 0 ? line[(bIndex + 3)..] : null;
+                    currentDiff.Clear();
+                    additions = 0;
+                    deletions = 0;
+                    continue;
+                }
+
+                if (currentFile != null)
+                {
+                    currentDiff.AppendLine(line);
+
+                    if (line.StartsWith('+') && !line.StartsWith("+++"))
+                        additions++;
+                    else if (line.StartsWith('-') && !line.StartsWith("---"))
+                        deletions++;
+                }
+            }
+
+            // Flush last file
+            FlushFileDiff(fileMap, currentFile, currentDiff, additions, deletions);
+
+            var (exitCode, stderr) = await streaming.WaitForExitAsync(ct);
+            if (exitCode != 0)
+                _logger.LogWarning("git diff exited with {ExitCode}: {Stderr}", exitCode, stderr);
+        }
+
+        return summary;
+    }
+
+    private static Dictionary<string, FileDiff> ParseNameStatusIntoFileMap(string nameStatus, DiffSummary summary)
+    {
         var fileMap = new Dictionary<string, FileDiff>();
+        if (string.IsNullOrWhiteSpace(nameStatus))
+            return fileMap;
+
         foreach (var line in nameStatus.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
             var parts = line.Split('\t', 2);
@@ -451,7 +515,6 @@ public class GitService : IGitService
                 _ => FileChangeType.Modified
             };
 
-            // For renames, the path may contain "old\tnew"
             if (changeType == FileChangeType.Renamed)
             {
                 var renameParts = filePath.Split('\t', 2);
@@ -462,6 +525,27 @@ public class GitService : IGitService
             fileMap[filePath] = fileDiff;
             summary.Files.Add(fileDiff);
         }
+
+        return fileMap;
+    }
+
+    private static void FlushFileDiff(Dictionary<string, FileDiff> fileMap, string? filePath, StringBuilder diffContent, int additions, int deletions)
+    {
+        if (filePath == null) return;
+        if (!fileMap.TryGetValue(filePath, out var fileDiff)) return;
+
+        fileDiff.UnifiedDiff = diffContent.ToString();
+        fileDiff.Additions = additions;
+        fileDiff.Deletions = deletions;
+    }
+
+    public static DiffSummary ParseDiff(string nameStatus, string rawDiff)
+    {
+        var summary = new DiffSummary();
+        if (string.IsNullOrWhiteSpace(nameStatus))
+            return summary;
+
+        var fileMap = ParseNameStatusIntoFileMap(nameStatus, summary);
 
         // Parse unified diff and assign to files
         if (!string.IsNullOrWhiteSpace(rawDiff))
