@@ -14,27 +14,55 @@ html, body {
 
 /* ===== 3-Panel Shell Layout ===== */
 .cominomi-shell {
+    --sidebar-width: 260px;
+    --detail-width: 400px;
     display: grid;
-    grid-template-columns: 260px 1fr;
+    grid-template-columns: var(--sidebar-width) auto 1fr;
     height: 100vh;
     overflow: hidden;
-    transition: grid-template-columns 200ms ease;
 }
 
 .cominomi-shell.detail-open {
-    grid-template-columns: 260px 1fr 400px;
+    grid-template-columns: var(--sidebar-width) auto 1fr auto var(--detail-width);
 }
 
 .cominomi-shell.sidebar-collapsed {
-    grid-template-columns: 0px 1fr;
+    --sidebar-width: 0px;
 }
 
-.cominomi-shell.sidebar-collapsed.detail-open {
-    grid-template-columns: 0px 1fr 400px;
+.cominomi-shell.sidebar-collapsed .cominomi-sidebar,
+.cominomi-shell.sidebar-collapsed .panel-resizer:first-of-type {
+    display: none;
+}
+
+/* ===== Panel Resizer ===== */
+.panel-resizer {
+    width: 5px;
+    cursor: col-resize;
+    background: transparent;
+    position: relative;
+    flex-shrink: 0;
+    z-index: 10;
+    transition: background 150ms ease;
+}
+
+.panel-resizer:hover,
+.panel-resizer.dragging {
+    background: var(--accent);
+}
+
+.panel-resizer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -3px;
+    right: -3px;
 }
 
 .cominomi-shell.sidebar-collapsed .cominomi-sidebar {
     overflow: hidden;
+    width: 0;
     opacity: 0;
     pointer-events: none;
 }
