@@ -3,7 +3,7 @@
 > 이 문서는 Cominomi의 모든 시스템을 해부하여 **현재 동작**, **데이터 흐름**, **의존관계**, **빠진 것/문제점**을 기술합니다.
 > 각 섹션을 가리켜 "이 부분은 이렇게 변경되어야 한다"고 지휘하는 데 사용하세요.
 
-**코드 규모**: ~184개 소스 파일, ~19,707줄 (Cominomi.Shared에 집중, tests/Cominomi.Shared.Tests 포함)
+**코드 규모**: ~189개 소스 파일, ~21,043줄 (Cominomi.Shared에 집중, tests/Cominomi.Shared.Tests 포함)
 **프레임워크**: .NET 10.0, MAUI + Blazor, MudBlazor UI
 **외부 도구**: Claude CLI (subprocess), Git CLI, GitHub CLI (gh)
 
@@ -248,8 +248,7 @@
   - [24. 에러 처리 패턴](#24-에러-처리-패턴)
   - [25. 의존성 그래프 & 커플링](#25-의존성-그래프--커플링)
 - [핵심 흐름 다이어그램](#핵심-흐름-다이어그램)
-- [해결된 구조적 문제](#해결된-구조적-문제-phase-15)
-- [구조적 문제 Top 10 (전항목 해결)](#구조적-문제-top-10--전항목-해결-완료-)
+- [미해결 구조적 문제 Top 10](#미해결-구조적-문제-top-10)
 
 ---
 
@@ -312,10 +311,7 @@
 
 ### 빠진 것 / 문제점
 - **모든 서비스가 Singleton**: `ChatState`는 가변 `ConcurrentDictionary`를 가지고, `SkillRegistry`는 가변 `List`를 가짐. 스레드 안전성이 관례에만 의존
-- ~~**옵션 패턴 미사용**: 각 서비스가 `ISettingsService.LoadAsync()`를 직접 호출하여 설정을 읽음. `IOptions<T>` 패턴으로 중앙화 가능~~ → ✅ **해결**: `IOptionsMonitor<AppSettings>` 도입. `AppSettingsFactory` + `AppSettingsChangeNotifier`로 설정 파일 로딩/갱신 자동화. 서비스 6개 + UI 2개 마이그레이션 완료
 - **서비스 건강 체크 없음**: Git/gh/Claude CLI가 없어도 앱이 시작됨 (런타임에만 실패). 다만 Spotlight 복구는 실패 시 로그 경고 후 계속 진행
-- ~~**Graceful shutdown 없음**: 스트리밍 중인 Claude 프로세스가 앱 종료 시 고아 프로세스가 될 수 있음~~ → ✅ **해결**: `App.xaml.cs` CleanUp()에서 `IClaudeService`, `ISpotlightService`, `ChatState`, `SessionListDataService` Dispose + `Log.CloseAndFlush()`
-- ~~**ChatState에 인터페이스 없음** (`:64`): 직접 클래스로 등록되어 테스트 불가~~ → ✅ **해결**: `IChatState` 인터페이스 도입 + `builder.Services.AddSingleton<IChatState, ChatState>()` DI 등록
 
 ---
 
@@ -363,12 +359,7 @@
 - `LoadSessionAsync()`: 메타데이터 로드 후 `.messages.json`에서 메시지 별도 로드 + `MigrateToParts()` 호출. 이전 단일 파일 형식도 자동 호환 (메시지가 인라인에 있으면 그대로 사용)
 
 ### 빠진 것 / 문제점
-- ~~**파일 락 없음**: 병렬 세션이 동시에 `SaveSessionAsync()`를 호출하면 데이터 손상 가능~~ → ✅ **해결**: `AtomicFileWriter` (임시파일→원자적 이동) + per-session `SemaphoreSlim` 락 도입. 전체 서비스(Session/Workspace/Settings/Task/Memory/Hooks/Skill)에 적용.
-- ~~**세션 파일 무한 성장**: 100턴 대화 + 도구 호출 결과가 하나의 JSON 파일에 전부 포함. 수 MB까지 성장 가능~~ → ✅ **해결**: Phase 4에서 메타데이터/메시지 분리 + 도구 출력 2,000자 절단. 목록 로드 시 메시지 파일 불필요
-- ~~**인덱싱 없음**: `GetSessionsAsync()`가 모든 메타데이터 파일을 역직렬화 — O(n) 성능. 세션 수 증가 시 사이드바 로딩 느려짐~~ → ✅ **해결**: `ConcurrentDictionary` 인메모리 캐시 + `EnsureCacheLoadedAsync()` 1회 로드 + 병렬 파일 읽기
-- ~~**백업/마이그레이션 없음**: JSON 스키마 변경 시 기존 파일이 역직렬화 실패 → 데이터 손실~~ → ✅ **해결**: `SchemaMigrator` + `$schemaVersion` 필드 도입. 읽기 시 자동 마이그레이션 + write-back. 모든 서비스(Session/Workspace/Settings/Memory/Task/Hooks/GitRepoInfo) 적용
 - **Usage 위치 불일치**: `AppData/Roaming`과 `AppData/Local`에 분산 저장
-- ~~**GetSessionsAsync 수동 매핑** (`SessionService.cs:46-68`): 15개 프로퍼티를 수동 복사. DTO나 프로젝션이 없음~~ → ✅ **해결**: Phase 4에서 메타데이터 파일을 직접 역직렬화. 수동 프로퍼티 복사 제거
 
 ---
 
@@ -439,12 +430,9 @@ public List<ContentPart> Parts { get; set; }  // 신규: 인터리브 렌더링
 `MigrateToParts()` (`:36-45`): 매 로드마다 호출. Parts가 비어있으면 ToolCalls→Parts, Text→Parts로 변환.
 
 ### 빠진 것 / 문제점
-- ~~**상태 전이 검증 없음**: 아무 상태에서 아무 상태로 전환 가능~~ → ✅ **해결**: Phase 4에서 `SessionStatusMachine` + `Session.TransitionStatus()` 도입. `Status`는 `private set`으로 보호. 11+ 사이트에서 직접 할당 제거
 - **기타 검증 없음**: 빈 `WorkspaceId`로 Session 생성 가능. 음수 토큰 카운트 가능
 - **Session이 너무 큼**: 대화 + Git + PR을 하나에 담아서, 하나를 변경하면 전체를 다시 직렬화
 - **Parts 이중 저장**: `Text`와 `Parts[].Text`가 동시에 존재. `AppendText()`가 양쪽 다 업데이트 (`ChatState.cs:184-202`)
-- **모든 모델이 가변**: `public set`만 있고, 불변(immutable) 보장 없음. 어디서든 조용히 수정 가능
-- ~~**ModelDefinitions 하드코딩**: opus/sonnet/haiku 3개 모델만. 새 모델 추가는 코드 변경 필요~~ → ✅ **해결**: `ModelDefinitions`가 `models.json` 외부 설정 파일 로딩 지원. 가격 정보(`ModelPricing`) 통합. 키워드 기반 정규화. 기본 내장값 폴백. **참고**: `models.json`은 리포에 포함되지 않음 (선택적). `MauiProgram.cs:91-92`에서 `AppPaths.Settings/models.json` 경로를 로드하며, 파일 없으면 내장 기본값(Opus/Sonnet/Haiku) 사용
 - **UI 전용 모델이 도메인과 혼재**: `ContentGroup`, `ActivitySummaryInfo` 등이 `Models/` 네임스페이스에 있음
 
 ---
@@ -491,10 +479,9 @@ macOS/Linux: /bin/sh
 **예외**: `ClaudeService.StartProcess()`와 `GitService.CloneAsync()`는 stdin 스트리밍 / 실시간 stderr 진행률 보고가 필요하여 `Process`를 직접 사용. 환경변수는 `CominomiConstants.Env`로 통합.
 
 ### 빠진 것 / 문제점
-- ~~**통합 프로세스 실행 추상화 없음**~~ → ✅ **해결**: 7개 서비스가 `IProcessRunner`로 마이그레이션 완료
 - **셸 감지 1회 캐싱**: 앱 실행 후 Git 설치하면 재시작 필요
 - **WhichAsync 3초 고정 타임아웃**: 에러 전파 없음, 실패 시 null 반환
-- ~~**GitService/GhService는 ShellService를 사용하지 않음**: `"git"`, `"gh"`를 직접 하드코딩~~ → `IProcessRunner`로 통합되어 환경변수/타임아웃 일관성 확보
+- **IProcessRunner stderr bare catch**: `StreamingProcess._stderrTask`의 `catch { }` 블록(`IProcessRunner.cs:75`)이 stderr 에러 정보 손실
 
 ---
 
@@ -1587,92 +1574,33 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 
 ---
 
-# 해결된 구조적 문제 (Phase 1–6)
+# 미해결 구조적 문제 Top 10
 
-| 문제 | 해결 방법 | Phase |
-|------|-----------|-------|
-| ChatView God Component (1,461줄, 18개 서비스) | `StreamEventProcessor` + `SystemPromptBuilder` + `SessionInitializer` + `ChatPrWorkflowService` + `BranchSelector` + `SessionWorkflowBar` + `LandingPage` 추출. 548줄, 13개 서비스 | 1, 3, 6 |
-| JSON 영속화 파일 락 없음 | `AtomicFileWriter` + per-session `SemaphoreSlim` 락 | 1 |
-| 세션 파일 무한 성장 | 메타데이터/메시지 분리 저장 + 도구 출력 2,000자 절단 | 4 |
-| ChatState God Object (366줄) | 파사드 패턴 + `MessageManager`/`StreamingStateManager`/`SettingsStateManager`. 219줄 | 3 |
-| 상태 전이 검증 없음 | `SessionStatusMachine` + `Session.TransitionStatus()` + `private set` | 4 |
-| 프로세스 실행 복붙 (7개 서비스) | `IProcessRunner` 통합 마이그레이션 | 2 |
-| SessionList God Component (719줄) | `SessionItem`+`SessionListToolbar`+`SessionListDataService` 추출. 479줄 | 3, 4 |
-| PR 생성 경로 2개 | `IChatPrWorkflowService`로 통합 | 3 |
-| 가격/모델/CLI 하드코딩 | `ModelDefinitions` + `models.json` + `CominomiConstants` | 2 |
-| 테스트 0개 | `tests/Cominomi.Shared.Tests/` — 114개 테스트, 9개 테스트 파일 | 4+ |
-| `async void` 안티패턴 (6개 컴포넌트) | `void` + `InvokeAsync()` 안전 패턴 | 3 |
-| Spotlight 크래시 시 리포 미복구 | `spotlight-state.json` + `RecoverAsync()` + 동시 가드 + sessionId별 stash | 4 |
-| 로컬라이제이션 인프라 부재 | `Strings.resx` (ko/en) + `ResourceManager` — 43개 문자열 | 6 |
-| ChatState 인터페이스 없음 | `IChatState` 인터페이스 (76줄) + DI 등록 변경 | 6 |
-| GetSessionsAsync O(n) 성능 | `ConcurrentDictionary` 인메모리 캐시 + 병렬 I/O | 6 |
-| Graceful shutdown 없음 | `App.xaml.cs` CleanUp() + IDisposable 서비스 정리 | 6 |
-| Git 워크플로우 롤백/리베이스 없음 | `RebaseInternalAsync()` + `ClosePrInternalAsync()` 자동 복구 | 6 |
-| 중앙 에러 전략 없음 | `AppError` + `ErrorCode` enum + Transient/Permanent 분류 | 6 |
-| MCP 서비스 regex 파싱 | `mcp.json` 직접 읽기로 교체 | 6 |
-| Session 모델 3관심사 혼재 | `GitContext` + `PrContext` 분리 + `SessionJsonConverter` 하위호환 | 6 |
-
----
-
-# 구조적 문제 Top 10 — 전항목 해결 완료 ✅
-
-> Phase 6 (PRs #122–#131)에서 기존 Top 10의 모든 항목이 해결되었습니다.
-
-| 순위 | 문제 | 해결 방법 | PR |
-|------|------|-----------|-----|
-| ~~**1**~~ | ~~로컬라이제이션 인프라 부재~~ | `Strings.resx` (ko) + `Strings.en.resx` (en) — 43개 문자열. `ResourceManager` 정적 접근자 패턴 | #127 |
-| ~~**2**~~ | ~~ChatView 899줄 / 14개 서비스~~ | `BranchSelector`(106줄) + `SessionWorkflowBar`(205줄) + `LandingPage`(93줄) 추출. 899→545줄, 14→13서비스 | #130 |
-| ~~**3**~~ | ~~Session 모델 3관심사 혼재~~ | `GitContext` + `PrContext` 분리 + `SessionJsonConverter` 하위호환 | #129 |
-| ~~**4**~~ | ~~중앙 에러 전략 없음~~ | `AppError` 레코드 + `ErrorCode` enum + Transient/Permanent 분류 + `ClassifyPushError()`/`ClassifyMergeError()` | #131 |
-| ~~**5**~~ | ~~ChatState 인터페이스 없음~~ | `IChatState` 인터페이스 (76줄, `IDisposable`) + DI 등록 변경 | #128 |
-| ~~**6**~~ | ~~GetSessionsAsync O(n) 성능~~ | `ConcurrentDictionary` 인메모리 캐시 + `EnsureCacheLoadedAsync()` 1회 로드 + 병렬 I/O | #122 |
-| ~~**7**~~ | ~~Graceful shutdown 없음~~ | `App.xaml.cs` CleanUp() — IClaudeService, ISpotlightService, ChatState, SessionListDataService Dispose + Log.CloseAndFlush() | #123 |
-| ~~**8**~~ | ~~Git 워크플로우 롤백/리베이스 없음~~ | `RebaseInternalAsync()` 자동 리베이스 + `ClosePrInternalAsync()` PR 자동 닫기 | #125 |
-| ~~**9**~~ | ~~플러그인 시스템 미구현~~ | 매니페스트 파싱 + 상태 관리 + enable/disable + 실행 엔진 구현 완료 (EntryPoint 로딩/실행/샌드박싱 + hooks·skills 등록) | #126, #137 |
-| ~~**10**~~ | ~~MCP 서비스 regex 파싱~~ | `~/.claude/mcp.json` + `.claude/mcp.json` JSON 직접 읽기. regex 파싱 제거 | #124 |
-
-### 차기 개선 후보 — 전항목 해결 완료 ✅
-
-| 순위 | 문제 | 해결 방법 | PR |
-|------|------|-----------|-----|
-| ~~**1**~~ | ~~플러그인 실행 엔진~~ | EntryPoint 로딩/실행/샌드박싱 + hooks·skills 매니페스트 자동 등록 | #137 |
-| ~~**2**~~ | ~~같은 세션 3~4회 로드~~ | Internal 메서드 + `LoadSessionAsync` 2초 TTL 캐시 | #134 |
-| ~~**3**~~ | ~~MainLayout 과다 책임~~ | `IThemeService` 추출 + `SidebarToolbar`/`MainToolbar` 컴포넌트 분리. 238→~127줄(47%↓) | #135 |
-| ~~**4**~~ | ~~macOS 알림 미구현~~ | `UNUserNotificationCenter` 기반 macOS 알림 + 포그라운드 배너 + `NotificationSound` 설정 연동 | #133 |
-| ~~**5**~~ | ~~옵션 패턴 미사용~~ | `IOptionsMonitor<AppSettings>` + `AppSettingsFactory` + `AppSettingsChangeNotifier`. 8개 서비스/컴포넌트 전환 | #136 |
-
----
-
-# 신규 구조적 문제 Top 10
-
-> 2026-03-18 코드베이스 전체 재분석으로 도출한 Top 10입니다. 이전 Top 10 + 차기 후보 전항목 해결 후 잔여 미해결 문제 중 영향도·빈도·심각도 기준 선정.
+> 2026-03-19 코드베이스 전체 재분석으로 도출. 이전 Top 10 + 신규 Top 10 + 차기 후보 전항목 해결 후, 현재 코드에서 영향도·빈도·심각도 기준 재선정.
 
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
-| ~~**1**~~ | ~~**데이터 모델 불변성 부재**~~ ✅ **해결** — 37개 프로퍼티 `init` 전환, `SessionJsonConverter` 객체 이니셜라이저 리팩토링 | 7개 핵심 모델의 생성 후 불변 프로퍼티(Id, CreatedAt, WorkspaceId, AgentType 등)를 `init`으로 전환. 잔여 `set` 프로퍼티(Title, Model, PermissionMode 등)는 UI/서비스에서 정당하게 변경되는 항목. `ChatState`↔`Session` 가변 참조 공유 문제는 아키텍처 수준 개선 필요 | §3, §23 | — |
-| ~~**2**~~ | ~~**ClaudeService 재시도 ~35줄 복붙** — `--verbose` 재시도 시 스트리밍 루프 전체 복사~~ | ✅ `ReadStreamEventsAsync()` 헬퍼로 스트리밍 루프 통합. 첫 루프·재시도 루프 모두 동일 메서드 호출 | §7 | — |
-| **3** | ~~**시스템 프롬프트·메모리 크기 제한 미흡**~~ ✅ Phase 13에서 해결 — `TokenEstimator` 도입, 모든 절단을 토큰 기반으로 전환, `MaxSystemPromptTokens` 전체 예산 추가 | `MemoryService`, `ContextService`, `SystemPromptBuilder` 토큰 기반 절단. notes.md도 `MaxContextItemTokens`로 제한 | §17, §18 | 중 |
-| ~~**4**~~ | ~~**ChatView `Task.Run` fire-and-forget** — 예외 미관찰 위험~~ | ✅ `CancellationTokenSource` + `try/catch(OperationCanceledException)` 패턴 도입. 예외 관찰 + 취소 지원 | §10 | — |
-| **5** | **GitService ParseDiff " b/" 파싱 취약** — 경로에 ` b/`가 포함된 파일 오파싱 | `GitService.cs:459` `header.LastIndexOf(" b/")`. 파일 경로에 ` b/`가 있으면 diff 어트리뷰션 오류 | §5 | 낮 |
-| **6** | ~~**TabManager 파일 콘텐츠 무한 메모리** — 퇴출 정책 없음~~ ✅ | LRU 퇴출 엔진 도입 (총 50MB 예산, 단일 10MB 제한). 퇴출 탭은 활성화 시 자동 재로딩 | §11 | 중 |
-| **7** | ~~**SessionService bare catch 블록** — `SessionService.cs:582`~~ ✅ Phase 10에서 해결 | `catch (Exception ex)` + `_logger.LogWarning` 로깅 추가 | §8 | 낮 |
-| **8** | ~~**ContextService .gitignore 중복 추가** — 행 기반이 아닌 `Contains` 체크~~ ✅ Phase 9에서 해결 | `ReadAllLinesAsync` + `line.Trim()` 정확 매칭으로 전환. AttachmentService 동일 패턴도 수정 | §17 | 낮 |
-| **9** | **~~SidebarExplorer FileSystemWatcher 레이스~~** — ✅ 해결됨 | `SidebarExplorer.razor` — `_debounceLock` 도입으로 디바운스 타이머 stop/start 및 dispose에 동시성 보호 추가 | §12 | ~~낮~~ |
-| ~~**10**~~ | ~~**플러그인 stdin/stdout 프로토콜 미정의** — 환경변수만 전달~~ | `PluginExecutionEngine.cs` — JSON stdin/stdout 프로토콜(`json/1`) 도입. `PluginRequest`→stdin, stdout→`PluginResponse` 구조화 데이터 교환. 환경변수 하위호환 유지 | §15.5 | 높 |
+| **1** | **ChatView 697줄 재비대화** — Phase 13 Continue 기능 추가로 548→697줄 재성장. 서비스 주입 13개 유지 | 유지보수성 저하, 테스트 불가, SRP 위반 | §10 | 중 |
+| **2** | **테스트 커버리지 부족** — 12개 테스트 파일 / 75+개 서비스. ClaudeService·GitService·SessionService 등 핵심 서비스 테스트 부재 | 회귀 방지 불가, 리팩토링 안전망 없음 | §25 | 높 |
+| **3** | **StreamEventProcessor 516줄 switch 아키텍처** — 20+개 case 중첩 switch문. 새 이벤트 타입 추가 시 OCP 위반 | 확장성, 유지보수성 | §10.5 | 중 |
+| **4** | **GitService ParseDiff " b/" 파싱 취약** — `LastIndexOf(" b/")` 패턴이 `ParseDiff`(정적)과 `GetDiffSummaryAsync`(스트리밍) 양쪽에 존재. 경로에 " b/" 포함 시 오파싱 | diff 표시 오류 | §5 | 낮 |
+| **5** | **SessionService 캐시 무한 성장** — `_metadataCache`·`_sessionCache` ConcurrentDictionary에 만료/퇴출 정책 없음. 삭제된 세션도 캐시에 잔류 가능 | 장기 실행 시 메모리 누수 | §8 | 중 |
+| **6** | **SessionList 8개 서비스 과다 주입** — 컴포넌트가 8개 서비스에 직접 의존. 파사드 서비스로 위임 필요 | 커플링, 테스트 난이도 | §12 | 중 |
+| **7** | **Usage 저장 경로 불일치** — `AppData/Roaming`(설정·세션)과 `AppData/Local`(usage.jsonl) 분산. 백업/이관 시 누락 위험 | 운영, 데이터 일관성 | §20 | 낮 |
+| **8** | **ParseDiff 레거시 코드 잔류** — static `ParseDiff` 메서드가 `GetDiffSummaryAsync`와 기능 중복. 둘 다 동일 " b/" 취약점 공유 | 코드 중복, 유지보수 혼란 | §5 | 낮 |
+| **9** | **IProcessRunner stderr bare catch** — `StreamingProcess._stderrTask`의 `catch { }` 블록(`IProcessRunner.cs:75`)이 stderr 에러 정보 손실 | 디버깅 어려움 | §4 | 낮 |
+| **10** | **ContentGrouper 중간 텍스트 휴리스틱** — 하드코딩된 한국어/영어 패턴으로 텍스트 분류. 다국어 확장 시 패턴 폭발 | 렌더링 오분류 | §13 | 낮 |
 
 ### 차기 개선 후보
 
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
-| ~~**1**~~ | ~~**훅 엔진 개선** — 타임아웃 기본값 0 허용 + 출력 미캡처~~ | `Math.Clamp(1-300s)` 타임아웃 보호 + `HookExecutionResult` 반환으로 출력 캡처. 8개 테스트 추가 | §14 | ~~중~~ ✅ |
-| ~~**2**~~ | ~~**QuestionDetector 감지 한계** — 한국어/영어 `?` 패턴만~~ | ~~`QuestionDetector.cs:9-21` — `?`로 끝나는 문장만 감지. 명령형 질문, 선택 요청 ("pick", "select"), 확인 요청 패턴 누락~~ | ~~§13~~ | ~~낮~~ |
-| ~~**3**~~ | ~~**Usage HashSet 재시작 시 리셋** — 중복 기록 가능~~ | ~~`UsageService`의 `_seenHashes` 인메모리 HashSet이 앱 재시작 시 초기화. 같은 세션의 사용량 이중 기록 가능~~ | §20 | ~~낮~~ |
-| ~~**4**~~ | ~~**중복 제거 해시 영속화** — 재시작 후 JSONL에서 기존 해시 재로드 필요~~ | ~~10MB 로테이션은 도입되었으나, 재시작 시 기존 해시를 로드하는 로직의 일관성 검증 필요~~ | §20 | ~~낮~~ |
-| ~~**5**~~ | ~~**stdout 전체 메모리 로드** — GitService 대형 diff 시 메모리 문제~~ | ✅ **해결 완료** — `MaxOutputBytes` bounded read (Phase 10) + `RunStreamingAsync` + `GetDiffSummaryAsync` 스트리밍 파싱 (Phase 11) | §5 | ~~중~~ ✅ |
+| **1** | **ToolCallCard JSON 매 렌더 파싱** — 도구 입력 JSON을 캐싱 없이 매 렌더마다 `JsonSerializer.Deserialize` | 렌더 성능 | §13 | 낮 |
+| **2** | **FileSystemWatcher 이벤트 폭주** — Windows에서 빠른 파일 변경 시 이벤트 과다 → UI 업데이트 과부하 | UI 버벅임 | §12 | 중 |
+| **3** | **알림 히스토리 없음** — 놓친 알림을 확인할 방법 없음 | UX | §21 | 중 |
+| **4** | **MCP 서버 수정 불가** — 기존 서버 설정 변경이 불가. 삭제 후 재추가만 가능 | UX | §16 | 낮 |
+| **5** | **스킬 체이닝 불가** — `/commit` 후 `/review` 같은 워크플로우 자동화 미지원 | 생산성 | §15 | 중 |
 
 ---
 
-> 이 문서의 각 섹션을 가리켜 변경 방향을 지시하세요. 예:
-> - "Top 1: Session/ChatMessage를 record 기반 불변 모델로 전환"
-> - "Top 2: ClaudeService 스트리밍 루프를 공통 메서드로 추출"
-> - "Top 4: ChatView ProcessMessageAsync를 안전한 비동기 패턴으로 전환"
+> 이 문서의 각 섹션을 가리켜 변경 방향을 지시하세요.
