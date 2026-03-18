@@ -82,6 +82,7 @@
             catch { _diff = null; }
 
             _tree = BuildTree(files);
+            ExpandAllDirs(_tree);
         }
         catch (Exception ex)
         {
@@ -193,6 +194,18 @@
             FileChangeType.Renamed => "color: #fab387;",
             _ => "color: #89b4fa;"
         };
+    }
+
+    private void ExpandAllDirs(List<FileNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            if (node.IsDirectory)
+            {
+                _expandedDirs.Add(node.FullPath);
+                ExpandAllDirs(node.Children);
+            }
+        }
     }
 
     private static List<FileNode> BuildTree(List<string> files)
