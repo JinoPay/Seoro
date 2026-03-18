@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
@@ -12,16 +11,20 @@ public class SessionStreamingState
 
 public class ChatState : IDisposable
 {
+    // Sub-managers (composition)
+    public MessageManager Messages { get; }
+    public StreamingStateManager Streaming { get; }
+    public SettingsStateManager Settings { get; }
+    public TabManager Tabs { get; } = new();
+
+    // Navigation state
     public Workspace? CurrentWorkspace { get; private set; }
     public Session? CurrentSession { get; private set; }
     public bool IsSpotlightActive { get; private set; }
     public string? PendingMessage { get; private set; }
     public RightPanelMode RightPanel { get; private set; }
 
-    public TabManager Tabs { get; } = new();
-
-    private readonly ConcurrentDictionary<string, SessionStreamingState> _streamingStates = new();
-    private readonly ConcurrentDictionary<string, Session> _activeSessions = new();
+    // Debounce
     private Timer? _debounceTimer;
     private volatile bool _pendingNotification;
     private const int DebounceMs = 50;
@@ -31,39 +34,98 @@ public class ChatState : IDisposable
 
     public ChatState()
     {
+        Messages = new MessageManager(NotifyStateChanged);
+        Streaming = new StreamingStateManager(NotifyStateChanged);
+        Settings = new SettingsStateManager(NotifyStateChanged);
         Tabs.OnTabChanged += NotifyStateChanged;
     }
 
-    // Current session streaming shortcuts (backward compatible)
-    public bool IsStreaming => CurrentSession != null && IsSessionStreaming(CurrentSession.Id);
-    public StreamingPhase Phase => CurrentSession != null ? GetSessionPhase(CurrentSession.Id) : StreamingPhase.None;
-    public string? ActiveToolName => CurrentSession != null ? GetSessionToolName(CurrentSession.Id) : null;
+    // --- Current session streaming shortcuts (backward compatible) ---
 
-    // Per-session streaming state
-    public bool IsSessionStreaming(string sessionId)
-        => _streamingStates.TryGetValue(sessionId, out var s) && s.IsStreaming;
+    public bool IsStreaming => CurrentSession != null && Streaming.IsSessionStreaming(CurrentSession.Id);
+    public StreamingPhase Phase => CurrentSession != null ? Streaming.GetSessionPhase(CurrentSession.Id) : StreamingPhase.None;
+    public string? ActiveToolName => CurrentSession != null ? Streaming.GetSessionToolName(CurrentSession.Id) : null;
 
-    public StreamingPhase GetSessionPhase(string sessionId)
-        => _streamingStates.TryGetValue(sessionId, out var s) ? s.Phase : StreamingPhase.None;
+    // --- Streaming delegation (backward compatible) ---
 
-    public string? GetSessionToolName(string sessionId)
-        => _streamingStates.TryGetValue(sessionId, out var s) ? s.ActiveToolName : null;
+    public bool IsSessionStreaming(string sessionId) => Streaming.IsSessionStreaming(sessionId);
+    public StreamingPhase GetSessionPhase(string sessionId) => Streaming.GetSessionPhase(sessionId);
+    public string? GetSessionToolName(string sessionId) => Streaming.GetSessionToolName(sessionId);
+    public bool HasAnyStreaming() => Streaming.HasAnyStreaming();
+    public IReadOnlyList<string> GetStreamingSessionIds() => Streaming.GetStreamingSessionIds();
+    public void RegisterActiveSession(Session session) => Streaming.RegisterActiveSession(session);
+    public void UnregisterActiveSession(string sessionId) => Streaming.UnregisterActiveSession(sessionId);
+    public Session? GetActiveSession(string sessionId) => Streaming.GetActiveSession(sessionId);
 
-    public bool HasAnyStreaming()
-        => _streamingStates.Values.Any(s => s.IsStreaming);
+    public void SetStreaming(bool streaming, string? sessionId = null)
+        => Streaming.SetStreaming(streaming, sessionId ?? CurrentSession?.Id);
 
-    public IReadOnlyList<string> GetStreamingSessionIds()
-        => _streamingStates.Where(kv => kv.Value.IsStreaming).Select(kv => kv.Key).ToList();
+    public void SetPhase(StreamingPhase phase, string? toolName = null, string? sessionId = null)
+        => Streaming.SetPhase(phase, toolName, sessionId ?? CurrentSession?.Id);
 
-    // Active session registry: holds live in-memory session objects during streaming
-    public void RegisterActiveSession(Session session)
-        => _activeSessions[session.Id] = session;
+    // --- Message delegation (backward compatible) ---
 
-    public void UnregisterActiveSession(string sessionId)
-        => _activeSessions.TryRemove(sessionId, out _);
+    public void AddUserMessage(string text)
+    {
+        if (CurrentSession != null) Messages.AddUserMessage(CurrentSession, text);
+    }
 
-    public Session? GetActiveSession(string sessionId)
-        => _activeSessions.TryGetValue(sessionId, out var session) ? session : null;
+    public void AddUserMessage(Session session, string text)
+        => Messages.AddUserMessage(session, text);
+
+    public void AddUserMessage(string text, List<FileAttachment> attachments)
+    {
+        if (CurrentSession != null) Messages.AddUserMessage(CurrentSession, text, attachments);
+    }
+
+    public void AddUserMessage(Session session, string text, List<FileAttachment> attachments)
+        => Messages.AddUserMessage(session, text, attachments);
+
+    public ChatMessage StartAssistantMessage()
+        => Messages.StartAssistantMessage(CurrentSession!);
+
+    public ChatMessage StartAssistantMessage(Session session)
+        => Messages.StartAssistantMessage(session);
+
+    public void AppendText(ChatMessage message, string text)
+        => Messages.AppendText(message, text);
+
+    public void AppendThinking(ChatMessage message, string text)
+        => Messages.AppendThinking(message, text);
+
+    public void AddToolCall(ChatMessage message, ToolCall toolCall)
+        => Messages.AddToolCall(message, toolCall);
+
+    public void FinishMessage(ChatMessage message)
+        => Messages.FinishMessage(message);
+
+    public void AddSystemMessage(string text)
+    {
+        if (CurrentSession != null) Messages.AddSystemMessage(CurrentSession, text);
+    }
+
+    public void AddSystemMessage(Session session, string text)
+        => Messages.AddSystemMessage(session, text);
+
+    // --- Settings delegation (backward compatible) ---
+
+    public bool ShowSettings => Settings.ShowSettings;
+    public string SettingsSection => Settings.SettingsSection;
+    public string? SettingsWorkspaceId => Settings.SettingsWorkspaceId;
+
+    public void OpenSettings(string section = "general", string? workspaceId = null)
+        => Settings.OpenSettings(section, workspaceId);
+
+    public void CloseSettings()
+        => Settings.CloseSettings();
+
+    public void SetSettingsSection(string section)
+        => Settings.SetSettingsSection(section);
+
+    public void SetSettingsWorkspace(string? workspaceId)
+        => Settings.SetSettingsWorkspace(workspaceId);
+
+    // --- Navigation & UI state (stays in ChatState) ---
 
     public void SetWorkspace(Workspace workspace)
     {
@@ -77,167 +139,11 @@ public class ChatState : IDisposable
         CurrentSession = session;
         Tabs.Reset(session?.Title);
 
-        // 세션 선택 시 기본으로 파일 탐색기 열기
         if (session != null && session.Status != SessionStatus.Pending)
             RightPanel = RightPanelMode.Explorer;
         else
             RightPanel = RightPanelMode.None;
 
-        NotifyStateChanged();
-    }
-
-    public void SetStreaming(bool streaming, string? sessionId = null)
-    {
-        var key = sessionId ?? CurrentSession?.Id;
-        if (key == null) return;
-
-        var state = _streamingStates.GetOrAdd(key, _ => new SessionStreamingState());
-        state.IsStreaming = streaming;
-        if (!streaming)
-        {
-            state.Phase = StreamingPhase.None;
-            state.ActiveToolName = null;
-        }
-        NotifyStateChanged();
-    }
-
-    public void SetPhase(StreamingPhase phase, string? toolName = null, string? sessionId = null)
-    {
-        var key = sessionId ?? CurrentSession?.Id;
-        if (key == null) return;
-
-        var state = _streamingStates.GetOrAdd(key, _ => new SessionStreamingState());
-        if (state.Phase == phase && state.ActiveToolName == toolName) return;
-        state.Phase = phase;
-        state.ActiveToolName = toolName;
-        NotifyStateChanged();
-    }
-
-    public void AddUserMessage(string text)
-    {
-        CurrentSession?.Messages.Add(new ChatMessage
-        {
-            Role = MessageRole.User,
-            Text = text
-        });
-        NotifyStateChanged();
-    }
-
-    public void AddUserMessage(Session session, string text)
-    {
-        session.Messages.Add(new ChatMessage
-        {
-            Role = MessageRole.User,
-            Text = text
-        });
-        NotifyStateChanged();
-    }
-
-    public void AddUserMessage(string text, List<FileAttachment> attachments)
-    {
-        CurrentSession?.Messages.Add(new ChatMessage
-        {
-            Role = MessageRole.User,
-            Text = text,
-            Attachments = attachments
-        });
-        NotifyStateChanged();
-    }
-
-    public void AddUserMessage(Session session, string text, List<FileAttachment> attachments)
-    {
-        session.Messages.Add(new ChatMessage
-        {
-            Role = MessageRole.User,
-            Text = text,
-            Attachments = attachments
-        });
-        NotifyStateChanged();
-    }
-
-    public ChatMessage StartAssistantMessage()
-    {
-        var msg = new ChatMessage
-        {
-            Role = MessageRole.Assistant,
-            IsStreaming = true,
-            StreamingStartedAt = DateTime.UtcNow
-        };
-        CurrentSession?.Messages.Add(msg);
-        NotifyStateChanged();
-        return msg;
-    }
-
-    public ChatMessage StartAssistantMessage(Session session)
-    {
-        var msg = new ChatMessage
-        {
-            Role = MessageRole.Assistant,
-            IsStreaming = true,
-            StreamingStartedAt = DateTime.UtcNow
-        };
-        session.Messages.Add(msg);
-        NotifyStateChanged();
-        return msg;
-    }
-
-    public void AppendText(ChatMessage message, string text)
-    {
-        message.Text += text;
-
-        var lastPart = message.Parts.Count > 0 ? message.Parts[^1] : null;
-        if (lastPart?.Type == ContentPartType.Text)
-        {
-            lastPart.Text += text;
-        }
-        else
-        {
-            message.Parts.Add(new ContentPart
-            {
-                Type = ContentPartType.Text,
-                Text = text
-            });
-        }
-
-        NotifyStateChanged();
-    }
-
-    public void AppendThinking(ChatMessage message, string text)
-    {
-        var lastPart = message.Parts.Count > 0 ? message.Parts[^1] : null;
-        if (lastPart?.Type == ContentPartType.Thinking)
-        {
-            lastPart.Text += text;
-        }
-        else
-        {
-            message.Parts.Add(new ContentPart
-            {
-                Type = ContentPartType.Thinking,
-                Text = text
-            });
-        }
-
-        NotifyStateChanged();
-    }
-
-    public void AddToolCall(ChatMessage message, ToolCall toolCall)
-    {
-        message.ToolCalls.Add(toolCall);
-
-        message.Parts.Add(new ContentPart
-        {
-            Type = ContentPartType.ToolCall,
-            ToolCall = toolCall
-        });
-
-        NotifyStateChanged();
-    }
-
-    public void FinishMessage(ChatMessage message)
-    {
-        message.IsStreaming = false;
-        message.StreamingFinishedAt = DateTime.UtcNow;
         NotifyStateChanged();
     }
 
@@ -265,59 +171,6 @@ public class ChatState : IDisposable
         return msg;
     }
 
-    public void AddSystemMessage(string text)
-    {
-        CurrentSession?.Messages.Add(new ChatMessage
-        {
-            Role = MessageRole.System,
-            Text = text
-        });
-        NotifyStateChanged();
-    }
-
-    public void AddSystemMessage(Session session, string text)
-    {
-        session.Messages.Add(new ChatMessage
-        {
-            Role = MessageRole.System,
-            Text = text
-        });
-        NotifyStateChanged();
-    }
-
-    // Settings page state
-    public bool ShowSettings { get; private set; }
-    public string SettingsSection { get; private set; } = "general";
-    public string? SettingsWorkspaceId { get; private set; }
-
-    public void OpenSettings(string section = "general", string? workspaceId = null)
-    {
-        ShowSettings = true;
-        SettingsSection = section;
-        SettingsWorkspaceId = workspaceId;
-        NotifyStateChanged();
-    }
-
-    public void CloseSettings()
-    {
-        ShowSettings = false;
-        SettingsWorkspaceId = null;
-        NotifyStateChanged();
-    }
-
-    public void SetSettingsSection(string section)
-    {
-        SettingsSection = section;
-        NotifyStateChanged();
-    }
-
-    public void SetSettingsWorkspace(string? workspaceId)
-    {
-        SettingsWorkspaceId = workspaceId;
-        SettingsSection = workspaceId != null ? "ws-general" : "general";
-        NotifyStateChanged();
-    }
-
     public void SetRightPanel(RightPanelMode mode)
     {
         RightPanel = mode;
@@ -330,11 +183,12 @@ public class ChatState : IDisposable
         NotifyStateChanged();
     }
 
+    // --- Debounced notification ---
+
     public void NotifyStateChanged()
     {
-        if (HasAnyStreaming())
+        if (Streaming.HasAnyStreaming())
         {
-            // During streaming, debounce to reduce re-render flood
             _pendingNotification = true;
             _debounceTimer ??= new Timer(_ =>
             {
@@ -347,7 +201,6 @@ public class ChatState : IDisposable
         }
         else
         {
-            // Not streaming: fire immediately, stop timer
             if (_debounceTimer != null)
             {
                 _debounceTimer.Dispose();

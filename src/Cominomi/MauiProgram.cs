@@ -86,6 +86,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<IActivityService, ActivityService>();
         builder.Services.AddSingleton<IStreamEventProcessor, StreamEventProcessor>();
         builder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
+        builder.Services.AddSingleton<ISystemPromptBuilder, SystemPromptBuilder>();
+        builder.Services.AddSingleton<ISessionInitializer, SessionInitializer>();
+        builder.Services.AddSingleton<IChatPrWorkflowService, ChatPrWorkflowService>();
 
         // Load external model definitions (pricing, model names) if present
         var modelsJsonPath = Path.Combine(AppPaths.Settings, "models.json");

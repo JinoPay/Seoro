@@ -204,12 +204,19 @@ else
         await JS.InvokeVoidAsync("setTheme", effectiveTheme);
     }
 
-    private async void HandleSettingsChanged(AppSettings settings)
+    private void HandleSettingsChanged(AppSettings settings)
     {
-        await InvokeAsync(async () =>
+        _ = InvokeAsync(async () =>
         {
-            await ApplyTheme(settings.Theme);
-            StateHasChanged();
+            try
+            {
+                await ApplyTheme(settings.Theme);
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"HandleSettingsChanged failed: {ex}");
+            }
         });
     }
 
