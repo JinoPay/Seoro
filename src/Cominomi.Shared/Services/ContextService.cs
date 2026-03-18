@@ -33,14 +33,14 @@ public class ContextService : IContextService
     {
         await EnsureContextDirectoryAsync(worktreePath);
         var path = Path.Combine(worktreePath, ContextDir, NotesFile);
-        await File.WriteAllTextAsync(path, content);
+        await AtomicFileWriter.WriteAsync(path, content);
     }
 
     public async Task SaveTodosAsync(string worktreePath, string content)
     {
         await EnsureContextDirectoryAsync(worktreePath);
         var path = Path.Combine(worktreePath, ContextDir, TodosFile);
-        await File.WriteAllTextAsync(path, content);
+        await AtomicFileWriter.WriteAsync(path, content);
     }
 
     public async Task SavePlanAsync(string worktreePath, string planName, string content)
@@ -51,7 +51,7 @@ public class ContextService : IContextService
 
         var fileName = planName.EndsWith(".md") ? planName : $"{planName}.md";
         var path = Path.Combine(plansPath, fileName);
-        await File.WriteAllTextAsync(path, content);
+        await AtomicFileWriter.WriteAsync(path, content);
     }
 
     public Task DeletePlanAsync(string worktreePath, string planName)
@@ -94,11 +94,11 @@ public class ContextService : IContextService
         // Create empty files if they don't exist
         var notesPath = Path.Combine(contextPath, NotesFile);
         if (!File.Exists(notesPath))
-            await File.WriteAllTextAsync(notesPath, "");
+            await AtomicFileWriter.WriteAsync(notesPath, "");
 
         var todosPath = Path.Combine(contextPath, TodosFile);
         if (!File.Exists(todosPath))
-            await File.WriteAllTextAsync(todosPath, "");
+            await AtomicFileWriter.WriteAsync(todosPath, "");
 
         // Add .context to .gitignore if not already there
         var gitignorePath = Path.Combine(worktreePath, ".gitignore");
@@ -107,7 +107,7 @@ public class ContextService : IContextService
             var content = await File.ReadAllTextAsync(gitignorePath);
             if (!content.Contains(".context/"))
             {
-                await File.AppendAllTextAsync(gitignorePath, "\n.context/\n");
+                await AtomicFileWriter.AppendAsync(gitignorePath, "\n.context/\n");
             }
         }
     }

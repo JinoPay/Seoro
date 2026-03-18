@@ -19,7 +19,7 @@ public partial class SessionService : ISessionService
     private readonly string _sessionsDir = AppPaths.Sessions;
     private readonly string _archiveDir = AppPaths.ArchivedContexts;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new();
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _initLocks = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _worktreeInitLocks = new();
 
     // In-memory metadata cache: avoids re-reading all files on every call
     private readonly ConcurrentDictionary<string, Session> _metadataCache = new();
@@ -215,8 +215,8 @@ public partial class SessionService : ISessionService
 
     public async Task<Session> InitializeWorktreeAsync(string sessionId, string baseBranch)
     {
-        var initLock = _initLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
-        await initLock.WaitAsync();
+        var semaphore = _worktreeInitLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync();
         try
         {
             // Invalidate cache so we read the latest state from disk after waiting on the lock
@@ -226,10 +226,10 @@ public partial class SessionService : ISessionService
             if (session == null)
                 throw new InvalidOperationException($"Session '{sessionId}' not found.");
 
-            // Guard: skip if another call already moved this session past Pending
+            // Guard: if another call already initialized this session, return as-is
             if (session.Status != SessionStatus.Pending)
             {
-                _logger.LogDebug("Session {SessionId} already initialized (status: {Status}), skipping", sessionId, session.Status);
+                _logger.LogDebug("Skipping worktree init for session {SessionId}: status is {Status}", sessionId, session.Status);
                 return session;
             }
 
@@ -275,7 +275,7 @@ public partial class SessionService : ISessionService
         }
         finally
         {
-            initLock.Release();
+            semaphore.Release();
         }
     }
 
