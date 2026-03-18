@@ -49,7 +49,7 @@
                 return firstLine.Length > 80 ? firstLine[..80] + "..." : firstLine;
             }
         }
-        catch { }
+        catch (JsonException) { /* malformed tool input — render empty */ }
         return "";
     }
 

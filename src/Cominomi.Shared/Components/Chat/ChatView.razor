@@ -521,7 +521,10 @@
                 await NotificationService.SendAsync(session.CityName, body, type);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to send notification for session {SessionId}", session.Id);
+        }
     }
 
     private void HandleCancel()

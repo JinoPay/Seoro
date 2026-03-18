@@ -21,7 +21,7 @@ public static class AtomicFileWriter
         finally
         {
             // Clean up temp file if move failed
-            try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { }
+            try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { /* best-effort: temp file cleanup is non-critical */ }
         }
     }
 
