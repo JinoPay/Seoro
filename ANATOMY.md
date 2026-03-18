@@ -103,6 +103,13 @@
 | #136 | 옵션 패턴 도입 | `IOptionsMonitor<AppSettings>` + `AppSettingsFactory` + `AppSettingsChangeNotifier`. 8개 서비스/컴포넌트 전환 |
 | #137 | 플러그인 실행 엔진 | EntryPoint 로딩/실행/샌드박싱 + hooks·skills 매니페스트 자동 등록 |
 
+### 구조 개선 Phase 9 (2026-03-18) — 신규 구조적 문제 #1 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| 7개 핵심 모델 `init` 전환 | 생성 후 불변이어야 할 프로퍼티 37개를 `{ get; set; }` → `{ get; init; }`. Session(7), ChatMessage(5), ContentPart(2), Workspace(3), AppSettings(1), MemoryEntry(3), ActivityEntry(9+2), MainTab(3), ToolCall(2) |
+| `SessionJsonConverter` 리팩토링 | 순차 할당(`session.Id = ...`) → 객체 이니셜라이저 패턴으로 전환. `init` 프로퍼티와 호환 |
+| 기존 `private set` 유지 | `Session.Status`(상태 머신), `TotalInputTokens/OutputTokens`(Guard 검증) 등 기존 보호 패턴 보존 |
+
 ### 구조 개선 Phase 8 (2026-03-18) — 신규 구조적 문제 #2 해결
 | 변경 내용 | 역할 / 영향 범위 |
 |-----------|-----------------|
@@ -1557,7 +1564,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
-| **1** | **데이터 모델 불변성 부재** — 7개 핵심 모델에 81개 `public set` 프로퍼티 | `ChatState`와 `Session`이 같은 `ChatMessage` 객체 가변 참조 공유. `AppendText()`가 `Text` + `Parts` 양쪽 수정. 어디서든 조용히 상태 변경 가능. Session(18), ChatMessage(8), Workspace(12), AppSettings(22), MemoryEntry(8), ActivityEntry(8), MainTab(5) | §3, §23 | 높 |
+| **1** | ~~**데이터 모델 불변성 부재**~~ ✅ **해결** — 37개 프로퍼티 `init` 전환, `SessionJsonConverter` 객체 이니셜라이저 리팩토링 | 7개 핵심 모델의 생성 후 불변 프로퍼티(Id, CreatedAt, WorkspaceId, AgentType 등)를 `init`으로 전환. 잔여 `set` 프로퍼티(Title, Model, PermissionMode 등)는 UI/서비스에서 정당하게 변경되는 항목. `ChatState`↔`Session` 가변 참조 공유 문제는 아키텍처 수준 개선 필요 | §3, §23 | — |
 | **2** | **ClaudeService 재시도 ~35줄 복붙** — `--verbose` 재시도 시 스트리밍 루프 전체 복사 | `ClaudeService.cs:83-102` (첫 루프)와 `:132-146` (재시도 루프)가 거의 동일. 하나만 수정 시 동작 불일치 | §7 | 중 |
 | **3** | **시스템 프롬프트·메모리 크기 제한 미흡** — 문자 수 기반 제한만, 토큰 카운팅 없음 | `MemoryService`가 `MaxMemoryPromptChars`/`MaxMemoryEntryChars` 문자 수로 절단하나, 토큰 기반이 아님. notes.md는 크기 제한 없이 프롬프트에 주입. 워크스페이스별 메모리 필터링은 `WorkspaceId == null`이면 모든 워크스페이스에 주입 | §17, §18 | 중 |
 | **4** | **ChatView `Task.Run` fire-and-forget** — 예외 미관찰 위험 | `ChatView.razor:295` `_ = Task.Run(() => ProcessMessageAsync(input))`. 에러 핸들링·취소 추적 없음. 스트리밍 실패 시 조용히 무시될 수 있음 | §10 | 중 |

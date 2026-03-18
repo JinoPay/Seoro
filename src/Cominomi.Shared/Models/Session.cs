@@ -21,14 +21,14 @@ public enum SessionStatus
 [JsonConverter(typeof(SessionJsonConverter))]
 public class Session
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Id { get; init; } = Guid.NewGuid().ToString();
     public string Title { get; set; } = "New Chat";
     public string Model { get; set; } = ModelDefinitions.Default.Id;
-    public string WorkspaceId { get; set; } = "default";
+    public string WorkspaceId { get; init; } = "default";
     public string PermissionMode { get; set; } = CominomiConstants.DefaultPermissionMode;
     public string EffortLevel { get; set; } = CominomiConstants.DefaultEffortLevel;
-    public AgentType AgentType { get; set; } = AgentType.Code;
-    public string CityName { get; set; } = "";
+    public AgentType AgentType { get; init; } = AgentType.Code;
+    public string CityName { get; init; } = "";
     public SessionStatus Status { get; private set; } = SessionStatus.Initializing;
 
     /// <summary>
@@ -57,14 +57,14 @@ public class Session
     public List<ChatMessage> Messages { get; set; } = [];
 
     // Git 관심사 (worktree, branch)
-    public GitContext Git { get; set; } = new();
+    public GitContext Git { get; init; } = new();
 
     // PR/이슈 관심사
-    public PrContext Pr { get; set; } = new();
+    public PrContext Pr { get; init; } = new();
 
     public string? ConversationId { get; set; }
-    public int? MaxTurns { get; set; }
-    public decimal? MaxBudgetUsd { get; set; }
+    public int? MaxTurns { get; init; }
+    public decimal? MaxBudgetUsd { get; init; }
     private long _totalInputTokens;
     private long _totalOutputTokens;
 
@@ -81,7 +81,7 @@ public class Session
     }
     public bool PlanCompleted { get; set; }
     public string? PlanFilePath { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     [JsonIgnore]

@@ -9,20 +9,20 @@ public enum ContentPartType
 
 public class ContentPart
 {
-    public ContentPartType Type { get; set; }
+    public ContentPartType Type { get; init; }
     public string? Text { get; set; }
-    public ToolCall? ToolCall { get; set; }
+    public ToolCall? ToolCall { get; init; }
 }
 
 public class ChatMessage
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString();
-    public MessageRole Role { get; set; }
+    public string Id { get; init; } = Guid.NewGuid().ToString();
+    public MessageRole Role { get; init; }
     public string Text { get; set; } = string.Empty;
-    public List<ToolCall> ToolCalls { get; set; } = [];
-    public List<ContentPart> Parts { get; set; } = [];
-    public List<FileAttachment> Attachments { get; set; } = [];
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public List<ToolCall> ToolCalls { get; init; } = [];
+    public List<ContentPart> Parts { get; init; } = [];
+    public List<FileAttachment> Attachments { get; init; } = [];
+    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
     public bool IsStreaming { get; set; }
     public DateTime? StreamingStartedAt { get; set; }
     public DateTime? StreamingFinishedAt { get; set; }

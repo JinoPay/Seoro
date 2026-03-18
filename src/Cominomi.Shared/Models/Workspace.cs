@@ -12,11 +12,11 @@ public enum WorkspaceStatus
 
 public class Workspace
 {
-    public int SchemaVersion { get; set; } = 1;
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public int SchemaVersion { get; init; } = 1;
+    public string Id { get; init; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = "";
     public string DefaultModel { get; set; } = ModelDefinitions.Default.Id;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Git fields

@@ -4,7 +4,7 @@ namespace Cominomi.Shared.Models;
 
 public class AppSettings
 {
-    public int SchemaVersion { get; set; } = 1;
+    public int SchemaVersion { get; init; } = 1;
     public string DefaultModel { get; set; } = ModelDefinitions.Default.Id;
     public string Theme { get; set; } = "dark";
     public string? ClaudePath { get; set; }

@@ -17,33 +17,97 @@ public class SessionJsonConverter : JsonConverter<Session>
         var doc = JsonDocument.ParseValue(ref reader);
         var root = doc.RootElement;
 
-        var session = new Session();
+        // Extract enum values
+        AgentType agentType = AgentType.Code;
+        if (root.TryGetProperty("agentType", out var atEl) && atEl.ValueKind == JsonValueKind.String)
+            if (Enum.TryParse<AgentType>(atEl.GetString(), true, out var at))
+                agentType = at;
 
-        // Scalar properties
-        if (root.TryGet("id", out var id)) session.Id = id;
+        int? maxTurns = null;
+        if (root.TryGetProperty("maxTurns", out var mt) && mt.ValueKind == JsonValueKind.Number)
+            maxTurns = mt.GetInt32();
+
+        decimal? maxBudgetUsd = null;
+        if (root.TryGetProperty("maxBudgetUsd", out var mb) && mb.ValueKind == JsonValueKind.Number)
+            maxBudgetUsd = mb.GetDecimal();
+
+        DateTime createdAt = DateTime.UtcNow;
+        if (root.TryGetProperty("createdAt", out var ca) && ca.ValueKind == JsonValueKind.String)
+            if (DateTime.TryParse(ca.GetString(), out var dt)) createdAt = dt;
+
+        // Git context: try nested "git" first, then flat properties
+        GitContext git;
+        if (root.TryGetProperty("git", out var gitEl) && gitEl.ValueKind == JsonValueKind.Object)
+        {
+            git = DeserializeGitContext(gitEl, options);
+        }
+        else
+        {
+            // Legacy flat format
+            git = new GitContext();
+            if (root.TryGet("worktreePath", out var wtp)) git.WorktreePath = wtp;
+            if (root.TryGet("branchName", out var bn)) git.BranchName = bn;
+            if (root.TryGet("baseBranch", out var bb)) git.BaseBranch = bb;
+            if (root.TryGetProperty("isLocalDir", out var ild) && ild.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                git.IsLocalDir = ild.GetBoolean();
+            if (root.TryGetProperty("additionalDirs", out var ad) && ad.ValueKind == JsonValueKind.Array)
+                git.AdditionalDirs = JsonSerializer.Deserialize<List<string>>(ad.GetRawText(), options) ?? [];
+        }
+
+        // PR context: try nested "pr" first, then flat properties
+        PrContext pr;
+        if (root.TryGetProperty("pr", out var prEl) && prEl.ValueKind == JsonValueKind.Object)
+        {
+            pr = DeserializePrContext(prEl, options);
+        }
+        else
+        {
+            // Legacy flat format
+            pr = new PrContext();
+            if (root.TryGet("prUrl", out var pu)) pr.PrUrl = pu;
+            if (root.TryGetProperty("prNumber", out var pn) && pn.ValueKind == JsonValueKind.Number)
+                pr.PrNumber = pn.GetInt32();
+            if (root.TryGetProperty("issueNumber", out var inEl) && inEl.ValueKind == JsonValueKind.Number)
+                pr.IssueNumber = inEl.GetInt32();
+            if (root.TryGet("issueUrl", out var iu)) pr.IssueUrl = iu;
+            if (root.TryGetProperty("conflictFiles", out var cf) && cf.ValueKind == JsonValueKind.Array)
+                pr.ConflictFiles = JsonSerializer.Deserialize<List<string>>(cf.GetRawText(), options);
+        }
+
+        // Messages (may be empty array in metadata file)
+        List<ChatMessage> messages = [];
+        if (root.TryGetProperty("messages", out var msgsEl) && msgsEl.ValueKind == JsonValueKind.Array)
+            messages = JsonSerializer.Deserialize<List<ChatMessage>>(msgsEl.GetRawText(), options) ?? [];
+
+        // Create session — init properties set via object initializer
+        var session = new Session
+        {
+            Id = root.TryGet("id", out var id) ? id : Guid.NewGuid().ToString(),
+            WorkspaceId = root.TryGet("workspaceId", out var wsId) ? wsId : "default",
+            CityName = root.TryGet("cityName", out var cn) ? cn : "",
+            AgentType = agentType,
+            MaxTurns = maxTurns,
+            MaxBudgetUsd = maxBudgetUsd,
+            CreatedAt = createdAt,
+            Git = git,
+            Pr = pr,
+            Messages = messages,
+        };
+
+        // Mutable properties — set after construction
         if (root.TryGet("title", out var title)) session.Title = title;
         if (root.TryGet("model", out var model)) session.Model = model;
-        if (root.TryGet("workspaceId", out var wsId)) session.WorkspaceId = wsId;
         if (root.TryGet("permissionMode", out var pm)) session.PermissionMode = pm;
         if (root.TryGet("effortLevel", out var el)) session.EffortLevel = el;
-        if (root.TryGet("cityName", out var cn)) session.CityName = cn;
+
         // Error: try new structured "error" object first, then legacy "errorMessage" string
         if (root.TryGetProperty("error", out var errEl) && errEl.ValueKind == JsonValueKind.Object)
-        {
             session.Error = JsonSerializer.Deserialize<AppError>(errEl.GetRawText(), options);
-        }
         else if (root.TryGet("errorMessage", out var em))
-        {
             session.Error = AppError.General(em);
-        }
+
         if (root.TryGet("conversationId", out var cid)) session.ConversationId = cid;
         if (root.TryGet("planFilePath", out var pfp)) session.PlanFilePath = pfp;
-
-        if (root.TryGetProperty("agentType", out var atEl) && atEl.ValueKind == JsonValueKind.String)
-        {
-            if (Enum.TryParse<AgentType>(atEl.GetString(), true, out var at))
-                session.AgentType = at;
-        }
 
         if (root.TryGetProperty("status", out var stEl) && stEl.ValueKind == JsonValueKind.String)
         {
@@ -51,10 +115,6 @@ public class SessionJsonConverter : JsonConverter<Session>
                 session.SetInitialStatus(st);
         }
 
-        if (root.TryGetProperty("maxTurns", out var mt) && mt.ValueKind == JsonValueKind.Number)
-            session.MaxTurns = mt.GetInt32();
-        if (root.TryGetProperty("maxBudgetUsd", out var mb) && mb.ValueKind == JsonValueKind.Number)
-            session.MaxBudgetUsd = mb.GetDecimal();
         if (root.TryGetProperty("totalInputTokens", out var tit) && tit.ValueKind == JsonValueKind.Number)
             session.TotalInputTokens = tit.GetInt64();
         if (root.TryGetProperty("totalOutputTokens", out var tot) && tot.ValueKind == JsonValueKind.Number)
@@ -62,62 +122,10 @@ public class SessionJsonConverter : JsonConverter<Session>
         if (root.TryGetProperty("planCompleted", out var pc) && pc.ValueKind is JsonValueKind.True or JsonValueKind.False)
             session.PlanCompleted = pc.GetBoolean();
 
-        if (root.TryGetProperty("createdAt", out var ca) && ca.ValueKind == JsonValueKind.String)
-        {
-            if (DateTime.TryParse(ca.GetString(), out var dt)) session.CreatedAt = dt;
-        }
         if (root.TryGetProperty("updatedAt", out var ua) && ua.ValueKind == JsonValueKind.String)
         {
             if (DateTime.TryParse(ua.GetString(), out var dt)) session.UpdatedAt = dt;
         }
-
-        // Messages (may be empty array in metadata file)
-        if (root.TryGetProperty("messages", out var msgsEl) && msgsEl.ValueKind == JsonValueKind.Array)
-        {
-            session.Messages = JsonSerializer.Deserialize<List<ChatMessage>>(msgsEl.GetRawText(), options) ?? [];
-        }
-
-        // Git context: try nested "git" first, then flat properties
-        if (root.TryGetProperty("git", out var gitEl) && gitEl.ValueKind == JsonValueKind.Object)
-        {
-            session.Git = DeserializeGitContext(gitEl, options);
-        }
-        else
-        {
-            // Legacy flat format
-            session.Git = new GitContext();
-            if (root.TryGet("worktreePath", out var wtp)) session.Git.WorktreePath = wtp;
-            if (root.TryGet("branchName", out var bn)) session.Git.BranchName = bn;
-            if (root.TryGet("baseBranch", out var bb)) session.Git.BaseBranch = bb;
-            if (root.TryGetProperty("isLocalDir", out var ild) && ild.ValueKind is JsonValueKind.True or JsonValueKind.False)
-                session.Git.IsLocalDir = ild.GetBoolean();
-            if (root.TryGetProperty("additionalDirs", out var ad) && ad.ValueKind == JsonValueKind.Array)
-                session.Git.AdditionalDirs = JsonSerializer.Deserialize<List<string>>(ad.GetRawText(), options) ?? [];
-        }
-
-        // PR context: try nested "pr" first, then flat properties
-        if (root.TryGetProperty("pr", out var prEl) && prEl.ValueKind == JsonValueKind.Object)
-        {
-            session.Pr = DeserializePrContext(prEl, options);
-        }
-        else
-        {
-            // Legacy flat format
-            session.Pr = new PrContext();
-            if (root.TryGet("prUrl", out var pu)) session.Pr.PrUrl = pu;
-            if (root.TryGetProperty("prNumber", out var pn) && pn.ValueKind == JsonValueKind.Number)
-                session.Pr.PrNumber = pn.GetInt32();
-            if (root.TryGetProperty("issueNumber", out var inEl) && inEl.ValueKind == JsonValueKind.Number)
-                session.Pr.IssueNumber = inEl.GetInt32();
-            if (root.TryGet("issueUrl", out var iu)) session.Pr.IssueUrl = iu;
-            if (root.TryGetProperty("conflictFiles", out var cf) && cf.ValueKind == JsonValueKind.Array)
-                session.Pr.ConflictFiles = JsonSerializer.Deserialize<List<string>>(cf.GetRawText(), options);
-        }
-
-        // AllowedTools / DisallowedTools were on Session, now on Git — but actually they're config, keep checking root
-        // These are not Git/PR related, but were on Session. Since we removed them, handle gracefully.
-        // Actually they were removed from Session entirely — they don't belong to Git or PR.
-        // Let me check if they need to stay somewhere...
 
         return session;
     }
