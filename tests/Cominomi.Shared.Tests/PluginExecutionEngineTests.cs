@@ -296,7 +296,8 @@ public class PluginExecutionEngineTests
     {
         public List<HookDefinition> AddedHooks { get; } = [];
 
-        public Task FireAsync(HookEvent hookEvent, Dictionary<string, string>? env = null) => Task.CompletedTask;
+        public Task<List<HookExecutionResult>> FireAsync(HookEvent hookEvent, Dictionary<string, string>? env = null) =>
+            Task.FromResult<List<HookExecutionResult>>([]);
         public List<HookDefinition> GetHooks() => AddedHooks;
         public Task AddHookAsync(HookDefinition hook) { AddedHooks.Add(hook); return Task.CompletedTask; }
         public Task RemoveHookAsync(HookEvent hookEvent, string command)
