@@ -401,6 +401,7 @@ public class PluginExecutionEngineTests
         public SkillDefinition? Find(string name) => RegisteredSkills.FirstOrDefault(s => s.Name == name);
         public string? TryParseSkillCommand(string input, out string? args) { args = null; return null; }
         public string ExpandSkill(SkillDefinition skill, string? args, Session session) => skill.PromptTemplate;
+        public bool TryParseSkillChain(string input, Session session, out List<SkillChainStep> steps) { steps = []; return false; }
         public void Register(SkillDefinition skill) => RegisteredSkills.Add(skill);
         public Task LoadCustomCommandsAsync(string? projectPath) => Task.CompletedTask;
         public Task SaveCommandAsync(SkillDefinition command) => Task.CompletedTask;

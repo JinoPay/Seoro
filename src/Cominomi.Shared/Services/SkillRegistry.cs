@@ -145,6 +145,88 @@ public class SkillRegistry : ISkillRegistry
         return expanded;
     }
 
+    public bool TryParseSkillChain(string input, Session session, out List<SkillChainStep> steps)
+    {
+        steps = [];
+        if (string.IsNullOrWhiteSpace(input) || !input.StartsWith('/'))
+            return false;
+
+        // Split on " | " to get pipe-separated segments
+        var segments = input.Split(" | ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length < 2)
+        {
+            // Single command — check if skill itself has a chain defined
+            var skillName = TryParseSkillCommand(input, out var skillArgs);
+            if (skillName == null) return false;
+
+            var skill = Find(skillName);
+            if (skill == null || skill.Chain.Count == 0) return false;
+
+            // First step: the command itself
+            steps.Add(new SkillChainStep
+            {
+                SkillName = skillName,
+                Args = skillArgs,
+                ExpandedText = ExpandSkill(skill, skillArgs, session)
+            });
+
+            // Append chain from skill definition
+            foreach (var chainedName in skill.Chain)
+            {
+                var chainedSkill = Find(chainedName);
+                if (chainedSkill == null) continue;
+                steps.Add(new SkillChainStep
+                {
+                    SkillName = chainedName,
+                    ExpandedText = ExpandSkill(chainedSkill, null, session)
+                });
+            }
+
+            return steps.Count > 1;
+        }
+
+        // Multiple pipe segments
+        SkillDefinition? firstSkill = null;
+        foreach (var segment in segments)
+        {
+            var seg = segment.Trim();
+            if (!seg.StartsWith('/')) continue;
+
+            var name = TryParseSkillCommand(seg, out var args);
+            if (name == null) continue;
+
+            var skill = Find(name);
+            if (skill == null) continue;
+
+            firstSkill ??= skill;
+            steps.Add(new SkillChainStep
+            {
+                SkillName = name,
+                Args = args,
+                ExpandedText = ExpandSkill(skill, args, session)
+            });
+        }
+
+        // Append chain from first skill's definition (after explicit pipe steps)
+        if (firstSkill?.Chain.Count > 0)
+        {
+            foreach (var chainedName in firstSkill.Chain)
+            {
+                if (steps.Any(s => s.SkillName.Equals(chainedName, StringComparison.OrdinalIgnoreCase)))
+                    continue; // skip duplicates
+                var chainedSkill = Find(chainedName);
+                if (chainedSkill == null) continue;
+                steps.Add(new SkillChainStep
+                {
+                    SkillName = chainedName,
+                    ExpandedText = ExpandSkill(chainedSkill, null, session)
+                });
+            }
+        }
+
+        return steps.Count > 1;
+    }
+
     public void Register(SkillDefinition skill)
     {
         var existing = _skills.FindIndex(s => s.Name == skill.Name);

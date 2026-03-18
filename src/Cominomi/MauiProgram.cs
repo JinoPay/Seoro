@@ -1,6 +1,7 @@
 using Cominomi.Services;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services;
+using Cominomi.Shared.Services.StreamEventHandlers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MudBlazor;
@@ -94,6 +95,16 @@ public static class MauiProgram
         builder.Services.AddSingleton<INotificationService, NotificationService>();
         builder.Services.AddSingleton<INotificationHistoryService, NotificationHistoryService>();
         builder.Services.AddSingleton<IActivityService, ActivityService>();
+        builder.Services.AddSingleton<IStreamEventHandler, SystemInitHandler>();
+        builder.Services.AddSingleton<IStreamEventHandler, ContentBlockStartHandler>();
+        builder.Services.AddSingleton<IStreamEventHandler, ContentBlockDeltaHandler>();
+        builder.Services.AddSingleton<IStreamEventHandler, ContentBlockStopHandler>();
+        builder.Services.AddSingleton<IStreamEventHandler, AssistantMessageHandler>();
+        builder.Services.AddSingleton<IStreamEventHandler, UserMessageHandler>();
+        builder.Services.AddSingleton<IStreamEventHandler, MessageStartHandler>();
+        builder.Services.AddSingleton<IStreamEventHandler, MessageDeltaHandler>();
+        builder.Services.AddSingleton<IStreamEventHandler, ResultHandler>();
+        builder.Services.AddSingleton<IStreamEventHandler, ErrorHandler>();
         builder.Services.AddSingleton<IStreamEventProcessor, StreamEventProcessor>();
         builder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
         builder.Services.AddSingleton<ISystemPromptBuilder, SystemPromptBuilder>();

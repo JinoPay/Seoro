@@ -212,6 +212,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
             StreamStartTime = DateTime.UtcNow
         };
         string? errorMessage = null;
+        bool wasCancelled = false;
 
         try
         {
@@ -241,6 +242,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            wasCancelled = true;
             _logger.LogInformation("{Mode} cancelled for session {SessionId}",
                 continueMode ? "Continue" : "Message processing", session.Id);
         }
@@ -269,7 +271,8 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
             PlanReviewVisible = streamCtx.PlanReviewVisible,
             QuickResponseVisible = streamCtx.QuickResponseVisible,
             QuickResponseOptions = streamCtx.QuickResponseOptions,
-            ErrorMessage = errorMessage
+            ErrorMessage = errorMessage,
+            WasCancelled = wasCancelled
         };
     }
 

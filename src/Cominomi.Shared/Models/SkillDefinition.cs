@@ -11,4 +11,5 @@ public class SkillDefinition
     public string? Namespace { get; set; }
     public bool AcceptsArguments { get; set; }
     public string? FilePath { get; set; }
+    public List<string> Chain { get; set; } = [];
 }

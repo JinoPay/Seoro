@@ -8,6 +8,7 @@ public interface ISkillRegistry
     SkillDefinition? Find(string name);
     string? TryParseSkillCommand(string input, out string? args);
     string ExpandSkill(SkillDefinition skill, string? args, Session session);
+    bool TryParseSkillChain(string input, Session session, out List<SkillChainStep> steps);
     void Register(SkillDefinition skill);
     Task LoadCustomCommandsAsync(string? projectPath);
     Task SaveCommandAsync(SkillDefinition command);

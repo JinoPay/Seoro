@@ -16,6 +16,9 @@ public class StreamResult
 
     /// <summary>Non-null when the streaming loop caught an exception that ChatView should surface via Snackbar.</summary>
     public string? ErrorMessage { get; init; }
+
+    /// <summary>True when the stream was cancelled via CancellationToken.</summary>
+    public bool WasCancelled { get; init; }
 }
 
 /// <summary>
