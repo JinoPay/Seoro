@@ -80,11 +80,8 @@
 
                 <MudSelect T="string" @bind-Value="_settings.DefaultEffortLevel" Label="기본 Effort 레벨"
                            Variant="Variant.Outlined" Margin="Margin.Dense"
-                           HelperText="auto: 모델 기본값 / low~max: 고정 레벨 (max는 Opus만 지원)">
+                           HelperText="auto: 모델 기본값 / max: 확장 사고 모드 (Opus만 지원)">
                     <MudSelectItem T="string" Value="@("auto")">Auto</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("low")">Low</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("medium")">Medium</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("high")">High</MudSelectItem>
                     <MudSelectItem T="string" Value="@("max")">Max (Thinking)</MudSelectItem>
                 </MudSelect>
 
