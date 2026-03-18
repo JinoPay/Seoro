@@ -32,7 +32,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
     public async Task<bool> CheckMergeStatusAsync(string sessionId)
     {
         var session = await _sessionService.LoadSessionAsync(sessionId);
-        if (session == null || session.Status != SessionStatus.Ready || session.IsLocalDir)
+        if (session == null || session.Status != SessionStatus.Ready || session.Git.IsLocalDir)
             return false;
 
         var workspace = await _workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
@@ -43,7 +43,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath));
 
         var isMerged = await _gitService.IsBranchMergedAsync(
-            workspace.RepoLocalPath, session.BranchName, baseBranch);
+            workspace.RepoLocalPath, session.Git.BranchName, baseBranch);
 
         if (isMerged)
         {
@@ -103,13 +103,13 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             var baseBranch = ResolveBaseBranch(session,
                 await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath));
 
-            var title = session.Title is "New Chat" or "" ? session.BranchName : session.Title;
+            var title = session.Title is "New Chat" or "" ? session.Git.BranchName : session.Title;
 
             string body;
             if (!string.IsNullOrEmpty(prBodyTemplate))
             {
                 body = prBodyTemplate
-                    .Replace("{branchName}", session.BranchName)
+                    .Replace("{branchName}", session.Git.BranchName)
                     .Replace("{baseBranch}", baseBranch)
                     .Replace("{sessionTitle}", session.Title);
             }
@@ -119,9 +119,9 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
                 body = logResult.Success ? logResult.Output.Trim() : "";
             }
 
-            if (session.IssueNumber != null && !body.Contains($"#{session.IssueNumber}"))
+            if (session.Pr.IssueNumber != null && !body.Contains($"#{session.Pr.IssueNumber}"))
             {
-                body = $"Closes #{session.IssueNumber}\n\n{body}";
+                body = $"Closes #{session.Pr.IssueNumber}\n\n{body}";
             }
 
             session = await CreatePrInternalAsync(session, workspace, title, body, ct);
@@ -167,7 +167,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
 
         session.TransitionStatus(SessionStatus.Ready);
         session.ErrorMessage = null;
-        session.ConflictFiles = null;
+        session.Pr.ConflictFiles = null;
         await _sessionService.SaveSessionAsync(session);
     }
 
@@ -177,9 +177,9 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
     {
         GitResult result;
         if (force)
-            result = await _gitService.PushForceBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
+            result = await _gitService.PushForceBranchAsync(workspace.RepoLocalPath, session.Git.BranchName, ct);
         else
-            result = await _gitService.PushBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
+            result = await _gitService.PushBranchAsync(workspace.RepoLocalPath, session.Git.BranchName, ct);
 
         if (result.Success)
         {
@@ -193,7 +193,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
                     await _hooksEngine.FireAsync(HookEvent.OnBranchPush, new Dictionary<string, string>
                     {
                         ["COMINOMI_SESSION_ID"] = session.Id,
-                        ["COMINOMI_BRANCH"] = session.BranchName
+                        ["COMINOMI_BRANCH"] = session.Git.BranchName
                     });
                 }
                 catch (Exception ex)
@@ -217,7 +217,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             await _gitService.DetectDefaultBranchAsync(workspace.RepoLocalPath));
 
         var result = await _ghService.CreatePrAsync(
-            workspace.RepoLocalPath, session.BranchName, baseBranch, title, body, ct);
+            workspace.RepoLocalPath, session.Git.BranchName, baseBranch, title, body, ct);
 
         if (result.Success)
         {
@@ -225,14 +225,14 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             session.ErrorMessage = null;
 
             // Parse PR URL from output (gh pr create prints the URL)
-            session.PrUrl = result.Output.Trim();
+            session.Pr.PrUrl = result.Output.Trim();
 
             // Try to get PR number
-            var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
+            var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.Git.BranchName, ct);
             if (prInfo != null)
             {
-                session.PrNumber = prInfo.Number;
-                session.PrUrl = prInfo.Url;
+                session.Pr.PrNumber = prInfo.Number;
+                session.Pr.PrUrl = prInfo.Url;
             }
         }
         else
@@ -246,21 +246,21 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
 
     private async Task<Session> MergePrInternalAsync(Session session, Workspace workspace, string mergeMethod, CancellationToken ct)
     {
-        if (session.PrNumber == null)
+        if (session.Pr.PrNumber == null)
         {
             // Try to find PR by branch name
-            var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
+            var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.Git.BranchName, ct);
             if (prInfo == null)
             {
                 session.ErrorMessage = "PR not found for this branch.";
                 await _sessionService.SaveSessionAsync(session);
                 return session;
             }
-            session.PrNumber = prInfo.Number;
-            session.PrUrl = prInfo.Url;
+            session.Pr.PrNumber = prInfo.Number;
+            session.Pr.PrUrl = prInfo.Url;
         }
 
-        var result = await _ghService.MergePrAsync(workspace.RepoLocalPath, session.PrNumber.Value, mergeMethod, ct);
+        var result = await _ghService.MergePrAsync(workspace.RepoLocalPath, session.Pr.PrNumber.Value, mergeMethod, ct);
 
         if (result.Success)
         {
@@ -293,7 +293,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         // Fetch latest before rebase
         await _gitService.FetchAsync(workspace.RepoLocalPath, ct);
 
-        var worktreePath = session.WorktreePath ?? workspace.RepoLocalPath;
+        var worktreePath = session.Git.WorktreePath ?? workspace.RepoLocalPath;
         var result = await _gitService.RebaseAsync(worktreePath, baseBranch, ct);
 
         if (result.Success)
@@ -301,7 +301,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             _logger.LogInformation("Rebase succeeded for session {SessionId}", session.Id);
             session.TransitionStatus(SessionStatus.Ready);
             session.ErrorMessage = null;
-            session.ConflictFiles = null;
+            session.Pr.ConflictFiles = null;
         }
         else
         {
@@ -315,27 +315,27 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
 
     private async Task<Session> ClosePrInternalAsync(Session session, Workspace workspace, CancellationToken ct)
     {
-        if (session.PrNumber == null)
+        if (session.Pr.PrNumber == null)
         {
-            var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
+            var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.Git.BranchName, ct);
             if (prInfo == null)
             {
                 session.ErrorMessage = "PR not found for this branch.";
                 await _sessionService.SaveSessionAsync(session);
                 return session;
             }
-            session.PrNumber = prInfo.Number;
+            session.Pr.PrNumber = prInfo.Number;
         }
 
-        var result = await _ghService.ClosePrAsync(workspace.RepoLocalPath, session.PrNumber.Value, ct);
+        var result = await _ghService.ClosePrAsync(workspace.RepoLocalPath, session.Pr.PrNumber.Value, ct);
 
         if (result.Success)
         {
             session.TransitionStatus(SessionStatus.Ready);
-            session.PrUrl = null;
-            session.PrNumber = null;
+            session.Pr.PrUrl = null;
+            session.Pr.PrNumber = null;
             session.ErrorMessage = null;
-            _logger.LogInformation("PR #{PrNumber} closed for session {SessionId}", session.PrNumber, session.Id);
+            _logger.LogInformation("PR #{PrNumber} closed for session {SessionId}", session.Pr.PrNumber, session.Id);
         }
         else
         {
@@ -348,8 +348,8 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
 
     private static string ResolveBaseBranch(Session session, string? detectedDefault)
     {
-        return !string.IsNullOrEmpty(session.BaseBranch)
-            ? session.BaseBranch
+        return !string.IsNullOrEmpty(session.Git.BaseBranch)
+            ? session.Git.BaseBranch
             : detectedDefault ?? "main";
     }
 

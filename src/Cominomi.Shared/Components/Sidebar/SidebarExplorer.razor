@@ -95,7 +95,7 @@
     {
         StopWatching();
 
-        var path = ChatState.CurrentSession?.WorktreePath;
+        var path = ChatState.CurrentSession?.Git.WorktreePath;
         if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
             return;
 
@@ -161,7 +161,7 @@
     private async Task LoadFilesAsync(bool preserveExpanded = false)
     {
         var session = ChatState.CurrentSession;
-        if (session == null || string.IsNullOrEmpty(session.WorktreePath)) return;
+        if (session == null || string.IsNullOrEmpty(session.Git.WorktreePath)) return;
 
         _loading = true;
         _error = null;
@@ -169,13 +169,13 @@
 
         try
         {
-            var files = await GitService.ListTrackedFilesAsync(session.WorktreePath);
+            var files = await GitService.ListTrackedFilesAsync(session.Git.WorktreePath);
 
             try
             {
-                var diffBase = !string.IsNullOrEmpty(session.BaseBranch) ? session.BaseBranch : "HEAD";
-                var nameStatus = await GitService.GetNameStatusAsync(session.WorktreePath, diffBase);
-                var rawDiff = await GitService.GetUnifiedDiffAsync(session.WorktreePath, diffBase);
+                var diffBase = !string.IsNullOrEmpty(session.Git.BaseBranch) ? session.Git.BaseBranch : "HEAD";
+                var nameStatus = await GitService.GetNameStatusAsync(session.Git.WorktreePath, diffBase);
+                var rawDiff = await GitService.GetUnifiedDiffAsync(session.Git.WorktreePath, diffBase);
                 _diff = Services.GitService.ParseDiff(nameStatus, rawDiff);
             }
             catch { _diff = null; }
@@ -269,11 +269,11 @@
     private async Task OpenFile(string filePath)
     {
         var session = ChatState.CurrentSession;
-        if (session == null || string.IsNullOrEmpty(session.WorktreePath)) return;
+        if (session == null || string.IsNullOrEmpty(session.Git.WorktreePath)) return;
 
         try
         {
-            var content = await GitService.ReadFileAsync(session.WorktreePath, filePath);
+            var content = await GitService.ReadFileAsync(session.Git.WorktreePath, filePath);
             ChatState.Tabs.OpenFileContentTab(filePath, content);
         }
         catch (Exception ex)

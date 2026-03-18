@@ -22,8 +22,8 @@ public class ActivityService : IActivityService
         var activeSessions = sessions.Where(s =>
             s.Status != SessionStatus.Pending &&
             s.Status != SessionStatus.Archived &&
-            !string.IsNullOrEmpty(s.WorktreePath) &&
-            !string.IsNullOrEmpty(s.BaseBranch)).ToList();
+            !string.IsNullOrEmpty(s.Git.WorktreePath) &&
+            !string.IsNullOrEmpty(s.Git.BaseBranch)).ToList();
 
         var allEntries = new List<ActivityEntry>();
         var tasks = activeSessions.Select(async session =>
@@ -31,7 +31,7 @@ public class ActivityService : IActivityService
             try
             {
                 var result = await _gitService.GetFormattedCommitLogAsync(
-                    session.WorktreePath, session.BaseBranch, 50, ct);
+                    session.Git.WorktreePath, session.Git.BaseBranch, 50, ct);
 
                 if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
                     return new List<ActivityEntry>();
@@ -76,7 +76,7 @@ public class ActivityService : IActivityService
             Message = parts[4],
             SessionId = session.Id,
             SessionTitle = session.Title,
-            BranchName = session.BranchName,
+            BranchName = session.Git.BranchName,
             SessionStatus = session.Status
         };
     }

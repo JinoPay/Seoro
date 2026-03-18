@@ -261,7 +261,7 @@
         if (_imageCache.TryGetValue(attachment.Id, out var cached))
             return cached;
 
-        var worktreePath = ChatState.CurrentSession?.WorktreePath;
+        var worktreePath = ChatState.CurrentSession?.Git.WorktreePath;
         if (string.IsNullOrEmpty(worktreePath))
             return string.Empty;
 

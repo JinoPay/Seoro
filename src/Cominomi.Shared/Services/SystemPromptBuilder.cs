@@ -41,11 +41,11 @@ Rules:
         else if (session.AgentType == AgentType.Explore)
             parts.Add("You are in Explore mode. Only read and search — do not modify any files.");
 
-        if (!string.IsNullOrEmpty(session.WorktreePath) && Directory.Exists(session.WorktreePath))
+        if (!string.IsNullOrEmpty(session.Git.WorktreePath) && Directory.Exists(session.Git.WorktreePath))
         {
             try
             {
-                var context = await _contextService.LoadContextAsync(session.WorktreePath);
+                var context = await _contextService.LoadContextAsync(session.Git.WorktreePath);
                 var contextPrompt = _contextService.BuildContextPrompt(context);
                 if (!string.IsNullOrWhiteSpace(contextPrompt))
                     parts.Add(contextPrompt);

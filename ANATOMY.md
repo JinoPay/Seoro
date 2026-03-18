@@ -217,7 +217,10 @@
 ### 관련 파일
 | 파일 | 줄수 | 역할 |
 |------|------|------|
-| `Shared/Models/Session.cs` | 78 | 핵심 엔티티 (30+ 프로퍼티) + 상태 전이 검증 |
+| `Shared/Models/Session.cs` | 78 | 핵심 엔티티 + 상태 전이 검증, `Git`/`Pr` 서브 객체로 관심사 분리 |
+| `Shared/Models/GitContext.cs` | 15 | Git worktree/branch 관련 속성 그룹 |
+| `Shared/Models/PrContext.cs` | 15 | PR/이슈 관련 속성 그룹 |
+| `Shared/Models/SessionJsonConverter.cs` | 205 | 기존 플랫 JSON ↔ 신규 중첩 JSON 하위호환 컨버터 |
 | `Shared/Models/Workspace.cs` | 42 | 리포 설정 |
 | `Shared/Models/ChatMessage.cs` | 53 | 메시지 + Parts |
 | `Shared/Models/StreamEvent.cs` | 165 | Claude CLI 스트림 프로토콜 |
@@ -227,22 +230,23 @@
 
 ### Session (핵심 엔티티)
 
-`Session.cs:19-56` — 하나의 클래스에 3가지 관심사가 혼재:
+`Session.cs` — 3가지 관심사를 `GitContext`/`PrContext` 서브 객체로 분리:
 
 ```
-[대화 관심사]
+[대화 관심사 — Session 루트]
   Id, Title, Messages, Model, PermissionMode, EffortLevel, AgentType
   ConversationId, MaxTurns, MaxBudgetUsd
-  TotalInputTokens, TotalOutputTokens
-  AllowedTools, DisallowedTools, AdditionalDirs
+  TotalInputTokens, TotalOutputTokens, WorkspaceId
+  Status, ErrorMessage, PlanCompleted, PlanFilePath
 
-[Git 관심사]
-  WorktreePath, BranchName, BaseBranch, WorkspaceId, IsLocalDir
+[Git 관심사 — session.Git (GitContext)]
+  WorktreePath, BranchName, BaseBranch, IsLocalDir, AdditionalDirs
 
-[GitHub/PR 관심사]
-  Status, PrUrl, PrNumber, IssueNumber, IssueUrl, ConflictFiles
-  PlanCompleted, PlanFilePath
+[PR/이슈 관심사 — session.Pr (PrContext)]
+  PrUrl, PrNumber, IssueNumber, IssueUrl, ConflictFiles
 ```
+
+`SessionJsonConverter`가 기존 플랫 포맷(v1)과 중첩 포맷(v2) 모두 역직렬화 지원.
 
 ### 상태 머신 (SessionStatus) — Phase 4에서 검증 추가
 
@@ -1432,7 +1436,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 |------|------|------|------------------|--------|
 | **1** | **로컬라이제이션 인프라 부재** | `.resx` 0개, `IStringLocalizer` 미사용. SnackbarExtensions(12개), ToolDisplayHelper(14+), QuestionDetector, ContentGrouper에 한국어 문자열 하드코딩. 다국어 지원 불가 | §13, §21, §24 | 중 |
 | **2** | **ChatView 여전히 899줄 / 14개 서비스** | Phase 1-3에서 38% 감소했으나 여전히 최대 컴포넌트. 브랜치 선택 UI(~65줄), 워크플로우 바(~85줄), 랜딩 페이지(~37줄) 추가 추출 가능 | §10 `ChatView.razor` | 중 |
-| **3** | **Session 모델 3관심사 혼재 (30+ 프로퍼티)** | 대화(Messages, Model, Tokens) + Git(WorktreePath, BranchName) + PR(PrUrl, Status, ConflictFiles)이 하나에. 하나 변경 시 전체 재직렬화 | §3 `Session.cs` | 높 |
+| ~~**3**~~ | ~~**Session 모델 3관심사 혼재 (30+ 프로퍼티)**~~ | **해결됨** — `GitContext`(WorktreePath, BranchName, BaseBranch, IsLocalDir, AdditionalDirs)와 `PrContext`(PrUrl, PrNumber, IssueNumber, IssueUrl, ConflictFiles)로 분리. `session.Git.*`, `session.Pr.*`로 접근. 기존 JSON 하위호환용 `SessionJsonConverter` 추가 | §3 `Session.cs`, `GitContext.cs`, `PrContext.cs` | ~~높~~ |
 | **4** | **중앙 에러 전략 없음** | 각 서비스가 독자적 에러 처리(try-catch→로그, 문자열 ErrorMessage, 합성 StreamEvent). 에러 코드/타입 없음, transient vs permanent 구분 없음 | §24 전체 | 높 |
 | **5** | **ChatState 인터페이스 없음** | 직접 클래스로 DI 등록. 모킹 불가 → ChatView 단위테스트 불가. Session 가변 참조 직접 공유 | §23 `ChatState.cs` | 낮 |
 | **6** | **GetSessionsAsync O(n) 성능** | 모든 메타데이터 파일을 역직렬화. 인덱싱/페이지네이션 없음. 세션 수 증가 시 사이드바 느려짐. UI 가상화도 없음 | §8, §12 `SessionService.cs` | 중 |

@@ -111,17 +111,16 @@ public partial class SessionService : ISessionService
         {
             Model = model,
             WorkspaceId = workspaceId,
-            BranchName = branchName,
-            BaseBranch = baseBranch
+            Git = { BranchName = branchName, BaseBranch = baseBranch }
         };
         session.TransitionStatus(SessionStatus.Initializing);
 
-        session.WorktreePath = Path.Combine(worktreesDir, session.Id);
+        session.Git.WorktreePath = Path.Combine(worktreesDir, session.Id);
 
         try
         {
             var result = await _gitService.AddWorktreeAsync(
-                workspace.RepoLocalPath, session.WorktreePath, branchName, baseBranch);
+                workspace.RepoLocalPath, session.Git.WorktreePath, branchName, baseBranch);
 
             if (!result.Success)
             {
@@ -189,8 +188,7 @@ public partial class SessionService : ISessionService
             WorkspaceId = workspaceId,
             CityName = cityName,
             Title = cityName,
-            IsLocalDir = true,
-            WorktreePath = workspace.RepoLocalPath,
+            Git = { IsLocalDir = true, WorktreePath = workspace.RepoLocalPath },
             EffortLevel = settings.DefaultEffortLevel,
             PermissionMode = settings.DefaultPermissionMode
         };
@@ -222,15 +220,15 @@ public partial class SessionService : ISessionService
         var branchName = $"{CominomiConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
         var worktreesDir = await _workspaceService.GetWorktreesDirAsync();
 
-        session.BranchName = branchName;
-        session.BaseBranch = baseBranch;
-        session.WorktreePath = Path.Combine(worktreesDir, session.Id);
+        session.Git.BranchName = branchName;
+        session.Git.BaseBranch = baseBranch;
+        session.Git.WorktreePath = Path.Combine(worktreesDir, session.Id);
         session.TransitionStatus(SessionStatus.Initializing);
 
         try
         {
             var result = await _gitService.AddWorktreeAsync(
-                workspace.RepoLocalPath, session.WorktreePath, branchName, baseBranch);
+                workspace.RepoLocalPath, session.Git.WorktreePath, branchName, baseBranch);
 
             if (!result.Success)
             {
@@ -241,7 +239,7 @@ public partial class SessionService : ISessionService
             {
                 session.TransitionStatus(SessionStatus.Ready);
                 // Initialize .context/ directory for collaboration
-                await _contextService.EnsureContextDirectoryAsync(session.WorktreePath);
+                await _contextService.EnsureContextDirectoryAsync(session.Git.WorktreePath);
                 _logger.LogInformation("Worktree initialized for session {SessionId} on branch {Branch}", sessionId, branchName);
             }
         }
@@ -387,14 +385,14 @@ public partial class SessionService : ISessionService
         if (session == null || session.Status != SessionStatus.Ready)
             return;
 
-        var oldBranch = session.BranchName;
+        var oldBranch = session.Git.BranchName;
         if (oldBranch == newBranchName)
             return;
 
-        var result = await _gitService.RenameBranchAsync(session.WorktreePath, oldBranch, newBranchName);
+        var result = await _gitService.RenameBranchAsync(session.Git.WorktreePath, oldBranch, newBranchName);
         if (result.Success)
         {
-            session.BranchName = newBranchName;
+            session.Git.BranchName = newBranchName;
             await SaveSessionAsync(session);
         }
     }
@@ -410,38 +408,38 @@ public partial class SessionService : ISessionService
             return;
 
         // Archive .context/ before removing worktree
-        if (!string.IsNullOrEmpty(session.WorktreePath) && Directory.Exists(session.WorktreePath))
+        if (!string.IsNullOrEmpty(session.Git.WorktreePath) && Directory.Exists(session.Git.WorktreePath))
         {
             try
             {
                 var archiveName = !string.IsNullOrEmpty(session.CityName) ? session.CityName : session.Id;
                 var archivePath = Path.Combine(_archiveDir, workspace.Name, archiveName);
-                await _contextService.ArchiveContextAsync(session.WorktreePath, archivePath);
+                await _contextService.ArchiveContextAsync(session.Git.WorktreePath, archivePath);
             }
             catch (Exception ex) { _logger.LogWarning(ex, "Failed to archive context for session {SessionId}", sessionId); }
         }
 
         // Skip worktree/branch cleanup for local-dir sessions (the directory is the user's real repo)
-        if (!session.IsLocalDir)
+        if (!session.Git.IsLocalDir)
         {
             // Remove worktree
-            if (!string.IsNullOrEmpty(session.WorktreePath))
+            if (!string.IsNullOrEmpty(session.Git.WorktreePath))
             {
                 try
                 {
-                    await _gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, session.WorktreePath);
+                    await _gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, session.Git.WorktreePath);
                 }
                 catch (Exception ex) { _logger.LogWarning(ex, "Failed to remove worktree for session {SessionId}", sessionId); }
             }
 
             // Delete branch
-            if (!string.IsNullOrEmpty(session.BranchName))
+            if (!string.IsNullOrEmpty(session.Git.BranchName))
             {
                 try
                 {
-                    await _gitService.DeleteBranchAsync(workspace.RepoLocalPath, session.BranchName);
+                    await _gitService.DeleteBranchAsync(workspace.RepoLocalPath, session.Git.BranchName);
                 }
-                catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete branch {Branch} for session {SessionId}", session.BranchName, sessionId); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete branch {Branch} for session {SessionId}", session.Git.BranchName, sessionId); }
             }
         }
 

@@ -23,18 +23,18 @@
     <div class="tree-session-info">
         <span class="tree-session-title">@Session.Title</span>
         <div class="tree-session-meta">
-            @if (Session.IsLocalDir)
+            @if (Session.Git.IsLocalDir)
             {
                 <span class="tree-session-branch" style="opacity: 0.5;">로컬</span>
             }
-            else if (!string.IsNullOrEmpty(Session.BranchName))
+            else if (!string.IsNullOrEmpty(Session.Git.BranchName))
             {
-                <span class="tree-session-branch">@Session.BranchName</span>
+                <span class="tree-session-branch">@Session.Git.BranchName</span>
             }
 
-            @if (Session.IssueNumber != null)
+            @if (Session.Pr.IssueNumber != null)
             {
-                <span style="opacity: 0.6; font-size: 0.65rem;">#@Session.IssueNumber</span>
+                <span style="opacity: 0.6; font-size: 0.65rem;">#@Session.Pr.IssueNumber</span>
             }
 
             @if (DiffAdditions > 0 || DiffDeletions > 0)
