@@ -580,7 +580,7 @@ ChatView.ProcessMessageAsync()
 - **세션 수 제한 없음**: 워크스페이스당 수백 개 워크트리 생성 가능. git 성능 저하
 - ~~**상태 전이 검증 없음**: Archived에서 Ready로 직접 변경해도 에러 없음~~ → ✅ **해결**: Phase 4에서 `SessionStatusMachine` 도입. 무효 전이 시 `InvalidOperationException`. `session.Status = X` 직접 할당 전부 `session.TransitionStatus(X)`로 교체
 - ~~**GetSessionsAsync O(n)** (`:31-78`): 파일 수 만큼 직렬화. 페이지네이션 없음~~ → ✅ **해결**: `ConcurrentDictionary` 인메모리 캐시 + 1회 로드 + 병렬 I/O
-- ~~**워크트리 초기화 레이스 컨디션**: Pending 세션에 메시지 전송 시 `InitializeWorktreeAsync`가 호출되는데, 빠르게 두 번 전송하면 워크트리 이중 생성 시도 가능~~ → ✅ **해결**: `SessionService`에 per-session `SemaphoreSlim` (`_worktreeInitLocks`) 추가하여 동시 호출 직렬화 + 락 획득 후 상태 재확인(Pending이 아니면 즉시 반환). `ChatView`에서도 `_isInitializingWorktree` 플래그로 UI-level 이중 진입 방지
+- ~~**워크트리 초기화 레이스 컨디션**: Pending 세션에 메시지 전송 시 `InitializeWorktreeAsync`가 호출되는데, 빠르게 두 번 전송하면 워크트리 이중 생성 시도 가능~~ → ✅ **해결**: `SessionService`에 per-session `SemaphoreSlim` (`_worktreeInitLocks`) 추가하여 동시 호출 직렬화 + 캐시 무효화 + 락 획득 후 상태 재확인(Pending이 아니면 즉시 반환). `ChatView`에서도 `_isInitializingWorktree` 플래그로 UI-level 이중 진입 방지
 - **CityName 아카이브 경로**: `CityNames.GetRandom()` (46개 도시)으로 이름 생성, 하지만 파일 경로에 부적합한 문자 없음을 보장하지 않음
 
 ---
@@ -1554,7 +1554,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **1** | **훅 엔진 개선** | 5초 타임아웃 하드코딩 + 직렬 실행 + 출력 미캡처 + 커맨드 이스케이핑 최소 | §14 | 중 |
 | **2** | **패널 크기 조절 불가** | CSS 고정 너비. 사이드바·디테일 패널 리사이즈 불가 + 키보드 네비게이션 없음 | §11 | 중 |
 | **3** | **JSON 스키마 마이그레이션 없음** | 스키마 변경 시 기존 파일 역직렬화 실패 → 데이터 손실. 버전 필드 없음 | §2 | 높 |
-| **4** | **~~워크트리 레이스 컨디션~~** | ~~Pending 세션에 빠르게 2번 전송 시 워크트리 이중 생성 시도 가능~~ ✅ 해결: per-session SemaphoreSlim + UI 가드 | §8 | 중 |
+| **4** | **~~워크트리 레이스 컨디션~~** | ~~Pending 세션에 빠르게 2번 전송 시 워크트리 이중 생성 시도 가능~~ ✅ 해결: per-session SemaphoreSlim + 캐시 무효화 + UI 가드 | §8 | 중 |
 | **5** | **활동 서비스 파이프 구분자 취약** | 커밋 메시지에 `\|`가 포함되면 파싱 실패. 아카이브 세션 활동 조회 불가 | §19.5 | 낮 |
 
 ---

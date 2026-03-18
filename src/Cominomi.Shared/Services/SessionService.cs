@@ -219,6 +219,9 @@ public partial class SessionService : ISessionService
         await semaphore.WaitAsync();
         try
         {
+            // Invalidate cache so we read the latest state from disk after waiting on the lock
+            _sessionCache.TryRemove(sessionId, out _);
+
             var session = await LoadSessionAsync(sessionId);
             if (session == null)
                 throw new InvalidOperationException($"Session '{sessionId}' not found.");
