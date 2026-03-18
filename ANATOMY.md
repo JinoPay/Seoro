@@ -155,7 +155,7 @@
 | #136 | 옵션 패턴 도입 | `IOptionsMonitor<AppSettings>` + `AppSettingsFactory` + `AppSettingsChangeNotifier`. 8개 서비스/컴포넌트 전환 |
 | #137 | 플러그인 실행 엔진 | EntryPoint 로딩/실행/샌드박싱 + hooks·skills 매니페스트 자동 등록 |
 
-### 구조 개선 Phase 14 (2026-03-19) — 신규 구조적 문제 #2 해결
+### 구조 개선 Phase 15 (2026-03-19) — 신규 구조적 문제 #2 해결
 | 변경 내용 | 역할 / 영향 범위 |
 |-----------|-----------------|
 | `GitServiceTests.cs` (신규, 25개 테스트) | `StubProcessRunner`로 GitService 전 메서드 테스트. 캐시 동작, 파싱 로직, 자동 abort, 캐시 무효화 검증 |
@@ -163,6 +163,12 @@
 | `SessionServiceTests.cs` (신규, 15개 테스트) | 6개 Fake 의존성으로 SessionService 테스트. CRUD 라운드트립, 제목 폴백, 도구 출력 절단, 워크스페이스 필터 검증 |
 | `ClaudeServiceTests.cs` (신규, 5개 테스트) | Cancel/Dispose 안전성 + DetectCliAsync 경로 해석 검증 |
 | `SessionStatusMachine` 수정 | `Initializing → Pending` 전이 누락 수정 (CreatePendingSessionAsync가 필요로 하는 전이) |
+
+### 구조 개선 Phase 14 (2026-03-19) — 미해결 구조적 문제 #8 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|------------------|
+| `ParseDiff` 정적 메서드 삭제 | `GetDiffSummaryAsync`와 기능 중복하던 레거시 코드 제거. 호출부 없는 데드 코드 |
+| `GetDiffSummaryAsync` 파싱 수정 | `diff --git` 헤더의 `LastIndexOf(" b/")` → `+++ b/` 줄 기반 파일 경로 추출. 경로에 " b/" 포함 시 오파싱 취약점 해결 |
 
 ### 구조 개선 Phase 13 (2026-03-19) — 신규 구조적 문제 #3 해결 + Continue 기능
 | 변경 내용 | 역할 / 영향 범위 |
@@ -531,7 +537,7 @@ macOS/Linux: /bin/sh
 - `DetectDefaultBranchAsync()` (`:119-139`): symbolic-ref → main 확인 → master 확인 → 현재 브랜치
 - `PushBranchAsync()` (`:215-218`): `git push -u origin`
 - `PushForceBranchAsync()` (`:220-223`): `git push --force-with-lease origin`
-- `ParseDiff()` (`:348-421`): 정적 메서드, `--name-status` + unified diff → `DiffSummary` 구조화
+- ~~`ParseDiff()`~~: ✅ **Phase 14에서 삭제** — `GetDiffSummaryAsync`와 기능 중복 데드 코드
 
 **프로세스 실행** (`RunGitAsync()`, `:186-197`):
 `IProcessRunner.RunAsync()`를 통해 `git` 명령 실행. 인수는 배열(`params string[]`)로 전달하며 `ArgumentList`를 사용하여 셸 해석 없이 안전하게 전달. 환경변수는 `CominomiConstants.Env.GitEnv`로 통합.
@@ -544,7 +550,7 @@ SessionService ──→ GitService.AddWorktreeAsync() (세션 생성)
 SessionService ──→ GitService.RemoveWorktreeAsync() (세션 정리)
 SessionGitWorkflowService ──→ GitService.PushBranchAsync() (브랜치 푸시)
 SidebarExplorer ──→ GitService.ListTrackedFilesAsync() (파일 목록)
-SidebarChanges ──→ GitService.GetNameStatusAsync() + ParseDiff() (변경사항)
+SidebarChanges ──→ GitService.GetDiffSummaryAsync() (변경사항)
 ChatView ──→ GitService.RenameBranchAsync() (제목 기반 브랜치 이름 변경)
 ```
 
@@ -1626,12 +1632,12 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 |------|------|------|-----------|--------|
 | **1** | **ChatView 697줄 재비대화** — Phase 13 Continue 기능 추가로 548→697줄 재성장. 서비스 주입 13개 유지 | 유지보수성 저하, 테스트 불가, SRP 위반 | §10 | 중 |
 | **~~2~~** | **~~테스트 커버리지 부족~~** — ~~12개 테스트 파일 / 75+개 서비스~~ → Phase 14에서 핵심 서비스 4종 테스트 추가 (16→228 테스트). `GitServiceTests`·`SessionServiceTests`·`ClaudeArgumentBuilderTests`·`ClaudeServiceTests` | ~~회귀 방지 불가~~ → 핵심 서비스 커버리지 확보 | §25 | ~~높~~ ✅ |
-| ~~**3**~~ | ~~**StreamEventProcessor 516줄 switch 아키텍처**~~ ✅ — 핸들러 레지스트리 패턴으로 리팩토링. 10개 개별 핸들러 + Dictionary 디스패치 | ~~확장성, 유지보수성~~ | §10.5 | ~~완료~~ |
-| **4** | ~~**GitService ParseDiff " b/" 파싱 취약**~~ ✅ **해결** — `ExtractPathFromDiffHeader` 대칭 구조 파싱 도입. `ParseDiff`+`GetDiffSummaryAsync` 양쪽 적용, rename은 `+++ b/` fallback | diff 표시 오류 | §5 | 낮 |
+| ~~**3**~~ | ~~**StreamEventProcessor 516줄 switch 아키텍처**~~ ✅ — 핸들러 레지스트리 패턴으로 리팩토링. 10개 개별 핸들러 + Dictionary 디스패치 | ~~확장성, 유지보수성~~ | ~~§10.5~~ | ~~완료~~ |
+| ~~**4**~~ | ~~**GitService ParseDiff " b/" 파싱 취약**~~ ✅ **해결** — `ExtractPathFromDiffHeader` 대칭 구조 파싱 도입. `ParseDiff`+`GetDiffSummaryAsync` 양쪽 적용, rename은 `+++ b/` fallback | ~~diff 표시 오류~~ | ~~§5~~ | ~~완료~~ |
 | ~~**5**~~ | ~~**SessionService 캐시 무한 성장**~~ ✅ — `_sessionCache` TTL 스캐벤징 + 최대 64 엔트리 용량 제한, `DeleteSessionAsync` try/finally 견고화 | ~~장기 실행 시 메모리 누수~~ | ~~§8~~ | ~~완료~~ |
 | ~~**6**~~ | ~~**SessionList 8개 서비스 과다 주입** — `ISessionListFacade` 파사드 도입으로 8→4 서비스 축소 완료~~ | ~~커플링, 테스트 난이도~~ | ~~§12~~ | ~~완료~~ |
 | ~~**7**~~ | ~~**Usage 저장 경로 불일치** — `AppPaths.Usage`로 통합 완료. `UsageService`가 `LocalApplicationData` 직접 참조 제거~~ | ~~해결~~ | ~~§20~~ | ~~완료~~ |
-| **8** | **ParseDiff 레거시 코드 잔류** — static `ParseDiff` 메서드가 `GetDiffSummaryAsync`와 기능 중복. 둘 다 동일 " b/" 취약점 공유 | 코드 중복, 유지보수 혼란 | §5 | 낮 |
+| **8** | **ParseDiff 레거시 코드 잔류** — static `ParseDiff` 메서드가 `GetDiffSummaryAsync`와 기능 중복 | 코드 중복, 유지보수 혼란 | §5 | 낮 |
 | ~~**9**~~ | ~~**IProcessRunner stderr bare catch**~~ ✅ — `StreamingProcess`에 `ILogger` 주입, bare catch를 로깅으로 교체 | ~~디버깅 어려움~~ | ~~§4~~ | ~~완료~~ |
 | **10** | **ToolCallCard JSON 매 렌더 파싱** — 도구 입력 JSON을 캐싱 없이 매 렌더마다 `JsonSerializer.Deserialize` | 렌더 성능 | §13 | 낮 |
 
