@@ -8,9 +8,16 @@ public record ProcessRunOptions
     public TimeSpan? Timeout { get; init; }
     public Dictionary<string, string>? EnvironmentVariables { get; init; }
     public bool KillEntireProcessTree { get; init; } = true;
+
+    /// <summary>
+    /// Maximum bytes to read from stdout. When exceeded, output is truncated and
+    /// <see cref="ProcessResult.Truncated"/> is set to <c>true</c>.
+    /// Null (default) means unlimited — the entire stream is buffered.
+    /// </summary>
+    public int? MaxOutputBytes { get; init; }
 }
 
-public record ProcessResult(bool Success, string Stdout, string Stderr, int ExitCode);
+public record ProcessResult(bool Success, string Stdout, string Stderr, int ExitCode, bool Truncated = false);
 
 public interface IProcessRunner
 {
