@@ -51,6 +51,24 @@
 | `AttachmentChips.razor` (신규, ~30줄) | InputArea에서 첨부파일 칩 표시 추출 — 순수 표시 컴포넌트 |
 | `InputArea.razor` 분해 | 460→~340줄(26%↓). 모델 선택 관련 상태/메서드 5개 + 첨부 칩 마크업을 자식 컴포넌트로 추출 |
 
+### 구조 개선 Phase 8 (2026-03-18) — 차기 개선 후보 #3 해결
+| 새 파일 / 변경 내용 | 역할 / 영향 범위 |
+|---------------------|-----------------|
+| `Migration/IJsonMigration.cs` (신규) | 단일 마이그레이션 스텝 인터페이스 — `FromVersion`→`ToVersion` JSON 변환 |
+| `Migration/SchemaVersion.cs` (신규) | `$schemaVersion` 필드 읽기/쓰기 헬퍼. 필드 없으면 v1 기본 |
+| `Migration/SchemaMigrator.cs` (신규) | 핵심 엔진 — 순차 마이그레이션 적용 + 버전 스탬핑 직렬화 |
+| `Migration/SchemaMigratorRegistry.cs` (신규) | 모델별 `SchemaMigrator` 중앙 레지스트리 (Session=v2, 나머지=v1) |
+| `Migration/MigratingJsonReader.cs` (신규) | 역직렬화 시 자동 스키마 마이그레이션 + write-back용 JSON 반환 |
+| `Migration/MigratingJsonWriter.cs` (신규) | 직렬화 시 `$schemaVersion` 자동 스탬핑 |
+| `HooksFileEnvelope.cs` (신규) | hooks.json 엔벨로프 래퍼 — 기존 bare array → `{ $schemaVersion, hooks }` |
+| `SessionJsonConverter.cs` 변경 | `Write()`에 `$schemaVersion` 스탬핑 추가 |
+| `SessionService.cs` 변경 | 로드 시 버전 검사 → 구버전 파일 자동 write-back |
+| `WorkspaceService.cs` 변경 | 읽기: `MigratingJsonReader` / 쓰기: `MigratingJsonWriter` 적용 (Workspace + GitRepoInfo) |
+| `SettingsService.cs` + `AppSettingsFactory.cs` | 읽기/쓰기에 마이그레이션 인프라 적용 |
+| `MemoryService.cs` 변경 | 읽기: `MigratingJsonReader` / 쓰기: `MigratingJsonWriter` 적용 |
+| `TaskService.cs` 변경 | 읽기: `MigratingJsonReader` / 쓰기: `MigratingJsonWriter` 적용 |
+| `HooksEngine.cs` 변경 | bare array/envelope 양방향 호환 읽기 + 엔벨로프 형식 쓰기 |
+
 ### 구조 개선 Phase 7 (2026-03-18) — 차기 개선 후보 #5
 | 새 파일 / 변경 내용 | 역할 / 영향 범위 |
 |---------------------|-----------------|
@@ -248,7 +266,7 @@
 - ~~**파일 락 없음**: 병렬 세션이 동시에 `SaveSessionAsync()`를 호출하면 데이터 손상 가능~~ → ✅ **해결**: `AtomicFileWriter` (임시파일→원자적 이동) + per-session `SemaphoreSlim` 락 도입. 전체 서비스(Session/Workspace/Settings/Task/Memory/Hooks/Skill)에 적용.
 - ~~**세션 파일 무한 성장**: 100턴 대화 + 도구 호출 결과가 하나의 JSON 파일에 전부 포함. 수 MB까지 성장 가능~~ → ✅ **해결**: Phase 4에서 메타데이터/메시지 분리 + 도구 출력 2,000자 절단. 목록 로드 시 메시지 파일 불필요
 - ~~**인덱싱 없음**: `GetSessionsAsync()`가 모든 메타데이터 파일을 역직렬화 — O(n) 성능. 세션 수 증가 시 사이드바 로딩 느려짐~~ → ✅ **해결**: `ConcurrentDictionary` 인메모리 캐시 + `EnsureCacheLoadedAsync()` 1회 로드 + 병렬 파일 읽기
-- **백업/마이그레이션 없음**: JSON 스키마 변경 시 기존 파일이 역직렬화 실패 → 데이터 손실
+- ~~**백업/마이그레이션 없음**: JSON 스키마 변경 시 기존 파일이 역직렬화 실패 → 데이터 손실~~ → ✅ **해결**: `SchemaMigrator` + `$schemaVersion` 필드 도입. 읽기 시 자동 마이그레이션 + write-back. 모든 서비스(Session/Workspace/Settings/Memory/Task/Hooks/GitRepoInfo) 적용
 - **Usage 위치 불일치**: `AppData/Roaming`과 `AppData/Local`에 분산 저장
 - ~~**GetSessionsAsync 수동 매핑** (`SessionService.cs:46-68`): 15개 프로퍼티를 수동 복사. DTO나 프로젝션이 없음~~ → ✅ **해결**: Phase 4에서 메타데이터 파일을 직접 역직렬화. 수동 프로퍼티 복사 제거
 
@@ -1544,7 +1562,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 |------|------|------|-----------|--------|
 | **1** | **훅 엔진 개선** | 5초 타임아웃 하드코딩 + 직렬 실행 + 출력 미캡처 + 커맨드 이스케이핑 최소 | §14 | 중 |
 | **2** | **패널 크기 조절 불가** | CSS 고정 너비. 사이드바·디테일 패널 리사이즈 불가 + 키보드 네비게이션 없음 | §11 | 중 |
-| **3** | **JSON 스키마 마이그레이션 없음** | 스키마 변경 시 기존 파일 역직렬화 실패 → 데이터 손실. 버전 필드 없음 | §2 | 높 |
+| ~~**3**~~ | ~~**JSON 스키마 마이그레이션 없음**~~ | ~~스키마 변경 시 기존 파일 역직렬화 실패 → 데이터 손실. 버전 필드 없음~~ | §2 | ✅ |
 | **4** | **워크트리 레이스 컨디션** | Pending 세션에 빠르게 2번 전송 시 워크트리 이중 생성 시도 가능 | §8 | 중 |
 | **5** | **활동 서비스 파이프 구분자 취약** | 커밋 메시지에 `\|`가 포함되면 파싱 실패. 아카이브 세션 활동 조회 불가 | §19.5 | 낮 |
 

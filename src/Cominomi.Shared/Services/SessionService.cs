@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Cominomi.Shared;
 using Cominomi.Shared.Models;
+using Cominomi.Shared.Services.Migration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -78,11 +80,18 @@ public partial class SessionService : ISessionService
             try
             {
                 var json = await File.ReadAllTextAsync(file);
+                var needsMigration = NeedsSchemaUpgrade(json);
                 var session = JsonSerializer.Deserialize<Session>(json, JsonDefaults.Options);
                 if (session != null)
                 {
                     session.Model = ModelDefinitions.NormalizeModelId(session.Model);
                     session.Messages.Clear();
+                    // Write back if schema was outdated (adds $schemaVersion)
+                    if (needsMigration)
+                    {
+                        var upgraded = JsonSerializer.Serialize(session, JsonDefaults.Options);
+                        await AtomicFileWriter.WriteAsync(file, upgraded);
+                    }
                     return session;
                 }
             }
@@ -273,10 +282,21 @@ public partial class SessionService : ISessionService
             return null;
 
         var json = await File.ReadAllTextAsync(path);
+        var needsMigration = NeedsSchemaUpgrade(json);
         var session = JsonSerializer.Deserialize<Session>(json, JsonDefaults.Options);
         if (session == null) return null;
 
         session.Model = ModelDefinitions.NormalizeModelId(session.Model);
+
+        // Write back if schema was outdated (adds $schemaVersion)
+        if (needsMigration)
+        {
+            var messages = session.Messages;
+            session.Messages = [];
+            var upgraded = JsonSerializer.Serialize(session, JsonDefaults.Options);
+            session.Messages = messages;
+            await AtomicFileWriter.WriteAsync(path, upgraded);
+        }
 
         // Load messages from separate file (new format)
         var messagesPath = Path.Combine(_sessionsDir, $"{sessionId}.messages.json");
@@ -511,6 +531,22 @@ public partial class SessionService : ISessionService
             slug = slug[..40].TrimEnd('-');
 
         return $"{CominomiConstants.BranchPrefix}{(string.IsNullOrEmpty(slug) ? DateTime.Now.ToString("yyyyMMdd-HHmmss") : slug)}";
+    }
+
+    /// <summary>
+    /// Checks if a JSON string is missing the current $schemaVersion — meaning it needs migration/upgrade.
+    /// </summary>
+    private static bool NeedsSchemaUpgrade(string json)
+    {
+        try
+        {
+            var node = JsonNode.Parse(json);
+            if (node is not JsonObject doc) return false;
+            var version = SchemaVersion.Read(doc);
+            var migrator = SchemaMigratorRegistry.GetMigrator<Session>();
+            return migrator != null && version < migrator.CurrentVersion;
+        }
+        catch { return false; }
     }
 
     [GeneratedRegex(@"\s+")]
