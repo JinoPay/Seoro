@@ -813,27 +813,42 @@ case "error"                            → 에러 메시지 추가
 ### 관련 파일
 | 파일 | 줄수 | 역할 |
 |------|------|------|
-| `Shared/Services/StreamEventProcessor.cs` | 516 | ChatView에서 추출한 스트림 이벤트 처리 핵심 |
+| `Shared/Services/StreamEventProcessor.cs` | ~110 | 핸들러 레지스트리 기반 디스패처 + FinalizeAsync 후처리 |
 | `Shared/Services/IStreamEventProcessor.cs` | 47 | 인터페이스 + `StreamProcessingContext` DTO |
+| `Shared/Services/StreamEventHandlers/IStreamEventHandler.cs` | 19 | 핸들러 인터페이스 (`EventType` + `HandleAsync`) |
+| `Shared/Services/StreamEventHandlers/StreamEventUtils.cs` | 110 | 공유 유틸리티 (ExtractToolResultContent, RecordUsageAsync 등) |
+| `Shared/Services/StreamEventHandlers/*Handler.cs` | 각 15~90 | 이벤트 타입별 핸들러 10개 |
 
-### 현재 동작
+### 아키텍처
 
-ChatView의 `ProcessMessageAsync`에서 추출된 핵심 로직. 단일 진입점 `ProcessEventAsync(StreamEvent, StreamProcessingContext)`로 12종 스트림 이벤트를 처리:
+**핸들러 레지스트리 패턴** (OCP 준수):
+- `IStreamEventHandler` 인터페이스: `EventType` 속성 + `HandleAsync` 메서드
+- DI로 10개 핸들러 등록 → `IEnumerable<IStreamEventHandler>`로 주입
+- `StreamEventProcessor`가 `Dictionary<string, IStreamEventHandler>`로 O(1) 디스패치
+- 새 이벤트 타입 추가 시 기존 코드 수정 없이 핸들러 클래스 추가 + DI 등록만 필요
 
-**처리 항목**:
-- **이벤트 디스패치**: type/subtype 기반 switch → ChatState 메서드 호출 (AddToolCall, AppendText, AppendThinking 등)
-- **도구 결과 매칭**: `toolResultBlockMap`으로 tool_use→tool_result 매핑
-- **토큰 누적**: message_start/message_delta에서 입출력 토큰 캡처
-- **중간 저장**: content_block_stop마다 `SessionService.SaveSessionAsync()`
+**핸들러 목록**:
+| 핸들러 | EventType | 역할 |
+|--------|-----------|------|
+| `SystemInitHandler` | system | 모델·세션 ID 초기화 |
+| `ContentBlockStartHandler` | content_block_start | thinking/tool_use/tool_result 블록 시작 |
+| `ContentBlockDeltaHandler` | content_block_delta | 텍스트/사고/JSON 델타 처리 |
+| `ContentBlockStopHandler` | content_block_stop | 도구 완료·세션 저장 |
+| `AssistantMessageHandler` | assistant | 완성 메시지 처리 (비스트리밍 경로) |
+| `UserMessageHandler` | user | tool_result 매칭 |
+| `MessageStartHandler` | message_start | 모델·토큰 초기화 |
+| `MessageDeltaHandler` | message_delta | 토큰 누적·max_tokens 감지 |
+| `ResultHandler` | result | 사용량 기록 (3단계 폴백)·콘텐츠 복원 |
+| `ErrorHandler` | error | 에러 메시지 표시 |
 
-**FinalizeAsync** — 스트림 종료 후 3가지 후처리:
-1. **사용량 기록** (3단계 폴백): result 이벤트 → 누적 토큰 → 비용 전용 → 후처리 계산
+**FinalizeAsync** — 스트림 종료 후 3가지 후처리 (StreamEventProcessor에 유지):
+1. **사용량 기록** (폴백): 누적 토큰 → `StreamEventUtils.RecordUsageAsync`
 2. **플랜 감지** (3계층): tool_use 기반 → 텍스트 패턴 검색 → 파일 존재 감지
 3. **질문 감지**: `QuestionDetector` → `QuickResponseBar` 제안
 
 ### 빠진 것 / 문제점
-- **ChatState 직접 변경**: `ProcessEventAsync` 내에서 `ChatState`의 가변 상태를 직접 수정. 부수효과 추적 어려움
-- **`StreamProcessingContext` 가변 DTO**: 참조 타입으로 컨텍스트 상태 공유. 호출자와 프로세서가 같은 객체를 변경
+- **ChatState 직접 변경**: 각 핸들러에서 `ChatState`의 가변 상태를 직접 수정. 부수효과 추적 어려움
+- **`StreamProcessingContext` 가변 DTO**: 참조 타입으로 컨텍스트 상태 공유. 호출자와 핸들러가 같은 객체를 변경
 
 ---
 
@@ -1582,14 +1597,13 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 |------|------|------|-----------|--------|
 | **1** | **ChatView 697줄 재비대화** — Phase 13 Continue 기능 추가로 548→697줄 재성장. 서비스 주입 13개 유지 | 유지보수성 저하, 테스트 불가, SRP 위반 | §10 | 중 |
 | **2** | **테스트 커버리지 부족** — 12개 테스트 파일 / 75+개 서비스. ClaudeService·GitService·SessionService 등 핵심 서비스 테스트 부재 | 회귀 방지 불가, 리팩토링 안전망 없음 | §25 | 높 |
-| **3** | **StreamEventProcessor 516줄 switch 아키텍처** — 20+개 case 중첩 switch문. 새 이벤트 타입 추가 시 OCP 위반 | 확장성, 유지보수성 | §10.5 | 중 |
-| **4** | **GitService ParseDiff " b/" 파싱 취약** — `LastIndexOf(" b/")` 패턴이 `ParseDiff`(정적)과 `GetDiffSummaryAsync`(스트리밍) 양쪽에 존재. 경로에 " b/" 포함 시 오파싱 | diff 표시 오류 | §5 | 낮 |
-| **5** | **SessionService 캐시 무한 성장** — `_metadataCache`·`_sessionCache` ConcurrentDictionary에 만료/퇴출 정책 없음. 삭제된 세션도 캐시에 잔류 가능 | 장기 실행 시 메모리 누수 | §8 | 중 |
-| **6** | **SessionList 8개 서비스 과다 주입** — 컴포넌트가 8개 서비스에 직접 의존. 파사드 서비스로 위임 필요 | 커플링, 테스트 난이도 | §12 | 중 |
-| **7** | **Usage 저장 경로 불일치** — `AppData/Roaming`(설정·세션)과 `AppData/Local`(usage.jsonl) 분산. 백업/이관 시 누락 위험 | 운영, 데이터 일관성 | §20 | 낮 |
-| **8** | **ParseDiff 레거시 코드 잔류** — static `ParseDiff` 메서드가 `GetDiffSummaryAsync`와 기능 중복. 둘 다 동일 " b/" 취약점 공유 | 코드 중복, 유지보수 혼란 | §5 | 낮 |
-| **9** | **IProcessRunner stderr bare catch** — `StreamingProcess._stderrTask`의 `catch { }` 블록(`IProcessRunner.cs:75`)이 stderr 에러 정보 손실 | 디버깅 어려움 | §4 | 낮 |
-| **10** | **ContentGrouper 중간 텍스트 휴리스틱** — 하드코딩된 한국어/영어 패턴으로 텍스트 분류. 다국어 확장 시 패턴 폭발 | 렌더링 오분류 | §13 | 낮 |
+| **3** | **GitService ParseDiff " b/" 파싱 취약** — `LastIndexOf(" b/")` 패턴이 `ParseDiff`(정적)과 `GetDiffSummaryAsync`(스트리밍) 양쪽에 존재. 경로에 " b/" 포함 시 오파싱 | diff 표시 오류 | §5 | 낮 |
+| **4** | **SessionService 캐시 무한 성장** — `_metadataCache`·`_sessionCache` ConcurrentDictionary에 만료/퇴출 정책 없음. 삭제된 세션도 캐시에 잔류 가능 | 장기 실행 시 메모리 누수 | §8 | 중 |
+| **5** | **SessionList 8개 서비스 과다 주입** — 컴포넌트가 8개 서비스에 직접 의존. 파사드 서비스로 위임 필요 | 커플링, 테스트 난이도 | §12 | 중 |
+| **6** | **Usage 저장 경로 불일치** — `AppData/Roaming`(설정·세션)과 `AppData/Local`(usage.jsonl) 분산. 백업/이관 시 누락 위험 | 운영, 데이터 일관성 | §20 | 낮 |
+| **7** | **ParseDiff 레거시 코드 잔류** — static `ParseDiff` 메서드가 `GetDiffSummaryAsync`와 기능 중복. 둘 다 동일 " b/" 취약점 공유 | 코드 중복, 유지보수 혼란 | §5 | 낮 |
+| **8** | **IProcessRunner stderr bare catch** — `StreamingProcess._stderrTask`의 `catch { }` 블록(`IProcessRunner.cs:75`)이 stderr 에러 정보 손실 | 디버깅 어려움 | §4 | 낮 |
+| **9** | **ContentGrouper 중간 텍스트 휴리스틱** — 하드코딩된 한국어/영어 패턴으로 텍스트 분류. 다국어 확장 시 패턴 폭발 | 렌더링 오분류 | §13 | 낮 |
 
 ### 차기 개선 후보
 
