@@ -65,8 +65,20 @@ public class Session
     public string? ConversationId { get; set; }
     public int? MaxTurns { get; set; }
     public decimal? MaxBudgetUsd { get; set; }
-    public long TotalInputTokens { get; set; }
-    public long TotalOutputTokens { get; set; }
+    private long _totalInputTokens;
+    private long _totalOutputTokens;
+
+    public long TotalInputTokens
+    {
+        get => _totalInputTokens;
+        set => _totalInputTokens = Guard.NonNegative(value, nameof(TotalInputTokens));
+    }
+
+    public long TotalOutputTokens
+    {
+        get => _totalOutputTokens;
+        set => _totalOutputTokens = Guard.NonNegative(value, nameof(TotalOutputTokens));
+    }
     public bool PlanCompleted { get; set; }
     public string? PlanFilePath { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

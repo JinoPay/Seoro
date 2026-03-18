@@ -1,3 +1,4 @@
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -130,6 +131,9 @@ public class SkillRegistry : ISkillRegistry
 
     public string ExpandSkill(SkillDefinition skill, string? args, Session session)
     {
+        Guard.NotNull(skill, nameof(skill));
+        Guard.NotNull(session, nameof(session));
+
         var template = skill.PromptTemplate;
 
         // Handle $ARGUMENTS placeholder (custom commands convention)

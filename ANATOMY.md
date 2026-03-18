@@ -1544,7 +1544,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **6** | **시스템 프롬프트·메모리 크기 제한 없음** — 무제한 토큰 소비 | notes.md 10만줄이 그대로 프롬프트에 주입. 메모리도 전체 JSON 로드 + 워크스페이스별 필터링 없음 | §17, §18 | 중 |
 | **7** | ~~**app.css 3,169줄 모놀리스** — 토큰·컴포넌트 스타일 혼재~~ ✅ **해결** | `tokens.css` 분리 완료 (73줄). `app.css` → 3,095줄 (컴포넌트 전용). `index.html`에서 `tokens.css` → `app.css` 순서 로드 | §11 | 낮 |
 | **8** | ~~**SessionList 가상화 없음** — 전체 DOM 렌더링~~ ✅ | 워크스페이스별 개별 `<Virtualize>` → 단일 플랫 리스트 `<Virtualize>` 전환. `SidebarRow` record + `SidebarRowKind` enum으로 헤더/서브헤더/세션 통합 가상화 | §12 | 낮 |
-| **9** | **입력 검증 전면 부재** — 설정/세션/플러그인 경계에서 | 빈 `WorkspaceId`로 Session 생성 가능, 음수 토큰 허용, 잘못된 경로의 설정 저장 가능. 5+ public 메서드에 null 체크 없음 | §3, §22 | 중 |
+| **9** | ~~**입력 검증 전면 부재** — 설정/세션/플러그인 경계에서~~ | ✅ **해결 완료.** `Guard` 유틸 도입. Session/UsageEntry 토큰 음수 차단, SessionService·MessageManager·ContextService·SkillRegistry·TaskService·PluginService·AttachmentService 경계 메서드에 null/empty 검증 추가 | §3, §22 | — |
 | **10** | ~~**JSONL 사용량 로그 무한 성장**~~ ✅ 해결 | 10MB 초과 시 자동 로테이션(90일 보존), 재시작 시 기존 해시 로드로 중복 방지, CSV 내보내기 추가 | §20 | 낮 |
 
 ### 차기 개선 후보

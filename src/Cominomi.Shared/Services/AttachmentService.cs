@@ -1,4 +1,5 @@
 using System.Text;
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
@@ -17,6 +18,9 @@ public class AttachmentService : IAttachmentService
 
     public async Task<FileAttachment> CopyFileToWorktreeAsync(string sourceFilePath, string worktreePath)
     {
+        Guard.NotNullOrWhiteSpace(sourceFilePath, nameof(sourceFilePath));
+        Guard.NotNullOrWhiteSpace(worktreePath, nameof(worktreePath));
+
         var dir = await EnsureAttachmentsDirAsync(worktreePath);
         var originalName = Path.GetFileName(sourceFilePath);
         var ext = Path.GetExtension(originalName);
@@ -39,6 +43,11 @@ public class AttachmentService : IAttachmentService
 
     public async Task<FileAttachment> SaveBytesToWorktreeAsync(byte[] data, string fileName, string contentType, string worktreePath)
     {
+        Guard.NotNull(data, nameof(data));
+        Guard.NotNullOrWhiteSpace(fileName, nameof(fileName));
+        Guard.NotNullOrWhiteSpace(contentType, nameof(contentType));
+        Guard.NotNullOrWhiteSpace(worktreePath, nameof(worktreePath));
+
         var dir = await EnsureAttachmentsDirAsync(worktreePath);
         var ext = Path.GetExtension(fileName);
         if (string.IsNullOrEmpty(ext) && contentType.StartsWith("image/"))

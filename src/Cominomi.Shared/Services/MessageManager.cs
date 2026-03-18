@@ -1,8 +1,10 @@
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
 
 public class MessageManager
+
 {
     private readonly Action _notifyChanged;
 
@@ -13,6 +15,9 @@ public class MessageManager
 
     public void AddUserMessage(Session session, string text)
     {
+        Guard.NotNull(session, nameof(session));
+        Guard.NotNull(text, nameof(text));
+
         session.Messages.Add(new ChatMessage
         {
             Role = MessageRole.User,
@@ -23,6 +28,10 @@ public class MessageManager
 
     public void AddUserMessage(Session session, string text, List<FileAttachment> attachments)
     {
+        Guard.NotNull(session, nameof(session));
+        Guard.NotNull(text, nameof(text));
+        Guard.NotNull(attachments, nameof(attachments));
+
         session.Messages.Add(new ChatMessage
         {
             Role = MessageRole.User,
@@ -47,6 +56,9 @@ public class MessageManager
 
     public void AppendText(ChatMessage message, string text)
     {
+        Guard.NotNull(message, nameof(message));
+        Guard.NotNull(text, nameof(text));
+
         message.Text += text;
 
         var lastPart = message.Parts.Count > 0 ? message.Parts[^1] : null;
@@ -87,6 +99,9 @@ public class MessageManager
 
     public void AddToolCall(ChatMessage message, ToolCall toolCall)
     {
+        Guard.NotNull(message, nameof(message));
+        Guard.NotNull(toolCall, nameof(toolCall));
+
         message.ToolCalls.Add(toolCall);
 
         message.Parts.Add(new ContentPart

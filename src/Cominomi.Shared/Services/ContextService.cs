@@ -32,6 +32,9 @@ public class ContextService : IContextService
 
     public async Task SaveNotesAsync(string worktreePath, string content)
     {
+        Guard.NotNullOrWhiteSpace(worktreePath, nameof(worktreePath));
+        Guard.NotNull(content, nameof(content));
+
         await EnsureContextDirectoryAsync(worktreePath);
         var path = Path.Combine(worktreePath, ContextDir, NotesFile);
         await AtomicFileWriter.WriteAsync(path, content);
@@ -39,6 +42,9 @@ public class ContextService : IContextService
 
     public async Task SaveTodosAsync(string worktreePath, string content)
     {
+        Guard.NotNullOrWhiteSpace(worktreePath, nameof(worktreePath));
+        Guard.NotNull(content, nameof(content));
+
         await EnsureContextDirectoryAsync(worktreePath);
         var path = Path.Combine(worktreePath, ContextDir, TodosFile);
         await AtomicFileWriter.WriteAsync(path, content);
@@ -46,6 +52,10 @@ public class ContextService : IContextService
 
     public async Task SavePlanAsync(string worktreePath, string planName, string content)
     {
+        Guard.NotNullOrWhiteSpace(worktreePath, nameof(worktreePath));
+        Guard.NotNullOrWhiteSpace(planName, nameof(planName));
+        Guard.NotNull(content, nameof(content));
+
         await EnsureContextDirectoryAsync(worktreePath);
         var plansPath = Path.Combine(worktreePath, ContextDir, PlansDir);
         Directory.CreateDirectory(plansPath);
@@ -127,6 +137,8 @@ public class ContextService : IContextService
 
     public string BuildContextPrompt(ContextInfo context)
     {
+        Guard.NotNull(context, nameof(context));
+
         var sb = new StringBuilder();
         var maxItem = CominomiConstants.MaxContextItemChars;
         var maxTotal = CominomiConstants.MaxContextPromptChars;

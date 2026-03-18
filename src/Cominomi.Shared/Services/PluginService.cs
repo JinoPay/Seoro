@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -122,6 +123,8 @@ public class PluginService : IPluginService
 
     public async Task<PluginInfo?> GetPluginAsync(string pluginId)
     {
+        Guard.NotNullOrWhiteSpace(pluginId, nameof(pluginId));
+
         var pluginDir = System.IO.Path.Combine(PluginsDirectory, pluginId);
         if (!Directory.Exists(pluginDir))
             return null;
@@ -132,6 +135,8 @@ public class PluginService : IPluginService
 
     public async Task SetPluginEnabledAsync(string pluginId, bool enabled)
     {
+        Guard.NotNullOrWhiteSpace(pluginId, nameof(pluginId));
+
         var settings = _appSettings.CurrentValue;
         settings.DisabledPlugins ??= [];
 
