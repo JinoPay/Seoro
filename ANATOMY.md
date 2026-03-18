@@ -595,7 +595,7 @@ ChatView UI 버튼
 ### 빠진 것 / 문제점
 - ~~**PR 생성 경로 2개**~~ → ✅ **해결**: Phase 3에서 `IChatPrWorkflowService`로 통합
 - ~~**자동 리베이스 없음**~~ → ✅ **해결**: `ConflictDetected` 시 `RebaseInternalAsync()` 자동 호출 → fetch → rebase → force-push → 재시도 병합 (3단계 복구)
-- **같은 세션 3~4번 로드**: `MergeAllAsync`가 `PushBranchAsync`를 호출 → 내부에서 `LoadSessionAndWorkspaceAsync` → 또 `LoadSessionAsync`. 파이프라인 한 번에 세션 파일을 3~4회 읽음
+- ~~**같은 세션 3~4번 로드**~~ → ✅ **해결**: (1) `MergeAllAsync`는 Internal 메서드로 1회만 로드, (2) `SessionService.LoadSessionAsync`에 2초 TTL 캐시 추가 — `SaveSessionAsync` 시 캐시 갱신, `Delete`/`Cleanup` 시 무효화
 - ~~**롤백 없음**: PR 생성 성공 후 병합 실패 시, PR이 열린 채로 방치~~ → ✅ **해결**: `ClosePrInternalAsync()` 도입. 병합 실패 시 PR 자동 닫기
 - **강제 푸시에 확인 없음**: `ForcePushAndMerge`가 UI에서 직접 호출
 - **충돌 감지 오탐 가능**: `"merge"` 단어가 에러와 무관한 맥락에 나올 수 있음
@@ -1479,7 +1479,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
 | **1** | **플러그인 실행 엔진** | #9 인프라만 완성. EntryPoint 파일 로딩/실행/샌드박싱 미구현 | §15.5 | 높 |
-| **2** | **같은 세션 3~4회 로드** | `MergeAllAsync` 파이프라인에서 세션 파일 반복 로드. 캐시 활용 가능 | §9 | 낮 |
+| ~~**2**~~ | ~~**같은 세션 3~4회 로드**~~ | ✅ **해결**: Internal 메서드 + `LoadSessionAsync` 2초 TTL 캐시 | §9 | ~~낮~~ |
 | **3** | **MainLayout 과다 책임** | 레이아웃 + 테마 + 의존성 체크 + 다이얼로그 관리 | §11 | 중 |
 | ~~**4**~~ | ~~**macOS 알림 미구현**~~ | ~~MacCatalyst 타겟이지만 NotificationService는 Windows 전용~~ | §21 | ✅ 해결 |
 | **5** | **옵션 패턴 미사용** | 각 서비스가 `ISettingsService.LoadAsync()` 직접 호출 | §1 | 낮 |
