@@ -2,6 +2,7 @@ using Cominomi.Shared.Services;
 using Microsoft.Extensions.Logging;
 
 #if MACCATALYST
+using Foundation;
 using UserNotifications;
 #elif WINDOWS
 using Microsoft.Windows.AppNotifications;
@@ -10,11 +11,29 @@ using Microsoft.Windows.AppNotifications.Builder;
 
 namespace Cominomi.Services;
 
+#if MACCATALYST
+internal sealed class ForegroundNotificationDelegate : NSObject, IUNUserNotificationCenterDelegate
+{
+    [Export("userNotificationCenter:willPresentNotification:withCompletionHandler:")]
+    public void WillPresentNotification(
+        UNUserNotificationCenter center,
+        UNNotification notification,
+        Action<UNNotificationPresentationOptions> completionHandler)
+    {
+        completionHandler(UNNotificationPresentationOptions.Banner | UNNotificationPresentationOptions.Sound);
+    }
+}
+#endif
+
 public class NotificationService : INotificationService
 {
     private readonly ILogger<NotificationService> _logger;
     private readonly ISettingsService _settingsService;
     private bool _initialized;
+
+#if MACCATALYST
+    private ForegroundNotificationDelegate? _delegate;
+#endif
 
     public NotificationService(ILogger<NotificationService> logger, ISettingsService settingsService)
     {
@@ -30,6 +49,8 @@ public class NotificationService : INotificationService
         try
         {
             var center = UNUserNotificationCenter.Current;
+            _delegate = new ForegroundNotificationDelegate();
+            center.Delegate = _delegate;
             var (granted, error) = await center.RequestAuthorizationAsync(
                 UNAuthorizationOptions.Alert | UNAuthorizationOptions.Sound);
 
@@ -78,7 +99,7 @@ public class NotificationService : INotificationService
             {
                 Title = title,
                 Body = body,
-                Sound = UNNotificationSound.Default
+                Sound = settings.NotificationSound ? UNNotificationSound.Default : null
             };
 
             var requestId = Guid.NewGuid().ToString();
