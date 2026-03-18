@@ -50,7 +50,10 @@ public class Session
     /// Initializes Status for deserialization or test setup. Bypasses validation.
     /// </summary>
     public void SetInitialStatus(SessionStatus status) => Status = status;
-    public string? ErrorMessage { get; set; }
+    public AppError? Error { get; set; }
+
+    [JsonIgnore]
+    public string? ErrorMessage => Error?.Message;
     public List<ChatMessage> Messages { get; set; } = [];
 
     // Git 관심사 (worktree, branch)

@@ -125,7 +125,7 @@ public partial class SessionService : ISessionService
             if (!result.Success)
             {
                 session.TransitionStatus(SessionStatus.Error);
-                session.ErrorMessage = result.Error;
+                session.Error = AppError.WorktreeCreation(result.Error);
             }
             else
             {
@@ -136,7 +136,7 @@ public partial class SessionService : ISessionService
         {
             _logger.LogError(ex, "Failed to create session worktree for workspace {WorkspaceId}", workspaceId);
             session.TransitionStatus(SessionStatus.Error);
-            session.ErrorMessage = ex.Message;
+            session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
         }
 
         return session;
@@ -233,7 +233,7 @@ public partial class SessionService : ISessionService
             if (!result.Success)
             {
                 session.TransitionStatus(SessionStatus.Error);
-                session.ErrorMessage = result.Error;
+                session.Error = AppError.WorktreeCreation(result.Error);
             }
             else
             {
@@ -247,7 +247,7 @@ public partial class SessionService : ISessionService
         {
             _logger.LogError(ex, "Failed to initialize worktree for session {SessionId}", sessionId);
             session.TransitionStatus(SessionStatus.Error);
-            session.ErrorMessage = ex.Message;
+            session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
         }
 
         await SaveSessionAsync(session);
