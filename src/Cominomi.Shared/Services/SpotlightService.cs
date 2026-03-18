@@ -220,7 +220,7 @@ public class SpotlightService : ISpotlightService, IDisposable
             RepoDir = repoDir
         };
         var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(StateFilePath, json);
+        await AtomicFileWriter.WriteAsync(StateFilePath, json);
     }
 
     private void TryDeleteStateFile()
