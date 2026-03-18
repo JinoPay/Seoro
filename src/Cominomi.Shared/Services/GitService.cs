@@ -317,7 +317,7 @@ public class GitService : IGitService
 
     public async Task<GitResult> GetFormattedCommitLogAsync(string repoDir, string baseBranch, int maxCount = 50, CancellationToken ct = default)
     {
-        return await RunGitAsync(repoDir, ct, "log", $"{baseBranch}..HEAD", "--format=%H|%h|%an|%aI|%s", "-n", maxCount.ToString());
+        return await RunGitAsync(repoDir, ct, "log", $"{baseBranch}..HEAD", "--format=%H%x00%h%x00%an%x00%aI%x00%s", "-n", maxCount.ToString());
     }
 
     public async Task<List<string>> ListTrackedFilesAsync(string workingDir, CancellationToken ct = default)
