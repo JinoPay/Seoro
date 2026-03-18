@@ -123,9 +123,30 @@ public class ChatState : IDisposable
         NotifyStateChanged();
     }
 
+    public void AddUserMessage(Session session, string text)
+    {
+        session.Messages.Add(new ChatMessage
+        {
+            Role = MessageRole.User,
+            Text = text
+        });
+        NotifyStateChanged();
+    }
+
     public void AddUserMessage(string text, List<FileAttachment> attachments)
     {
         CurrentSession?.Messages.Add(new ChatMessage
+        {
+            Role = MessageRole.User,
+            Text = text,
+            Attachments = attachments
+        });
+        NotifyStateChanged();
+    }
+
+    public void AddUserMessage(Session session, string text, List<FileAttachment> attachments)
+    {
+        session.Messages.Add(new ChatMessage
         {
             Role = MessageRole.User,
             Text = text,
@@ -143,6 +164,19 @@ public class ChatState : IDisposable
             StreamingStartedAt = DateTime.UtcNow
         };
         CurrentSession?.Messages.Add(msg);
+        NotifyStateChanged();
+        return msg;
+    }
+
+    public ChatMessage StartAssistantMessage(Session session)
+    {
+        var msg = new ChatMessage
+        {
+            Role = MessageRole.Assistant,
+            IsStreaming = true,
+            StreamingStartedAt = DateTime.UtcNow
+        };
+        session.Messages.Add(msg);
         NotifyStateChanged();
         return msg;
     }
@@ -234,6 +268,16 @@ public class ChatState : IDisposable
     public void AddSystemMessage(string text)
     {
         CurrentSession?.Messages.Add(new ChatMessage
+        {
+            Role = MessageRole.System,
+            Text = text
+        });
+        NotifyStateChanged();
+    }
+
+    public void AddSystemMessage(Session session, string text)
+    {
+        session.Messages.Add(new ChatMessage
         {
             Role = MessageRole.System,
             Text = text

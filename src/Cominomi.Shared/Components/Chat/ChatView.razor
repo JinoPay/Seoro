@@ -567,9 +567,9 @@
         var messageForClaude = AttachmentService.BuildMessageWithAttachments(input.Text, fileAttachments);
 
         if (fileAttachments.Count > 0)
-            ChatState.AddUserMessage(input.Text, fileAttachments);
+            ChatState.AddUserMessage(session, input.Text, fileAttachments);
         else
-            ChatState.AddUserMessage(input.Text);
+            ChatState.AddUserMessage(session, input.Text);
 
         // Save immediately so user message persists even if navigation occurs mid-stream
         await SessionService.SaveSessionAsync(session);
@@ -579,7 +579,7 @@
 
         ChatState.SetStreaming(true, session.Id);
         ChatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
-        var assistantMsg = ChatState.StartAssistantMessage();
+        var assistantMsg = ChatState.StartAssistantMessage(session);
 
         // Summarize with Haiku before main model processing to set title & branch name
         if (isFirstMessage && session.Status == SessionStatus.Ready && !string.IsNullOrWhiteSpace(input.Text))
@@ -604,7 +604,7 @@
 
                     // Show in-chat notification
                     var branchInfo = session.IsLocalDir ? "" : $" · 브랜치: {session.BranchName}";
-                    ChatState.AddSystemMessage($"제목이 \"{summary}\"(으)로 설정됨{branchInfo}");
+                    ChatState.AddSystemMessage(session, $"제목이 \"{summary}\"(으)로 설정됨{branchInfo}");
 
                     // Save once with both title and branch name updated on the same object
                     await SessionService.SaveSessionAsync(session);
