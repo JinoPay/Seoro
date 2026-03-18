@@ -85,6 +85,15 @@
 | #136 | 옵션 패턴 도입 | `IOptionsMonitor<AppSettings>` + `AppSettingsFactory` + `AppSettingsChangeNotifier`. 8개 서비스/컴포넌트 전환 |
 | #137 | 플러그인 실행 엔진 | EntryPoint 로딩/실행/샌드박싱 + hooks·skills 매니페스트 자동 등록 |
 
+### 구조 개선 Phase 8 (2026-03-18) — 신규 구조적 문제 #2 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| `AtomicFileWriter.AppendAsync()` 추가 | 기존 파일 내용을 읽고 append 후 원자적 쓰기. .gitignore, JSONL 등 append 패턴 지원 |
+| `SpotlightService` 원자적 쓰기 | `PersistStateAsync()`의 `File.WriteAllTextAsync` → `AtomicFileWriter.WriteAsync` |
+| `ContextService` 원자적 쓰기 | notes/todos/plans 저장 + .gitignore append 총 6곳 → `AtomicFileWriter` 전환 |
+| `AttachmentService` 원자적 쓰기 + async 전환 | `EnsureGitignore` sync → `EnsureGitignoreAsync` + `AtomicFileWriter` 전환 |
+| `UsageService` 원자적 쓰기 | JSONL append → `AtomicFileWriter.AppendAsync` 전환 |
+
 ### 구조 개선 Phase 7 (2026-03-18) — 차기 개선 후보 #3 해결
 | 변경 내용 | 역할 / 영향 범위 |
 |-----------|-----------------|
@@ -1528,7 +1537,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
 | **1** | **빈 catch 블록 14곳** — `catch { }` 로 에러 삼킴 | 디버깅 불가. 도구 위젯 7개 + ChatView + InputArea + SessionWorkflowBar + ClaudeService 등. 프로덕션에서 원인 추적 불가 | §10, §13, §7 | 낮 |
-| **2** | **비원자적 파일 쓰기 5곳** — `AtomicFileWriter` 미사용 | `SpotlightService` 상태, `ContextService` notes/todos/plans, `AttachmentService` .gitignore, `UsageService` JSONL — 앱 크래시 시 데이터 손상 가능 | §19, §17, §20 | 낮 |
+| ~~**2**~~ | ~~**비원자적 파일 쓰기 5곳** — `AtomicFileWriter` 미사용~~ | ~~`SpotlightService` 상태, `ContextService` notes/todos/plans, `AttachmentService` .gitignore, `UsageService` JSONL — 앱 크래시 시 데이터 손상 가능~~ | §19, §17, §20 | ✅ 해결 |
 | **3** | **ClaudeService 재시도 60줄 복붙** — `--verbose` 재시도 시 스트리밍 루프 전체 복사 | 유지보수 시 두 곳을 동시 수정해야 함. 하나만 수정 시 동작 불일치 | §7 | 중 |
 | **4** | **데이터 모델 불변성 부재** — 모든 모델이 `public set`, 가변 참조 공유 | `ChatState`와 `Session`이 같은 `ChatMessage` 객체 참조. `AppendText()`가 `Text` + `Parts` 양쪽 수정. 상태 추적 불가 | §3, §23 | 높 |
 | **5** | **Git/Activity 캐싱 없음** — 매번 프로세스 생성 | `DetectDefaultBranchAsync`, `ListBranchesAsync`가 매 호출마다 git 프로세스. 탭 전환마다 모든 세션의 `git log` 재실행 | §5, §19.5 | 중 |
