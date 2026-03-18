@@ -21,6 +21,7 @@ else
         @* === Left Panel: Sidebar === *@
         <aside class="cominomi-sidebar">
             <SidebarToolbar OnOpenActivity="OpenActivity"
+                            OnOpenNotifications="OpenNotifications"
                             OnOpenUsageDashboard="@(() => _usageDashboardOpen = true)"
                             OnOpenSettings="@(() => ChatState.OpenSettings())" />
             <SessionList />
@@ -46,6 +47,10 @@ else
                 @if (ChatState.Tabs.ActiveTab?.Type == MainTabType.Activity)
                 {
                     <ActivityView />
+                }
+                else if (ChatState.Tabs.ActiveTab?.Type == MainTabType.Notifications)
+                {
+                    <NotificationHistoryView />
                 }
                 else if (ChatState.Tabs.ActiveTab?.Type == MainTabType.FileContent && ChatState.Tabs.ActiveTab.FilePath != null)
                 {
@@ -179,6 +184,7 @@ else
     }
 
     private void OpenActivity() => ChatState.Tabs.OpenActivityTab();
+    private void OpenNotifications() => ChatState.Tabs.OpenNotificationsTab();
 
     private HashSet<string> _reloadingTabs = new();
 

@@ -9,6 +9,7 @@
 @inject ILogger<ChatView> Logger
 @inject ISnackbar Snackbar
 @inject INotificationService NotificationService
+@inject INotificationHistoryService NotificationHistory
 @implements IDisposable
 
 <div class="chat-container">
@@ -389,6 +390,8 @@
     {
         try
         {
+            NotificationHistory.Record(session.CityName, body, type, session.Id);
+
             var isFocused = await JSRuntime.InvokeAsync<bool>("isWindowFocused");
             var isCurrentSession = ChatState.CurrentSession?.Id == session.Id;
 
