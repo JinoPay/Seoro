@@ -1576,7 +1576,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **2** | **QuestionDetector 감지 한계** — 한국어/영어 `?` 패턴만 | `QuestionDetector.cs:9-21` — `?`로 끝나는 문장만 감지. 명령형 질문, 선택 요청 ("pick", "select"), 확인 요청 패턴 누락 | §13 | 낮 |
 | **3** | **Usage HashSet 재시작 시 리셋** — 중복 기록 가능 | `UsageService`의 `_recordedHashes` 인메모리 HashSet이 앱 재시작 시 초기화. 같은 세션의 사용량 이중 기록 가능 | §20 | 낮 |
 | **4** | **중복 제거 해시 영속화** — 재시작 후 JSONL에서 기존 해시 재로드 필요 | 10MB 로테이션은 도입되었으나, 재시작 시 기존 해시를 로드하는 로직의 일관성 검증 필요 | §20 | 낮 |
-| **5** | **stdout 전체 메모리 로드** — GitService 대형 diff 시 메모리 문제 | `IProcessRunner.RunAsync()`가 stdout 전체를 문자열로 반환. 대형 diff(수 MB)에서 메모리 압박 | §5 | 중 |
+| ~~**5**~~ | ~~**stdout 전체 메모리 로드** — GitService 대형 diff 시 메모리 문제~~ | ✅ **해결 완료** — `ProcessRunOptions.MaxOutputBytes`로 bounded read 도입. `ProcessRunner`가 제한 초과 시 truncate + drain. GitService의 diff/log/ls-files 계열 메서드에 1 MB 제한 적용 | §5 | 중 |
 
 ---
 
