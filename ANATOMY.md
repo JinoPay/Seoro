@@ -1586,7 +1586,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **3** | **StreamEventProcessor 516줄 switch 아키텍처** — 20+개 case 중첩 switch문. 새 이벤트 타입 추가 시 OCP 위반 | 확장성, 유지보수성 | §10.5 | 중 |
 | **4** | **GitService ParseDiff " b/" 파싱 취약** — `LastIndexOf(" b/")` 패턴이 `ParseDiff`(정적)과 `GetDiffSummaryAsync`(스트리밍) 양쪽에 존재. 경로에 " b/" 포함 시 오파싱 | diff 표시 오류 | §5 | 낮 |
 | **5** | **SessionService 캐시 무한 성장** — `_metadataCache`·`_sessionCache` ConcurrentDictionary에 만료/퇴출 정책 없음. 삭제된 세션도 캐시에 잔류 가능 | 장기 실행 시 메모리 누수 | §8 | 중 |
-| **6** | **SessionList 8개 서비스 과다 주입** — 컴포넌트가 8개 서비스에 직접 의존. 파사드 서비스로 위임 필요 | 커플링, 테스트 난이도 | §12 | 중 |
+| ~~**6**~~ | ~~**SessionList 8개 서비스 과다 주입** — `ISessionListFacade` 파사드 도입으로 8→4 서비스 축소 완료~~ | ~~커플링, 테스트 난이도~~ | ~~§12~~ | ~~완료~~ |
 | ~~**7**~~ | ~~**Usage 저장 경로 불일치** — `AppPaths.Usage`로 통합 완료. `UsageService`가 `LocalApplicationData` 직접 참조 제거~~ | ~~해결~~ | ~~§20~~ | ~~완료~~ |
 | **8** | **ParseDiff 레거시 코드 잔류** — static `ParseDiff` 메서드가 `GetDiffSummaryAsync`와 기능 중복. 둘 다 동일 " b/" 취약점 공유 | 코드 중복, 유지보수 혼란 | §5 | 낮 |
 | **9** | ~~**IProcessRunner stderr bare catch**~~ ✅ — `StreamingProcess`에 `ILogger` 주입, bare catch를 로깅으로 교체 | ~~디버깅 어려움~~ | §4 | 낮 |
