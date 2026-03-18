@@ -103,6 +103,12 @@
 | #136 | 옵션 패턴 도입 | `IOptionsMonitor<AppSettings>` + `AppSettingsFactory` + `AppSettingsChangeNotifier`. 8개 서비스/컴포넌트 전환 |
 | #137 | 플러그인 실행 엔진 | EntryPoint 로딩/실행/샌드박싱 + hooks·skills 매니페스트 자동 등록 |
 
+### 구조 개선 Phase 10 (2026-03-18) — 신규 구조적 문제 #7 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| `SessionService.NeedsSchemaUpgrade` bare catch 제거 | `catch { return false; }` → `catch (Exception ex)` + `_logger.LogWarning` 로깅 추가. 디버깅 정보 보존 |
+| `NeedsSchemaUpgrade` static → instance 메서드 전환 | `_logger` 인스턴스 필드 접근을 위해 `static` 한정자 제거 |
+
 ### 구조 개선 Phase 9 (2026-03-18) — 신규 구조적 문제 #8 해결
 | 변경 내용 | 역할 / 영향 범위 |
 |-----------|-----------------|
@@ -1578,7 +1584,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | ~~**4**~~ | ~~**ChatView `Task.Run` fire-and-forget** — 예외 미관찰 위험~~ | ~~`ChatView.razor:295` `_ = Task.Run(() => ProcessMessageAsync(input))`. 에러 핸들링·취소 추적 없음. 스트리밍 실패 시 조용히 무시될 수 있음~~ | ~~§10~~ | ~~중~~ |
 | **5** | **GitService ParseDiff " b/" 파싱 취약** — 경로에 ` b/`가 포함된 파일 오파싱 | `GitService.cs:459` `header.LastIndexOf(" b/")`. 파일 경로에 ` b/`가 있으면 diff 어트리뷰션 오류 | §5 | 낮 |
 | **6** | **TabManager 파일 콘텐츠 무한 메모리** — 퇴출 정책 없음 | `MainTab.FileContent` 문자열이 탭 닫을 때까지 메모리에 상주. 대용량 파일(100MB+)도 보유. LRU/크기 제한 없음 | §11 | 중 |
-| **7** | **SessionService bare catch 블록** — `SessionService.cs:582` | `catch { return false; }` 로깅 없는 완전 침묵 실패. 디버깅 정보 손실 | §8 | 낮 |
+| **7** | ~~**SessionService bare catch 블록** — `SessionService.cs:582`~~ ✅ Phase 10에서 해결 | `catch (Exception ex)` + `_logger.LogWarning` 로깅 추가 | §8 | 낮 |
 | **8** | ~~**ContextService .gitignore 중복 추가** — 행 기반이 아닌 `Contains` 체크~~ ✅ Phase 9에서 해결 | `ReadAllLinesAsync` + `line.Trim()` 정확 매칭으로 전환. AttachmentService 동일 패턴도 수정 | §17 | 낮 |
 | **9** | **~~SidebarExplorer FileSystemWatcher 레이스~~** — ✅ 해결됨 | `SidebarExplorer.razor` — `_debounceLock` 도입으로 디바운스 타이머 stop/start 및 dispose에 동시성 보호 추가 | §12 | ~~낮~~ |
 | **10** | **플러그인 stdin/stdout 프로토콜 미정의** — 환경변수만 전달 | `PluginExecutionEngine.cs` — 플러그인 ↔ 앱 간 구조화된 데이터 교환 없음. 양방향 스트리밍 불가. exit code + 버퍼된 stdout/stderr만 | §15.5 | 높 |
