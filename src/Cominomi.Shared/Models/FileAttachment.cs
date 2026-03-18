@@ -14,6 +14,7 @@ public class ChatInputMessage
 {
     public string Text { get; set; } = string.Empty;
     public List<PendingAttachment> Attachments { get; set; } = [];
+    public List<SkillChainStep>? PendingChain { get; set; }
 }
 
 public class PendingAttachment

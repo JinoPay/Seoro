@@ -72,7 +72,7 @@ public class SkillFileStore
         var sb = new System.Text.StringBuilder();
 
         // Write frontmatter if we have metadata
-        if (!string.IsNullOrEmpty(command.Description) || command.AllowedTools.Count > 0)
+        if (!string.IsNullOrEmpty(command.Description) || command.AllowedTools.Count > 0 || command.Chain.Count > 0)
         {
             sb.AppendLine("---");
             if (!string.IsNullOrEmpty(command.Description))
@@ -82,6 +82,12 @@ public class SkillFileStore
                 sb.AppendLine("allowed-tools:");
                 foreach (var tool in command.AllowedTools)
                     sb.AppendLine($"  - {tool}");
+            }
+            if (command.Chain.Count > 0)
+            {
+                sb.AppendLine("chain:");
+                foreach (var step in command.Chain)
+                    sb.AppendLine($"  - {step}");
             }
             sb.AppendLine("---");
             sb.AppendLine();
@@ -119,6 +125,7 @@ public class SkillFileStore
         // Parse optional YAML frontmatter
         string description = "";
         var allowedTools = new List<string>();
+        var chain = new List<string>();
         var body = content;
 
         var lines = content.Split('\n');
@@ -136,24 +143,47 @@ public class SkillFileStore
 
             if (endIdx > 0)
             {
-                // Simple YAML parsing for description and allowed-tools
+                string? currentListField = null;
+
                 for (int i = 1; i < endIdx; i++)
                 {
                     var line = lines[i].Trim();
                     if (line.StartsWith("description:"))
+                    {
+                        currentListField = null;
                         description = line["description:".Length..].Trim().Trim('"', '\'');
+                    }
                     else if (line.StartsWith("allowed-tools:"))
                     {
-                        var toolsStr = line["allowed-tools:".Length..].Trim();
-                        if (toolsStr.StartsWith('['))
+                        currentListField = "allowed-tools";
+                        var val = line["allowed-tools:".Length..].Trim();
+                        if (val.StartsWith('['))
                         {
-                            toolsStr = toolsStr.Trim('[', ']');
-                            allowedTools = toolsStr.Split(',').Select(t => t.Trim().Trim('"', '\'')).Where(t => !string.IsNullOrEmpty(t)).ToList();
+                            allowedTools = ParseInlineList(val);
+                            currentListField = null;
                         }
                     }
-                    else if (line.StartsWith("- ") && allowedTools.Count > 0)
+                    else if (line.StartsWith("chain:"))
                     {
-                        allowedTools.Add(line[2..].Trim());
+                        currentListField = "chain";
+                        var val = line["chain:".Length..].Trim();
+                        if (val.StartsWith('['))
+                        {
+                            chain = ParseInlineList(val);
+                            currentListField = null;
+                        }
+                    }
+                    else if (line.StartsWith("- ") && currentListField != null)
+                    {
+                        var item = line[2..].Trim();
+                        if (currentListField == "allowed-tools")
+                            allowedTools.Add(item);
+                        else if (currentListField == "chain")
+                            chain.Add(item);
+                    }
+                    else if (!line.StartsWith("- "))
+                    {
+                        currentListField = null;
                     }
                 }
 
@@ -171,9 +201,19 @@ public class SkillFileStore
             IsBuiltIn = false,
             Scope = scope,
             AllowedTools = allowedTools,
+            Chain = chain,
             Namespace = ns,
             AcceptsArguments = acceptsArguments,
             FilePath = filePath
         };
+    }
+
+    private static List<string> ParseInlineList(string value)
+    {
+        return value.Trim('[', ']')
+            .Split(',')
+            .Select(t => t.Trim().Trim('"', '\''))
+            .Where(t => !string.IsNullOrEmpty(t))
+            .ToList();
     }
 }

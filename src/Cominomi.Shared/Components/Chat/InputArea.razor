@@ -318,22 +318,33 @@
             return;
 
         var text = _inputText.Trim();
+        List<SkillChainStep>? pendingChain = null;
 
-        // Try to expand slash commands
-        var skillName = SkillRegistry.TryParseSkillCommand(text, out var skillArgs);
-        if (skillName != null)
+        // Try skill chaining first (pipe syntax or definition chain)
+        if (CurrentSession != null && SkillRegistry.TryParseSkillChain(text, CurrentSession, out var chainSteps))
         {
-            var skill = SkillRegistry.Find(skillName);
-            if (skill != null && CurrentSession != null)
+            text = chainSteps[0].ExpandedText;
+            pendingChain = chainSteps.Count > 1 ? chainSteps.GetRange(1, chainSteps.Count - 1) : null;
+        }
+        else
+        {
+            // Single slash command (no chain)
+            var skillName = SkillRegistry.TryParseSkillCommand(text, out var skillArgs);
+            if (skillName != null)
             {
-                text = SkillRegistry.ExpandSkill(skill, skillArgs, CurrentSession);
+                var skill = SkillRegistry.Find(skillName);
+                if (skill != null && CurrentSession != null)
+                {
+                    text = SkillRegistry.ExpandSkill(skill, skillArgs, CurrentSession);
+                }
             }
         }
 
         var input = new ChatInputMessage
         {
             Text = text,
-            Attachments = new List<PendingAttachment>(_pendingAttachments)
+            Attachments = new List<PendingAttachment>(_pendingAttachments),
+            PendingChain = pendingChain
         };
 
         _suppressInputUpdates = true;   // Block oninput from reinserting newline

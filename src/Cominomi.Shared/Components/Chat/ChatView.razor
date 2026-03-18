@@ -102,6 +102,7 @@
     private bool _isLoadingBranches;
     private LandingPage? _landingPage;
     private CancellationTokenSource? _messageCts;
+    private List<SkillChainStep>? _pendingChain;
 
     protected override void OnInitialized()
     {
@@ -295,6 +296,13 @@
         _quickResponseVisible = false;
         _quickResponseOptions = [];
         _planReviewVisible = false;
+
+        // Extract chain state from input
+        if (input.PendingChain is { Count: > 0 })
+        {
+            _pendingChain = input.PendingChain;
+            input.PendingChain = null;
+        }
 
         _messageCts?.Cancel();
         _messageCts?.Dispose();
@@ -508,6 +516,28 @@
             {
                 _ = SendNotificationIfNeeded(session, "Task completed", NotificationType.Info);
             }
+
+            // Skill chaining: auto-send next step if not cancelled/errored/paused
+            if (_pendingChain is { Count: > 0 }
+                && !ct.IsCancellationRequested
+                && !_planReviewVisible
+                && !_quickResponseVisible
+                && !(assistantMsg.Text?.StartsWith("Error:") == true))
+            {
+                var nextStep = _pendingChain[0];
+                _pendingChain.RemoveAt(0);
+                var remainingChain = _pendingChain.Count > 0 ? _pendingChain : null;
+                _pendingChain = null;
+
+                ChatState.AddSystemMessage(session, $"체이닝: /{nextStep.SkillName} 실행 중...");
+                await InvokeAsync(StateHasChanged);
+
+                await InvokeAsync(() => HandleSend(new ChatInputMessage
+                {
+                    Text = nextStep.ExpandedText,
+                    PendingChain = remainingChain
+                }));
+            }
         }
     }
 
@@ -570,6 +600,7 @@
 
     private void HandleCancel()
     {
+        _pendingChain = null;
         ClaudeService.Cancel(ChatState.CurrentSession?.Id);
     }
 
