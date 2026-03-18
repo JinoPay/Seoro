@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Cominomi.Shared.Models;
+using Cominomi.Shared.Services.Migration;
 using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Services;
@@ -18,9 +19,12 @@ public class AppSettingsFactory : IOptionsFactory<AppSettings>
         try
         {
             var json = File.ReadAllText(path);
-            var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonDefaults.Options) ?? new AppSettings();
-            settings.DefaultModel = ModelDefinitions.NormalizeModelId(settings.DefaultModel);
-            return settings;
+            var (settings, migrated, migratedJson) = MigratingJsonReader.Read<AppSettings>(json, JsonDefaults.Options);
+            var result = settings ?? new AppSettings();
+            result.DefaultModel = ModelDefinitions.NormalizeModelId(result.DefaultModel);
+            if (migrated && migratedJson != null)
+                AtomicFileWriter.WriteAsync(path, migratedJson).GetAwaiter().GetResult();
+            return result;
         }
         catch
         {

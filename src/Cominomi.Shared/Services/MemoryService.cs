@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Cominomi.Shared;
 using Cominomi.Shared.Models;
+using Cominomi.Shared.Services.Migration;
 using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
@@ -25,9 +26,13 @@ public class MemoryService : IMemoryService
             try
             {
                 var json = await File.ReadAllTextAsync(file);
-                var entry = JsonSerializer.Deserialize<MemoryEntry>(json, JsonDefaults.Options);
+                var (entry, migrated, migratedJson) = MigratingJsonReader.Read<MemoryEntry>(json, JsonDefaults.Options);
                 if (entry != null)
+                {
                     entries.Add(entry);
+                    if (migrated && migratedJson != null)
+                        await AtomicFileWriter.WriteAsync(file, migratedJson);
+                }
             }
             catch (Exception ex) { _logger.LogWarning(ex, "Skipping corrupted memory file: {File}", file); }
         }
@@ -51,7 +56,7 @@ public class MemoryService : IMemoryService
     {
         entry.UpdatedAt = DateTime.UtcNow;
         var path = Path.Combine(_memoryDir, $"{entry.Id}.json");
-        var json = JsonSerializer.Serialize(entry, JsonDefaults.Options);
+        var json = MigratingJsonWriter.Write(entry, JsonDefaults.Options);
         await AtomicFileWriter.WriteAsync(path, json);
     }
 
@@ -70,7 +75,10 @@ public class MemoryService : IMemoryService
             return null;
 
         var json = await File.ReadAllTextAsync(path);
-        return JsonSerializer.Deserialize<MemoryEntry>(json, JsonDefaults.Options);
+        var (entry, migrated, migratedJson) = MigratingJsonReader.Read<MemoryEntry>(json, JsonDefaults.Options);
+        if (migrated && migratedJson != null)
+            await AtomicFileWriter.WriteAsync(path, migratedJson);
+        return entry;
     }
 
     public string BuildMemoryPrompt(IEnumerable<MemoryEntry> entries)

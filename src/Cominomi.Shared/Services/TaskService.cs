@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Cominomi.Shared;
 using Cominomi.Shared.Models;
+using Cominomi.Shared.Services.Migration;
 using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
@@ -37,7 +38,7 @@ public class TaskService : ITaskService
         Directory.CreateDirectory(sessionDir);
 
         var path = Path.Combine(sessionDir, $"{task.Id}.json");
-        var json = JsonSerializer.Serialize(task, JsonDefaults.Options);
+        var json = MigratingJsonWriter.Write(task, JsonDefaults.Options);
         await AtomicFileWriter.WriteAsync(path, json);
 
         return task;
@@ -51,7 +52,10 @@ public class TaskService : ITaskService
             if (File.Exists(path))
             {
                 var json = await File.ReadAllTextAsync(path);
-                return JsonSerializer.Deserialize<TaskItem>(json, JsonDefaults.Options);
+                var (task, migrated, migratedJson) = MigratingJsonReader.Read<TaskItem>(json, JsonDefaults.Options);
+                if (migrated && migratedJson != null)
+                    await AtomicFileWriter.WriteAsync(path, migratedJson);
+                return task;
             }
         }
         return null;
@@ -66,7 +70,7 @@ public class TaskService : ITaskService
         task.UpdatedAt = DateTime.UtcNow;
 
         var path = Path.Combine(_tasksDir, task.SessionId, $"{task.Id}.json");
-        var json = JsonSerializer.Serialize(task, JsonDefaults.Options);
+        var json = MigratingJsonWriter.Write(task, JsonDefaults.Options);
         await AtomicFileWriter.WriteAsync(path, json);
     }
 
@@ -108,9 +112,13 @@ public class TaskService : ITaskService
             try
             {
                 var json = await File.ReadAllTextAsync(file);
-                var task = JsonSerializer.Deserialize<TaskItem>(json, JsonDefaults.Options);
+                var (task, migrated, migratedJson) = MigratingJsonReader.Read<TaskItem>(json, JsonDefaults.Options);
                 if (task != null)
+                {
                     tasks.Add(task);
+                    if (migrated && migratedJson != null)
+                        await AtomicFileWriter.WriteAsync(file, migratedJson);
+                }
             }
             catch (Exception ex) { _logger.LogWarning(ex, "Skipping corrupted task file: {File}", file); }
         }

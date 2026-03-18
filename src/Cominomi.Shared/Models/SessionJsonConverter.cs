@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cominomi.Shared.Services;
+using Cominomi.Shared.Services.Migration;
 
 namespace Cominomi.Shared.Models;
 
@@ -124,6 +125,10 @@ public class SessionJsonConverter : JsonConverter<Session>
     public override void Write(Utf8JsonWriter writer, Session value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
+
+        // Schema version stamp
+        var migrator = SchemaMigratorRegistry.GetMigrator<Session>();
+        writer.WriteNumber(SchemaVersion.FieldName, migrator?.CurrentVersion ?? 2);
 
         writer.WriteString("id", value.Id);
         writer.WriteString("title", value.Title);
