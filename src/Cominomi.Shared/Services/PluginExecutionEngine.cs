@@ -5,12 +5,41 @@ using Microsoft.Extensions.Logging;
 namespace Cominomi.Shared.Services;
 
 /// <summary>
-/// Plugin execution result containing stdout, stderr, and exit code.
+/// Plugin execution result containing stdout, stderr, exit code, and parsed structured data.
 /// </summary>
-public record PluginExecutionResult(bool Success, string Output, string Error, int ExitCode);
+public record PluginExecutionResult(bool Success, string Output, string Error, int ExitCode)
+{
+    /// <summary>
+    /// Structured data parsed from the plugin's JSON stdout response.
+    /// Null when the plugin does not emit a valid JSON response.
+    /// </summary>
+    public PluginResponse? Data { get; init; }
+}
 
 /// <summary>
-/// Context passed to plugin entry points via environment variables.
+/// JSON request envelope written to the plugin's stdin.
+/// </summary>
+public record PluginRequest
+{
+    public string PluginId { get; init; } = "";
+    public string Action { get; init; } = "run";
+    public Dictionary<string, object?> Parameters { get; init; } = [];
+}
+
+/// <summary>
+/// JSON response envelope read from the plugin's stdout.
+/// Plugins may emit a single JSON object to stdout to return structured data.
+/// If stdout is not valid JSON, the raw text is still available via <see cref="PluginExecutionResult.Output"/>.
+/// </summary>
+public record PluginResponse
+{
+    public bool Success { get; init; } = true;
+    public string? Message { get; init; }
+    public JsonElement? Data { get; init; }
+}
+
+/// <summary>
+/// Context passed to plugin entry points via stdin JSON and environment variables.
 /// </summary>
 public record PluginExecutionContext
 {
@@ -202,6 +231,13 @@ public class PluginExecutionEngine : IPluginExecutionEngine
         _logger.LogInformation("Plugin '{Id}' unloaded", pluginId);
     }
 
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+        PropertyNameCaseInsensitive = true
+    };
+
     public async Task<PluginExecutionResult> ExecuteAsync(string pluginId,
         PluginExecutionContext? context = null, CancellationToken ct = default)
     {
@@ -217,11 +253,13 @@ public class PluginExecutionEngine : IPluginExecutionEngine
             var entryPath = Path.Combine(plugin.Path, plugin.EntryPoint);
             var command = BuildEntryPointCommand(entryPath, plugin.EntryPoint);
 
+            // Environment variables (backward compatible)
             var env = new Dictionary<string, string>
             {
                 ["COMINOMI_PLUGIN_ID"] = pluginId,
                 ["COMINOMI_PLUGIN_DIR"] = plugin.Path,
-                ["COMINOMI_PLUGIN_ACTION"] = context?.Action ?? "run"
+                ["COMINOMI_PLUGIN_ACTION"] = context?.Action ?? "run",
+                ["COMINOMI_PROTOCOL"] = "json/1"
             };
 
             if (context?.Parameters is { Count: > 0 })
@@ -229,6 +267,16 @@ public class PluginExecutionEngine : IPluginExecutionEngine
                 foreach (var (key, value) in context.Parameters)
                     env[$"COMINOMI_PARAM_{key.ToUpperInvariant()}"] = value;
             }
+
+            // Build JSON request for stdin
+            var request = new PluginRequest
+            {
+                PluginId = pluginId,
+                Action = context?.Action ?? "run",
+                Parameters = context?.Parameters?.ToDictionary(
+                    kv => kv.Key, kv => (object?)kv.Value) ?? []
+            };
+            var stdinJson = JsonSerializer.Serialize(request, JsonOptions);
 
             var escapedCommand = command.Replace("\"", "\\\"");
             var result = await _processRunner.RunAsync(new ProcessRunOptions
@@ -239,15 +287,46 @@ public class PluginExecutionEngine : IPluginExecutionEngine
                     : ["-c", escapedCommand],
                 WorkingDirectory = plugin.Path,
                 EnvironmentVariables = env,
+                StandardInput = stdinJson,
                 Timeout = DefaultTimeout
             }, ct);
 
-            return new PluginExecutionResult(result.Success, result.Stdout, result.Stderr, result.ExitCode);
+            // Try to parse structured JSON response from stdout
+            var response = TryParseResponse(result.Stdout);
+
+            return new PluginExecutionResult(result.Success, result.Stdout, result.Stderr, result.ExitCode)
+            {
+                Data = response
+            };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Plugin '{Id}' execution failed", pluginId);
             return new PluginExecutionResult(false, "", ex.Message, -1);
+        }
+    }
+
+    /// <summary>
+    /// Try to parse a <see cref="PluginResponse"/> from the plugin's stdout.
+    /// Returns null if the output is not valid JSON or cannot be deserialized.
+    /// </summary>
+    private PluginResponse? TryParseResponse(string stdout)
+    {
+        if (string.IsNullOrWhiteSpace(stdout))
+            return null;
+
+        var trimmed = stdout.Trim();
+        if (!trimmed.StartsWith('{'))
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<PluginResponse>(trimmed, JsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogDebug(ex, "Plugin stdout is not valid JSON, treating as plain text");
+            return null;
         }
     }
 

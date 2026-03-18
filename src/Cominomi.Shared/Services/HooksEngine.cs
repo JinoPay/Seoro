@@ -13,6 +13,9 @@ public class HooksEngine : IHooksEngine
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    private const int MinTimeoutSeconds = 1;
+    private const int MaxTimeoutSeconds = 300;
+
     private readonly ILogger<HooksEngine> _logger;
     private readonly IShellService _shellService;
     private readonly IProcessRunner _processRunner;
@@ -71,19 +74,20 @@ public class HooksEngine : IHooksEngine
         await AtomicFileWriter.WriteAsync(_hooksFile, json);
     }
 
-    public async Task FireAsync(HookEvent hookEvent, Dictionary<string, string>? env = null)
+    public async Task<List<HookExecutionResult>> FireAsync(HookEvent hookEvent, Dictionary<string, string>? env = null)
     {
         var hooks = _hooks.Where(h => h.Event == hookEvent && h.Enabled).ToList();
-        if (hooks.Count == 0) return;
+        if (hooks.Count == 0) return [];
 
         _logger.LogInformation("Firing hook event {Event} ({Count} hooks)", hookEvent, hooks.Count);
 
         var shell = await _shellService.GetShellAsync();
         var tasks = hooks.Select(hook => ExecuteHookAsync(hook, hookEvent, shell, env));
-        await Task.WhenAll(tasks);
+        var results = await Task.WhenAll(tasks);
+        return [.. results];
     }
 
-    private async Task ExecuteHookAsync(
+    private async Task<HookExecutionResult> ExecuteHookAsync(
         HookDefinition hook, HookEvent hookEvent, ShellInfo shell, Dictionary<string, string>? env)
     {
         try
@@ -98,6 +102,14 @@ public class HooksEngine : IHooksEngine
                     envVars[key] = value;
             }
 
+            var timeoutSeconds = Math.Clamp(hook.TimeoutSeconds, MinTimeoutSeconds, MaxTimeoutSeconds);
+            if (hook.TimeoutSeconds != timeoutSeconds)
+            {
+                _logger.LogWarning(
+                    "Hook '{Command}' timeout {Original}s clamped to {Clamped}s (allowed: {Min}-{Max})",
+                    hook.Command, hook.TimeoutSeconds, timeoutSeconds, MinTimeoutSeconds, MaxTimeoutSeconds);
+            }
+
             var result = await _processRunner.RunAsync(new ProcessRunOptions
             {
                 FileName = shell.FileName,
@@ -106,7 +118,7 @@ public class HooksEngine : IHooksEngine
                     : ["-c", hook.Command],
                 WorkingDirectory = hook.WorkingDirectory ?? ".",
                 EnvironmentVariables = envVars,
-                Timeout = TimeSpan.FromSeconds(hook.TimeoutSeconds)
+                Timeout = TimeSpan.FromSeconds(timeoutSeconds)
             });
 
             if (!string.IsNullOrWhiteSpace(result.Stdout))
@@ -116,10 +128,15 @@ public class HooksEngine : IHooksEngine
             if (!result.Success)
                 _logger.LogWarning("Hook '{Command}' for event {Event} exited with code {ExitCode}",
                     hook.Command, hookEvent, result.ExitCode);
+
+            var timedOut = result.ExitCode == -1 && result.Stderr.Contains("timed out");
+            return new HookExecutionResult(hook.Command, result.Success, result.ExitCode,
+                result.Stdout, result.Stderr, timedOut);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Hook '{Command}' for event {Event} failed", hook.Command, hookEvent);
+            return new HookExecutionResult(hook.Command, false, -1, "", ex.Message, false);
         }
     }
 

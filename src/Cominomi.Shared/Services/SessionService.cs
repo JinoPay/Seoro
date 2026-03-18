@@ -569,7 +569,7 @@ public partial class SessionService : ISessionService
     /// <summary>
     /// Checks if a JSON string is missing the current $schemaVersion — meaning it needs migration/upgrade.
     /// </summary>
-    private static bool NeedsSchemaUpgrade(string json)
+    private bool NeedsSchemaUpgrade(string json)
     {
         try
         {
@@ -579,7 +579,11 @@ public partial class SessionService : ISessionService
             var migrator = SchemaMigratorRegistry.GetMigrator<Session>();
             return migrator != null && version < migrator.CurrentVersion;
         }
-        catch { return false; }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to check schema upgrade for session JSON");
+            return false;
+        }
     }
 
     [GeneratedRegex(@"\s+")]

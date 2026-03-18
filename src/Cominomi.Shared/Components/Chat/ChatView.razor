@@ -100,6 +100,7 @@
     private bool _shouldAutoScroll;
     private bool _isLoadingBranches;
     private LandingPage? _landingPage;
+    private CancellationTokenSource? _messageCts;
 
     protected override void OnInitialized()
     {
@@ -294,11 +295,31 @@
         _quickResponseOptions = [];
         _planReviewVisible = false;
 
-        _ = Task.Run(() => ProcessMessageAsync(input));
+        _messageCts?.Cancel();
+        _messageCts?.Dispose();
+        _messageCts = new CancellationTokenSource();
+        var ct = _messageCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await ProcessMessageAsync(input, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancellation is expected — no action needed
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Unhandled exception in ProcessMessageAsync for session {SessionId}",
+                    ChatState.CurrentSession?.Id);
+            }
+        });
         return Task.CompletedTask;
     }
 
-    private async Task ProcessMessageAsync(ChatInputMessage input)
+    private async Task ProcessMessageAsync(ChatInputMessage input, CancellationToken ct = default)
     {
         var session = ChatState.CurrentSession!;
 
@@ -338,6 +359,8 @@
                 await InvokeAsync(StateHasChanged);
             }
         }
+
+        ct.ThrowIfCancellationRequested();
 
         var isFirstMessage = session.Messages.Count(m => m.Role == MessageRole.User) == 0;
 
@@ -401,6 +424,8 @@
 
         try
         {
+            ct.ThrowIfCancellationRequested();
+
             var conversationId = session.ConversationId;
             var systemPrompt = await SystemPromptBuilder.BuildAsync(session, ChatState.CurrentWorkspace);
 
@@ -412,7 +437,7 @@
                 effortLevel: session.EffortLevel ?? "auto",
                 sessionId: session.Id,
                 conversationId: conversationId,
-                systemPrompt: systemPrompt))
+                systemPrompt: systemPrompt).WithCancellation(ct))
             {
                 if (firstEvent)
                 {
@@ -424,6 +449,10 @@
             }
 
             await StreamProcessor.FinalizeAsync(streamCtx);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            Logger.LogInformation("Message processing cancelled for session {SessionId}", session.Id);
         }
         catch (Exception ex)
         {
@@ -483,14 +512,21 @@
 
     private async Task CheckAndUpdatePrStatus(Session session)
     {
-        var result = await PrWorkflow.CheckPrStatusAsync(session);
-        if (result is var (prNumber, prUrl))
+        try
         {
-            session.TransitionStatus(SessionStatus.PrOpen);
-            session.Pr.PrUrl = prUrl;
-            session.Pr.PrNumber = prNumber;
-            await SessionService.SaveSessionAsync(session);
-            await InvokeAsync(StateHasChanged);
+            var result = await PrWorkflow.CheckPrStatusAsync(session);
+            if (result is var (prNumber, prUrl))
+            {
+                session.TransitionStatus(SessionStatus.PrOpen);
+                session.Pr.PrUrl = prUrl;
+                session.Pr.PrNumber = prNumber;
+                await SessionService.SaveSessionAsync(session);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "PR status check failed for session {SessionId}", session.Id);
         }
     }
 
@@ -543,11 +579,31 @@
         _quickResponseOptions = [];
         _planReviewVisible = false;
 
-        _ = Task.Run(() => ProcessContinueAsync());
+        _messageCts?.Cancel();
+        _messageCts?.Dispose();
+        _messageCts = new CancellationTokenSource();
+        var ct = _messageCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await ProcessContinueAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancellation is expected — no action needed
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Unhandled exception in ProcessContinueAsync for session {SessionId}",
+                    ChatState.CurrentSession?.Id);
+            }
+        });
         return Task.CompletedTask;
     }
 
-    private async Task ProcessContinueAsync()
+    private async Task ProcessContinueAsync(CancellationToken ct = default)
     {
         var session = ChatState.CurrentSession!;
 
@@ -568,6 +624,8 @@
 
         try
         {
+            ct.ThrowIfCancellationRequested();
+
             var systemPrompt = await SystemPromptBuilder.BuildAsync(session, ChatState.CurrentWorkspace);
 
             await foreach (var evt in ClaudeService.SendMessageAsync(
@@ -579,7 +637,7 @@
                 sessionId: session.Id,
                 conversationId: session.ConversationId,
                 systemPrompt: systemPrompt,
-                continueMode: true))
+                continueMode: true).WithCancellation(ct))
             {
                 if (firstEvent)
                 {
@@ -591,6 +649,10 @@
             }
 
             await StreamProcessor.FinalizeAsync(streamCtx);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            Logger.LogInformation("Continue cancelled for session {SessionId}", session.Id);
         }
         catch (Exception ex)
         {
@@ -629,5 +691,7 @@
     public void Dispose()
     {
         ChatState.OnChange -= HandleStateChanged;
+        _messageCts?.Cancel();
+        _messageCts?.Dispose();
     }
 }

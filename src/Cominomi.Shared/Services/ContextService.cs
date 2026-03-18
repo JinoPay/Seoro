@@ -115,8 +115,8 @@ public class ContextService : IContextService
         var gitignorePath = Path.Combine(worktreePath, ".gitignore");
         if (File.Exists(gitignorePath))
         {
-            var content = await File.ReadAllTextAsync(gitignorePath);
-            if (!content.Contains(".context/"))
+            var lines = await File.ReadAllLinesAsync(gitignorePath);
+            if (!lines.Any(line => line.Trim() == ".context/"))
             {
                 await AtomicFileWriter.AppendAsync(gitignorePath, "\n.context/\n");
             }
