@@ -143,6 +143,15 @@
 | #136 | 옵션 패턴 도입 | `IOptionsMonitor<AppSettings>` + `AppSettingsFactory` + `AppSettingsChangeNotifier`. 8개 서비스/컴포넌트 전환 |
 | #137 | 플러그인 실행 엔진 | EntryPoint 로딩/실행/샌드박싱 + hooks·skills 매니페스트 자동 등록 |
 
+### 구조 개선 Phase 14 (2026-03-19) — 신규 구조적 문제 #2 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| `GitServiceTests.cs` (신규, 25개 테스트) | `StubProcessRunner`로 GitService 전 메서드 테스트. 캐시 동작, 파싱 로직, 자동 abort, 캐시 무효화 검증 |
+| `ClaudeArgumentBuilderTests.cs` (신규, 20개 테스트) | 정적 `Build()` 메서드 전 매개변수 조합 검증. 권한 모드, 노력 수준, resume/continue, 시스템 프롬프트 이스케이프 |
+| `SessionServiceTests.cs` (신규, 15개 테스트) | 6개 Fake 의존성으로 SessionService 테스트. CRUD 라운드트립, 제목 폴백, 도구 출력 절단, 워크스페이스 필터 검증 |
+| `ClaudeServiceTests.cs` (신규, 5개 테스트) | Cancel/Dispose 안전성 + DetectCliAsync 경로 해석 검증 |
+| `SessionStatusMachine` 수정 | `Initializing → Pending` 전이 누락 수정 (CreatePendingSessionAsync가 필요로 하는 전이) |
+
 ### 구조 개선 Phase 13 (2026-03-19) — 신규 구조적 문제 #3 해결 + Continue 기능
 | 변경 내용 | 역할 / 영향 범위 |
 |-----------|-----------------|
@@ -1055,7 +1064,7 @@ case "error"                            → 에러 메시지 추가
 **ActivitySummary** (141줄): 도구 활동 요약 블록. 사고(thinking) 블록 접기/펴기, 도구 호출 카운트 표시
 
 ### 빠진 것 / 문제점
-- **"중간 텍스트" 휴리스틱** (`ContentGrouper.cs`): 하드코딩된 한국어/영어 패턴으로 텍스트를 "중간"으로 분류. 오분류 가능
+- ~~**"중간 텍스트" 휴리스틱** (`ContentGrouper.cs`): 하드코딩된 한국어/영어 패턴으로 텍스트를 "중간"으로 분류. 오분류 가능~~ → ✅ **해결**: 언어별 패턴 배열 제거, 구조적 마커 기반(코드·링크·서식·다단락) 언어 무관 휴리스틱으로 교체
 - ~~**InputArea 459줄**: 텍스트 입력 + 파일 첨부 + 모델/권한/노력 선택이 한 컴포넌트에~~ → ✅ **해결**: Phase 5에서 `ModelSelector.razor`+`AttachmentChips.razor` 자식 컴포넌트 추출. 460→~340줄(26%↓)
 - **도구 입력 JSON 매 렌더 파싱**: ToolCallCard가 `JsonSerializer.Deserialize`를 매 렌더마다 수행. 캐싱 없음
 - ~~**QuestionDetector 제한적**: 마지막 문장이 `?`로 끝나야 질문으로 감지. 질문이 본문 중간에 있으면 놓침~~ → ✅ **해결**: `ConfirmPatterns`(16패턴) + `ImperativeQuestionPatterns`(16패턴) 추가. `?` 필수 가드 제거 → 패턴 우선 매칭, `?`는 generic fallback으로만 사용
@@ -1604,15 +1613,15 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
 | **1** | **ChatView 697줄 재비대화** — Phase 13 Continue 기능 추가로 548→697줄 재성장. 서비스 주입 13개 유지 | 유지보수성 저하, 테스트 불가, SRP 위반 | §10 | 중 |
-| **2** | **테스트 커버리지 부족** — 12개 테스트 파일 / 75+개 서비스. ClaudeService·GitService·SessionService 등 핵심 서비스 테스트 부재 | 회귀 방지 불가, 리팩토링 안전망 없음 | §25 | 높 |
+| **~~2~~** | **~~테스트 커버리지 부족~~** — ~~12개 테스트 파일 / 75+개 서비스~~ → Phase 14에서 핵심 서비스 4종 테스트 추가 (16→228 테스트). `GitServiceTests`·`SessionServiceTests`·`ClaudeArgumentBuilderTests`·`ClaudeServiceTests` | ~~회귀 방지 불가~~ → 핵심 서비스 커버리지 확보 | §25 | ~~높~~ ✅ |
 | ~~**3**~~ | ~~**StreamEventProcessor 516줄 switch 아키텍처**~~ ✅ — 핸들러 레지스트리 패턴으로 리팩토링. 10개 개별 핸들러 + Dictionary 디스패치 | ~~확장성, 유지보수성~~ | §10.5 | ~~완료~~ |
 | **4** | **GitService ParseDiff " b/" 파싱 취약** — `LastIndexOf(" b/")` 패턴이 `ParseDiff`(정적)과 `GetDiffSummaryAsync`(스트리밍) 양쪽에 존재. 경로에 " b/" 포함 시 오파싱 | diff 표시 오류 | §5 | 낮 |
-| **5** | **SessionService 캐시 무한 성장** — `_metadataCache`·`_sessionCache` ConcurrentDictionary에 만료/퇴출 정책 없음. 삭제된 세션도 캐시에 잔류 가능 | 장기 실행 시 메모리 누수 | §8 | 중 |
+| ~~**5**~~ | ~~**SessionService 캐시 무한 성장**~~ ✅ — `_sessionCache` TTL 스캐벤징 + 최대 64 엔트리 용량 제한, `DeleteSessionAsync` try/finally 견고화 | ~~장기 실행 시 메모리 누수~~ | ~~§8~~ | ~~완료~~ |
 | ~~**6**~~ | ~~**SessionList 8개 서비스 과다 주입** — `ISessionListFacade` 파사드 도입으로 8→4 서비스 축소 완료~~ | ~~커플링, 테스트 난이도~~ | ~~§12~~ | ~~완료~~ |
 | ~~**7**~~ | ~~**Usage 저장 경로 불일치** — `AppPaths.Usage`로 통합 완료. `UsageService`가 `LocalApplicationData` 직접 참조 제거~~ | ~~해결~~ | ~~§20~~ | ~~완료~~ |
 | **8** | **ParseDiff 레거시 코드 잔류** — static `ParseDiff` 메서드가 `GetDiffSummaryAsync`와 기능 중복. 둘 다 동일 " b/" 취약점 공유 | 코드 중복, 유지보수 혼란 | §5 | 낮 |
-| ~~**9**~~ | ~~**IProcessRunner stderr bare catch**~~ ✅ — `StreamingProcess`에 `ILogger` 주입, bare catch를 로깅으로 교체 | ~~디버깅 어려움~~ | §4 | 낮 |
-| **10** | **ContentGrouper 중간 텍스트 휴리스틱** — 하드코딩된 한국어/영어 패턴으로 텍스트 분류. 다국어 확장 시 패턴 폭발 | 렌더링 오분류 | §13 | 낮 |
+| ~~**9**~~ | ~~**IProcessRunner stderr bare catch**~~ ✅ — `StreamingProcess`에 `ILogger` 주입, bare catch를 로깅으로 교체 | ~~디버깅 어려움~~ | ~~§4~~ | ~~완료~~ |
+| **10** | **ToolCallCard JSON 매 렌더 파싱** — 도구 입력 JSON을 캐싱 없이 매 렌더마다 `JsonSerializer.Deserialize` | 렌더 성능 | §13 | 낮 |
 
 ### 차기 개선 후보
 
