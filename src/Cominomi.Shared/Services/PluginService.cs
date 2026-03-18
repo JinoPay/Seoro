@@ -1,5 +1,7 @@
 using System.Text.Json;
+using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Services;
 
@@ -50,6 +52,7 @@ public interface IPluginService
 
 public class PluginService : IPluginService
 {
+    private readonly IOptionsMonitor<AppSettings> _appSettings;
     private readonly ISettingsService _settingsService;
     private readonly ILogger<PluginService> _logger;
 
@@ -57,8 +60,9 @@ public class PluginService : IPluginService
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".claude", "plugins");
 
-    public PluginService(ISettingsService settingsService, ILogger<PluginService> logger)
+    public PluginService(IOptionsMonitor<AppSettings> appSettings, ISettingsService settingsService, ILogger<PluginService> logger)
     {
+        _appSettings = appSettings;
         _settingsService = settingsService;
         _logger = logger;
     }
@@ -89,7 +93,7 @@ public class PluginService : IPluginService
             return plugins;
         }
 
-        var settings = await _settingsService.LoadAsync();
+        var settings = _appSettings.CurrentValue;
 
         try
         {
@@ -114,13 +118,13 @@ public class PluginService : IPluginService
         if (!Directory.Exists(pluginDir))
             return null;
 
-        var settings = await _settingsService.LoadAsync();
+        var settings = _appSettings.CurrentValue;
         return await LoadPluginFromDirectoryAsync(pluginDir, pluginId, settings);
     }
 
     public async Task SetPluginEnabledAsync(string pluginId, bool enabled)
     {
-        var settings = await _settingsService.LoadAsync();
+        var settings = _appSettings.CurrentValue;
         settings.DisabledPlugins ??= [];
 
         if (enabled)
@@ -172,7 +176,7 @@ public class PluginService : IPluginService
             _logger.LogInformation("Removed plugin '{PluginId}'", pluginId);
 
             // Clean up settings
-            var settings = await _settingsService.LoadAsync();
+            var settings = _appSettings.CurrentValue;
             settings.DisabledPlugins?.Remove(pluginId);
             await _settingsService.SaveAsync(settings);
 

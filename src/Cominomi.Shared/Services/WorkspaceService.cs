@@ -2,31 +2,32 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Services;
 
 public partial class WorkspaceService : IWorkspaceService
 {
     private readonly IGitService _gitService;
-    private readonly ISettingsService _settingsService;
+    private readonly IOptionsMonitor<AppSettings> _appSettings;
     private readonly ILogger<WorkspaceService> _logger;
     private readonly string _workspacesDir = AppPaths.Workspaces;
     private readonly string _repoInfoDir = AppPaths.Repos;
 
-    public WorkspaceService(IGitService gitService, ISettingsService settingsService, ILogger<WorkspaceService> logger)
+    public WorkspaceService(IGitService gitService, IOptionsMonitor<AppSettings> appSettings, ILogger<WorkspaceService> logger)
     {
         _gitService = gitService;
-        _settingsService = settingsService;
+        _appSettings = appSettings;
         _logger = logger;
     }
 
-    private async Task<string> GetBaseDirAsync()
+    private Task<string> GetBaseDirAsync()
     {
-        var settings = await _settingsService.LoadAsync();
+        var settings = _appSettings.CurrentValue;
         var baseDir = !string.IsNullOrWhiteSpace(settings.DefaultCloneDirectory)
             ? settings.DefaultCloneDirectory
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Cominomi");
-        return baseDir;
+        return Task.FromResult(baseDir);
     }
 
     private async Task<string> GetReposDirAsync()

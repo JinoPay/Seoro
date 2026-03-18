@@ -1,5 +1,6 @@
 @inject IChatState ChatState
 @inject ISessionService SessionService
+@inject IOptionsMonitor<AppSettings> AppSettings
 @inject ISettingsService SettingsService
 @inject SessionListDataService DataService
 @inject IDialogService DialogService
@@ -158,7 +159,7 @@
 
         await DataService.LoadWorkspacesAsync();
 
-        var settings = await SettingsService.LoadAsync();
+        var settings = AppSettings.CurrentValue;
         var lastId = settings.LastWorkspaceId;
 
         var currentWs = DataService.Workspaces.FirstOrDefault(w => w.Id == lastId)
@@ -273,7 +274,7 @@
             if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
                 sessions.Insert(0, session);
 
-            var settings = await SettingsService.LoadAsync();
+            var settings = AppSettings.CurrentValue;
             settings.LastWorkspaceId = ws.Id;
             settings.LastSessionId = session.Id;
             await SettingsService.SaveAsync(settings);
@@ -303,7 +304,7 @@
             if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
                 sessions.Insert(0, session);
 
-            var settings = await SettingsService.LoadAsync();
+            var settings = AppSettings.CurrentValue;
             settings.LastWorkspaceId = ws.Id;
             settings.LastSessionId = session.Id;
             await SettingsService.SaveAsync(settings);
@@ -337,7 +338,7 @@
                 ChatState.SetSession(session);
         }
 
-        var settings = await SettingsService.LoadAsync();
+        var settings = AppSettings.CurrentValue;
         settings.LastWorkspaceId = session.WorkspaceId;
         settings.LastSessionId = session.Id;
         await SettingsService.SaveAsync(settings);

@@ -1,5 +1,6 @@
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Services;
 
@@ -9,7 +10,7 @@ public class ChatPrWorkflowService : IChatPrWorkflowService
     private readonly ISessionGitWorkflowService _gitWorkflow;
     private readonly IGhService _ghService;
     private readonly ISessionService _sessionService;
-    private readonly ISettingsService _settingsService;
+    private readonly IOptionsMonitor<AppSettings> _appSettings;
     private readonly ILogger<ChatPrWorkflowService> _logger;
 
     public ChatPrWorkflowService(
@@ -17,14 +18,14 @@ public class ChatPrWorkflowService : IChatPrWorkflowService
         ISessionGitWorkflowService gitWorkflow,
         IGhService ghService,
         ISessionService sessionService,
-        ISettingsService settingsService,
+        IOptionsMonitor<AppSettings> appSettings,
         ILogger<ChatPrWorkflowService> logger)
     {
         _workspaceService = workspaceService;
         _gitWorkflow = gitWorkflow;
         _ghService = ghService;
         _sessionService = sessionService;
-        _settingsService = settingsService;
+        _appSettings = appSettings;
         _logger = logger;
     }
 
@@ -46,8 +47,7 @@ public class ChatPrWorkflowService : IChatPrWorkflowService
 
     public async Task<(SessionStatus Status, AppError? Error)> MergePrAsync(Session session)
     {
-        var settings = await _settingsService.LoadAsync();
-        var mergeMethod = settings.DefaultMergeStrategy ?? "squash";
+        var mergeMethod = _appSettings.CurrentValue.DefaultMergeStrategy ?? "squash";
 
         var updated = await _gitWorkflow.MergePrAsync(session.Id, mergeMethod);
         return (updated.Status, updated.Error);

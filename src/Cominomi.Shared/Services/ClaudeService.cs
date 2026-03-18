@@ -6,12 +6,13 @@ using System.Text.Json;
 using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Services;
 
 public class ClaudeService : IClaudeService, IDisposable
 {
-    private readonly ISettingsService _settingsService;
+    private readonly IOptionsMonitor<AppSettings> _appSettings;
     private readonly ILogger<ClaudeService> _logger;
     private readonly ClaudeCliResolver _cliResolver;
     private readonly ConcurrentDictionary<string, AgentProcess> _agents = new();
@@ -21,9 +22,9 @@ public class ClaudeService : IClaudeService, IDisposable
 
     private const string DefaultAgentKey = "__default__";
 
-    public ClaudeService(ISettingsService settingsService, IShellService shellService, IProcessRunner processRunner, ILogger<ClaudeService> logger)
+    public ClaudeService(IOptionsMonitor<AppSettings> appSettings, IShellService shellService, IProcessRunner processRunner, ILogger<ClaudeService> logger)
     {
-        _settingsService = settingsService;
+        _appSettings = appSettings;
         _logger = logger;
         _cliResolver = new ClaudeCliResolver(shellService, processRunner, logger);
     }
@@ -49,7 +50,7 @@ public class ClaudeService : IClaudeService, IDisposable
         var agentKey = sessionId ?? DefaultAgentKey;
         _logger.LogInformation("Starting Claude process for session {AgentKey} with model {Model}", agentKey, model);
 
-        var settings = await _settingsService.LoadAsync();
+        var settings = _appSettings.CurrentValue;
         var (fileName, baseArgs) = await _cliResolver.ResolveAsync(settings.ClaudePath);
         var caps = await DetectCapabilitiesAsync(fileName, baseArgs);
 
@@ -271,7 +272,7 @@ public class ClaudeService : IClaudeService, IDisposable
     {
         try
         {
-            var settings = await _settingsService.LoadAsync();
+            var settings = _appSettings.CurrentValue;
             var (fileName, _) = await _cliResolver.ResolveAsync(settings.ClaudePath);
             return (true, fileName);
         }
@@ -296,7 +297,7 @@ public class ClaudeService : IClaudeService, IDisposable
     {
         try
         {
-            var settings = await _settingsService.LoadAsync();
+            var settings = _appSettings.CurrentValue;
             var (fileName, baseArgs) = await _cliResolver.ResolveAsync(settings.ClaudePath);
 
             var sb = new StringBuilder(baseArgs);

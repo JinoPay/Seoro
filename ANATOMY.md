@@ -51,6 +51,17 @@
 | `AttachmentChips.razor` (신규, ~30줄) | InputArea에서 첨부파일 칩 표시 추출 — 순수 표시 컴포넌트 |
 | `InputArea.razor` 분해 | 460→~340줄(26%↓). 모델 선택 관련 상태/메서드 5개 + 첨부 칩 마크업을 자식 컴포넌트로 추출 |
 
+### 구조 개선 Phase 7 (2026-03-18) — 차기 개선 후보 #5
+| 새 파일 / 변경 내용 | 역할 / 영향 범위 |
+|---------------------|-----------------|
+| `AppSettingsFactory.cs` (신규) | `IOptionsFactory<AppSettings>` — 설정 파일에서 `AppSettings` 인스턴스 생성 |
+| `AppSettingsChangeNotifier.cs` (신규) | `IOptionsChangeTokenSource<AppSettings>` — 설정 저장 시 `IOptionsMonitor` 갱신 트리거 |
+| `SettingsService.cs` 변경 | `AppSettingsChangeNotifier` 주입, `SaveAsync` 시 change token 발행 |
+| `MauiProgram.cs` 옵션 등록 | `AddOptions<AppSettings>()` + 커스텀 팩토리/체인지 토큰 소스 등록 |
+| 서비스 6개 리팩터링 | `ClaudeService`, `WorkspaceService`, `ChatPrWorkflowService`, `SessionService`, `NotificationService`, `PluginService` → `IOptionsMonitor<AppSettings>` 주입 |
+| UI 컴포넌트 2개 리팩터링 | `MainLayout.razor`, `SessionList.razor` → `IOptionsMonitor<AppSettings>` 주입 |
+| `_Imports.razor` | `@using Microsoft.Extensions.Options` 추가 |
+
 ### 구조 개선 Phase 6 (2026-03-18) — Top 10 전항목 해결
 | PR | 변경 내용 | 역할 / 영향 범위 |
 |----|-----------|-----------------|
@@ -166,7 +177,7 @@
 
 ### 빠진 것 / 문제점
 - **모든 서비스가 Singleton**: `ChatState`는 가변 `ConcurrentDictionary`를 가지고, `SkillRegistry`는 가변 `List`를 가짐. 스레드 안전성이 관례에만 의존
-- **옵션 패턴 미사용**: 각 서비스가 `ISettingsService.LoadAsync()`를 직접 호출하여 설정을 읽음. `IOptions<T>` 패턴으로 중앙화 가능
+- ~~**옵션 패턴 미사용**: 각 서비스가 `ISettingsService.LoadAsync()`를 직접 호출하여 설정을 읽음. `IOptions<T>` 패턴으로 중앙화 가능~~ → ✅ **해결**: `IOptionsMonitor<AppSettings>` 도입. `AppSettingsFactory` + `AppSettingsChangeNotifier`로 설정 파일 로딩/갱신 자동화. 서비스 6개 + UI 2개 마이그레이션 완료
 - **서비스 건강 체크 없음**: Git/gh/Claude CLI가 없어도 앱이 시작됨 (런타임에만 실패). 다만 Spotlight 복구는 실패 시 로그 경고 후 계속 진행
 - ~~**Graceful shutdown 없음**: 스트리밍 중인 Claude 프로세스가 앱 종료 시 고아 프로세스가 될 수 있음~~ → ✅ **해결**: `App.xaml.cs` CleanUp()에서 `IClaudeService`, `ISpotlightService`, `ChatState`, `SessionListDataService` Dispose + `Log.CloseAndFlush()`
 - ~~**ChatState에 인터페이스 없음** (`:64`): 직접 클래스로 등록되어 테스트 불가~~ → ✅ **해결**: `IChatState` 인터페이스 도입 + `builder.Services.AddSingleton<IChatState, ChatState>()` DI 등록
@@ -1480,7 +1491,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **2** | **같은 세션 3~4회 로드** | `MergeAllAsync` 파이프라인에서 세션 파일 반복 로드. 캐시 활용 가능 | §9 | 낮 |
 | **3** | **MainLayout 과다 책임** | 레이아웃 + 테마 + 의존성 체크 + 다이얼로그 관리 | §11 | 중 |
 | **4** | **macOS 알림 미구현** | MacCatalyst 타겟이지만 NotificationService는 Windows 전용 | §21 | 중 |
-| **5** | **옵션 패턴 미사용** | 각 서비스가 `ISettingsService.LoadAsync()` 직접 호출 | §1 | 낮 |
+| ~~5~~ | ~~**옵션 패턴 미사용**~~ | ~~각 서비스가 `ISettingsService.LoadAsync()` 직접 호출~~ | §1 | ✅ 해결 |
 
 ---
 

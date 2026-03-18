@@ -2,6 +2,7 @@ using Cominomi.Services;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MudBlazor;
 using MudBlazor.Services;
 using Serilog;
@@ -58,6 +59,13 @@ public static class MauiProgram
             config.SnackbarConfiguration.MaxDisplayedSnackbars = 3;
             config.SnackbarConfiguration.PreventDuplicates = true;
         });
+
+        // Options pattern for AppSettings (IOptionsMonitor<AppSettings>)
+        builder.Services.AddSingleton<AppSettingsChangeNotifier>();
+        builder.Services.AddSingleton<IOptionsChangeTokenSource<AppSettings>>(sp =>
+            sp.GetRequiredService<AppSettingsChangeNotifier>());
+        builder.Services.AddOptions<AppSettings>();
+        builder.Services.AddSingleton<IOptionsFactory<AppSettings>, AppSettingsFactory>();
 
         // App Services
         builder.Services.AddSingleton<IShellService, ShellService>();

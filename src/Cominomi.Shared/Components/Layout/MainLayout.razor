@@ -170,6 +170,7 @@ else
         }
     };
 
+    [Inject] private IOptionsMonitor<AppSettings> AppSettings { get; set; } = default!;
     [Inject] private ISettingsService SettingsService { get; set; } = default!;
     [Inject] private IDependencyCheckService DependencyCheckService { get; set; } = default!;
 
@@ -178,8 +179,7 @@ else
         ChatState.OnChange += HandleStateChanged;
         SettingsService.OnSettingsChanged += HandleSettingsChanged;
 
-        var settings = await SettingsService.LoadAsync();
-        _isDarkMode = settings.Theme != "light";
+        _isDarkMode = AppSettings.CurrentValue.Theme != "light";
 
         var deps = await DependencyCheckService.CheckAllAsync();
         if (deps.Any(d => !d.IsInstalled))
@@ -192,8 +192,7 @@ else
     {
         if (firstRender)
         {
-            var settings = await SettingsService.LoadAsync();
-            await ApplyTheme(settings.Theme);
+            await ApplyTheme(AppSettings.CurrentValue.Theme);
         }
     }
 
@@ -227,7 +226,7 @@ else
     private async Task ToggleDarkMode()
     {
         _isDarkMode = !_isDarkMode;
-        var settings = await SettingsService.LoadAsync();
+        var settings = AppSettings.CurrentValue;
         settings.Theme = _isDarkMode ? "dark" : "light";
         await SettingsService.SaveAsync(settings);
         await ApplyTheme(settings.Theme);

@@ -1,5 +1,7 @@
+using Cominomi.Shared.Models;
 using Cominomi.Shared.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 #if MACCATALYST
 using UserNotifications;
@@ -13,13 +15,13 @@ namespace Cominomi.Services;
 public class NotificationService : INotificationService
 {
     private readonly ILogger<NotificationService> _logger;
-    private readonly ISettingsService _settingsService;
+    private readonly IOptionsMonitor<AppSettings> _appSettings;
     private bool _initialized;
 
-    public NotificationService(ILogger<NotificationService> logger, ISettingsService settingsService)
+    public NotificationService(ILogger<NotificationService> logger, IOptionsMonitor<AppSettings> appSettings)
     {
         _logger = logger;
-        _settingsService = settingsService;
+        _appSettings = appSettings;
     }
 
     public async Task InitializeAsync()
@@ -65,7 +67,7 @@ public class NotificationService : INotificationService
 
     public async Task SendAsync(string title, string body, NotificationType type = NotificationType.Info)
     {
-        var settings = await _settingsService.LoadAsync();
+        var settings = _appSettings.CurrentValue;
         if (!settings.NotificationsEnabled) return;
 
         if (!_initialized)

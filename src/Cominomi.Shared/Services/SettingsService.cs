@@ -8,8 +8,13 @@ public class SettingsService : ISettingsService
     public event Action<AppSettings>? OnSettingsChanged;
 
     private readonly string _settingsPath = AppPaths.SettingsFile;
+    private readonly AppSettingsChangeNotifier _changeNotifier;
     private AppSettings? _cached;
 
+    public SettingsService(AppSettingsChangeNotifier changeNotifier)
+    {
+        _changeNotifier = changeNotifier;
+    }
 
     public async Task<AppSettings> LoadAsync()
     {
@@ -34,5 +39,6 @@ public class SettingsService : ISettingsService
         var json = JsonSerializer.Serialize(settings, JsonDefaults.Options);
         await AtomicFileWriter.WriteAsync(_settingsPath, json);
         OnSettingsChanged?.Invoke(settings);
+        _changeNotifier.NotifyChanged();
     }
 }
