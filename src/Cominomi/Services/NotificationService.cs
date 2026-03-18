@@ -50,6 +50,7 @@ public class NotificationService : INotificationService
 #elif WINDOWS
         try
         {
+            AppNotificationManager.Default.Register();
             _initialized = true;
             _logger.LogInformation("Windows notifications initialized");
         }
