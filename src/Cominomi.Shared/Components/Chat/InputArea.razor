@@ -30,7 +30,7 @@
         <MudTextField T="string" Value="@_inputText" ValueChanged="@HandleInputValueChanged"
                       Placeholder="@GetPlaceholder()"
                       Variant="Variant.Text"
-                      Lines="1"
+                      Lines="2"
                       AutoGrow="true"
                       MaxLines="8"
                       Immediate="true"
@@ -388,6 +388,12 @@
         _forceRender = true;
         Model = modelId;
         await OnModelChanged.InvokeAsync(modelId);
+    }
+
+    [JSInvokable]
+    public void OnNewlineInserted(string value)
+    {
+        _inputText = value;
     }
 
     [JSInvokable]

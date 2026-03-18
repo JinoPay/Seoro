@@ -75,12 +75,15 @@
                     if (e.shiftKey && isTextarea) {
                         var start = inputEl.selectionStart;
                         var end = inputEl.selectionEnd;
-                        inputEl.value = inputEl.value.substring(0, start) + '\n' + inputEl.value.substring(end);
+                        var newValue = inputEl.value.substring(0, start) + '\n' + inputEl.value.substring(end);
+                        inputEl.value = newValue;
                         inputEl.selectionStart = inputEl.selectionEnd = start + 1;
                         inputEl.dispatchEvent(new Event('input', { bubbles: true }));
                         inputEl.dispatchEvent(new Event('change', { bubbles: true }));
                         inputEl.style.height = 'auto';
                         inputEl.style.height = inputEl.scrollHeight + 'px';
+                        // Sync value to C# directly (synthetic events may not trigger Blazor binding)
+                        dotNetRef.invokeMethodAsync('OnNewlineInserted', newValue);
                     } else {
                         dotNetRef.invokeMethodAsync('SendFromJs');
                     }
