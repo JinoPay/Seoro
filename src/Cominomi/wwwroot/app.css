@@ -812,6 +812,10 @@ html, body {
     color: #89b4fa;
 }
 
+.sidebar-file-item.has-diff .sidebar-file-name {
+    color: rgba(137, 180, 250, 0.7);
+}
+
 .sidebar-file-name {
     overflow: hidden;
     text-overflow: ellipsis;
