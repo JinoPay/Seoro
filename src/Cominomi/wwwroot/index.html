@@ -34,21 +34,72 @@
             if (el) el.scrollTop = el.scrollHeight;
         };
 
-        window.registerPasteHandler = function(elementId, dotNetRef) {
-            const container = document.getElementById(elementId);
-            if (!container) return;
-            const textarea = container.querySelector('textarea');
-            const target = textarea || container;
-            target._pasteHandler = async function(e) {
-                const items = e.clipboardData?.items;
+        // --- Input area handler helpers ---
+        // Find the actual input element (textarea or input) inside a container.
+        // MudBlazor may render <textarea> or <input> depending on timing/config.
+        window._findInputEl = function(container) {
+            if (!container) return null;
+            return container.querySelector('textarea') || container.querySelector('input.mud-input-slot');
+        };
+
+        // Attach all handlers (enter, paste, composition, drop) to a given input element.
+        window._attachInputHandlers = function(inputEl, container, dotNetRef) {
+            if (!inputEl || inputEl._cominomiHandlers) return; // already attached
+            inputEl._cominomiHandlers = true;
+
+            // Disable macOS autocorrect/spellcheck to prevent cursor jumping
+            inputEl.setAttribute('spellcheck', 'false');
+            inputEl.setAttribute('autocorrect', 'off');
+            inputEl.setAttribute('autocomplete', 'off');
+            inputEl.setAttribute('autocapitalize', 'off');
+
+            var isTextarea = inputEl.tagName === 'TEXTAREA';
+
+            // --- IME composition tracking (Korean/CJK) ---
+            inputEl._isComposing = false;
+            inputEl._compositionStartHandler = function() {
+                inputEl._isComposing = true;
+                dotNetRef.invokeMethodAsync('OnCompositionStart');
+            };
+            inputEl._compositionEndHandler = function() {
+                inputEl._isComposing = false;
+                dotNetRef.invokeMethodAsync('OnCompositionEnd');
+            };
+            inputEl.addEventListener('compositionstart', inputEl._compositionStartHandler);
+            inputEl.addEventListener('compositionend', inputEl._compositionEndHandler);
+
+            // --- Enter / Shift+Enter ---
+            inputEl._enterHandler = function(e) {
+                if (e.key === 'Enter' && !e.isComposing && !inputEl._isComposing) {
+                    e.preventDefault();
+                    if (e.shiftKey && isTextarea) {
+                        var start = inputEl.selectionStart;
+                        var end = inputEl.selectionEnd;
+                        inputEl.value = inputEl.value.substring(0, start) + '\n' + inputEl.value.substring(end);
+                        inputEl.selectionStart = inputEl.selectionEnd = start + 1;
+                        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                        inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+                        inputEl.style.height = 'auto';
+                        inputEl.style.height = inputEl.scrollHeight + 'px';
+                    } else {
+                        dotNetRef.invokeMethodAsync('SendFromJs');
+                    }
+                }
+            };
+            inputEl.addEventListener('keydown', inputEl._enterHandler);
+
+            // --- Paste (images/files from clipboard) ---
+            inputEl._pasteHandler = async function(e) {
+                var items = e.clipboardData?.items;
                 if (!items) return;
-                for (const item of items) {
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
                     if (item.kind === 'file') {
                         e.preventDefault();
-                        const file = item.getAsFile();
+                        var file = item.getAsFile();
                         if (!file) continue;
-                        const buffer = await file.arrayBuffer();
-                        const bytes = new Uint8Array(buffer);
+                        var buffer = await file.arrayBuffer();
+                        var bytes = new Uint8Array(buffer);
                         await dotNetRef.invokeMethodAsync('OnFilePasted',
                             file.name || 'pasted-image.png',
                             file.type || 'application/octet-stream',
@@ -56,111 +107,103 @@
                     }
                 }
             };
-            target.addEventListener('paste', target._pasteHandler);
+            inputEl.addEventListener('paste', inputEl._pasteHandler);
         };
 
-        window.registerDropHandler = function(elementId, dotNetRef) {
-            const el = document.getElementById(elementId);
-            if (!el) return;
-            el._dragOverHandler = function(e) {
+        // Detach all handlers from an input element.
+        window._detachInputHandlers = function(inputEl) {
+            if (!inputEl || !inputEl._cominomiHandlers) return;
+            if (inputEl._enterHandler) inputEl.removeEventListener('keydown', inputEl._enterHandler);
+            if (inputEl._compositionStartHandler) inputEl.removeEventListener('compositionstart', inputEl._compositionStartHandler);
+            if (inputEl._compositionEndHandler) inputEl.removeEventListener('compositionend', inputEl._compositionEndHandler);
+            if (inputEl._pasteHandler) inputEl.removeEventListener('paste', inputEl._pasteHandler);
+            inputEl._cominomiHandlers = false;
+        };
+
+        // --- Public registration: uses MutationObserver to handle late/replaced elements ---
+        window.registerInputHandlers = function(elementId, dotNetRef) {
+            var container = document.getElementById(elementId);
+            if (!container) return;
+
+            // Try to attach immediately
+            var inputEl = window._findInputEl(container);
+            if (inputEl) {
+                window._attachInputHandlers(inputEl, container, dotNetRef);
+            }
+
+            // Watch for textarea/input being added or replaced by MudBlazor
+            var observer = new MutationObserver(function() {
+                var current = window._findInputEl(container);
+                if (current && !current._cominomiHandlers) {
+                    window._attachInputHandlers(current, container, dotNetRef);
+                }
+            });
+            observer.observe(container, { childList: true, subtree: true });
+            container._inputObserver = observer;
+            container._dotNetRef = dotNetRef;
+
+            // Drop handlers on the container itself
+            container._dragOverHandler = function(e) {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'copy';
-                el.classList.add('drop-active');
+                container.classList.add('drop-active');
             };
-            el._dragLeaveHandler = function(e) {
-                el.classList.remove('drop-active');
+            container._dragLeaveHandler = function(e) {
+                container.classList.remove('drop-active');
             };
-            el._dropHandler = async function(e) {
+            container._dropHandler = async function(e) {
                 e.preventDefault();
-                el.classList.remove('drop-active');
-                const files = e.dataTransfer?.files;
+                container.classList.remove('drop-active');
+                var files = e.dataTransfer?.files;
                 if (!files) return;
-                for (const file of files) {
-                    const buffer = await file.arrayBuffer();
-                    const bytes = new Uint8Array(buffer);
+                for (var i = 0; i < files.length; i++) {
+                    var file = files[i];
+                    var buffer = await file.arrayBuffer();
+                    var bytes = new Uint8Array(buffer);
                     await dotNetRef.invokeMethodAsync('OnFileDropped',
                         file.name, file.type || 'application/octet-stream',
                         Array.from(bytes));
                 }
             };
-            el.addEventListener('dragover', el._dragOverHandler);
-            el.addEventListener('dragleave', el._dragLeaveHandler);
-            el.addEventListener('drop', el._dropHandler);
+            container.addEventListener('dragover', container._dragOverHandler);
+            container.addEventListener('dragleave', container._dragLeaveHandler);
+            container.addEventListener('drop', container._dropHandler);
         };
 
-        window.unregisterFileHandlers = function(elementId) {
-            const el = document.getElementById(elementId);
-            if (!el) return;
-            var textarea = el.querySelector('textarea');
-            var pasteTarget = textarea || el;
-            if (pasteTarget._pasteHandler) pasteTarget.removeEventListener('paste', pasteTarget._pasteHandler);
-            if (el._dragOverHandler) el.removeEventListener('dragover', el._dragOverHandler);
-            if (el._dragLeaveHandler) el.removeEventListener('dragleave', el._dragLeaveHandler);
-            if (el._dropHandler) el.removeEventListener('drop', el._dropHandler);
-        };
-
-        window.registerEnterHandler = function(elementId, dotNetRef) {
+        window.unregisterInputHandlers = function(elementId) {
             var container = document.getElementById(elementId);
             if (!container) return;
-            var textarea = container.querySelector('textarea');
-            if (!textarea || textarea._enterHandler) return; // Already registered → skip
-
-            // Disable macOS autocorrect/spellcheck to prevent cursor jumping on space/period
-            textarea.setAttribute('spellcheck', 'false');
-            textarea.setAttribute('autocorrect', 'off');
-            textarea.setAttribute('autocomplete', 'off');
-            textarea.setAttribute('autocapitalize', 'off');
-
-            // Track IME composition state for robust Korean/CJK input handling
-            textarea._isComposing = false;
-            textarea._compositionStartHandler = function() {
-                textarea._isComposing = true;
-                dotNetRef.invokeMethodAsync('OnCompositionStart');
-            };
-            textarea._compositionEndHandler = function() {
-                textarea._isComposing = false;
-                dotNetRef.invokeMethodAsync('OnCompositionEnd');
-            };
-            textarea.addEventListener('compositionstart', textarea._compositionStartHandler);
-            textarea.addEventListener('compositionend', textarea._compositionEndHandler);
-
-            textarea._enterHandler = function(e) {
-                if (e.key === 'Enter' && !e.isComposing && !textarea._isComposing) {
-                    e.preventDefault();
-                    if (e.shiftKey) {
-                        var start = textarea.selectionStart;
-                        var end = textarea.selectionEnd;
-                        textarea.value = textarea.value.substring(0, start) + '\n' + textarea.value.substring(end);
-                        textarea.selectionStart = textarea.selectionEnd = start + 1;
-                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                        textarea.dispatchEvent(new Event('change', { bubbles: true }));
-                        textarea.style.height = 'auto';
-                        textarea.style.height = textarea.scrollHeight + 'px';
-                    } else {
-                        dotNetRef.invokeMethodAsync('SendFromJs');
-                    }
-                }
-            };
-            textarea.addEventListener('keydown', textarea._enterHandler);
+            // Stop observer
+            if (container._inputObserver) {
+                container._inputObserver.disconnect();
+                container._inputObserver = null;
+            }
+            // Detach input element handlers
+            var inputEl = window._findInputEl(container);
+            window._detachInputHandlers(inputEl);
+            // Detach drop handlers
+            if (container._dragOverHandler) container.removeEventListener('dragover', container._dragOverHandler);
+            if (container._dragLeaveHandler) container.removeEventListener('dragleave', container._dragLeaveHandler);
+            if (container._dropHandler) container.removeEventListener('drop', container._dropHandler);
         };
 
         window.clearInputArea = function(elementId) {
-            var textarea = document.getElementById(elementId)?.querySelector('textarea');
-            if (textarea && textarea.value !== '') {
-                textarea.value = '';
-                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            var container = document.getElementById(elementId);
+            if (!container) return;
+            var inputEl = window._findInputEl(container);
+            if (inputEl && inputEl.value !== '') {
+                inputEl.value = '';
+                inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                inputEl.dispatchEvent(new Event('change', { bubbles: true }));
             }
         };
 
-        window.unregisterEnterHandler = function(elementId) {
-            const container = document.getElementById(elementId);
-            if (!container) return;
-            const textarea = container.querySelector('textarea');
-            if (!textarea) return;
-            if (textarea._enterHandler) textarea.removeEventListener('keydown', textarea._enterHandler);
-            if (textarea._compositionStartHandler) textarea.removeEventListener('compositionstart', textarea._compositionStartHandler);
-            if (textarea._compositionEndHandler) textarea.removeEventListener('compositionend', textarea._compositionEndHandler);
-        };
+        // Legacy aliases — keep for backward compat during transition
+        window.registerPasteHandler = function() {};
+        window.registerDropHandler = function() {};
+        window.registerEnterHandler = function() {};
+        window.unregisterFileHandlers = function(id) { window.unregisterInputHandlers(id); };
+        window.unregisterEnterHandler = function() {};
 
         window.isWindowFocused = function() {
             return document.hasFocus();

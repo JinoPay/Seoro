@@ -280,9 +280,7 @@
         if (firstRender)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
-            await JSRuntime.InvokeVoidAsync("registerPasteHandler", "input-area", _dotNetRef);
-            await JSRuntime.InvokeVoidAsync("registerDropHandler", "input-area", _dotNetRef);
-            await JSRuntime.InvokeVoidAsync("registerEnterHandler", "input-area", _dotNetRef);
+            await JSRuntime.InvokeVoidAsync("registerInputHandlers", "input-area", _dotNetRef);
             _handlersRegistered = true;
         }
     }
@@ -447,9 +445,7 @@
     {
         if (_handlersRegistered)
         {
-            try { await JSRuntime.InvokeVoidAsync("unregisterFileHandlers", "input-area"); }
-            catch { }
-            try { await JSRuntime.InvokeVoidAsync("unregisterEnterHandler", "input-area"); }
+            try { await JSRuntime.InvokeVoidAsync("unregisterInputHandlers", "input-area"); }
             catch { }
         }
         _dotNetRef?.Dispose();
