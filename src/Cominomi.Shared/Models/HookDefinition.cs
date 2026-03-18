@@ -37,3 +37,11 @@ public class HookDefinition
     public bool Enabled { get; set; } = true;
     public int TimeoutSeconds { get; set; } = 5;
 }
+
+public record HookExecutionResult(
+    string Command,
+    bool Success,
+    int ExitCode,
+    string Stdout,
+    string Stderr,
+    bool TimedOut);

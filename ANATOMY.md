@@ -51,6 +51,14 @@
 | `AttachmentChips.razor` (신규, ~30줄) | InputArea에서 첨부파일 칩 표시 추출 — 순수 표시 컴포넌트 |
 | `InputArea.razor` 분해 | 460→~340줄(26%↓). 모델 선택 관련 상태/메서드 5개 + 첨부 칩 마크업을 자식 컴포넌트로 추출 |
 
+### 구조 개선 Phase 9 (2026-03-18) — 차기 개선 후보 #1 해결
+| 새 파일 / 변경 내용 | 역할 / 영향 범위 |
+|---------------------|-----------------|
+| `HookExecutionResult` 레코드 (HookDefinition.cs) | 훅 실행 결과 캡처용 — Command, Success, ExitCode, Stdout, Stderr, TimedOut |
+| `HooksEngine.cs` 개선 | `Math.Clamp(1-300s)` 타임아웃 보호. `FireAsync` → `Task<List<HookExecutionResult>>` 반환으로 출력 캡처 |
+| `IHooksEngine.cs` 시그니처 변경 | `FireAsync` 반환 타입 `Task` → `Task<List<HookExecutionResult>>` |
+| `HooksEngineTests.cs` (신규, 8개 테스트) | 타임아웃 클램프, 결과 반환, 비활성 훅 스킵, 타임아웃 플래그, 예외 처리 검증 |
+
 ### 구조 개선 Phase 8 (2026-03-18) — 차기 개선 후보 #3 해결
 | 새 파일 / 변경 내용 | 역할 / 영향 범위 |
 |---------------------|-----------------|
@@ -1572,7 +1580,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 
 | 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
 |------|------|------|-----------|--------|
-| **1** | **훅 엔진 개선** — 타임아웃 기본값 0 허용 + 출력 미캡처 | `HooksEngine.cs:109` — `hook.TimeoutSeconds`가 0이면 무한 대기. stdout/stderr를 redirect하지만 읽지 않음 | §14 | 중 |
+| ~~**1**~~ | ~~**훅 엔진 개선** — 타임아웃 기본값 0 허용 + 출력 미캡처~~ | `Math.Clamp(1-300s)` 타임아웃 보호 + `HookExecutionResult` 반환으로 출력 캡처. 8개 테스트 추가 | §14 | ~~중~~ ✅ |
 | **2** | **QuestionDetector 감지 한계** — 한국어/영어 `?` 패턴만 | `QuestionDetector.cs:9-21` — `?`로 끝나는 문장만 감지. 명령형 질문, 선택 요청 ("pick", "select"), 확인 요청 패턴 누락 | §13 | 낮 |
 | **3** | **Usage HashSet 재시작 시 리셋** — 중복 기록 가능 | `UsageService`의 `_recordedHashes` 인메모리 HashSet이 앱 재시작 시 초기화. 같은 세션의 사용량 이중 기록 가능 | §20 | 낮 |
 | **4** | **중복 제거 해시 영속화** — 재시작 후 JSONL에서 기존 해시 재로드 필요 | 10MB 로테이션은 도입되었으나, 재시작 시 기존 해시를 로드하는 로직의 일관성 검증 필요 | §20 | 낮 |
