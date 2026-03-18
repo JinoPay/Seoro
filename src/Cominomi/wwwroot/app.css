@@ -1553,23 +1553,150 @@ html, body {
     flex-wrap: wrap;
 }
 
-/* ===== Plan Review Bar ===== */
-.plan-review-bar {
+/* ===== Plan Review Panel ===== */
+.plan-review-panel {
+    display: flex;
+    flex-direction: column;
+    margin: 0 12px 8px;
+    border-radius: 12px;
+    background: rgba(249, 226, 175, 0.04);
+    border: 1px solid rgba(249, 226, 175, 0.15);
+    overflow: hidden;
+    animation: planSlideIn 0.3s ease-out;
+}
+
+@keyframes planSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.plan-review-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid rgba(249, 226, 175, 0.08);
+    transition: background 0.15s;
+}
+
+.plan-review-header:hover {
+    background: rgba(249, 226, 175, 0.04);
+}
+
+.plan-review-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.plan-review-icon-badge {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-3);
-    padding: var(--space-2) var(--space-4);
-    background: rgba(249, 226, 175, 0.06);
-    border-top: 2px solid rgba(249, 226, 175, 0.3);
-    flex-wrap: wrap;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(249, 226, 175, 0.12);
+    color: rgba(249, 226, 175, 0.9);
+    flex-shrink: 0;
 }
 
-.plan-review-label {
+.plan-review-title-area {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.plan-review-title {
     font-size: var(--text-sm);
     font-weight: 600;
-    color: rgba(249, 226, 175, 0.8);
-    margin-right: var(--space-2);
+    color: rgba(249, 226, 175, 0.9);
+    letter-spacing: 0.2px;
+}
+
+.plan-review-filename {
+    font-size: 11px;
+    opacity: 0.4;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.plan-review-content {
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 16px 18px;
+    border-bottom: 1px solid rgba(249, 226, 175, 0.08);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(249, 226, 175, 0.15) transparent;
+}
+
+.plan-review-content::-webkit-scrollbar {
+    width: 5px;
+}
+
+.plan-review-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.plan-review-content::-webkit-scrollbar-thumb {
+    background: rgba(249, 226, 175, 0.15);
+    border-radius: 3px;
+}
+
+.plan-review-content .markdown-body {
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.plan-review-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+}
+
+.plan-review-btn {
+    text-transform: none !important;
+    border-radius: 8px !important;
+    font-size: var(--text-sm) !important;
+    padding: 4px 16px !important;
+    min-width: 0 !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.2px !important;
+}
+
+.plan-review-btn-approve {
+    flex-shrink: 0;
+}
+
+.plan-review-btn-advise {
+    border-color: rgba(186, 147, 255, 0.3) !important;
+    color: rgba(186, 147, 255, 0.8) !important;
+}
+
+.plan-review-btn-reject {
+    margin-left: auto;
+    opacity: 0.6;
+}
+
+.plan-review-btn-reject:hover {
+    opacity: 1;
+}
+
+.plan-review-advice {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 14px 12px;
+    border-top: 1px solid rgba(249, 226, 175, 0.08);
+}
+
+.plan-review-advice-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 /* ===== Thinking Block ===== */
