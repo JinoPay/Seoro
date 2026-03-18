@@ -3117,6 +3117,123 @@ html, body {
     margin-left: auto;
 }
 
+/* ===== Notification History View ===== */
+.notification-history-view {
+    height: 100%;
+    overflow-y: auto;
+    padding: var(--space-4);
+}
+
+.notification-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+}
+
+.notification-history-title {
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.notification-history-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-8) 0;
+}
+
+.notification-date-header {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.45;
+    font-weight: 600;
+    padding: var(--space-3) 0 var(--space-2);
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: var(--space-1);
+}
+
+.notification-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    transition: background var(--transition);
+    cursor: pointer;
+}
+
+.notification-entry:hover {
+    background: var(--accent-hover);
+}
+
+.notification-entry.unread {
+    background: rgba(var(--mud-palette-primary-rgb, 119, 107, 231), 0.06);
+}
+
+.notification-entry.unread:hover {
+    background: rgba(var(--mud-palette-primary-rgb, 119, 107, 231), 0.1);
+}
+
+.notification-entry-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-message {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.notification-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: 2px;
+}
+
+.notification-session-badge {
+    font-size: var(--text-xs);
+    padding: 1px 8px;
+    border-radius: var(--radius-full);
+    background: var(--accent-dim);
+    color: var(--accent);
+    white-space: nowrap;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notification-time {
+    font-size: var(--text-xs);
+    opacity: 0.4;
+    white-space: nowrap;
+    margin-left: auto;
+}
+
+.notification-unread-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mud-palette-primary);
+    flex-shrink: 0;
+    margin-top: 6px;
+}
+
+.notification-badge .mud-badge {
+    font-size: 9px;
+    min-width: 16px;
+    height: 16px;
+}
+
 /* ===== MCP Manager ===== */
 .mcp-table {
     font-size: var(--text-sm);
