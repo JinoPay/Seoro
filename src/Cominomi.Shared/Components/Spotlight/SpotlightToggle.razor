@@ -1,6 +1,6 @@
 @using Microsoft.Extensions.Logging
 @inject ISpotlightService SpotlightService
-@inject ChatState ChatState
+@inject IChatState ChatState
 @inject ILogger<SpotlightToggle> Logger
 
 @if (ChatState.CurrentWorkspace?.Status == WorkspaceStatus.Ready &&
