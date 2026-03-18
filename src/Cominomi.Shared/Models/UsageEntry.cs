@@ -52,6 +52,10 @@ public class UsageEntry
 
     [JsonPropertyName("project_path")]
     public string ProjectPath { get; set; } = string.Empty;
+
+    [JsonPropertyName("dedup_hash")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DedupHash { get; set; }
 }
 
 public class UsageStats
