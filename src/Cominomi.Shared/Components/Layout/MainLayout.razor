@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject IChatState ChatState
+@inject IGitService GitService
 @inject IJSRuntime JS
 @inject IThemeService ThemeService
 @inject IDependencyCheckService DependencyCheckService
@@ -48,8 +49,18 @@ else
                 }
                 else if (ChatState.Tabs.ActiveTab?.Type == MainTabType.FileContent && ChatState.Tabs.ActiveTab.FilePath != null)
                 {
-                    <FileContentView FilePath="ChatState.Tabs.ActiveTab.FilePath"
-                                     Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")" />
+                    @if (ChatState.Tabs.ActiveTab.ContentEvicted)
+                    {
+                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; opacity: 0.5;">
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+                            <span>Reloading…</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <FileContentView FilePath="ChatState.Tabs.ActiveTab.FilePath"
+                                         Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")" />
+                    }
                 }
                 else if (ChatState.Tabs.ActiveTab?.Type == MainTabType.FileDiff && ChatState.Tabs.ActiveTab.DiffData != null)
                 {
@@ -156,9 +167,43 @@ else
         });
     }
 
-    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+    private void HandleStateChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            var active = ChatState.Tabs.ActiveTab;
+            if (active is { Type: MainTabType.FileContent, ContentEvicted: true })
+                await ReloadEvictedContent(active);
+        });
+    }
 
     private void OpenActivity() => ChatState.Tabs.OpenActivityTab();
+
+    private HashSet<string> _reloadingTabs = new();
+
+    private async Task ReloadEvictedContent(MainTab tab)
+    {
+        if (!_reloadingTabs.Add(tab.Id)) return;
+        try
+        {
+            var session = ChatState.CurrentSession;
+            if (session == null || string.IsNullOrEmpty(session.Git.WorktreePath) || tab.FilePath == null) return;
+
+            var content = await GitService.ReadFileAsync(session.Git.WorktreePath, tab.FilePath);
+            ChatState.Tabs.OpenFileContentTab(tab.FilePath, content);
+        }
+        catch (Exception ex)
+        {
+            tab.FileContent = $"Error reloading file: {ex.Message}";
+            tab.ContentEvicted = false;
+        }
+        finally
+        {
+            _reloadingTabs.Remove(tab.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {
