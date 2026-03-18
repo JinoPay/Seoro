@@ -7,25 +7,7 @@
 
 <div class="input-area-container" id="input-area">
     <div class="input-area-float">
-        @if (_pendingAttachments.Count > 0)
-        {
-            <div class="attachment-chips">
-                @foreach (var attachment in _pendingAttachments)
-                {
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                             Icon="@(attachment.IsImage ? Icons.Material.Filled.Image : Icons.Material.Filled.InsertDriveFile)"
-                             OnClose="@(() => RemoveAttachment(attachment))"
-                             Style="font-size: 0.75rem;">
-                        @if (attachment.IsImage && attachment.PreviewDataUrl != null)
-                        {
-                            <img src="@attachment.PreviewDataUrl" alt="@attachment.FileName"
-                                 style="max-height: 28px; max-width: 40px; border-radius: 4px; margin-right: 4px; vertical-align: middle;" />
-                        }
-                        @TruncateFileName(attachment.FileName)
-                    </MudChip>
-                }
-            </div>
-        }
+        <AttachmentChips Attachments="_pendingAttachments" OnRemove="RemoveAttachment" />
 
         <MudTextField T="string" Value="@_inputText" ValueChanged="@HandleInputValueChanged"
                       Placeholder="@GetPlaceholder()"
@@ -67,50 +49,9 @@
             </div>
 
             <div class="input-toolbar-right">
-                <MudTooltip Text="@(ResolvedModel ?? GetModelDisplayName())">
-                    <button class="model-selector-pill" type="button"
-                            @onclick="ToggleModelMenu"
-                            disabled="@(Disabled || IsStreaming)">
-                        <span class="model-selector-label">@GetModelDisplayName()</span>
-                        <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" />
-                    </button>
-                </MudTooltip>
-
-                <MudPopover Open="@_modelMenuOpen" AnchorOrigin="Origin.TopRight"
-                            TransformOrigin="Origin.BottomRight" Class="model-popover">
-                    <MudList T="string" Dense="true" Class="model-list">
-                        @foreach (var model in ModelDefinitions.All)
-                        {
-                            <MudListItem T="string" OnClick="@(() => SelectModel(model.Id))"
-                                         Class="@(Model == model.Id ? "model-item-active" : "")">
-                                @model.DisplayName
-                            </MudListItem>
-                        }
-                        <MudDivider />
-                        <MudListItem T="string" OnClick="@(() => _customModelInput = true)"
-                                     Class="@(_isCustomModel ? "model-item-active" : "")">
-                            @if (_customModelInput)
-                            {
-                                <MudTextField T="string" @bind-Value="_customModelId"
-                                              Placeholder="claude-sonnet-4-6..."
-                                              Variant="Variant.Text" Margin="Margin.Dense"
-                                              Immediate="true" AutoFocus="true"
-                                              OnKeyDown="HandleCustomModelKeyDown"
-                                              Style="font-size: 0.8rem;" />
-                            }
-                            else
-                            {
-                                <span style="opacity: 0.7;">커스텀 모델...</span>
-                            }
-                        </MudListItem>
-                    </MudList>
-                </MudPopover>
-
-                @if (_modelMenuOpen)
-                {
-                    <MudOverlay Visible="true" OnClick="CloseModelMenu"
-                                DarkBackground="false" ZIndex="1" />
-                }
+                <ModelSelector Model="Model" ResolvedModel="ResolvedModel"
+                               OnModelChanged="OnModelChanged"
+                               Disabled="Disabled" IsStreaming="IsStreaming" />
 
                 @if (IsStreaming)
                 {
@@ -151,6 +92,7 @@
     [Parameter] public string? ResolvedModel { get; set; }
     [Parameter] public string EffortLevel { get; set; } = "auto";
     [Parameter] public EventCallback<string> EffortLevelChanged { get; set; }
+    [Parameter] public Session? CurrentSession { get; set; }
 
     private static readonly string[] PermissionModes = ["bypassAll", "plan"];
     private static readonly string[] EffortLevels = ["auto", "max"];
@@ -160,10 +102,6 @@
     private DotNetObjectReference<InputArea>? _dotNetRef;
     private bool _handlersRegistered;
     private bool _suppressInputUpdates;
-    private bool _modelMenuOpen;
-    private bool _customModelInput;
-    private string _customModelId = "";
-    private bool _isCustomModel => !ModelDefinitions.All.Any(m => m.Id == Model) && !string.IsNullOrEmpty(Model);
 
     // Parameter tracking to prevent unnecessary re-renders (cursor jumping fix)
     private bool _prevIsStreaming;
@@ -270,7 +208,6 @@
     public void OnCompositionEnd()
     {
         _isComposing = false;
-        // Catch up on any deferred render (e.g. send button enable/disable)
         _forceRender = true;
         StateHasChanged();
     }
@@ -345,51 +282,6 @@
         };
     }
 
-    private string GetModelDisplayName()
-    {
-        var model = ModelDefinitions.All.FirstOrDefault(m => m.Id == Model);
-        return model?.DisplayName ?? Model;
-    }
-
-    private void ToggleModelMenu()
-    {
-        _modelMenuOpen = !_modelMenuOpen;
-        _forceRender = true;
-        StateHasChanged();
-    }
-
-    private void CloseModelMenu()
-    {
-        _modelMenuOpen = false;
-        _customModelInput = false;
-        _forceRender = true;
-        StateHasChanged();
-    }
-
-    private async Task HandleCustomModelKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_customModelId))
-        {
-            await SelectModel(_customModelId.Trim());
-            _customModelInput = false;
-            _customModelId = "";
-        }
-        else if (e.Key == "Escape")
-        {
-            _customModelInput = false;
-            _forceRender = true;
-            StateHasChanged();
-        }
-    }
-
-    private async Task SelectModel(string modelId)
-    {
-        _modelMenuOpen = false;
-        _forceRender = true;
-        Model = modelId;
-        await OnModelChanged.InvokeAsync(modelId);
-    }
-
     [JSInvokable]
     public void OnNewlineInserted(string value)
     {
@@ -401,8 +293,6 @@
     {
         await Send();
     }
-
-    [Parameter] public Session? CurrentSession { get; set; }
 
     private async Task Send()
     {
@@ -440,11 +330,6 @@
         catch { }
 
         _suppressInputUpdates = false;  // Unblock
-    }
-
-    private static string TruncateFileName(string name)
-    {
-        return name.Length > 20 ? string.Concat(name.AsSpan(0, 17), "...") : name;
     }
 
     public async ValueTask DisposeAsync()
