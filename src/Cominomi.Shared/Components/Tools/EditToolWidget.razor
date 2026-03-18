@@ -34,9 +34,13 @@
     private string _filePath = "";
     private string[] _oldLines = [];
     private string[] _newLines = [];
+    private string? _lastInput;
 
     protected override void OnParametersSet()
     {
+        if (ReferenceEquals(_lastInput, Tool.Input)) return;
+        _lastInput = Tool.Input;
+
         if (string.IsNullOrEmpty(Tool.Input)) return;
         try
         {

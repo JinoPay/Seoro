@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
@@ -38,13 +39,15 @@ public sealed class StreamingProcess : IAsyncDisposable
     private readonly Process _process;
     private readonly Task<string> _stderrTask;
     private readonly bool _killEntireTree;
+    private readonly ILogger? _logger;
     private bool _disposed;
 
-    internal StreamingProcess(Process process, Task<string> stderrTask, bool killEntireTree)
+    internal StreamingProcess(Process process, Task<string> stderrTask, bool killEntireTree, ILogger? logger = null)
     {
         _process = process;
         _stderrTask = stderrTask;
         _killEntireTree = killEntireTree;
+        _logger = logger;
     }
 
     /// <summary>Read a single line from stdout. Returns null at EOF.</summary>
@@ -69,10 +72,17 @@ public sealed class StreamingProcess : IAsyncDisposable
             if (!_process.HasExited)
                 _process.Kill(_killEntireTree);
         }
-        catch { /* already exited */ }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "StreamingProcess: failed to kill process (likely already exited)");
+        }
 
         // Drain stderr to avoid deadlock
-        try { await _stderrTask; } catch { }
+        try { await _stderrTask; }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "StreamingProcess: stderr reading failed — error details may have been lost");
+        }
 
         _process.Dispose();
     }

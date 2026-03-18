@@ -32,31 +32,42 @@
     private int _lineCount;
     private string _syntaxClass = "";
     private bool _collapsed = true;
+    private string? _lastInput;
+    private string? _lastOutput;
 
     protected override void OnParametersSet()
     {
-        _filePath = ParseFilePath(Tool.Input);
-        _lineCount = string.IsNullOrEmpty(Tool.Output) ? 0 : Tool.Output.Split('\n').Length;
-        _collapsed = _lineCount > 20;
-
-        var ext = Path.GetExtension(_filePath).ToLowerInvariant();
-        _syntaxClass = ext switch
+        if (!ReferenceEquals(_lastInput, Tool.Input))
         {
-            ".cs" => "lang-csharp",
-            ".js" or ".jsx" => "lang-javascript",
-            ".ts" or ".tsx" => "lang-typescript",
-            ".py" => "lang-python",
-            ".rs" => "lang-rust",
-            ".go" => "lang-go",
-            ".java" => "lang-java",
-            ".html" or ".razor" => "lang-html",
-            ".css" => "lang-css",
-            ".json" => "lang-json",
-            ".yaml" or ".yml" => "lang-yaml",
-            ".xml" or ".csproj" => "lang-xml",
-            ".md" => "lang-markdown",
-            _ => ""
-        };
+            _lastInput = Tool.Input;
+            _filePath = ParseFilePath(Tool.Input);
+
+            var ext = Path.GetExtension(_filePath).ToLowerInvariant();
+            _syntaxClass = ext switch
+            {
+                ".cs" => "lang-csharp",
+                ".js" or ".jsx" => "lang-javascript",
+                ".ts" or ".tsx" => "lang-typescript",
+                ".py" => "lang-python",
+                ".rs" => "lang-rust",
+                ".go" => "lang-go",
+                ".java" => "lang-java",
+                ".html" or ".razor" => "lang-html",
+                ".css" => "lang-css",
+                ".json" => "lang-json",
+                ".yaml" or ".yml" => "lang-yaml",
+                ".xml" or ".csproj" => "lang-xml",
+                ".md" => "lang-markdown",
+                _ => ""
+            };
+        }
+
+        if (!ReferenceEquals(_lastOutput, Tool.Output))
+        {
+            _lastOutput = Tool.Output;
+            _lineCount = string.IsNullOrEmpty(Tool.Output) ? 0 : Tool.Output.Split('\n').Length;
+            _collapsed = _lineCount > 20;
+        }
     }
 
     private static string ParseFilePath(string? input)

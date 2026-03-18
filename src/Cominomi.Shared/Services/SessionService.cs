@@ -30,6 +30,9 @@ public partial class SessionService : ISessionService
     // Full session cache: avoids redundant disk reads for the same session within a short window
     private readonly ConcurrentDictionary<string, (Session Session, DateTime LoadedAt)> _sessionCache = new();
     private static readonly TimeSpan SessionCacheTtl = TimeSpan.FromSeconds(2);
+    private const int MaxSessionCacheEntries = 64;
+    private static readonly TimeSpan ScavengeInterval = TimeSpan.FromSeconds(30);
+    private DateTime _lastScavengeUtc = DateTime.UtcNow;
 
     public SessionService(IGitService gitService, IWorkspaceService workspaceService,
         IOptionsMonitor<AppSettings> appSettings, IContextService contextService, IHooksEngine hooksEngine,
@@ -303,6 +306,8 @@ public partial class SessionService : ISessionService
 
     public async Task<Session?> LoadSessionAsync(string sessionId)
     {
+        ScavengeExpiredSessions();
+
         // Return cached session if still fresh (avoids redundant disk I/O in pipelines)
         if (_sessionCache.TryGetValue(sessionId, out var cached) &&
             DateTime.UtcNow - cached.LoadedAt < SessionCacheTtl)
@@ -346,7 +351,46 @@ public partial class SessionService : ISessionService
             msg.MigrateToParts();
 
         _sessionCache[sessionId] = (session, DateTime.UtcNow);
+        EnforceSessionCacheCapacity();
         return session;
+    }
+
+    private void ScavengeExpiredSessions()
+    {
+        var now = DateTime.UtcNow;
+        if (now - _lastScavengeUtc < ScavengeInterval)
+            return;
+        _lastScavengeUtc = now;
+
+        var removed = 0;
+        foreach (var kvp in _sessionCache)
+        {
+            if (now - kvp.Value.LoadedAt >= SessionCacheTtl)
+            {
+                if (_sessionCache.TryRemove(kvp.Key, out _))
+                    removed++;
+            }
+        }
+
+        if (removed > 0)
+            _logger.LogDebug("Session cache scavenged: removed {Removed}, {Remaining} entries remaining", removed, _sessionCache.Count);
+    }
+
+    private void EnforceSessionCacheCapacity()
+    {
+        if (_sessionCache.Count <= MaxSessionCacheEntries)
+            return;
+
+        var toEvict = _sessionCache
+            .OrderBy(kv => kv.Value.LoadedAt)
+            .Take(_sessionCache.Count - MaxSessionCacheEntries)
+            .Select(kv => kv.Key)
+            .ToList();
+
+        foreach (var key in toEvict)
+            _sessionCache.TryRemove(key, out _);
+
+        _logger.LogDebug("Session cache capacity enforced: evicted {Count}, limit {Max}", toEvict.Count, MaxSessionCacheEntries);
     }
 
     private const int MaxToolOutputLength = 2000;
@@ -534,16 +578,24 @@ public partial class SessionService : ISessionService
             catch (Exception ex) { _logger.LogWarning(ex, "Cleanup failed during session delete: {SessionId}", sessionId); }
         }
 
-        var path = Path.Combine(_sessionsDir, $"{sessionId}.json");
-        if (File.Exists(path))
-            File.Delete(path);
+        try
+        {
+            var path = Path.Combine(_sessionsDir, $"{sessionId}.json");
+            if (File.Exists(path))
+                File.Delete(path);
 
-        var messagesPath = Path.Combine(_sessionsDir, $"{sessionId}.messages.json");
-        if (File.Exists(messagesPath))
-            File.Delete(messagesPath);
-
-        _metadataCache.TryRemove(sessionId, out _);
-        _sessionCache.TryRemove(sessionId, out _);
+            var messagesPath = Path.Combine(_sessionsDir, $"{sessionId}.messages.json");
+            if (File.Exists(messagesPath))
+                File.Delete(messagesPath);
+        }
+        finally
+        {
+            // Ensure caches are purged even if file deletion fails
+            _metadataCache.TryRemove(sessionId, out _);
+            _sessionCache.TryRemove(sessionId, out _);
+            _sessionLocks.TryRemove(sessionId, out _);
+            _worktreeInitLocks.TryRemove(sessionId, out _);
+        }
 
         _logger.LogInformation("Session {SessionId} deleted", sessionId);
     }

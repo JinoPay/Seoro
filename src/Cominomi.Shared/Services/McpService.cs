@@ -167,6 +167,30 @@ public class McpService : IMcpService
         }
     }
 
+    public async Task<bool> UpdateServerAsync(string oldName, string oldScope, string name, string transport, string? command, List<string>? args, Dictionary<string, string>? env, string? url, string scope)
+    {
+        try
+        {
+            var removed = await RemoveServerAsync(oldName, oldScope);
+            if (!removed)
+                return false;
+
+            var added = await AddServerAsync(name, transport, command, args, env, url, scope);
+            if (!added)
+            {
+                _logger.LogWarning("Failed to add server after removing old one during update. Old: {OldName}/{OldScope}", oldName, oldScope);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update MCP server {OldName} -> {Name}", oldName, name);
+            return false;
+        }
+    }
+
     public async Task<bool> TestConnectionAsync(string name)
     {
         // Best-effort test: just try listing and see if the server is present
