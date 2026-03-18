@@ -1,17 +1,14 @@
 @inject ChatState ChatState
 @inject ISessionService SessionService
-@inject ISessionGitWorkflowService GitWorkflow
 @inject ISettingsService SettingsService
-@inject IWorkspaceService WorkspaceService
-@inject IGitService GitService
-@inject IGhService GhService
+@inject SessionListDataService DataService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 @implements IDisposable
 
 <div class="sidebar-tree">
-    @if (_workspaces.Count > 0)
+    @if (DataService.Workspaces.Count > 0)
     {
         <SessionListToolbar FilterVisible="_filterVisible"
                             FilterText="@_filterText"
@@ -22,7 +19,7 @@
         @* Tree body *@
         <div class="tree-body">
             @{ var sessionIndex = 0; }
-            @foreach (var group in GetFilteredWorkspaces().GroupBy(GetProjectName))
+            @foreach (var group in DataService.GetFilteredWorkspaces(_filterText).GroupBy(SessionListDataService.GetProjectName))
             {
                 var projectName = group.Key;
                 var isExpanded = _expandedProjects.Contains(projectName);
@@ -96,13 +93,13 @@
                                 </div>
                             }
 
-                            @if (_sessionCache.TryGetValue(ws.Id, out var sessions))
+                            @if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
                             {
-                                @foreach (var session in FilterSessions(sessions))
+                                @foreach (var session in SessionListDataService.FilterSessions(sessions, _filterText))
                                 {
                                     var isStreaming = ChatState.IsSessionStreaming(session.Id);
                                     var currentIndex = sessionIndex;
-                                    var hasDiffStats = _diffStatsCache.TryGetValue(session.Id, out var stats);
+                                    var hasDiffStats = DataService.DiffStatsCache.TryGetValue(session.Id, out var stats);
                                     sessionIndex++;
 
                                     <SessionItem Session="session"
@@ -143,42 +140,36 @@
 <CreateWorkspaceDialog @bind-IsOpen="_createDialogOpen" OnWorkspaceCreated="ReloadWorkspaces" />
 
 @code {
-    private List<Workspace> _workspaces = [];
     private HashSet<string> _expandedProjects = new();
-    private Dictionary<string, List<Session>> _sessionCache = new();
-    private Dictionary<string, (int Additions, int Deletions)> _diffStatsCache = new();
     private bool _createDialogOpen;
     private bool _isCreatingSession;
     private bool _filterVisible;
     private string? _filterText;
     private DotNetObjectReference<SessionList>? _dotNetRef;
 
-    // Ordered list of session IDs for keyboard shortcuts
-    private List<(Session Session, Workspace Workspace)> _orderedSessions = [];
-
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += OnStateChanged;
         ChatState.OnRequestCreateWorkspace += HandleCreateWorkspaceRequest;
+        DataService.OnDataChanged += OnDataServiceChanged;
 
-        _workspaces = await WorkspaceService.GetWorkspacesAsync();
+        await DataService.LoadWorkspacesAsync();
 
         var settings = await SettingsService.LoadAsync();
         var lastId = settings.LastWorkspaceId;
 
-        var currentWs = _workspaces.FirstOrDefault(w => w.Id == lastId)
-                        ?? _workspaces.FirstOrDefault();
+        var currentWs = DataService.Workspaces.FirstOrDefault(w => w.Id == lastId)
+                        ?? DataService.Workspaces.FirstOrDefault();
         if (currentWs != null)
         {
-            var projectName = GetProjectName(currentWs);
+            var projectName = SessionListDataService.GetProjectName(currentWs);
             _expandedProjects.Add(projectName);
-            await LoadSessionsForProject(projectName);
+            await DataService.LoadSessionsForProjectAsync(projectName);
 
             ChatState.SetWorkspace(currentWs);
 
-            // Auto-restore last active session
             if (!string.IsNullOrEmpty(settings.LastSessionId)
-                && _sessionCache.TryGetValue(currentWs.Id, out var cached))
+                && DataService.SessionCache.TryGetValue(currentWs.Id, out var cached))
             {
                 var lastSession = cached.FirstOrDefault(s => s.Id == settings.LastSessionId);
                 if (lastSession != null)
@@ -186,7 +177,7 @@
             }
         }
 
-        RebuildOrderedSessions();
+        DataService.RebuildOrderedSessions();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -201,30 +192,11 @@
     [JSInvokable]
     public async Task OnSessionShortcut(int index)
     {
-        if (index >= 0 && index < _orderedSessions.Count)
+        if (index >= 0 && index < DataService.OrderedSessions.Count)
         {
-            var (session, ws) = _orderedSessions[index];
+            var (session, ws) = DataService.OrderedSessions[index];
             await SelectSession(session, ws);
             await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private void RebuildOrderedSessions()
-    {
-        _orderedSessions.Clear();
-        foreach (var group in _workspaces.GroupBy(GetProjectName))
-        {
-            var workspacesInGroup = group.OrderByDescending(w => w.UpdatedAt).ToList();
-            foreach (var ws in workspacesInGroup)
-            {
-                if (_sessionCache.TryGetValue(ws.Id, out var sessions))
-                {
-                    foreach (var s in sessions)
-                    {
-                        _orderedSessions.Add((s, ws));
-                    }
-                }
-            }
         }
     }
 
@@ -252,68 +224,11 @@
         };
     }
 
-    private IEnumerable<Workspace> GetFilteredWorkspaces()
-    {
-        if (string.IsNullOrWhiteSpace(_filterText))
-            return _workspaces;
-
-        var filter = _filterText.Trim();
-        return _workspaces.Where(w =>
-        {
-            if (GetProjectName(w).Contains(filter, StringComparison.OrdinalIgnoreCase))
-                return true;
-            if (w.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
-                return true;
-            if (_sessionCache.TryGetValue(w.Id, out var sessions))
-                return sessions.Any(s => s.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)
-                    || s.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
-                    || s.CityName.Contains(filter, StringComparison.OrdinalIgnoreCase));
-            return false;
-        });
-    }
-
-    private IEnumerable<Session> FilterSessions(List<Session> sessions)
-    {
-        if (string.IsNullOrWhiteSpace(_filterText))
-            return sessions;
-
-        var filter = _filterText.Trim();
-        return sessions.Where(s =>
-            s.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)
-            || s.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
-            || s.CityName.Contains(filter, StringComparison.OrdinalIgnoreCase));
-    }
-
     private void ToggleFilter()
     {
         _filterVisible = !_filterVisible;
         if (!_filterVisible)
             _filterText = "";
-    }
-
-    private static string GetProjectName(Workspace ws)
-    {
-        if (!string.IsNullOrEmpty(ws.RepoUrl))
-        {
-            var url = ws.RepoUrl.TrimEnd('/');
-            if (url.EndsWith(".git"))
-                url = url[..^4];
-
-            // SSH: git@github.com:org/repo
-            var colonIdx = url.LastIndexOf(':');
-            var slashIdx = url.LastIndexOf('/');
-            if (slashIdx >= 0)
-                return url[(slashIdx + 1)..];
-            if (colonIdx >= 0)
-                return url[(colonIdx + 1)..];
-        }
-
-        if (!string.IsNullOrEmpty(ws.RepoLocalPath))
-        {
-            return Path.GetFileName(ws.RepoLocalPath.TrimEnd(Path.DirectorySeparatorChar, '/'));
-        }
-
-        return ws.Name;
     }
 
     private async Task ToggleProject(string projectName)
@@ -325,134 +240,18 @@
         else
         {
             _expandedProjects.Add(projectName);
-            await LoadSessionsForProject(projectName);
-        }
-    }
-
-    private async Task LoadSessionsForProject(string projectName)
-    {
-        var workspacesInGroup = _workspaces.Where(w => GetProjectName(w) == projectName);
-        foreach (var ws in workspacesInGroup)
-        {
-            if (!_sessionCache.ContainsKey(ws.Id))
-            {
-                var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
-                _sessionCache[ws.Id] = sessions;
-                _ = CheckMergeStatuses(ws.Id);
-                _ = LoadDiffStatsForWorkspace(ws, sessions);
-            }
-        }
-        RebuildOrderedSessions();
-    }
-
-    private async Task LoadDiffStatsForWorkspace(Workspace ws, List<Session> sessions)
-    {
-        foreach (var session in sessions)
-        {
-            if (session.Status == SessionStatus.Pending || session.IsLocalDir
-                || string.IsNullOrEmpty(session.WorktreePath) || string.IsNullOrEmpty(session.BaseBranch))
-                continue;
-
-            try
-            {
-                var stats = await GitService.GetDiffStatAsync(session.WorktreePath, session.BaseBranch);
-                if (stats.Additions > 0 || stats.Deletions > 0)
-                {
-                    _diffStatsCache[session.Id] = stats;
-                    await InvokeAsync(StateHasChanged);
-                }
-            }
-            catch { }
-        }
-    }
-
-    private async Task RefreshDiffStats(string sessionId)
-    {
-        var session = _orderedSessions.FirstOrDefault(o => o.Session.Id == sessionId).Session;
-        if (session == null || session.IsLocalDir
-            || string.IsNullOrEmpty(session.WorktreePath) || string.IsNullOrEmpty(session.BaseBranch))
-            return;
-
-        try
-        {
-            var stats = await GitService.GetDiffStatAsync(session.WorktreePath, session.BaseBranch);
-            _diffStatsCache[sessionId] = stats;
-            await InvokeAsync(StateHasChanged);
-        }
-        catch { }
-    }
-
-    private async Task CheckMergeStatuses(string workspaceId)
-    {
-        if (!_sessionCache.TryGetValue(workspaceId, out var sessions)) return;
-
-        var targetSessions = sessions
-            .Where(s => s.Status is SessionStatus.Ready or SessionStatus.Pushed)
-            .ToList();
-
-        foreach (var session in targetSessions)
-        {
-            try
-            {
-                // Ready 세션: 이미 merge 됐는지 확인
-                if (session.Status == SessionStatus.Ready)
-                {
-                    var merged = await GitWorkflow.CheckMergeStatusAsync(session.Id);
-                    if (merged)
-                    {
-                        session.Status = SessionStatus.Merged;
-                        await InvokeAsync(StateHasChanged);
-                        continue;
-                    }
-                }
-
-                // PR이 아직 연결 안 된 세션: GitHub에 PR이 있는지 확인
-                if (session.PrNumber == null && !session.IsLocalDir
-                    && !string.IsNullOrEmpty(session.BranchName))
-                {
-                    await CheckAndUpdatePrForSession(session);
-                }
-            }
-            catch { }
-        }
-    }
-
-    private async Task CheckAndUpdatePrForSession(Session session)
-    {
-        var workspace = _workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);
-        if (workspace == null) return;
-
-        var prInfo = await GhService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName);
-        if (prInfo != null && prInfo.State is "OPEN" or "open")
-        {
-            session.Status = SessionStatus.PrOpen;
-            session.PrUrl = prInfo.Url;
-            session.PrNumber = prInfo.Number;
-            await SessionService.SaveSessionAsync(session);
-            await InvokeAsync(StateHasChanged);
+            await DataService.LoadSessionsForProjectAsync(projectName);
         }
     }
 
     private async Task ReloadWorkspaces()
     {
-        _workspaces = await WorkspaceService.GetWorkspacesAsync();
+        var invalidProjects = _expandedProjects
+            .Where(p => !DataService.Workspaces.Any(w => SessionListDataService.GetProjectName(w) == p))
+            .ToList();
+        foreach (var p in invalidProjects) _expandedProjects.Remove(p);
 
-        // Reload sessions for expanded projects
-        foreach (var projectName in _expandedProjects.ToList())
-        {
-            var workspacesInGroup = _workspaces.Where(w => GetProjectName(w) == projectName).ToList();
-            if (workspacesInGroup.Count == 0)
-            {
-                _expandedProjects.Remove(projectName);
-                continue;
-            }
-            foreach (var ws in workspacesInGroup)
-            {
-                var sessions = await SessionService.GetSessionsByWorkspaceAsync(ws.Id);
-                _sessionCache[ws.Id] = sessions;
-            }
-        }
-        RebuildOrderedSessions();
+        await DataService.ReloadWorkspacesAsync(_expandedProjects);
     }
 
     private async Task CreateNewChat(Workspace ws)
@@ -468,7 +267,7 @@
             ChatState.SetWorkspace(ws);
             ChatState.SetSession(session);
 
-            if (_sessionCache.TryGetValue(ws.Id, out var sessions))
+            if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
                 sessions.Insert(0, session);
 
             var settings = await SettingsService.LoadAsync();
@@ -476,7 +275,7 @@
             settings.LastSessionId = session.Id;
             await SettingsService.SaveAsync(settings);
 
-            RebuildOrderedSessions();
+            DataService.RebuildOrderedSessions();
         }
         finally
         {
@@ -498,7 +297,7 @@
             ChatState.SetWorkspace(ws);
             ChatState.SetSession(session);
 
-            if (_sessionCache.TryGetValue(ws.Id, out var sessions))
+            if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
                 sessions.Insert(0, session);
 
             var settings = await SettingsService.LoadAsync();
@@ -506,7 +305,7 @@
             settings.LastSessionId = session.Id;
             await SettingsService.SaveAsync(settings);
 
-            RebuildOrderedSessions();
+            DataService.RebuildOrderedSessions();
         }
         finally
         {
@@ -517,7 +316,7 @@
 
     private async Task SelectSession(Session session, Workspace? ws = null)
     {
-        ws ??= _workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);
+        ws ??= DataService.Workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);
         if (ws != null)
             ChatState.SetWorkspace(ws);
 
@@ -544,7 +343,7 @@
     private async Task CleanupSession(Session session)
     {
         await SessionService.CleanupSessionAsync(session.Id);
-        session.Status = SessionStatus.Archived;
+        session.TransitionStatus(SessionStatus.Archived);
         StateHasChanged();
     }
 
@@ -561,14 +360,14 @@
         {
             await SessionService.DeleteSessionAsync(session.Id);
 
-            if (_sessionCache.TryGetValue(session.WorkspaceId, out var sessions))
+            if (DataService.SessionCache.TryGetValue(session.WorkspaceId, out var sessions))
                 sessions.Remove(session);
 
             if (ChatState.CurrentSession?.Id == session.Id)
                 ChatState.SetSession(null!);
 
-            _diffStatsCache.Remove(session.Id);
-            RebuildOrderedSessions();
+            DataService.DiffStatsCache.Remove(session.Id);
+            DataService.RebuildOrderedSessions();
             Snackbar.SessionDeleted();
         }
         catch (Exception ex)
@@ -605,9 +404,9 @@
             // If a session stopped streaming, refresh its diff stats
             if (_lastHasStreaming && !hasStreaming)
             {
-                foreach (var ordered in _orderedSessions)
+                foreach (var ordered in DataService.OrderedSessions)
                 {
-                    _ = RefreshDiffStats(ordered.Session.Id);
+                    _ = DataService.RefreshDiffStatsAsync(ordered.Session.Id);
                 }
             }
 
@@ -624,10 +423,16 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private void OnDataServiceChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
     public void Dispose()
     {
         ChatState.OnChange -= OnStateChanged;
         ChatState.OnRequestCreateWorkspace -= HandleCreateWorkspaceRequest;
+        DataService.OnDataChanged -= OnDataServiceChanged;
         _ = JS.InvokeVoidAsync("unregisterSessionShortcuts");
         _dotNetRef?.Dispose();
     }

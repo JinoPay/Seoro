@@ -8,6 +8,10 @@
 
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Cominomi.Shared.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 

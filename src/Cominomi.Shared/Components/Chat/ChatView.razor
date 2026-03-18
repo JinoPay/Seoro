@@ -530,7 +530,7 @@
                 session.WorktreePath = updated.WorktreePath;
                 session.BranchName = updated.BranchName;
                 session.BaseBranch = updated.BaseBranch;
-                session.Status = updated.Status;
+                session.SetInitialStatus(updated.Status);
                 session.ErrorMessage = updated.ErrorMessage;
 
                 if (session.Status == SessionStatus.Error)
@@ -541,7 +541,7 @@
             }
             catch (Exception ex)
             {
-                session.Status = SessionStatus.Error;
+                session.TransitionStatus(SessionStatus.Error);
                 session.ErrorMessage = ex.Message;
                 ChatState.NotifyStateChanged();
                 return;
@@ -706,7 +706,7 @@
         var result = await PrWorkflow.CheckPrStatusAsync(session);
         if (result is var (prNumber, prUrl))
         {
-            session.Status = SessionStatus.PrOpen;
+            session.TransitionStatus(SessionStatus.PrOpen);
             session.PrUrl = prUrl;
             session.PrNumber = prNumber;
             await SessionService.SaveSessionAsync(session);
@@ -776,7 +776,7 @@
         try
         {
             var (status, error) = await PrWorkflow.MergePrAsync(session);
-            session.Status = status;
+            session.TransitionStatus(status);
             session.ErrorMessage = error;
 
             if (status == SessionStatus.Merged)
@@ -805,7 +805,7 @@
         try
         {
             var (status, error) = await PrWorkflow.ForcePushAsync(session);
-            session.Status = status;
+            session.TransitionStatus(status);
             session.ErrorMessage = error;
 
             if (status != SessionStatus.Pushed)
@@ -829,7 +829,7 @@
 
     private async Task ResolveConflicts(Session session)
     {
-        session.Status = SessionStatus.Ready;
+        session.TransitionStatus(SessionStatus.Ready);
         session.ErrorMessage = null;
         session.ConflictFiles = null;
 

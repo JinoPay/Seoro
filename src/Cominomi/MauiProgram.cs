@@ -89,6 +89,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISystemPromptBuilder, SystemPromptBuilder>();
         builder.Services.AddSingleton<ISessionInitializer, SessionInitializer>();
         builder.Services.AddSingleton<IChatPrWorkflowService, ChatPrWorkflowService>();
+        builder.Services.AddSingleton<SessionListDataService>();
 
         // Load external model definitions (pricing, model names) if present
         var modelsJsonPath = Path.Combine(AppPaths.Settings, "models.json");
@@ -98,6 +99,19 @@ public static class MauiProgram
         builder.Services.AddBlazorWebViewDeveloperTools();
 #endif
 
-        return builder.Build();
+        var app = builder.Build();
+
+        // Recover from Spotlight crash if the app was terminated while Spotlight was active
+        try
+        {
+            var spotlight = app.Services.GetRequiredService<ISpotlightService>();
+            spotlight.RecoverAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Spotlight crash recovery failed during startup");
+        }
+
+        return app;
     }
 }
