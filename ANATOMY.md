@@ -1565,7 +1565,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **6** | **TabManager 파일 콘텐츠 무한 메모리** — 퇴출 정책 없음 | `MainTab.FileContent` 문자열이 탭 닫을 때까지 메모리에 상주. 대용량 파일(100MB+)도 보유. LRU/크기 제한 없음 | §11 | 중 |
 | **7** | **SessionService bare catch 블록** — `SessionService.cs:582` | `catch { return false; }` 로깅 없는 완전 침묵 실패. 디버깅 정보 손실 | §8 | 낮 |
 | **8** | **ContextService .gitignore 중복 추가** — 행 기반이 아닌 `Contains` 체크 | `ContextService.cs:119` `content.Contains(".context/")` — 줄 기반이 아니라 부분 문자열 매칭. 중복 엔트리 축적 가능 | §17 | 낮 |
-| **9** | **SidebarExplorer FileSystemWatcher 레이스** — 디바운스 타이머 동시 리셋 | `SidebarExplorer.razor:109-147` — 2초 디바운스 Timer가 stop/start 사이에 동시성 보호 없음. Windows에서 빠른 파일 변경 시 이벤트 폭주 | §12 | 낮 |
+| **9** | **~~SidebarExplorer FileSystemWatcher 레이스~~** — ✅ 해결됨 | `SidebarExplorer.razor` — `_debounceLock` 도입으로 디바운스 타이머 stop/start 및 dispose에 동시성 보호 추가 | §12 | ~~낮~~ |
 | **10** | **플러그인 stdin/stdout 프로토콜 미정의** — 환경변수만 전달 | `PluginExecutionEngine.cs` — 플러그인 ↔ 앱 간 구조화된 데이터 교환 없음. 양방향 스트리밍 불가. exit code + 버퍼된 stdout/stderr만 | §15.5 | 높 |
 
 ### 차기 개선 후보
