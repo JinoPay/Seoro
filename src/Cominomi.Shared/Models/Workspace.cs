@@ -22,7 +22,10 @@ public class Workspace
     public WorkspaceStatus Status { get; set; } = WorkspaceStatus.Initializing;
     public string RepoUrl { get; set; } = "";
     public string RepoLocalPath { get; set; } = "";
-    public string? ErrorMessage { get; set; }
+    public AppError? Error { get; set; }
+
+    [JsonIgnore]
+    public string? ErrorMessage => Error?.Message;
     public string? SystemPrompt { get; set; }
 
     // Git defaults

@@ -139,7 +139,7 @@ public partial class WorkspaceService : IWorkspaceService
                 if (!cloneResult.Success)
                 {
                     workspace.Status = WorkspaceStatus.Error;
-                    workspace.ErrorMessage = cloneResult.Error;
+                    workspace.Error = AppError.CloneFailed(cloneResult.Error);
                     await SaveWorkspaceAsync(workspace);
                     return workspace;
                 }
@@ -158,7 +158,7 @@ public partial class WorkspaceService : IWorkspaceService
             workspace.RepoLocalPath = repoDir;
 
             workspace.Status = WorkspaceStatus.Ready;
-            workspace.ErrorMessage = null;
+            workspace.Error = null;
             await SaveWorkspaceAsync(workspace);
             progress?.Report("Workspace ready!");
             _logger.LogInformation("Workspace {Name} created from {Url}", name, url);
@@ -173,7 +173,7 @@ public partial class WorkspaceService : IWorkspaceService
         {
             _logger.LogError(ex, "Failed to create workspace from URL: {Url}", url);
             workspace.Status = WorkspaceStatus.Error;
-            workspace.ErrorMessage = ex.Message;
+            workspace.Error = AppError.FromException(ErrorCode.Unknown, ex);
             await SaveWorkspaceAsync(workspace);
             return workspace;
         }
@@ -196,13 +196,13 @@ public partial class WorkspaceService : IWorkspaceService
             if (!await _gitService.IsGitRepoAsync(localPath))
             {
                 workspace.Status = WorkspaceStatus.Error;
-                workspace.ErrorMessage = "Not a valid git repository.";
+                workspace.Error = AppError.InvalidGitRepo("Not a valid git repository.");
                 await SaveWorkspaceAsync(workspace);
                 return workspace;
             }
 
             workspace.Status = WorkspaceStatus.Ready;
-            workspace.ErrorMessage = null;
+            workspace.Error = null;
             await SaveWorkspaceAsync(workspace);
             _logger.LogInformation("Workspace {Name} created from local path {Path}", name, localPath);
             return workspace;
@@ -211,7 +211,7 @@ public partial class WorkspaceService : IWorkspaceService
         {
             _logger.LogError(ex, "Failed to create workspace from local path: {Path}", localPath);
             workspace.Status = WorkspaceStatus.Error;
-            workspace.ErrorMessage = ex.Message;
+            workspace.Error = AppError.FromException(ErrorCode.Unknown, ex);
             await SaveWorkspaceAsync(workspace);
             return workspace;
         }

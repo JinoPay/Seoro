@@ -84,13 +84,13 @@
                         break;
                 }
 
-                @if (!string.IsNullOrEmpty(ChatState.CurrentSession.ErrorMessage))
+                @if (ChatState.CurrentSession.Error != null)
                 {
-                    <MudTooltip Text="@ChatState.CurrentSession.ErrorMessage">
+                    <MudTooltip Text="@ChatState.CurrentSession.Error.Message">
                         <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Error"
                                  Style="width: 14px; height: 14px;" />
                     </MudTooltip>
-                    @if (ChatState.CurrentSession.ErrorMessage.Contains("rejected", StringComparison.OrdinalIgnoreCase))
+                    @if (ChatState.CurrentSession.Error.Code == ErrorCode.BranchPushRejected)
                     {
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
                                    OnClick="@(() => ForcePushAndMerge(ChatState.CurrentSession))"
@@ -531,7 +531,7 @@
                 session.BranchName = updated.BranchName;
                 session.BaseBranch = updated.BaseBranch;
                 session.SetInitialStatus(updated.Status);
-                session.ErrorMessage = updated.ErrorMessage;
+                session.Error = updated.Error;
 
                 if (session.Status == SessionStatus.Error)
                 {
@@ -542,7 +542,7 @@
             catch (Exception ex)
             {
                 session.TransitionStatus(SessionStatus.Error);
-                session.ErrorMessage = ex.Message;
+                session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
                 ChatState.NotifyStateChanged();
                 return;
             }
@@ -777,7 +777,7 @@
         {
             var (status, error) = await PrWorkflow.MergePrAsync(session);
             session.TransitionStatus(status);
-            session.ErrorMessage = error;
+            session.Error = error;
 
             if (status == SessionStatus.Merged)
             {
@@ -786,13 +786,13 @@
             }
             else if (status == SessionStatus.ConflictDetected)
                 Snackbar.ConflictDetected(session.BranchName);
-            else if (!string.IsNullOrEmpty(error))
-                Snackbar.MergeError(error);
+            else if (error != null)
+                Snackbar.MergeError(error.Message);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "MergePr failed for session {SessionId}", session.Id);
-            session.ErrorMessage = ex.Message;
+            session.Error = AppError.FromException(ErrorCode.PrMergeFailed, ex);
             Snackbar.MergeError(ex.Message);
         }
         finally { _operatingSessionId = null; StateHasChanged(); }
@@ -806,22 +806,22 @@
         {
             var (status, error) = await PrWorkflow.ForcePushAsync(session);
             session.TransitionStatus(status);
-            session.ErrorMessage = error;
+            session.Error = error;
 
             if (status != SessionStatus.Pushed)
             {
-                if (!string.IsNullOrEmpty(error))
-                    Snackbar.PushError(error);
+                if (error != null)
+                    Snackbar.PushError(error.Message);
                 return;
             }
 
-            session.ErrorMessage = null;
+            session.Error = null;
             Snackbar.Add("강제 푸시 완료. PR을 생성하세요.", Severity.Success);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "ForcePushAndMerge failed for session {SessionId}", session.Id);
-            session.ErrorMessage = ex.Message;
+            session.Error = AppError.FromException(ErrorCode.BranchPushFailed, ex);
             Snackbar.MergeError(ex.Message);
         }
         finally { _operatingSessionId = null; StateHasChanged(); }
@@ -830,7 +830,7 @@
     private async Task ResolveConflicts(Session session)
     {
         session.TransitionStatus(SessionStatus.Ready);
-        session.ErrorMessage = null;
+        session.Error = null;
         session.ConflictFiles = null;
 
         var (fullSession, prompt) = await PrWorkflow.ResolveConflictsAsync(session);

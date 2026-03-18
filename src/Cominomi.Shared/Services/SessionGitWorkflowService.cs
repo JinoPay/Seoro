@@ -68,7 +68,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         if (result.Success)
         {
             session.TransitionStatus(SessionStatus.Pushed);
-            session.ErrorMessage = null;
+            session.Error = null;
 
             _ = Task.Run(async () =>
             {
@@ -88,7 +88,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         }
         else
         {
-            session.ErrorMessage = result.Error;
+            session.Error = AppError.ClassifyPushError(result.Error);
         }
 
         await _sessionService.SaveSessionAsync(session);
@@ -109,7 +109,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         if (result.Success)
         {
             session.TransitionStatus(SessionStatus.PrOpen);
-            session.ErrorMessage = null;
+            session.Error = null;
 
             // Parse PR URL from output (gh pr create prints the URL)
             session.PrUrl = result.Output.Trim();
@@ -124,7 +124,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         }
         else
         {
-            session.ErrorMessage = result.Error;
+            session.Error = AppError.PrCreation(result.Error);
         }
 
         await _sessionService.SaveSessionAsync(session);
@@ -141,7 +141,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName, ct);
             if (prInfo == null)
             {
-                session.ErrorMessage = "PR not found for this branch.";
+                session.Error = AppError.PrNotFoundError("PR not found for this branch.");
                 await _sessionService.SaveSessionAsync(session);
                 return session;
             }
@@ -154,21 +154,15 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         if (result.Success)
         {
             session.TransitionStatus(SessionStatus.Merged);
-            session.ErrorMessage = null;
+            session.Error = null;
         }
         else
         {
-            // Check if it's a conflict error
-            var errorLower = (result.Error + result.Output).ToLowerInvariant();
-            if (errorLower.Contains("conflict") || errorLower.Contains("merge") || errorLower.Contains("not mergeable"))
-            {
+            var error = AppError.ClassifyMergeError(result.Error, result.Output);
+            session.Error = error;
+
+            if (error.Code == ErrorCode.PrMergeConflict)
                 session.TransitionStatus(SessionStatus.ConflictDetected);
-                session.ErrorMessage = result.Error;
-            }
-            else
-            {
-                session.ErrorMessage = result.Error;
-            }
         }
 
         await _sessionService.SaveSessionAsync(session);
@@ -235,7 +229,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             ?? throw new InvalidOperationException($"Session '{sessionId}' not found.");
 
         session.TransitionStatus(SessionStatus.Ready);
-        session.ErrorMessage = null;
+        session.Error = null;
         session.ConflictFiles = null;
         await _sessionService.SaveSessionAsync(session);
     }

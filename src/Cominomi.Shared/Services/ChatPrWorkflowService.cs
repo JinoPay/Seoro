@@ -44,19 +44,19 @@ public class ChatPrWorkflowService : IChatPrWorkflowService
         return prompt;
     }
 
-    public async Task<(SessionStatus Status, string? Error)> MergePrAsync(Session session)
+    public async Task<(SessionStatus Status, AppError? Error)> MergePrAsync(Session session)
     {
         var settings = await _settingsService.LoadAsync();
         var mergeMethod = settings.DefaultMergeStrategy ?? "squash";
 
         var updated = await _gitWorkflow.MergePrAsync(session.Id, mergeMethod);
-        return (updated.Status, updated.ErrorMessage);
+        return (updated.Status, updated.Error);
     }
 
-    public async Task<(SessionStatus Status, string? Error)> ForcePushAsync(Session session)
+    public async Task<(SessionStatus Status, AppError? Error)> ForcePushAsync(Session session)
     {
         var pushed = await _gitWorkflow.PushBranchAsync(session.Id, force: true);
-        return (pushed.Status, pushed.ErrorMessage);
+        return (pushed.Status, pushed.Error);
     }
 
     public async Task<(Session? FullSession, string RebasePrompt)> ResolveConflictsAsync(Session session)
