@@ -3,7 +3,7 @@ using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
 
-public interface IClaudeService
+public interface IClaudeService : IDisposable
 {
     IAsyncEnumerable<StreamEvent> SendMessageAsync(
         string message,
