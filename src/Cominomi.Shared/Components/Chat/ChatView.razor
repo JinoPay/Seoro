@@ -52,12 +52,15 @@
                 {
                     case SessionStatus.Ready:
                     case SessionStatus.Pushed:
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.RocketLaunch"
-                                   OnClick="@(() => CreatePr(ChatState.CurrentSession))"
-                                   Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
-                            PR 생성
-                        </MudButton>
+                        @if (!ChatState.IsStreaming)
+                        {
+                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.RocketLaunch"
+                                       OnClick="@(() => CreatePr(ChatState.CurrentSession))"
+                                       Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
+                                PR 생성
+                            </MudButton>
+                        }
                         break;
                     case SessionStatus.PrOpen:
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
@@ -1033,10 +1036,38 @@
                 }
             });
 
+            // Check if AI created a PR during this conversation
+            if (session.Status == SessionStatus.Pushed && !string.IsNullOrEmpty(session.BranchName))
+            {
+                _ = CheckAndUpdatePrStatus(session);
+            }
+
             if (!_quickResponseVisible && !_planReviewVisible)
             {
                 _ = SendNotificationIfNeeded(session, "Task completed", NotificationType.Info);
             }
+        }
+    }
+
+    private async Task CheckAndUpdatePrStatus(Session session)
+    {
+        try
+        {
+            var workspace = await WorkspaceService.LoadWorkspaceAsync(session.WorkspaceId);
+            if (workspace == null) return;
+            var prInfo = await GhService.GetPrForBranchAsync(workspace.RepoLocalPath, session.BranchName);
+            if (prInfo != null && prInfo.State is "OPEN" or "open")
+            {
+                session.Status = SessionStatus.PrOpen;
+                session.PrUrl = prInfo.Url;
+                session.PrNumber = prInfo.Number;
+                await SessionService.SaveSessionAsync(session);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to check PR status for session {SessionId}", session.Id);
         }
     }
 
@@ -1164,71 +1195,29 @@ Rules:
         ClaudeService.Cancel(ChatState.CurrentSession?.Id);
     }
 
-    // Workflow: push + create PR (does NOT merge)
+    // Workflow: send PR creation request to AI — let AI handle diff check, commit, push, and gh pr create
     private async Task CreatePr(Session session)
     {
-        _operatingSessionId = session.Id;
-        StateHasChanged();
         try
         {
-            // Step 1: Push
-            if (session.Status == SessionStatus.Ready)
-            {
-                var pushed = await GitWorkflow.PushBranchAsync(session.Id);
-                session.Status = pushed.Status;
-                session.ErrorMessage = pushed.ErrorMessage;
-                if (pushed.Status != SessionStatus.Pushed)
-                {
-                    if (!string.IsNullOrEmpty(pushed.ErrorMessage))
-                        Snackbar.PushError(pushed.ErrorMessage);
-                    return;
-                }
-            }
-
-            // Step 2: Create PR
-            var settings = await SettingsService.LoadAsync();
-            var bodyTemplate = settings.DefaultPrBodyTemplate;
-            var title = session.Title is "New Chat" or "" ? session.BranchName : session.Title;
             var workspace = await WorkspaceService.LoadWorkspaceAsync(session.WorkspaceId);
-            var baseBranch = !string.IsNullOrEmpty(session.BaseBranch)
-                ? session.BaseBranch
-                : await GitService.DetectDefaultBranchAsync(workspace!.RepoLocalPath) ?? "main";
+            var preferences = workspace?.CreatePrPreferences;
 
-            string body;
-            if (!string.IsNullOrEmpty(bodyTemplate))
-            {
-                body = bodyTemplate
-                    .Replace("{branchName}", session.BranchName)
-                    .Replace("{baseBranch}", baseBranch)
-                    .Replace("{sessionTitle}", session.Title);
-            }
-            else
-            {
-                var logResult = await GitService.GetCommitLogAsync(workspace.RepoLocalPath, baseBranch);
-                body = logResult.Success ? logResult.Output.Trim() : "";
-            }
+            var prompt = "PR을 생성해주세요. diff를 확인하고, 커밋 상태를 점검하고, 브랜치를 푸시한 뒤 `gh pr create`로 PR을 만들어주세요.";
 
-            if (session.IssueNumber != null && !body.Contains($"#{session.IssueNumber}"))
-                body = $"Closes #{session.IssueNumber}\n\n{body}";
+            if (session.IssueNumber != null)
+                prompt += $"\n\n연결된 이슈: #{session.IssueNumber}";
 
-            var updated = await GitWorkflow.CreatePrAsync(session.Id, title, body);
-            session.Status = updated.Status;
-            session.ErrorMessage = updated.ErrorMessage;
-            session.PrUrl = updated.PrUrl;
-            session.PrNumber = updated.PrNumber;
+            if (!string.IsNullOrEmpty(preferences))
+                prompt += $"\n\n## PR 생성 지침\n{preferences}";
 
-            if (updated.Status == SessionStatus.PrOpen)
-                Snackbar.Add("PR이 생성되었습니다.", Severity.Success);
-            else if (!string.IsNullOrEmpty(updated.ErrorMessage))
-                Snackbar.MergeError(updated.ErrorMessage);
+            _ = HandleSend(new ChatInputMessage { Text = prompt });
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "CreatePr failed for session {SessionId}", session.Id);
-            session.ErrorMessage = ex.Message;
             Snackbar.MergeError(ex.Message);
         }
-        finally { _operatingSessionId = null; StateHasChanged(); }
     }
 
     // Workflow: merge an existing PR
