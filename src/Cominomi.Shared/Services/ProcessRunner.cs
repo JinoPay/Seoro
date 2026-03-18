@@ -79,7 +79,7 @@ public class ProcessRunner : IProcessRunner
             // Capture stderr in background so the caller only needs to read stdout
             var stderrTask = process.StandardError.ReadToEndAsync(ct);
 
-            return Task.FromResult(new StreamingProcess(process, stderrTask, options.KillEntireProcessTree));
+            return Task.FromResult(new StreamingProcess(process, stderrTask, options.KillEntireProcessTree, _logger));
         }
         catch (FileNotFoundException ex)
         {

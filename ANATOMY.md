@@ -481,7 +481,7 @@ macOS/Linux: /bin/sh
 ### 빠진 것 / 문제점
 - **셸 감지 1회 캐싱**: 앱 실행 후 Git 설치하면 재시작 필요
 - **WhichAsync 3초 고정 타임아웃**: 에러 전파 없음, 실패 시 null 반환
-- **IProcessRunner stderr bare catch**: `StreamingProcess._stderrTask`의 `catch { }` 블록(`IProcessRunner.cs:75`)이 stderr 에러 정보 손실
+- ~~**IProcessRunner stderr bare catch**~~: ✅ 해결 — `StreamingProcess`에 `ILogger` 주입, `DisposeAsync()`의 bare catch를 로깅으로 교체
 
 ---
 
@@ -1588,7 +1588,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **6** | **SessionList 8개 서비스 과다 주입** — 컴포넌트가 8개 서비스에 직접 의존. 파사드 서비스로 위임 필요 | 커플링, 테스트 난이도 | §12 | 중 |
 | **7** | **Usage 저장 경로 불일치** — `AppData/Roaming`(설정·세션)과 `AppData/Local`(usage.jsonl) 분산. 백업/이관 시 누락 위험 | 운영, 데이터 일관성 | §20 | 낮 |
 | **8** | **ParseDiff 레거시 코드 잔류** — static `ParseDiff` 메서드가 `GetDiffSummaryAsync`와 기능 중복. 둘 다 동일 " b/" 취약점 공유 | 코드 중복, 유지보수 혼란 | §5 | 낮 |
-| **9** | **IProcessRunner stderr bare catch** — `StreamingProcess._stderrTask`의 `catch { }` 블록(`IProcessRunner.cs:75`)이 stderr 에러 정보 손실 | 디버깅 어려움 | §4 | 낮 |
+| **9** | ~~**IProcessRunner stderr bare catch**~~ ✅ — `StreamingProcess`에 `ILogger` 주입, bare catch를 로깅으로 교체 | ~~디버깅 어려움~~ | §4 | 낮 |
 | **10** | **ContentGrouper 중간 텍스트 휴리스틱** — 하드코딩된 한국어/영어 패턴으로 텍스트 분류. 다국어 확장 시 패턴 폭발 | 렌더링 오분류 | §13 | 낮 |
 
 ### 차기 개선 후보
