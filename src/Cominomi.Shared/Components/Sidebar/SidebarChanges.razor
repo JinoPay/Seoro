@@ -199,9 +199,9 @@
         _ => "color: #89b4fa;"
     };
 
-    private async void HandleStateChanged()
+    private void HandleStateChanged()
     {
-        await InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()

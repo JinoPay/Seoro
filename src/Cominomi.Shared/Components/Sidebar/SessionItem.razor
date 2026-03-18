@@ -1,0 +1,91 @@
+@using Cominomi.Shared.Models
+
+<div @key="Session.Id"
+     class="tree-session @(IsActive ? "active" : "") @(Session.Status == SessionStatus.Archived ? "archived" : "")"
+     @onclick="@OnClick">
+
+    <div class="tree-session-actions">
+        @if (Session.Status == SessionStatus.Merged)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.CleaningServices" Size="Size.Small"
+                           Color="Color.Success" Style="width: 20px; height: 20px;"
+                           OnClick="@OnCleanup"
+                           OnClickStopPropagation="true" />
+        }
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                       Style="width: 20px; height: 20px; opacity: 0.4;"
+                       OnClick="@OnDelete"
+                       OnClickStopPropagation="true" />
+    </div>
+
+    <span class="status-dot @GetStatusDotClass(Session.Status) @(IsStreaming ? "streaming" : "")"></span>
+
+    <div class="tree-session-info">
+        <span class="tree-session-title">@Session.Title</span>
+        <div class="tree-session-meta">
+            @if (Session.IsLocalDir)
+            {
+                <span class="tree-session-branch" style="opacity: 0.5;">로컬</span>
+            }
+            else if (!string.IsNullOrEmpty(Session.BranchName))
+            {
+                <span class="tree-session-branch">@Session.BranchName</span>
+            }
+
+            @if (Session.IssueNumber != null)
+            {
+                <span style="opacity: 0.6; font-size: 0.65rem;">#@Session.IssueNumber</span>
+            }
+
+            @if (DiffAdditions > 0 || DiffDeletions > 0)
+            {
+                <span class="tree-session-diff-stats">
+                    @if (DiffAdditions > 0)
+                    {
+                        <span class="diff-add">+@DiffAdditions</span>
+                    }
+                    @if (DiffDeletions > 0)
+                    {
+                        <span class="diff-del">-@DiffDeletions</span>
+                    }
+                </span>
+            }
+        </div>
+
+        @if (IsStreaming)
+        {
+            <span class="tree-session-status">@StreamingStatusText</span>
+        }
+    </div>
+
+    @if (ShortcutLabel != null)
+    {
+        <span class="tree-session-shortcut">@ShortcutLabel</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Session Session { get; set; } = default!;
+    [Parameter] public bool IsActive { get; set; }
+    [Parameter] public bool IsStreaming { get; set; }
+    [Parameter] public string? StreamingStatusText { get; set; }
+    [Parameter] public int DiffAdditions { get; set; }
+    [Parameter] public int DiffDeletions { get; set; }
+    [Parameter] public string? ShortcutLabel { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public EventCallback OnCleanup { get; set; }
+
+    private static string GetStatusDotClass(SessionStatus status) => status switch
+    {
+        SessionStatus.Ready => "ready",
+        SessionStatus.Pushed => "pushed",
+        SessionStatus.PrOpen => "pr-open",
+        SessionStatus.Merged => "merged",
+        SessionStatus.ConflictDetected => "conflict",
+        SessionStatus.Error => "error",
+        SessionStatus.Pending => "pending",
+        SessionStatus.Archived => "archived",
+        _ => "pending"
+    };
+}

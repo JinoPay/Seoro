@@ -1,0 +1,34 @@
+<div class="tree-header">
+    <span class="tree-header-label">Workspaces</span>
+    <div class="tree-header-actions">
+        <MudIconButton Icon="@(FilterVisible ? Icons.Material.Filled.FilterListOff : Icons.Material.Filled.FilterList)"
+                       Size="Size.Small"
+                       Style="width: 24px; height: 24px; opacity: 0.5;"
+                       OnClick="@OnToggleFilter" />
+        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                       Style="width: 24px; height: 24px; opacity: 0.5;"
+                       OnClick="@OnCreateWorkspace" />
+    </div>
+</div>
+
+@if (FilterVisible)
+{
+    <div class="tree-filter">
+        <MudTextField Value="FilterText" ValueChanged="FilterTextChanged" T="string"
+                      Placeholder="검색..."
+                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@(FilterText?.Length > 0 ? Icons.Material.Filled.Close : "")"
+                      OnAdornmentClick="@(() => FilterTextChanged.InvokeAsync(""))"
+                      Immediate="true"
+                      Style="font-size: var(--text-xs);" />
+    </div>
+}
+
+@code {
+    [Parameter] public bool FilterVisible { get; set; }
+    [Parameter] public string? FilterText { get; set; }
+    [Parameter] public EventCallback OnToggleFilter { get; set; }
+    [Parameter] public EventCallback OnCreateWorkspace { get; set; }
+    [Parameter] public EventCallback<string> FilterTextChanged { get; set; }
+}
