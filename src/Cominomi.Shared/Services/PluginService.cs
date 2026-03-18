@@ -46,12 +46,15 @@ public interface IPluginService
     Task<bool> ValidatePluginAsync(string pluginId);
     Task<bool> RemovePluginAsync(string pluginId);
     Task EnsurePluginsDirectoryAsync();
+    Task<bool> LoadPluginAsync(string pluginId);
+    Task UnloadPluginAsync(string pluginId);
 }
 
 public class PluginService : IPluginService
 {
     private readonly ISettingsService _settingsService;
     private readonly ILogger<PluginService> _logger;
+    private IPluginExecutionEngine? _executionEngine;
 
     public string PluginsDirectory { get; } = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -62,6 +65,11 @@ public class PluginService : IPluginService
         _settingsService = settingsService;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Late-bind the execution engine to avoid circular DI.
+    /// </summary>
+    internal void SetExecutionEngine(IPluginExecutionEngine engine) => _executionEngine = engine;
 
     public async Task EnsurePluginsDirectoryAsync()
     {
@@ -183,6 +191,26 @@ public class PluginService : IPluginService
             _logger.LogError(ex, "Failed to remove plugin '{PluginId}'", pluginId);
             return false;
         }
+    }
+
+    public async Task<bool> LoadPluginAsync(string pluginId)
+    {
+        if (_executionEngine == null)
+        {
+            _logger.LogWarning("Plugin execution engine not available");
+            return false;
+        }
+
+        var plugin = await GetPluginAsync(pluginId);
+        if (plugin == null) return false;
+
+        return await _executionEngine.LoadPluginAsync(plugin);
+    }
+
+    public async Task UnloadPluginAsync(string pluginId)
+    {
+        if (_executionEngine != null)
+            await _executionEngine.UnloadPluginAsync(pluginId);
     }
 
     private async Task<PluginInfo> LoadPluginFromDirectoryAsync(string dir, string pluginId, Models.AppSettings settings)

@@ -80,6 +80,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IFilePickerService, FilePickerService>();
         builder.Services.AddSingleton<IAttachmentService, AttachmentService>();
         builder.Services.AddSingleton<IPluginService, PluginService>();
+        builder.Services.AddSingleton<IPluginExecutionEngine, PluginExecutionEngine>();
         builder.Services.AddSingleton<IUsageService, UsageService>();
         builder.Services.AddSingleton<IMcpService, McpService>();
         builder.Services.AddSingleton<INotificationService, NotificationService>();
@@ -111,6 +112,20 @@ public static class MauiProgram
         catch (Exception ex)
         {
             Log.Warning(ex, "Spotlight crash recovery failed during startup");
+        }
+
+        // Wire plugin execution engine and load enabled plugins
+        try
+        {
+            var pluginService = app.Services.GetRequiredService<IPluginService>();
+            var pluginEngine = app.Services.GetRequiredService<IPluginExecutionEngine>();
+            if (pluginService is PluginService ps)
+                ps.SetExecutionEngine(pluginEngine);
+            pluginEngine.LoadAllAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Plugin engine initialization failed during startup");
         }
 
         return app;

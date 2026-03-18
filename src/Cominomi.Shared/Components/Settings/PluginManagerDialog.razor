@@ -1,4 +1,5 @@
 @inject IPluginService PluginService
+@inject IPluginExecutionEngine PluginEngine
 @inject ISnackbar Snackbar
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
@@ -82,6 +83,18 @@
                                                    ValueChanged="@(v => TogglePlugin(plugin, v))"
                                                    Color="Color.Primary" Size="Size.Small"
                                                    Disabled="@(plugin.Status == PluginStatus.Invalid || plugin.Status == PluginStatus.Error)" />
+                                        @if (plugin.IsEnabled && plugin.Status == PluginStatus.Valid)
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small"
+                                                           Color="Color.Primary" Title="로드"
+                                                           OnClick="@(() => LoadPlugin(plugin))" />
+                                        }
+                                        @if (plugin.Status == PluginStatus.Loaded)
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Filled.Stop" Size="Size.Small"
+                                                           Color="Color.Warning" Title="언로드"
+                                                           OnClick="@(() => UnloadPlugin(plugin))" />
+                                        }
                                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                                        Color="Color.Error"
                                                        OnClick="@(() => RemovePlugin(plugin))" />
@@ -114,7 +127,13 @@
   "version": "1.0.0",
   "author": "작성자",
   "entryPoint": "main.js",
-  "permissions": ["read", "write"]
+  "permissions": ["read", "write"],
+  "hooks": [
+    { "event": "OnMessageComplete", "command": "node {entryPoint} on-message" }
+  ],
+  "skills": [
+    { "name": "my-skill", "description": "스킬 설명", "command": "node {entryPoint} skill" }
+  ]
 }</pre>
 
                     <MudText Typo="Typo.subtitle2" Class="mt-2">필드 설명</MudText>
@@ -127,8 +146,10 @@
                             <tr><td><code>description</code></td><td>선택</td><td>플러그인 설명</td></tr>
                             <tr><td><code>version</code></td><td>선택</td><td>시맨틱 버전</td></tr>
                             <tr><td><code>author</code></td><td>선택</td><td>작성자</td></tr>
-                            <tr><td><code>entryPoint</code></td><td>선택</td><td>실행 파일 경로</td></tr>
+                            <tr><td><code>entryPoint</code></td><td>선택</td><td>실행 파일 경로 (.js, .py, .sh 등)</td></tr>
                             <tr><td><code>permissions</code></td><td>선택</td><td>요청 권한 목록</td></tr>
+                            <tr><td><code>hooks</code></td><td>선택</td><td>이벤트 훅 배열 (event, command)</td></tr>
+                            <tr><td><code>skills</code></td><td>선택</td><td>슬래시 커맨드 배열 (name, command, description)</td></tr>
                         </tbody>
                     </MudSimpleTable>
 
@@ -180,7 +201,40 @@
     {
         await PluginService.SetPluginEnabledAsync(plugin.Id, enabled);
         plugin.IsEnabled = enabled;
+
+        if (enabled && plugin.Status == PluginStatus.Valid)
+        {
+            await LoadPlugin(plugin);
+        }
+        else if (!enabled && plugin.Status == PluginStatus.Loaded)
+        {
+            await UnloadPlugin(plugin);
+        }
+
         Snackbar.Add($"'{plugin.Name}' 플러그인이 {(enabled ? "활성화" : "비활성화")}되었습니다.", Severity.Info);
+        StateHasChanged();
+    }
+
+    private async Task LoadPlugin(PluginInfo plugin)
+    {
+        var success = await PluginService.LoadPluginAsync(plugin.Id);
+        if (success)
+        {
+            plugin.Status = PluginStatus.Loaded;
+            Snackbar.Add($"'{plugin.Name}' 플러그인이 로드되었습니다.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add($"'{plugin.Name}' 플러그인 로드에 실패했습니다.", Severity.Error);
+        }
+        StateHasChanged();
+    }
+
+    private async Task UnloadPlugin(PluginInfo plugin)
+    {
+        await PluginService.UnloadPluginAsync(plugin.Id);
+        plugin.Status = PluginStatus.Valid;
+        Snackbar.Add($"'{plugin.Name}' 플러그인이 언로드되었습니다.", Severity.Info);
         StateHasChanged();
     }
 
