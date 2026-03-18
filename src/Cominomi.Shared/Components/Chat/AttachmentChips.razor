@@ -1,0 +1,31 @@
+@using Cominomi.Shared.Models
+
+@if (Attachments.Count > 0)
+{
+    <div class="attachment-chips">
+        @foreach (var attachment in Attachments)
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                     Icon="@(attachment.IsImage ? Icons.Material.Filled.Image : Icons.Material.Filled.InsertDriveFile)"
+                     OnClose="@(() => OnRemove.InvokeAsync(attachment))"
+                     Style="font-size: 0.75rem;">
+                @if (attachment.IsImage && attachment.PreviewDataUrl != null)
+                {
+                    <img src="@attachment.PreviewDataUrl" alt="@attachment.FileName"
+                         style="max-height: 28px; max-width: 40px; border-radius: 4px; margin-right: 4px; vertical-align: middle;" />
+                }
+                @TruncateFileName(attachment.FileName)
+            </MudChip>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<PendingAttachment> Attachments { get; set; } = [];
+    [Parameter] public EventCallback<PendingAttachment> OnRemove { get; set; }
+
+    private static string TruncateFileName(string name)
+    {
+        return name.Length > 20 ? string.Concat(name.AsSpan(0, 17), "...") : name;
+    }
+}

@@ -1,0 +1,97 @@
+@using Cominomi.Shared.Models
+
+<MudTooltip Text="@(ResolvedModel ?? GetModelDisplayName())">
+    <button class="model-selector-pill" type="button"
+            @onclick="ToggleModelMenu"
+            disabled="@(Disabled || IsStreaming)">
+        <span class="model-selector-label">@GetModelDisplayName()</span>
+        <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" />
+    </button>
+</MudTooltip>
+
+<MudPopover Open="@_modelMenuOpen" AnchorOrigin="Origin.TopRight"
+            TransformOrigin="Origin.BottomRight" Class="model-popover">
+    <MudList T="string" Dense="true" Class="model-list">
+        @foreach (var model in ModelDefinitions.All)
+        {
+            <MudListItem T="string" OnClick="@(() => SelectModel(model.Id))"
+                         Class="@(Model == model.Id ? "model-item-active" : "")">
+                @model.DisplayName
+            </MudListItem>
+        }
+        <MudDivider />
+        <MudListItem T="string" OnClick="@(() => _customModelInput = true)"
+                     Class="@(_isCustomModel ? "model-item-active" : "")">
+            @if (_customModelInput)
+            {
+                <MudTextField T="string" @bind-Value="_customModelId"
+                              Placeholder="claude-sonnet-4-6..."
+                              Variant="Variant.Text" Margin="Margin.Dense"
+                              Immediate="true" AutoFocus="true"
+                              OnKeyDown="HandleCustomModelKeyDown"
+                              Style="font-size: 0.8rem;" />
+            }
+            else
+            {
+                <span style="opacity: 0.7;">커스텀 모델...</span>
+            }
+        </MudListItem>
+    </MudList>
+</MudPopover>
+
+@if (_modelMenuOpen)
+{
+    <MudOverlay Visible="true" OnClick="CloseModelMenu"
+                DarkBackground="false" ZIndex="1" />
+}
+
+@code {
+    [Parameter] public string Model { get; set; } = string.Empty;
+    [Parameter] public string? ResolvedModel { get; set; }
+    [Parameter] public EventCallback<string> OnModelChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool IsStreaming { get; set; }
+
+    private bool _modelMenuOpen;
+    private bool _customModelInput;
+    private string _customModelId = "";
+    private bool _isCustomModel => !ModelDefinitions.All.Any(m => m.Id == Model) && !string.IsNullOrEmpty(Model);
+
+    private string GetModelDisplayName()
+    {
+        var model = ModelDefinitions.All.FirstOrDefault(m => m.Id == Model);
+        return model?.DisplayName ?? Model;
+    }
+
+    private void ToggleModelMenu()
+    {
+        _modelMenuOpen = !_modelMenuOpen;
+    }
+
+    private void CloseModelMenu()
+    {
+        _modelMenuOpen = false;
+        _customModelInput = false;
+    }
+
+    private async Task HandleCustomModelKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_customModelId))
+        {
+            await SelectModel(_customModelId.Trim());
+            _customModelInput = false;
+            _customModelId = "";
+        }
+        else if (e.Key == "Escape")
+        {
+            _customModelInput = false;
+        }
+    }
+
+    private async Task SelectModel(string modelId)
+    {
+        _modelMenuOpen = false;
+        Model = modelId;
+        await OnModelChanged.InvokeAsync(modelId);
+    }
+}
