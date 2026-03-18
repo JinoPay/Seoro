@@ -37,7 +37,7 @@
 ### 구조 개선 Phase 4 (2026-03-18)
 | 새 파일 / 변경 내용 | 역할 / 영향 범위 |
 |---------------------|-----------------|
-| `tests/Cominomi.Shared.Tests/` (프로젝트 신규) | xUnit 테스트 인프라 — 79개 테스트, 8개 테스트 파일 (ContentGrouper, QuestionDetector, ToolDisplayHelper, ExtractToolResultContent, SessionStatusMachine, ActivityService, JsonMigrator, PluginExecutionEngine) |
+| `tests/Cominomi.Shared.Tests/` (프로젝트 신규) | xUnit 테스트 인프라 — 114개 테스트, 9개 테스트 파일 (ContentGrouper, QuestionDetector, ToolDisplayHelper, ExtractToolResultContent, SessionStatusMachine, ActivityService, JsonMigrator, PluginExecutionEngine, ContextServiceGitignore) |
 | `SessionStatusMachine.cs` (신규, 27줄) | 세션 상태 전이 규칙 정의 + 유효성 검증. `Session.Status`를 `private set`으로 보호 |
 | 세션 파일 분리 | `{uuid}.json`(메타데이터) + `{uuid}.messages.json`(메시지) 이중 파일 구조. 이전 단일 파일 형식 자동 마이그레이션 |
 | `ToolCall.Output` 절단 | 저장 시 2,000자 초과 도구 출력을 `[truncated, N chars]`로 절단 |
@@ -102,6 +102,13 @@
 | #135 | MainLayout 분해 | `IThemeService` + `SidebarToolbar` + `MainToolbar` 추출. 238→~127줄(47%↓) |
 | #136 | 옵션 패턴 도입 | `IOptionsMonitor<AppSettings>` + `AppSettingsFactory` + `AppSettingsChangeNotifier`. 8개 서비스/컴포넌트 전환 |
 | #137 | 플러그인 실행 엔진 | EntryPoint 로딩/실행/샌드박싱 + hooks·skills 매니페스트 자동 등록 |
+
+### 구조 개선 Phase 9 (2026-03-18) — 신규 구조적 문제 #8 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| `ContextService` .gitignore 행 기반 체크 | `content.Contains(".context/")` → `ReadAllLinesAsync` + `line.Trim() == ".context/"` 정확 매칭. 주석·부분 경로 오탐 방지 |
+| `AttachmentService` .gitignore 행 기반 체크 | 동일 패턴 적용 — `content.Contains(entry)` → 행 기반 정확 매칭 |
+| `ContextServiceGitignoreTests.cs` (신규, 4개 테스트) | 정확 매칭·중복 방지·주석 내 부분 문자열·다른 경로 부분 매칭 시나리오 검증 |
 
 ### 구조 개선 Phase 8 (2026-03-18) — 신규 구조적 문제 #2 해결
 | 변경 내용 | 역할 / 영향 범위 |
@@ -1508,7 +1515,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | SessionList God Component (719줄) | `SessionItem`+`SessionListToolbar`+`SessionListDataService` 추출. 479줄 | 3, 4 |
 | PR 생성 경로 2개 | `IChatPrWorkflowService`로 통합 | 3 |
 | 가격/모델/CLI 하드코딩 | `ModelDefinitions` + `models.json` + `CominomiConstants` | 2 |
-| 테스트 0개 | `tests/Cominomi.Shared.Tests/` — 79개 테스트, 8개 테스트 파일 | 4+ |
+| 테스트 0개 | `tests/Cominomi.Shared.Tests/` — 114개 테스트, 9개 테스트 파일 | 4+ |
 | `async void` 안티패턴 (6개 컴포넌트) | `void` + `InvokeAsync()` 안전 패턴 | 3 |
 | Spotlight 크래시 시 리포 미복구 | `spotlight-state.json` + `RecoverAsync()` + 동시 가드 + sessionId별 stash | 4 |
 | 로컬라이제이션 인프라 부재 | `Strings.resx` (ko/en) + `ResourceManager` — 43개 문자열 | 6 |
@@ -1564,7 +1571,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 | **5** | **GitService ParseDiff " b/" 파싱 취약** — 경로에 ` b/`가 포함된 파일 오파싱 | `GitService.cs:459` `header.LastIndexOf(" b/")`. 파일 경로에 ` b/`가 있으면 diff 어트리뷰션 오류 | §5 | 낮 |
 | **6** | **TabManager 파일 콘텐츠 무한 메모리** — 퇴출 정책 없음 | `MainTab.FileContent` 문자열이 탭 닫을 때까지 메모리에 상주. 대용량 파일(100MB+)도 보유. LRU/크기 제한 없음 | §11 | 중 |
 | **7** | **SessionService bare catch 블록** — `SessionService.cs:582` | `catch { return false; }` 로깅 없는 완전 침묵 실패. 디버깅 정보 손실 | §8 | 낮 |
-| **8** | **ContextService .gitignore 중복 추가** — 행 기반이 아닌 `Contains` 체크 | `ContextService.cs:119` `content.Contains(".context/")` — 줄 기반이 아니라 부분 문자열 매칭. 중복 엔트리 축적 가능 | §17 | 낮 |
+| **8** | ~~**ContextService .gitignore 중복 추가** — 행 기반이 아닌 `Contains` 체크~~ ✅ Phase 9에서 해결 | `ReadAllLinesAsync` + `line.Trim()` 정확 매칭으로 전환. AttachmentService 동일 패턴도 수정 | §17 | 낮 |
 | **9** | **SidebarExplorer FileSystemWatcher 레이스** — 디바운스 타이머 동시 리셋 | `SidebarExplorer.razor:109-147` — 2초 디바운스 Timer가 stop/start 사이에 동시성 보호 없음. Windows에서 빠른 파일 변경 시 이벤트 폭주 | §12 | 낮 |
 | **10** | **플러그인 stdin/stdout 프로토콜 미정의** — 환경변수만 전달 | `PluginExecutionEngine.cs` — 플러그인 ↔ 앱 간 구조화된 데이터 교환 없음. 양방향 스트리밍 불가. exit code + 버퍼된 stdout/stderr만 | §15.5 | 높 |
 
