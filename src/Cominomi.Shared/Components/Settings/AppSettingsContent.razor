@@ -204,6 +204,23 @@
                 </MudText>
             </MudStack>
         }
+        else if (Section == "plugins")
+        {
+            <div class="settings-section-title">플러그인</div>
+            <div class="settings-section-desc">플러그인을 설치하고 관리합니다.</div>
+
+            <MudStack Spacing="3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Extension"
+                           OnClick="@(() => _pluginManagerOpen = true)"
+                           Style="text-transform: none; align-self: flex-start;">
+                    플러그인 관리 열기
+                </MudButton>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    플러그인 설치, 활성화/비활성화, 제거를 관리합니다.
+                </MudText>
+            </MudStack>
+        }
         else if (Section == "commands")
         {
             <div class="settings-section-title">슬래시 명령어</div>
@@ -277,6 +294,7 @@
 
 <McpManagerDialog @bind-IsOpen="_mcpManagerOpen" />
 <SlashCommandsEditor @bind-IsOpen="_slashCommandsOpen" />
+<PluginManagerDialog @bind-IsOpen="_pluginManagerOpen" />
 
 @code {
     [Parameter] public string Section { get; set; } = "general";
@@ -293,6 +311,7 @@
     private string _newEnvValue = "";
     private bool _mcpManagerOpen;
     private bool _slashCommandsOpen;
+    private bool _pluginManagerOpen;
 
     protected override async Task OnInitializedAsync()
     {

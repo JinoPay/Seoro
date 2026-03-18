@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute name="xml:space" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <!-- SnackbarExtensions -->
+  <data name="Snackbar_PushSuccess" xml:space="preserve"><value>Branch '{0}' has been pushed.</value></data>
+  <data name="Snackbar_PushError" xml:space="preserve"><value>Push failed: {0}</value></data>
+  <data name="Snackbar_PrCreated" xml:space="preserve"><value>PR #{0} created</value></data>
+  <data name="Snackbar_PrCreateError" xml:space="preserve"><value>PR creation failed: {0}</value></data>
+  <data name="Snackbar_MergeSuccess" xml:space="preserve"><value>PR for '{0}' has been merged.</value></data>
+  <data name="Snackbar_MergeError" xml:space="preserve"><value>Merge failed: {0}</value></data>
+  <data name="Snackbar_WorkspaceCreated" xml:space="preserve"><value>Workspace '{0}' has been created.</value></data>
+  <data name="Snackbar_SettingsSaved" xml:space="preserve"><value>Settings saved.</value></data>
+  <data name="Snackbar_SessionDeleted" xml:space="preserve"><value>Session deleted.</value></data>
+  <data name="Snackbar_ConflictDetected" xml:space="preserve"><value>Merge conflict detected on branch '{0}'.</value></data>
+  <data name="Snackbar_StreamingError" xml:space="preserve"><value>Response error: {0}</value></data>
+  <data name="Snackbar_IssueLinked" xml:space="preserve"><value>Issue #{0} linked</value></data>
+  <data name="Snackbar_IssueCreated" xml:space="preserve"><value>Issue #{0} created</value></data>
+
+  <!-- ToolDisplayHelper -->
+  <data name="Tool_FilesRead" xml:space="preserve"><value>{0} file(s) read</value></data>
+  <data name="Tool_FileWrittenSingle" xml:space="preserve"><value>1 file written</value></data>
+  <data name="Tool_FileWrittenMultiple" xml:space="preserve"><value>{0} files written</value></data>
+  <data name="Tool_FileEditedSingle" xml:space="preserve"><value>1 file edited</value></data>
+  <data name="Tool_FileEditedMultiple" xml:space="preserve"><value>{0} files edited</value></data>
+  <data name="Tool_GrepSingle" xml:space="preserve"><value>Pattern searched</value></data>
+  <data name="Tool_GrepMultiple" xml:space="preserve"><value>{0} patterns searched</value></data>
+  <data name="Tool_GlobDone" xml:space="preserve"><value>Files searched</value></data>
+  <data name="Tool_BashSingle" xml:space="preserve"><value>Command executed</value></data>
+  <data name="Tool_BashMultiple" xml:space="preserve"><value>{0} commands executed</value></data>
+  <data name="Tool_AgentSingle" xml:space="preserve"><value>Agent executed</value></data>
+  <data name="Tool_AgentMultiple" xml:space="preserve"><value>{0} agents executed</value></data>
+  <data name="Tool_WebFetchSingle" xml:space="preserve"><value>Web page fetched</value></data>
+  <data name="Tool_WebFetchMultiple" xml:space="preserve"><value>{0} web pages fetched</value></data>
+  <data name="Tool_WebSearchSingle" xml:space="preserve"><value>Web searched</value></data>
+  <data name="Tool_WebSearchMultiple" xml:space="preserve"><value>{0} web searches</value></data>
+  <data name="Tool_NotebookSingle" xml:space="preserve"><value>Notebook edited</value></data>
+  <data name="Tool_NotebookMultiple" xml:space="preserve"><value>{0} notebook edits</value></data>
+  <data name="Tool_TodoWriteDone" xml:space="preserve"><value>Todo list updated</value></data>
+  <data name="Tool_DefaultMultiple" xml:space="preserve"><value>{0} ×{1}</value></data>
+  <data name="Tool_ReadHint" xml:space="preserve"><value>{0} lines read</value></data>
+  <data name="Tool_GrepHint" xml:space="preserve"><value>{0} results</value></data>
+  <data name="Tool_GlobHint" xml:space="preserve"><value>{0} files found</value></data>
+
+  <!-- QuestionDetector -->
+  <data name="Suggest_Proceed" xml:space="preserve"><value>Yes, please proceed</value></data>
+  <data name="Suggest_No" xml:space="preserve"><value>No</value></data>
+  <data name="Suggest_Alternative" xml:space="preserve"><value>Try another way</value></data>
+  <data name="Suggest_First" xml:space="preserve"><value>First option</value></data>
+  <data name="Suggest_Second" xml:space="preserve"><value>Second option</value></data>
+  <data name="Suggest_Explain" xml:space="preserve"><value>Please explain</value></data>
+  <data name="Suggest_Yes" xml:space="preserve"><value>Yes</value></data>
+</root>

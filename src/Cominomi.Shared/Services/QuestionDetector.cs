@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Cominomi.Shared.Models;
+using Cominomi.Shared.Resources;
 
 namespace Cominomi.Shared.Services;
 
@@ -19,11 +20,9 @@ public static partial class QuestionDetector
         "which", "what approach", "what method", "how should"
     ];
 
-    // Matches numbered list items: "1. React로 구현" or "1) React로 구현"
     [GeneratedRegex(@"^\s*(\d+)[.)]\s+(.+)$", RegexOptions.Multiline)]
     private static partial Regex NumberedListRegex();
 
-    // Matches bullet list items: "- React로 구현" or "* React로 구현"
     [GeneratedRegex(@"^\s*[-*]\s+\*{0,2}(.+?)\*{0,2}\s*$", RegexOptions.Multiline)]
     private static partial Regex BulletListRegex();
 
@@ -41,7 +40,7 @@ public static partial class QuestionDetector
         foreach (var pattern in YesNoPatterns)
         {
             if (lower.Contains(pattern))
-                return (true, ["네, 진행해주세요", "아니요", "다른 방법으로"]);
+                return (true, [Strings.Suggest_Proceed, Strings.Suggest_No, Strings.Suggest_Alternative]);
         }
 
         foreach (var pattern in ChoicePatterns)
@@ -51,12 +50,12 @@ public static partial class QuestionDetector
                 var extracted = ExtractChoices(text);
                 if (extracted.Count >= 2)
                     return (true, extracted);
-                return (true, ["첫 번째", "두 번째", "설명해주세요"]);
+                return (true, [Strings.Suggest_First, Strings.Suggest_Second, Strings.Suggest_Explain]);
             }
         }
 
         // Generic question
-        return (true, ["네", "아니요"]);
+        return (true, [Strings.Suggest_Yes, Strings.Suggest_No]);
     }
 
     private static List<string> ExtractChoices(string text)

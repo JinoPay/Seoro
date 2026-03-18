@@ -2,7 +2,7 @@
 @using Cominomi.Shared.Models
 @using Cominomi.Shared.Services
 @using Cominomi.Shared.Components.Tools
-@inject ChatState ChatState
+@inject IChatState ChatState
 
 @if (Message.Role == MessageRole.System)
 {
@@ -261,7 +261,7 @@
         if (_imageCache.TryGetValue(attachment.Id, out var cached))
             return cached;
 
-        var worktreePath = ChatState.CurrentSession?.WorktreePath;
+        var worktreePath = ChatState.CurrentSession?.Git.WorktreePath;
         if (string.IsNullOrEmpty(worktreePath))
             return string.Empty;
 
