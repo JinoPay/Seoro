@@ -3,7 +3,7 @@
 > 이 문서는 Cominomi의 모든 시스템을 해부하여 **현재 동작**, **데이터 흐름**, **의존관계**, **빠진 것/문제점**을 기술합니다.
 > 각 섹션을 가리켜 "이 부분은 이렇게 변경되어야 한다"고 지휘하는 데 사용하세요.
 
-**코드 규모**: ~189개 소스 파일, ~21,043줄 (Cominomi.Shared에 집중, tests/Cominomi.Shared.Tests 포함)
+**코드 규모**: ~217개 소스 파일, ~23,799줄 (Cominomi.Shared에 집중, tests/Cominomi.Shared.Tests 포함)
 **프레임워크**: .NET 10.0, MAUI + Blazor, MudBlazor UI
 **외부 도구**: Claude CLI (subprocess), Git CLI, GitHub CLI (gh)
 
@@ -160,7 +160,7 @@
 |-----------|-----------------|
 | `IChatMessageOrchestrator` (신규) | 메시지 전송/Continue 오케스트레이션 인터페이스 + `StreamResult` DTO |
 | `ChatMessageOrchestrator` (신규) | `ProcessMessageAsync`·`ProcessContinueAsync` 비즈니스 로직 추출. 워크트리 초기화, 첨부파일, 스트리밍 루프, Finalize, 훅, PR 체크 담당 |
-| `ChatView.razor` 경량화 | 697→424줄 (39% 감소). 서비스 주입 13→10개. 중복 스트리밍 코드 제거, UI 이벤트 핸들링만 담당 |
+| `ChatView.razor` 경량화 | 697→458줄. 서비스 주입 13→10개. 중복 스트리밍 코드 제거, UI 이벤트 핸들링만 담당 |
 | `MauiProgram.cs` | `IChatMessageOrchestrator` DI 등록 |
 
 ### 구조 개선 Phase 15 (2026-03-19) — 신규 구조적 문제 #2 해결
@@ -172,10 +172,10 @@
 | `ClaudeServiceTests.cs` (신규, 5개 테스트) | Cancel/Dispose 안전성 + DetectCliAsync 경로 해석 검증 |
 | `SessionStatusMachine` 수정 | `Initializing → Pending` 전이 누락 수정 (CreatePendingSessionAsync가 필요로 하는 전이) |
 
-### 구조 개선 Phase 14 (2026-03-19) — 미해결 구조적 문제 #8 해결
+### 구조 개선 Phase 14 (2026-03-19) — 미해결 구조적 문제 #8 부분 해결
 | 변경 내용 | 역할 / 영향 범위 |
 |-----------|------------------|
-| `ParseDiff` 정적 메서드 삭제 | `GetDiffSummaryAsync`와 기능 중복하던 레거시 코드 제거. 호출부 없는 데드 코드 |
+| ~~`ParseDiff` 정적 메서드 삭제~~ | ⚠️ 커밋 998edcb에서 문서만 수정, **코드 미삭제**. `GitService.ParseDiff` 정적 메서드 여전히 존재 (테스트에서만 호출, 프로덕션 호출부 없음) |
 | `GetDiffSummaryAsync` 파싱 수정 | `diff --git` 헤더의 `LastIndexOf(" b/")` → `+++ b/` 줄 기반 파일 경로 추출. 경로에 " b/" 포함 시 오파싱 취약점 해결 |
 
 ### 구조 개선 Phase 13 (2026-03-19) — 신규 구조적 문제 #3 해결 + Continue 기능
@@ -1635,27 +1635,49 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 
 # 미해결 구조적 문제 Top 10
 
-> 2026-03-19 코드베이스 전체 재분석으로 도출. 이전 Top 10 + 신규 Top 10 + 차기 후보 전항목 해결 후, 현재 코드에서 영향도·빈도·심각도 기준 재선정.
+> 이전 Top 10 아카이브 → 하단 참조. 2026-03-19 코드베이스 전체 재분석으로 재선정.
 
-| 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
-|------|------|------|-----------|--------|
-| ~~**1**~~ | ~~**ChatView 697줄 재비대화**~~ → ✅ Phase 16에서 `ChatMessageOrchestrator` 추출. 697→424줄, 서비스 13→10개 | ~~유지보수성 저하~~ | §10 | — |
-| **~~2~~** | **~~테스트 커버리지 부족~~** — ~~12개 테스트 파일 / 75+개 서비스~~ → Phase 14에서 핵심 서비스 4종 테스트 추가 (16→228 테스트). `GitServiceTests`·`SessionServiceTests`·`ClaudeArgumentBuilderTests`·`ClaudeServiceTests` | ~~회귀 방지 불가~~ → 핵심 서비스 커버리지 확보 | §25 | ~~높~~ ✅ |
-| ~~**3**~~ | ~~**StreamEventProcessor 516줄 switch 아키텍처**~~ ✅ — 핸들러 레지스트리 패턴으로 리팩토링. 10개 개별 핸들러 + Dictionary 디스패치 | ~~확장성, 유지보수성~~ | ~~§10.5~~ | ~~완료~~ |
-| ~~**4**~~ | ~~**GitService ParseDiff " b/" 파싱 취약**~~ ✅ **해결** — `ExtractPathFromDiffHeader` 대칭 구조 파싱 도입. `ParseDiff`+`GetDiffSummaryAsync` 양쪽 적용, rename은 `+++ b/` fallback | ~~diff 표시 오류~~ | ~~§5~~ | ~~완료~~ |
-| ~~**5**~~ | ~~**SessionService 캐시 무한 성장**~~ ✅ — `_sessionCache` TTL 스캐벤징 + 최대 64 엔트리 용량 제한, `DeleteSessionAsync` try/finally 견고화 | ~~장기 실행 시 메모리 누수~~ | ~~§8~~ | ~~완료~~ |
-| ~~**6**~~ | ~~**SessionList 8개 서비스 과다 주입** — `ISessionListFacade` 파사드 도입으로 8→4 서비스 축소 완료~~ | ~~커플링, 테스트 난이도~~ | ~~§12~~ | ~~완료~~ |
-| ~~**7**~~ | ~~**Usage 저장 경로 불일치** — `AppPaths.Usage`로 통합 완료. `UsageService`가 `LocalApplicationData` 직접 참조 제거~~ | ~~해결~~ | ~~§20~~ | ~~완료~~ |
-| **8** | **ParseDiff 레거시 코드 잔류** — static `ParseDiff` 메서드가 `GetDiffSummaryAsync`와 기능 중복 | 코드 중복, 유지보수 혼란 | §5 | 낮 |
-| ~~**9**~~ | ~~**IProcessRunner stderr bare catch**~~ ✅ — `StreamingProcess`에 `ILogger` 주입, bare catch를 로깅으로 교체 | ~~디버깅 어려움~~ | ~~§4~~ | ~~완료~~ |
-| **10** | **ToolCallCard JSON 매 렌더 파싱** — 도구 입력 JSON을 캐싱 없이 매 렌더마다 `JsonSerializer.Deserialize` | 렌더 성능 | §13 | 낮 |
+| 순위 | 문제 | 영향 | 난이도 |
+|------|------|------|--------|
+| **1** | **SendMessageAsync 15 파라미터 / ClaudeArgumentBuilder.Build 16 파라미터** — Parameter Object 패턴 필요. `SendMessageOptions` 클래스로 캡슐화 | API 가독성, 유지보수성, 호출부 실수 위험 | 중 |
+| **2** | **GitService 661줄 God Object** — cloning, branching, diff 파싱, 캐싱, stash, rebase를 단일 클래스에서 담당 | SRP 위반, 테스트 어려움 | 높 |
+| **3** | **SessionService 649줄 God Object** — 세션 CRUD, 캐시, 메타데이터, 라이프사이클, 워크트리를 단일 클래스에서 담당 | SRP 위반, 테스트 어려움 | 높 |
+| **4** | **도구 이름 매핑 중복** — `ContentGrouper`(172-182줄)와 `ToolDisplayHelper`(193-208줄)에 동일한 tool name 정규화 로직 중복. ToolDisplayHelper 쪽이 더 포괄적 | 유지보수 혼란, 매핑 불일치 위험 | 낮 |
+| **5** | **ParseDiff 레거시 코드 잔류** — static `ParseDiff` 메서드가 `GetDiffSummaryAsync`와 기능 중복. 프로덕션 호출부 없음 (테스트에서만 사용). Phase 14에서 삭제 예정이었으나 문서만 수정됨 | 코드 중복, 혼란 | 낮 |
+| **6** | **ChatMessageOrchestrator 10개 서비스 주입** — `IChatState, IClaudeService, ISessionService, IAttachmentService, IStreamEventProcessor, ISystemPromptBuilder, ISessionInitializer, IHooksEngine, IChatPrWorkflowService, ILogger`. 파사드 패턴이나 추가 분해 필요 | 커플링, 테스트 어려움 | 중 |
+| **7** | **설정 상수 산재** — 캐시 크기, 토큰 제한, 타임아웃 등 52+개 설정값이 14+개 파일에 `private const`로 분산. `CominomiConstants`/`AppSettings` 미활용 | 변경 추적 불가, 테스트 시 오버라이드 불가 | 중 |
+| **8** | **대형 Razor 컴포넌트** — McpManagerDialog(419줄), SidebarExplorer(401줄), AppSettingsContent(396줄), SessionList(377줄), InputArea(372줄). 각각 자식 컴포넌트 추출 가능 | UI 유지보수성 | 중 |
+| **9** | **캐시 용량 제한 미비** — `ActivityService._activityCache`, `GitService._branchListCache`, `GitService._branchGroupCache`에 TTL·용량 제한 없음. `SessionService`(64개 제한)와 불일치 | 장기 실행 시 메모리 누수 | 낮 |
+| **10** | **테스트 커버리지 갭** — ~102개 서비스 중 ~43개 테스트 없음(57% 커버리지). 미테스트 핵심 서비스: `ChatMessageOrchestrator`, `ContextService`, `SettingsService`, `ProcessRunner`, StreamEventHandler 6종 | 회귀 방지 불가 | 높 |
 
 ### 차기 개선 후보
 
-| 순위 | 문제 | 영향 | 관련 섹션 | 난이도 |
-|------|------|------|-----------|--------|
-| ~~**1**~~ | ~~**알림 히스토리 없음** — 놓친 알림을 확인할 방법 없음~~ | ~~UX~~ | ~~§21~~ | ~~중~~ |
-| ~~**2**~~ | ~~**스킬 체이닝 불가**~~ — Phase 13에서 해결. 파이프 구문 `/commit \| /review` + 커스텀 스킬 `chain:` 프론트매터 | ~~생산성~~ | ~~§15~~ | ~~중~~ |
+| 순위 | 문제 | 영향 | 난이도 |
+|------|------|------|--------|
+| **1** | **ChatState 41개 public 멤버** — 4개 매니저(MessageManager, StreamingStateManager, SettingsStateManager, TabManager) 조합이지만 외부에서 직접 접근 가능한 멤버가 과다 | 상태 경계 모호 | 중 |
+| **2** | **에러 핸들링 일관성 부재** — ClaudeService(11개 bare catch), ContextService(로깅 0건), SessionService(경고 로깅) 등 서비스별 에러 처리 패턴 불일치 | 디버깅 어려움 | 중 |
+| **3** | **All-Singleton DI** — 45+개 서비스 전부 `AddSingleton`. Scoped/Transient 미사용 | 상태 누수 가능성 | 중 |
+
+### 이전 Top 10 아카이브
+
+<details>
+<summary>해결 완료된 이전 항목 (클릭해서 펼치기)</summary>
+
+| 이전 순위 | 문제 | 해결 |
+|-----------|------|------|
+| ~~1~~ | ChatView 697줄 재비대화 | ✅ Phase 16 — `ChatMessageOrchestrator` 추출. 697→458줄, 서비스 13→10개 |
+| ~~2~~ | 테스트 커버리지 부족 (12파일/75+서비스) | ✅ Phase 15 — 핵심 4종 테스트 추가 (16→228 테스트) |
+| ~~3~~ | StreamEventProcessor 516줄 switch | ✅ 핸들러 레지스트리 패턴, 10개 핸들러 + Dictionary 디스패치 |
+| ~~4~~ | ParseDiff " b/" 파싱 취약 | ✅ `ExtractPathFromDiffHeader` 대칭 구조 파싱 |
+| ~~5~~ | SessionService 캐시 무한 성장 | ✅ TTL 스캐벤징 + 최대 64 엔트리 |
+| ~~6~~ | SessionList 8개 서비스 과다 주입 | ✅ `ISessionListFacade` 파사드 (8→4) |
+| ~~7~~ | Usage 저장 경로 불일치 | ✅ `AppPaths.Usage` 통합 |
+| ~~9~~ | IProcessRunner stderr bare catch | ✅ `ILogger` 주입, 로깅 교체 |
+| ~~10~~ | ToolCallCard JSON 매 렌더 파싱 | ✅ `ReferenceEquals` 변경 감지 캐싱 도입 |
+| ~~차기1~~ | 알림 히스토리 없음 | ✅ NotificationHistoryService 도입 |
+| ~~차기2~~ | 스킬 체이닝 불가 | ✅ Phase 13 — 파이프 구문 + `chain:` 프론트매터 |
+
+</details>
 
 ---
 
