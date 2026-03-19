@@ -95,6 +95,7 @@
     private bool _isLoadingBranches;
     private LandingPage? _landingPage;
     private CancellationTokenSource? _messageCts;
+    private Task? _messageTask;
     private List<SkillChainStep>? _pendingChain;
 
     protected override void OnInitialized()
@@ -306,7 +307,7 @@
         var workspace = ChatState.CurrentWorkspace;
         var branch = _selectedBranch;
 
-        _ = Task.Run(async () =>
+        _messageTask = Task.Run(async () =>
         {
             try
             {
@@ -339,7 +340,7 @@
         var session = ChatState.CurrentSession;
         var workspace = ChatState.CurrentWorkspace;
 
-        _ = Task.Run(async () =>
+        _messageTask = Task.Run(async () =>
         {
             try
             {
@@ -453,6 +454,11 @@
     {
         ChatState.OnChange -= HandleStateChanged;
         _messageCts?.Cancel();
+
+        // Observe the task to prevent UnobservedTaskException
+        if (_messageTask is { IsCompleted: false })
+            _messageTask.ContinueWith(static t => { _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
+
         _messageCts?.Dispose();
     }
 }

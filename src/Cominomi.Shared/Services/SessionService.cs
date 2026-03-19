@@ -126,6 +126,8 @@ public partial class SessionService : ISessionService
         if (workspace == null)
             throw new InvalidOperationException($"Workspace '{workspaceId}' not found.");
 
+        await EnforceSessionLimitAsync(workspaceId);
+
         var branchName = $"{CominomiConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
         var worktreesDir = await _workspaceService.GetWorktreesDirAsync();
 
@@ -172,6 +174,8 @@ public partial class SessionService : ISessionService
         var workspace = await _workspaceService.LoadWorkspaceAsync(workspaceId);
         if (workspace == null)
             throw new InvalidOperationException($"Workspace '{workspaceId}' not found.");
+
+        await EnforceSessionLimitAsync(workspaceId);
 
         var settings = _appSettings.CurrentValue;
         var cityName = CityNames.GetRandom();
@@ -525,8 +529,9 @@ public partial class SessionService : ISessionService
         {
             try
             {
-                var archiveName = !string.IsNullOrEmpty(session.CityName) ? session.CityName : session.Id;
-                var archivePath = Path.Combine(_archiveDir, workspace.Name, archiveName);
+                var archiveName = SanitizePathSegment(
+                    !string.IsNullOrEmpty(session.CityName) ? session.CityName : session.Id);
+                var archivePath = Path.Combine(_archiveDir, SanitizePathSegment(workspace.Name), archiveName);
                 await _contextService.ArchiveContextAsync(session.Git.WorktreePath, archivePath);
             }
             catch (Exception ex) { _logger.LogWarning(ex, "Failed to archive context for session {SessionId}", sessionId); }
@@ -605,17 +610,24 @@ public partial class SessionService : ISessionService
         var slug = message.ToLowerInvariant().Trim();
         // Replace whitespace with hyphens
         slug = WhitespaceRegex().Replace(slug, "-");
-        // Remove non-alphanumeric except hyphens
-        slug = NonSlugRegex().Replace(slug, "");
+        // Remove non-alphanumeric except hyphens (ASCII only survives)
+        var asciiSlug = NonSlugRegex().Replace(slug, "");
         // Collapse multiple hyphens
-        slug = MultiHyphenRegex().Replace(slug, "-");
-        // Trim hyphens
-        slug = slug.Trim('-');
-        // Truncate
-        if (slug.Length > 40)
-            slug = slug[..40].TrimEnd('-');
+        asciiSlug = MultiHyphenRegex().Replace(asciiSlug, "-");
+        asciiSlug = asciiSlug.Trim('-');
 
-        return $"{CominomiConstants.BranchPrefix}{(string.IsNullOrEmpty(slug) ? DateTime.Now.ToString("yyyyMMdd-HHmmss") : slug)}";
+        // If non-ASCII input produced an empty slug, generate a stable hash-based slug
+        if (string.IsNullOrEmpty(asciiSlug))
+        {
+            var hash = Math.Abs(message.GetHashCode()).ToString("x8");
+            asciiSlug = hash;
+        }
+
+        // Truncate
+        if (asciiSlug.Length > 40)
+            asciiSlug = asciiSlug[..40].TrimEnd('-');
+
+        return $"{CominomiConstants.BranchPrefix}{asciiSlug}";
     }
 
     /// <summary>
@@ -636,6 +648,22 @@ public partial class SessionService : ISessionService
             _logger.LogWarning(ex, "Failed to check schema upgrade for session JSON");
             return false;
         }
+    }
+
+    private async Task EnforceSessionLimitAsync(string workspaceId)
+    {
+        var active = await GetSessionsByWorkspaceAsync(workspaceId);
+        var activeCount = active.Count(s => s.Status is not SessionStatus.Archived and not SessionStatus.Error);
+        if (activeCount >= CominomiConstants.MaxActiveSessionsPerWorkspace)
+            throw new InvalidOperationException(
+                $"Workspace has {activeCount} active sessions (limit: {CominomiConstants.MaxActiveSessionsPerWorkspace}). Archive or delete existing sessions first.");
+    }
+
+    private static string SanitizePathSegment(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var sanitized = string.Concat(name.Select(c => Array.IndexOf(invalid, c) >= 0 ? '_' : c));
+        return string.IsNullOrWhiteSpace(sanitized) ? "unnamed" : sanitized;
     }
 
     [GeneratedRegex(@"\s+")]

@@ -8,6 +8,7 @@
 @inject INotificationHistoryService NotificationHistory
 @inject IJSRuntime JSRuntime
 @inject ILogger<SessionWorkflowBar> Logger
+@inject IDialogService DialogService
 
 @if (Session != null && !Session.Git.IsLocalDir
      && Session.Status is SessionStatus.Ready
@@ -145,6 +146,12 @@
 
     private async Task ForcePushAndMerge(Session session)
     {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "강제 푸시 확인",
+            $"'{session.Git.BranchName}' 브랜치를 강제 푸시합니다. 리모트 히스토리가 덮어쓰여집니다. 계속하시겠습니까?",
+            yesText: "강제 푸시", cancelText: "취소");
+        if (confirmed != true) return;
+
         _operatingSessionId = session.Id;
         StateHasChanged();
         try
