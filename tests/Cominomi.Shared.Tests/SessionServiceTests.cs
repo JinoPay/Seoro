@@ -74,12 +74,31 @@ public class SessionServiceTests : IDisposable
     }
 
     [Fact]
-    public void GenerateBranchName_EmptyMessage_UsesTimestamp()
+    public void GenerateBranchName_EmptyMessage_UsesHashFallback()
     {
         var result = SessionService.GenerateBranchName("   ");
         Assert.StartsWith(CominomiConstants.BranchPrefix, result);
-        // Should contain timestamp format (yyyyMMdd-HHmmss)
-        Assert.Matches(@"\d{8}-\d{6}", result);
+        var slug = result[CominomiConstants.BranchPrefix.Length..];
+        Assert.Matches(@"^[0-9a-f]+$", slug);
+    }
+
+    [Fact]
+    public void GenerateBranchName_KoreanMessage_UsesHashFallback()
+    {
+        var result = SessionService.GenerateBranchName("로그인 버그 수정");
+        Assert.StartsWith(CominomiConstants.BranchPrefix, result);
+        var slug = result[CominomiConstants.BranchPrefix.Length..];
+        Assert.Matches(@"^[0-9a-f]+$", slug);
+        Assert.True(slug.Length > 0);
+    }
+
+    [Fact]
+    public void GenerateBranchName_MixedKoreanEnglish_KeepsEnglish()
+    {
+        var result = SessionService.GenerateBranchName("fix 로그인 bug");
+        Assert.StartsWith(CominomiConstants.BranchPrefix, result);
+        Assert.Contains("fix", result);
+        Assert.Contains("bug", result);
     }
 
     [Fact]

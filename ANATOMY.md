@@ -3,9 +3,21 @@
 > 이 문서는 Cominomi의 모든 시스템을 해부하여 **현재 동작**, **데이터 흐름**, **의존관계**, **빠진 것/문제점**을 기술합니다.
 > 각 섹션을 가리켜 "이 부분은 이렇게 변경되어야 한다"고 지휘하는 데 사용하세요.
 
-**코드 규모**: ~217개 소스 파일, ~23,799줄 (Cominomi.Shared에 집중, tests/Cominomi.Shared.Tests 포함)
+**코드 규모**: ~226개 소스 파일, ~23,973줄 (Cominomi.Shared에 집중, tests/Cominomi.Shared.Tests 포함)
 **프레임워크**: .NET 10.0, MAUI + Blazor, MudBlazor UI
 **외부 도구**: Claude CLI (subprocess), Git CLI, GitHub CLI (gh)
+
+### 구조 개선 Phase 17 (2026-03-19) — Part III 워크플로우 오케스트레이션 전항목 해결
+| 변경 내용 | 역할 / 영향 범위 |
+|-----------|-----------------|
+| `SessionService.GenerateBranchName` 한국어 지원 | 비ASCII 입력 시 해시 기반 슬러그 폴백 (`Math.Abs(hash).ToString("x8")`). 한국어 제목도 안정적 브랜치명 생성 |
+| `CominomiConstants.MaxActiveSessionsPerWorkspace` (20) | 워크스페이스당 활성 세션 수 제한. `CreateSessionAsync`/`CreatePendingSessionAsync`에서 `EnforceSessionLimitAsync` 검증 |
+| `SessionService.SanitizePathSegment` + 아카이브 경로 수정 | `CleanupSessionAsync` 아카이브 경로에 `Path.GetInvalidFileNameChars` 기반 안전화 적용 |
+| `AppError.ClassifyMergeError` 패턴 개선 | `"conflict"` 단독 → `"merge conflict"` + `"conflicting files"` + `"required status check"` 구체화. 오탐 감소 |
+| `SessionWorkflowBar` 강제 푸시 확인 | `ForcePushAndMerge`에 `DialogService.ShowMessageBoxAsync` 확인 다이얼로그 추가 |
+| `ChatView` 백그라운드 태스크 관찰 | `_ = Task.Run(...)` → `_messageTask = Task.Run(...)` + `Dispose`에서 `.ContinueWith` 예외 관찰 |
+| `StreamEventProcessor.DetectPlanFile` 비동기 전환 | `File.ReadAllText` → `File.ReadAllTextAsync`. 스트림 파이프라인 전체 async |
+| 테스트 3개 추가 | `GenerateBranchName_KoreanMessage`, `MixedKoreanEnglish`, `EmptyMessage_HashFallback` |
 
 ### 최근 도입된 구조 개선 (2026-03-18)
 | 새 파일 | 역할 |
@@ -675,7 +687,7 @@ ChatView.ProcessMessageAsync()
 ### 관련 파일
 | 파일 | 줄수 | 역할 |
 |------|------|------|
-| `Shared/Services/SessionService.cs` | 593 | 세션 CRUD + 워크트리 + 파일 분리 저장 + per-session SemaphoreSlim 동시성 보호 |
+| `Shared/Services/SessionService.cs` | 677 | 세션 CRUD + 워크트리 + 파일 분리 저장 + per-session SemaphoreSlim 동시성 보호 + 워크스페이스당 세션 수 제한 |
 | `Shared/Services/SessionStatusMachine.cs` | 27 | 상태 전이 규칙 (Phase 4) |
 | `Shared/Services/ISessionService.cs` | 18 | 인터페이스 |
 
@@ -715,12 +727,12 @@ ChatView.ProcessMessageAsync()
 ```
 
 ### 빠진 것 / 문제점
-- **한국어 제목 → 빈 슬러그**: `[^a-z0-9\-]` 정규식 (`:396`)이 한글을 전부 제거. 결과: `cominomi/20260318-143022` (타임스탬프 폴백)
-- **세션 수 제한 없음**: 워크스페이스당 수백 개 워크트리 생성 가능. git 성능 저하
+- ~~**한국어 제목 → 빈 슬러그**: `[^a-z0-9\-]` 정규식이 한글을 전부 제거~~ → ✅ **해결**: Phase 17에서 비ASCII 입력 시 `Math.Abs(hash).ToString("x8")` 해시 기반 슬러그 폴백. 한국어+영어 혼합 시 영어 부분 유지
+- ~~**세션 수 제한 없음**: 워크스페이스당 수백 개 워크트리 생성 가능~~ → ✅ **해결**: Phase 17에서 `MaxActiveSessionsPerWorkspace(20)` 상수 + `EnforceSessionLimitAsync` 검증. `CreateSessionAsync`/`CreatePendingSessionAsync` 양쪽 적용
 - ~~**상태 전이 검증 없음**: Archived에서 Ready로 직접 변경해도 에러 없음~~ → ✅ **해결**: Phase 4에서 `SessionStatusMachine` 도입. 무효 전이 시 `InvalidOperationException`. `session.Status = X` 직접 할당 전부 `session.TransitionStatus(X)`로 교체
 - ~~**GetSessionsAsync O(n)** (`:31-78`): 파일 수 만큼 직렬화. 페이지네이션 없음~~ → ✅ **해결**: `ConcurrentDictionary` 인메모리 캐시 + 1회 로드 + 병렬 I/O
 - ~~**워크트리 초기화 레이스 컨디션**: Pending 세션에 메시지 전송 시 `InitializeWorktreeAsync`가 호출되는데, 빠르게 두 번 전송하면 워크트리 이중 생성 시도 가능~~ → ✅ **해결**: `SessionService`에 per-session `SemaphoreSlim` (`_worktreeInitLocks`) 추가하여 동시 호출 직렬화 + 캐시 무효화 + 락 획득 후 상태 재확인(Pending이 아니면 즉시 반환). `ChatView`에서도 `_isInitializingWorktree` 플래그로 UI-level 이중 진입 방지
-- **CityName 아카이브 경로**: `CityNames.GetRandom()` (46개 도시)으로 이름 생성, 하지만 파일 경로에 부적합한 문자 없음을 보장하지 않음
+- ~~**CityName 아카이브 경로**: 파일 경로에 부적합한 문자 없음을 보장하지 않음~~ → ✅ **해결**: Phase 17에서 `SanitizePathSegment` 메서드 추가. `CleanupSessionAsync` 아카이브 경로에 `Path.GetInvalidFileNameChars` 기반 안전화 적용
 
 ---
 
@@ -773,8 +785,8 @@ ChatView UI 버튼
 - ~~**자동 리베이스 없음**~~ → ✅ **해결**: `ConflictDetected` 시 `RebaseInternalAsync()` 자동 호출 → fetch → rebase → force-push → 재시도 병합 (3단계 복구)
 - ~~**같은 세션 3~4번 로드**~~ → ✅ **해결**: (1) `MergeAllAsync`는 Internal 메서드로 1회만 로드, (2) `SessionService.LoadSessionAsync`에 2초 TTL 캐시 추가 — `SaveSessionAsync` 시 캐시 갱신, `Delete`/`Cleanup` 시 무효화
 - ~~**롤백 없음**: PR 생성 성공 후 병합 실패 시, PR이 열린 채로 방치~~ → ✅ **해결**: `ClosePrInternalAsync()` 도입. 병합 실패 시 PR 자동 닫기
-- **강제 푸시에 확인 없음**: `ForcePushAndMerge`가 UI에서 직접 호출
-- **충돌 감지 오탐 가능**: `"merge"` 단어가 에러와 무관한 맥락에 나올 수 있음
+- ~~**강제 푸시에 확인 없음**: `ForcePushAndMerge`가 UI에서 직접 호출~~ → ✅ **해결**: Phase 17에서 `DialogService.ShowMessageBoxAsync` 확인 다이얼로그 추가. 사용자 취소 시 작업 중단
+- ~~**충돌 감지 오탐 가능**: `"conflict"` 단독 매칭으로 오탐 가능~~ → ✅ **해결**: Phase 17에서 `ClassifyMergeError` 패턴을 `"merge conflict"`, `"conflicting files"`, `"not mergeable"`, `"required status check"`로 구체화
 
 ---
 
@@ -783,7 +795,7 @@ ChatView UI 버튼
 ### 관련 파일
 | 파일 | 줄수 | 역할 |
 |------|------|------|
-| `Shared/Components/Chat/ChatView.razor` | ~424 | UI 오케스트레이터 (Phase 16에서 697→424줄. 비즈니스 로직은 ChatMessageOrchestrator로 추출) |
+| `Shared/Components/Chat/ChatView.razor` | ~464 | UI 오케스트레이터 (Phase 16에서 697→424줄→464줄. 비즈니스 로직은 ChatMessageOrchestrator로 추출, Phase 17에서 태스크 관찰 추가) |
 | `Shared/Services/ChatMessageOrchestrator.cs` | ~230 | 메시지 전송/Continue 비즈니스 로직 (Phase 16 추출) |
 | `Shared/Services/IChatMessageOrchestrator.cs` | ~52 | 인터페이스 + StreamResult DTO |
 | `Shared/Components/Chat/BranchSelector.razor` | ~106 | 브랜치 선택 UI (Phase 6 추출) |
@@ -846,7 +858,7 @@ case "error"                            → 에러 메시지 추가
 - ~~**스트림 처리 300줄 switch**~~ → ✅ **해결**: `StreamEventProcessor` 서비스로 분리
 - ~~**사용량 추적 4단계 폴백**~~ → ✅ **해결**: `StreamEventProcessor.FinalizeAsync()`로 캡슐화
 - ~~**플랜 모드 3계층 감지**~~ → ✅ **해결**: `StreamEventProcessor.FinalizeAsync()`로 캡슐화
-- **ProcessMessageAsync가 Task.Run에서 실행**: 백그라운드 스레드에서 `InvokeAsync(StateHasChanged)` 호출. 동작하지만 예외 미관찰 위험
+- ~~**ProcessMessageAsync가 Task.Run에서 실행**: 예외 미관찰 위험~~ → ✅ **해결**: Phase 17에서 `_ = Task.Run(...)` → `_messageTask = Task.Run(...)` 추적. `Dispose`에서 `ContinueWith(OnlyOnFaulted)` 예외 관찰
 - ~~**async void HandleStateChanged**~~ → ✅ **해결**: Phase 3에서 `void` + `InvokeAsync()` try-catch 패턴으로 변환
 - ~~**CreatePr AI vs 직접 경로 2개**~~ → ✅ **해결**: Phase 3에서 PR 워크플로우를 `IChatPrWorkflowService`로 통합. ChatView는 UI 피드백만 담당
 
@@ -893,6 +905,7 @@ case "error"                            → 에러 메시지 추가
 ### 빠진 것 / 문제점
 - **ChatState 직접 변경**: 각 핸들러에서 `ChatState`의 가변 상태를 직접 수정. 부수효과 추적 어려움
 - **`StreamProcessingContext` 가변 DTO**: 참조 타입으로 컨텍스트 상태 공유. 호출자와 핸들러가 같은 객체를 변경
+- ~~**`DetectPlanFile` 동기 I/O**: `File.ReadAllText` 동기 호출~~ → ✅ **해결**: Phase 17에서 `DetectPlanFileAsync` + `File.ReadAllTextAsync`로 전환
 
 ---
 
@@ -1641,7 +1654,7 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 |------|------|------|--------|
 | **1** | **SendMessageAsync 15 파라미터 / ClaudeArgumentBuilder.Build 16 파라미터** — Parameter Object 패턴 필요. `SendMessageOptions` 클래스로 캡슐화 | API 가독성, 유지보수성, 호출부 실수 위험 | 중 |
 | **2** | **GitService 661줄 God Object** — cloning, branching, diff 파싱, 캐싱, stash, rebase를 단일 클래스에서 담당 | SRP 위반, 테스트 어려움 | 높 |
-| **3** | **SessionService 649줄 God Object** — 세션 CRUD, 캐시, 메타데이터, 라이프사이클, 워크트리를 단일 클래스에서 담당 | SRP 위반, 테스트 어려움 | 높 |
+| **3** | **SessionService 677줄 God Object** — 세션 CRUD, 캐시, 메타데이터, 라이프사이클, 워크트리, 세션 수 제한을 단일 클래스에서 담당 | SRP 위반, 테스트 어려움 | 높 |
 | **4** | **도구 이름 매핑 중복** — `ContentGrouper`(172-182줄)와 `ToolDisplayHelper`(193-208줄)에 동일한 tool name 정규화 로직 중복. ToolDisplayHelper 쪽이 더 포괄적 | 유지보수 혼란, 매핑 불일치 위험 | 낮 |
 | **5** | **ParseDiff 레거시 코드 잔류** — static `ParseDiff` 메서드가 `GetDiffSummaryAsync`와 기능 중복. 프로덕션 호출부 없음 (테스트에서만 사용). Phase 14에서 삭제 예정이었으나 문서만 수정됨 | 코드 중복, 혼란 | 낮 |
 | **6** | **ChatMessageOrchestrator 10개 서비스 주입** — `IChatState, IClaudeService, ISessionService, IAttachmentService, IStreamEventProcessor, ISystemPromptBuilder, ISessionInitializer, IHooksEngine, IChatPrWorkflowService, ILogger`. 파사드 패턴이나 추가 분해 필요 | 커플링, 테스트 어려움 | 중 |

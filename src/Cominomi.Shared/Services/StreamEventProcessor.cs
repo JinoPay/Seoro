@@ -64,7 +64,7 @@ public class StreamEventProcessor : IStreamEventProcessor
             // Layer 3: file system detection
             if (!ctx.ExitPlanModeDetected && !string.IsNullOrEmpty(ctx.Session.Git.WorktreePath))
             {
-                DetectPlanFile(ctx);
+                await DetectPlanFileAsync(ctx);
                 if (ctx.PlanContent != null)
                     ctx.ExitPlanModeDetected = true;
             }
@@ -72,7 +72,7 @@ public class StreamEventProcessor : IStreamEventProcessor
             if (ctx.ExitPlanModeDetected)
             {
                 if (ctx.PlanContent == null)
-                    DetectPlanFile(ctx);
+                    await DetectPlanFileAsync(ctx);
                 ctx.Session.PlanCompleted = true;
                 ctx.Session.PlanFilePath = ctx.PlanFilePath;
                 ctx.PlanReviewVisible = true;
@@ -96,7 +96,7 @@ public class StreamEventProcessor : IStreamEventProcessor
         }
     }
 
-    private static void DetectPlanFile(StreamProcessingContext ctx)
+    private static async Task DetectPlanFileAsync(StreamProcessingContext ctx)
     {
         ctx.PlanFilePath = null;
         ctx.PlanContent = null;
@@ -111,7 +111,7 @@ public class StreamEventProcessor : IStreamEventProcessor
         if (planFile != null)
         {
             ctx.PlanFilePath = planFile;
-            ctx.PlanContent = File.ReadAllText(planFile);
+            ctx.PlanContent = await File.ReadAllTextAsync(planFile);
         }
     }
 

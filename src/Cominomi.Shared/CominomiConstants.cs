@@ -13,6 +13,9 @@ public static class CominomiConstants
     public const string DefaultEffortLevel = "auto";
     public const string DefaultMergeStrategy = "squash";
 
+    // Session limits
+    public const int MaxActiveSessionsPerWorkspace = 20;
+
     // System prompt size limits (token-based via TokenEstimator)
     public const int MaxContextPromptTokens = 5_000;   // notes + todos + plans combined
     public const int MaxContextItemTokens = 2_000;     // single note/todo/plan file
