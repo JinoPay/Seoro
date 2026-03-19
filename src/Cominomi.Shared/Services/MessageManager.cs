@@ -117,6 +117,13 @@ public class MessageManager
     {
         message.IsStreaming = false;
         message.StreamingFinishedAt = DateTime.UtcNow;
+
+        // Sync Text from Parts (canonical source) to ensure consistency
+        message.Text = string.Concat(
+            message.Parts
+                .Where(p => p.Type == ContentPartType.Text)
+                .Select(p => p.Text));
+
         _notifyChanged();
     }
 

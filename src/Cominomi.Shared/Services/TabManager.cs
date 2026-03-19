@@ -1,4 +1,5 @@
 using Cominomi.Shared.Models;
+using Cominomi.Shared.Models.ViewModels;
 
 namespace Cominomi.Shared.Services;
 

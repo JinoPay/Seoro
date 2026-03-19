@@ -7,6 +7,7 @@ namespace Cominomi.Shared.Services;
 public class SkillRegistry : ISkillRegistry
 {
     private readonly List<SkillDefinition> _skills = [];
+    private readonly object _lock = new();
     private readonly SkillFileStore _fileStore;
     private readonly ILogger<SkillRegistry> _logger;
 
@@ -100,10 +101,15 @@ public class SkillRegistry : ISkillRegistry
         ]);
     }
 
-    public IReadOnlyList<SkillDefinition> GetAll() => _skills.AsReadOnly();
+    public IReadOnlyList<SkillDefinition> GetAll()
+    {
+        lock (_lock) { return _skills.ToList().AsReadOnly(); }
+    }
 
     public SkillDefinition? Find(string name)
-        => _skills.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    {
+        lock (_lock) { return _skills.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase)); }
+    }
 
     public string? TryParseSkillCommand(string input, out string? args)
     {
@@ -229,30 +235,36 @@ public class SkillRegistry : ISkillRegistry
 
     public void Register(SkillDefinition skill)
     {
-        var existing = _skills.FindIndex(s => s.Name == skill.Name);
-        if (existing >= 0)
-            _skills[existing] = skill;
-        else
-            _skills.Add(skill);
+        lock (_lock)
+        {
+            var existing = _skills.FindIndex(s => s.Name == skill.Name);
+            if (existing >= 0)
+                _skills[existing] = skill;
+            else
+                _skills.Add(skill);
+        }
     }
 
     public async Task LoadCustomCommandsAsync(string? projectPath)
     {
-        // Remove previously loaded custom commands
-        _skills.RemoveAll(s => !s.IsBuiltIn);
-
         // User-scope commands: ~/.claude/commands/
         var userDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             ".claude", "commands");
         var userSkills = await _fileStore.LoadFromDirectoryAsync(userDir, "user");
-        _skills.AddRange(userSkills);
 
         // Project-scope commands: <project>/.claude/commands/
+        List<SkillDefinition> projectSkills = [];
         if (!string.IsNullOrEmpty(projectPath))
         {
             var projectDir = Path.Combine(projectPath, ".claude", "commands");
-            var projectSkills = await _fileStore.LoadFromDirectoryAsync(projectDir, "project");
+            projectSkills = await _fileStore.LoadFromDirectoryAsync(projectDir, "project");
+        }
+
+        lock (_lock)
+        {
+            _skills.RemoveAll(s => !s.IsBuiltIn);
+            _skills.AddRange(userSkills);
             _skills.AddRange(projectSkills);
         }
     }
@@ -265,13 +277,14 @@ public class SkillRegistry : ISkillRegistry
 
     public Task DeleteCommandAsync(string name, string scope, string? projectPath)
     {
-        var skill = _skills.FirstOrDefault(s => s.Name == name && s.Scope == scope);
-        if (skill != null)
+        lock (_lock)
         {
-            _fileStore.Delete(skill);
-        }
+            var skill = _skills.FirstOrDefault(s => s.Name == name && s.Scope == scope);
+            if (skill != null)
+                _fileStore.Delete(skill);
 
-        _skills.RemoveAll(s => s.Name == name && s.Scope == scope);
+            _skills.RemoveAll(s => s.Name == name && s.Scope == scope);
+        }
         return Task.CompletedTask;
     }
 }
