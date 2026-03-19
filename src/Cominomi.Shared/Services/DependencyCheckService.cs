@@ -18,6 +18,9 @@ public class DependencyCheckService : IDependencyCheckService
 
     public async Task<List<DependencyResult>> CheckAllAsync()
     {
+        // Invalidate cached shell so re-check picks up newly installed tools
+        _shellService.InvalidateCache();
+
         var tasks = new[]
         {
             CheckToolAsync("git", "Git version control",

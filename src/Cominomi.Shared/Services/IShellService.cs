@@ -10,6 +10,7 @@ public interface IShellService
     /// Returns the resolved shell for the current platform.
     /// On Windows, prefers Git Bash; falls back to cmd.exe.
     /// On macOS/Linux, returns /bin/sh.
+    /// Result is cached with a TTL; call <see cref="InvalidateCache"/> to force re-resolution.
     /// </summary>
     Task<ShellInfo> GetShellAsync();
 
@@ -18,4 +19,10 @@ public interface IShellService
     /// Uses 'which' under bash/sh, 'where.exe' under cmd.
     /// </summary>
     Task<string?> WhichAsync(string executableName);
+
+    /// <summary>
+    /// Clears the cached shell info so the next <see cref="GetShellAsync"/> re-detects.
+    /// Useful when dependencies are reinstalled after app start.
+    /// </summary>
+    void InvalidateCache();
 }

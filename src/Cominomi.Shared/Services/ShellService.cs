@@ -9,6 +9,7 @@ public class ShellService : IShellService
     private readonly IProcessRunner _processRunner;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private ShellInfo? _cached;
+    private DateTime _cachedAt;
 
     public ShellService(ILogger<ShellService> logger, IProcessRunner processRunner)
     {
@@ -18,13 +19,17 @@ public class ShellService : IShellService
 
     public async Task<ShellInfo> GetShellAsync()
     {
-        if (_cached != null) return _cached;
+        if (_cached != null && DateTime.UtcNow - _cachedAt < CominomiConstants.ShellCacheTtl)
+            return _cached;
 
         await _lock.WaitAsync();
         try
         {
-            if (_cached != null) return _cached;
+            if (_cached != null && DateTime.UtcNow - _cachedAt < CominomiConstants.ShellCacheTtl)
+                return _cached;
+
             _cached = await ResolveShellAsync();
+            _cachedAt = DateTime.UtcNow;
             _logger.LogInformation("Resolved shell: {Type} at {Path}", _cached.Type, _cached.FileName);
             return _cached;
         }
@@ -32,6 +37,11 @@ public class ShellService : IShellService
         {
             _lock.Release();
         }
+    }
+
+    public void InvalidateCache()
+    {
+        _cached = null;
     }
 
     public async Task<string?> WhichAsync(string executableName)
@@ -55,7 +65,7 @@ public class ShellService : IShellService
                     {
                         FileName = "where.exe",
                         Arguments = [executableName],
-                        Timeout = TimeSpan.FromSeconds(3)
+                        Timeout = CominomiConstants.WhichTimeout
                     };
                     break;
 
@@ -65,7 +75,7 @@ public class ShellService : IShellService
                     {
                         FileName = shell.FileName,
                         Arguments = ["-c", $"cygpath -w \"$(which {executableName})\""],
-                        Timeout = TimeSpan.FromSeconds(3)
+                        Timeout = CominomiConstants.WhichTimeout
                     };
                     break;
 
@@ -74,7 +84,7 @@ public class ShellService : IShellService
                     {
                         FileName = shell.FileName,
                         Arguments = ["-c", $"which {executableName}"],
-                        Timeout = TimeSpan.FromSeconds(3)
+                        Timeout = CominomiConstants.WhichTimeout
                     };
                     break;
             }
@@ -84,6 +94,10 @@ public class ShellService : IShellService
 
             if (result.Success && !string.IsNullOrWhiteSpace(firstLine))
                 return firstLine;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("WhichAsync timed out for: {Name} (timeout={Timeout}s)", executableName, CominomiConstants.WhichTimeout.TotalSeconds);
         }
         catch (Exception ex)
         {
@@ -119,7 +133,7 @@ public class ShellService : IShellService
             {
                 FileName = "where.exe",
                 Arguments = ["git"],
-                Timeout = TimeSpan.FromSeconds(3)
+                Timeout = CominomiConstants.WhichTimeout
             });
 
             var gitPath = result.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim();

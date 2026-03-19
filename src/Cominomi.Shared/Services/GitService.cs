@@ -4,6 +4,7 @@ using System.Text;
 using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Services;
 
@@ -11,6 +12,14 @@ public class GitService : IGitService
 {
     private readonly ILogger<GitService> _logger;
     private readonly IProcessRunner _processRunner;
+    private readonly IOptionsMonitor<AppSettings> _appSettings;
+    private readonly IShellService _shellService;
+
+    // Resolved git path cache
+    private string? _resolvedGitPath;
+    private DateTime _gitPathResolvedAt;
+    private readonly SemaphoreSlim _gitPathLock = new(1, 1);
+    private static readonly TimeSpan GitPathCacheTtl = TimeSpan.FromMinutes(10);
 
     // Cache: DetectDefaultBranch rarely changes → 5 min TTL
     private readonly ConcurrentDictionary<string, (string? Branch, DateTime LoadedAt)> _defaultBranchCache = new();
@@ -21,10 +30,44 @@ public class GitService : IGitService
     private readonly ConcurrentDictionary<string, (List<BranchGroup> Groups, DateTime LoadedAt)> _branchGroupCache = new();
     private static readonly TimeSpan BranchListCacheTtl = TimeSpan.FromSeconds(30);
 
-    public GitService(ILogger<GitService> logger, IProcessRunner processRunner)
+    public GitService(ILogger<GitService> logger, IProcessRunner processRunner, IOptionsMonitor<AppSettings> appSettings, IShellService shellService)
     {
         _logger = logger;
         _processRunner = processRunner;
+        _appSettings = appSettings;
+        _shellService = shellService;
+    }
+
+    private async Task<string> ResolveGitPathAsync()
+    {
+        // Use configured path if set
+        var configuredPath = _appSettings.CurrentValue.GitPath;
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+            return configuredPath;
+
+        // Check cache
+        if (_resolvedGitPath != null && DateTime.UtcNow - _gitPathResolvedAt < GitPathCacheTtl)
+            return _resolvedGitPath;
+
+        await _gitPathLock.WaitAsync();
+        try
+        {
+            if (_resolvedGitPath != null && DateTime.UtcNow - _gitPathResolvedAt < GitPathCacheTtl)
+                return _resolvedGitPath;
+
+            var resolved = await _shellService.WhichAsync("git");
+            _resolvedGitPath = resolved ?? "git";
+            _gitPathResolvedAt = DateTime.UtcNow;
+
+            if (resolved != null)
+                _logger.LogDebug("Resolved git path: {Path}", resolved);
+
+            return _resolvedGitPath;
+        }
+        finally
+        {
+            _gitPathLock.Release();
+        }
     }
 
     public async Task<GitResult> CloneAsync(string url, string targetDir, IProgress<string>? progress = null, CancellationToken ct = default)
@@ -33,8 +76,9 @@ public class GitService : IGitService
         if (parentDir != null)
             Directory.CreateDirectory(parentDir);
 
+        var gitPath = await ResolveGitPathAsync();
         _logger.LogDebug("git clone --progress {Url} -> {TargetDir}", url, targetDir);
-        var process = CreateStreamingGitProcess(["clone", "--progress", url, targetDir], parentDir ?? ".");
+        var process = CreateStreamingGitProcess(gitPath, ["clone", "--progress", url, targetDir], parentDir ?? ".");
         process.Start();
 
         var stdoutBuilder = new StringBuilder();
@@ -221,7 +265,7 @@ public class GitService : IGitService
     public async Task<GitResult> RunAsync(string arguments, string workingDir, CancellationToken ct = default)
     {
         var args = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return await RunGitAsync(workingDir, ct, args);
+        return await RunGitBoundedAsync(workingDir, ct, args);
     }
 
     /// <summary>
@@ -242,10 +286,11 @@ public class GitService : IGitService
 
     private async Task<GitResult> RunGitCoreAsync(string workingDir, int? maxOutputBytes, CancellationToken ct, params string[] args)
     {
+        var gitPath = await ResolveGitPathAsync();
         _logger.LogDebug("git {Arguments}", string.Join(" ", args));
         var result = await _processRunner.RunAsync(new ProcessRunOptions
         {
-            FileName = "git",
+            FileName = gitPath,
             Arguments = args,
             WorkingDirectory = workingDir,
             EnvironmentVariables = CominomiConstants.Env.GitEnv,
@@ -433,10 +478,11 @@ public class GitService : IGitService
         // Fetch name-status and stream diff in parallel
         var nameStatusTask = GetNameStatusAsync(workingDir, baseBranch, ct);
 
+        var gitPath = await ResolveGitPathAsync();
         _logger.LogDebug("git diff {BaseBranch} (streaming)", baseBranch);
         var streamingTask = _processRunner.RunStreamingAsync(new ProcessRunOptions
         {
-            FileName = "git",
+            FileName = gitPath,
             Arguments = ["diff", baseBranch],
             WorkingDirectory = workingDir,
             EnvironmentVariables = CominomiConstants.Env.GitEnv,
@@ -570,6 +616,7 @@ public class GitService : IGitService
         fileDiff.Deletions = deletions;
     }
 
+    [Obsolete("Use GetDiffSummaryAsync which streams incrementally without loading full diff into memory.")]
     public static DiffSummary ParseDiff(string nameStatus, string rawDiff)
     {
         var summary = new DiffSummary();
@@ -641,11 +688,11 @@ public class GitService : IGitService
     /// Creates a git process for CloneAsync which needs character-by-character stderr streaming.
     /// All other git commands use IProcessRunner via RunGitAsync.
     /// </summary>
-    private static Process CreateStreamingGitProcess(string[] args, string workingDir)
+    private static Process CreateStreamingGitProcess(string gitPath, string[] args, string workingDir)
     {
         var psi = new ProcessStartInfo
         {
-            FileName = "git",
+            FileName = gitPath,
             WorkingDirectory = workingDir,
             UseShellExecute = false,
             RedirectStandardOutput = true,

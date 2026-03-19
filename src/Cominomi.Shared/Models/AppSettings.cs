@@ -8,6 +8,7 @@ public class AppSettings
     public string DefaultModel { get; set; } = ModelDefinitions.Default.Id;
     public string Theme { get; set; } = "dark";
     public string? ClaudePath { get; set; }
+    public string? GitPath { get; set; }
     public string? DefaultCloneDirectory { get; set; }
     public string DefaultEffortLevel { get; set; } = CominomiConstants.DefaultEffortLevel;
     public string DefaultPermissionMode { get; set; } = CominomiConstants.DefaultPermissionMode;
@@ -20,6 +21,8 @@ public class AppSettings
     public bool NotificationSound { get; set; } = true;
     public Dictionary<string, string> EnvironmentVariables { get; set; } = [];
     public string DefaultMergeStrategy { get; set; } = CominomiConstants.DefaultMergeStrategy;
+    public bool WaitForCiBeforeMerge { get; set; } = true;
+    public int CiCheckTimeoutSeconds { get; set; } = 300;
     public string? DefaultPrBodyTemplate { get; set; }
     public string LastWorkspaceId { get; set; } = "";
     public string LastSessionId { get; set; } = "";

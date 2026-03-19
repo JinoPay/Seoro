@@ -22,6 +22,7 @@ public enum ErrorCode
     PrNotFound,
     PrMergeFailed,
     PrMergeConflict,
+    CiChecksFailed,
 
     // Claude / Streaming
     StreamingFailed,
@@ -81,6 +82,9 @@ public record AppError(
 
     public static AppError PrConflict(string message) =>
         new(ErrorCode.PrMergeConflict, ErrorCategory.Transient, message);
+
+    public static AppError CiChecksFailed(string message) =>
+        new(ErrorCode.CiChecksFailed, ErrorCategory.Transient, message);
 
     // --- Streaming ---
 

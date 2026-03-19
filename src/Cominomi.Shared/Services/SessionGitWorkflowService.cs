@@ -1,6 +1,7 @@
 using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Services;
 
@@ -11,6 +12,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
     private readonly IGhService _ghService;
     private readonly IWorkspaceService _workspaceService;
     private readonly IHooksEngine _hooksEngine;
+    private readonly IOptionsMonitor<AppSettings> _appSettings;
     private readonly ILogger<SessionGitWorkflowService> _logger;
 
     public SessionGitWorkflowService(
@@ -19,6 +21,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         IGhService ghService,
         IWorkspaceService workspaceService,
         IHooksEngine hooksEngine,
+        IOptionsMonitor<AppSettings> appSettings,
         ILogger<SessionGitWorkflowService> logger)
     {
         _sessionService = sessionService;
@@ -26,6 +29,7 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
         _ghService = ghService;
         _workspaceService = workspaceService;
         _hooksEngine = hooksEngine;
+        _appSettings = appSettings;
         _logger = logger;
     }
 
@@ -175,6 +179,9 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
 
     private async Task<Session> PushBranchInternalAsync(Session session, Workspace workspace, bool force, CancellationToken ct)
     {
+        // Fetch latest remote state to avoid push conflicts from others' changes
+        await _gitService.FetchAsync(workspace.RepoLocalPath, ct);
+
         GitResult result;
         if (force)
             result = await _gitService.PushForceBranchAsync(workspace.RepoLocalPath, session.Git.BranchName, ct);
@@ -258,6 +265,22 @@ public class SessionGitWorkflowService : ISessionGitWorkflowService
             }
             session.Pr.PrNumber = prInfo.Number;
             session.Pr.PrUrl = prInfo.Url;
+        }
+
+        // Wait for CI checks if configured
+        var settings = _appSettings.CurrentValue;
+        if (settings.WaitForCiBeforeMerge)
+        {
+            var timeout = TimeSpan.FromSeconds(settings.CiCheckTimeoutSeconds);
+            _logger.LogInformation("Waiting for CI checks on PR #{PrNumber} (timeout={Timeout}s)", session.Pr.PrNumber.Value, timeout.TotalSeconds);
+
+            var checkResult = await _ghService.WaitForChecksAsync(workspace.RepoLocalPath, session.Pr.PrNumber.Value, timeout, ct);
+            if (!checkResult.AllPassed)
+            {
+                session.Error = AppError.CiChecksFailed(checkResult.Summary);
+                await _sessionService.SaveSessionAsync(session);
+                return session;
+            }
         }
 
         var result = await _ghService.MergePrAsync(workspace.RepoLocalPath, session.Pr.PrNumber.Value, mergeMethod, ct);

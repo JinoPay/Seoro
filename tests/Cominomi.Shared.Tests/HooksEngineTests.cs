@@ -146,5 +146,6 @@ public class HooksEngineTests
             Task.FromResult(new ShellInfo("/bin/bash", "-c", ShellType.Bash));
         public Task<string?> WhichAsync(string executableName) =>
             Task.FromResult<string?>(null);
+        public void InvalidateCache() { }
     }
 }

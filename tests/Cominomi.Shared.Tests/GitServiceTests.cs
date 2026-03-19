@@ -1,6 +1,7 @@
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Tests;
 
@@ -11,7 +12,11 @@ public class GitServiceTests
 
     public GitServiceTests()
     {
-        _sut = new GitService(NullLogger<GitService>.Instance, _processRunner);
+        _sut = new GitService(
+            NullLogger<GitService>.Instance,
+            _processRunner,
+            new FakeOptionsMonitor(),
+            new FakeShellService());
     }
 
     // --- IsGitRepoAsync ---
@@ -380,5 +385,21 @@ public class GitServiceTests
         {
             throw new NotImplementedException();
         }
+    }
+
+    private class FakeOptionsMonitor : IOptionsMonitor<AppSettings>
+    {
+        public AppSettings CurrentValue { get; } = new();
+        public AppSettings Get(string? name) => CurrentValue;
+        public IDisposable? OnChange(Action<AppSettings, string?> listener) => null;
+    }
+
+    private class FakeShellService : IShellService
+    {
+        public Task<ShellInfo> GetShellAsync()
+            => Task.FromResult(new ShellInfo("/bin/sh", "-c", ShellType.Sh));
+        public Task<string?> WhichAsync(string executableName)
+            => Task.FromResult<string?>(null);
+        public void InvalidateCache() { }
     }
 }

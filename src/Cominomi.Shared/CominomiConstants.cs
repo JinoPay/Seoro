@@ -24,6 +24,13 @@ public static class CominomiConstants
     public const int MaxSystemPromptTokens = 10_000;   // overall system prompt budget
     public const string TruncationMarker = "\n\n[...truncated, {0:N0} tokens total]";
 
+    // Timeout / retry constants
+    public static readonly TimeSpan WhichTimeout = TimeSpan.FromSeconds(5);
+    public static readonly TimeSpan ShellCacheTtl = TimeSpan.FromMinutes(10);
+    public const int GhMaxRetries = 3;
+    public const int GhRetryBaseDelaySeconds = 5;
+    public const int GhDefaultIssueLimit = 100;
+
     // Environment variables shared by multiple process-launching services
     public static class Env
     {

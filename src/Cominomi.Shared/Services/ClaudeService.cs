@@ -21,6 +21,7 @@ public class ClaudeService : IClaudeService, IDisposable
     private bool _disposed;
 
     private const string DefaultAgentKey = "__default__";
+    private static readonly TimeSpan GracefulShutdownTimeout = TimeSpan.FromSeconds(2);
 
     public ClaudeService(IOptionsMonitor<AppSettings> appSettings, IShellService shellService, IProcessRunner processRunner, ILogger<ClaudeService> logger)
     {
@@ -66,9 +67,65 @@ public class ClaudeService : IClaudeService, IDisposable
         var token = cts.Token;
         var envVars = settings.EnvironmentVariables.Count > 0 ? settings.EnvironmentVariables : null;
 
+        // First attempt
+        var ctx = new StreamingContext();
+        await foreach (var evt in ExecuteClaudeProcessAsync(fileName, arguments, workingDir, message, continueMode, agentKey, cts, envVars, ctx, token))
+        {
+            yield return evt;
+        }
+
+        // Retry with --verbose if process failed before producing events
+        if (!ctx.AnyEvents && ctx.ExitCode != 0
+            && ctx.Stderr.Contains("requires --verbose", StringComparison.OrdinalIgnoreCase)
+            && !caps.RequiresVerboseForStreamJson)
+        {
+            _logger.LogInformation("Retrying Claude process with --verbose flag");
+            caps.RequiresVerboseForStreamJson = true;
+            caps.SupportsVerbose = true;
+
+            arguments = ClaudeArgumentBuilder.Build(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
+
+            ctx = new StreamingContext();
+            await foreach (var evt in ExecuteClaudeProcessAsync(fileName, arguments, workingDir, message, continueMode, agentKey, cts, envVars, ctx, token))
+            {
+                yield return evt;
+            }
+        }
+
+        // Emit error event for stderr errors
+        if (!string.IsNullOrEmpty(ctx.Stderr) && ctx.ExitCode != 0)
+        {
+            _logger.LogWarning("Claude process exited with code {ExitCode}: {Stderr}", ctx.ExitCode, ctx.Stderr);
+            yield return new StreamEvent
+            {
+                Type = "error",
+                Error = JsonSerializer.SerializeToElement(ctx.Stderr)
+            };
+        }
+        // Crash recovery: non-zero exit with partial events but no stderr
+        else if (ctx.AnyEvents && ctx.ExitCode != 0)
+        {
+            _logger.LogWarning("Claude process terminated unexpectedly with exit code {ExitCode} after emitting events", ctx.ExitCode);
+            yield return new StreamEvent
+            {
+                Type = "error",
+                Error = JsonSerializer.SerializeToElement(
+                    $"Claude process terminated unexpectedly (exit code {ctx.ExitCode}). Response may be incomplete.")
+            };
+        }
+
+        _agents.TryRemove(agentKey, out _);
+    }
+
+    private async IAsyncEnumerable<StreamEvent> ExecuteClaudeProcessAsync(
+        string fileName, string arguments, string workingDir, string message,
+        bool continueMode, string agentKey, CancellationTokenSource cts,
+        Dictionary<string, string>? envVars, StreamingContext ctx,
+        [EnumeratorCancellation] CancellationToken token)
+    {
         _logger.LogDebug("Executing: {FileName} {Arguments}", fileName, arguments);
         var process = StartProcess(fileName, arguments, workingDir, envVars);
-        var agent = new AgentProcess(process, cts);
+        var agent = new AgentProcess(process, cts, _logger);
         _agents[agentKey] = agent;
 
         // In continue mode, close stdin immediately without writing a message
@@ -80,74 +137,22 @@ public class ClaudeService : IClaudeService, IDisposable
         var stderrTask = CollectStderrAsync(process, stderrBuilder, token);
 
         var reader = process.StandardOutput;
-        bool anyEvents = false;
 
         await foreach (var evt in ReadStreamEventsAsync(reader, token))
         {
-            anyEvents = true;
+            ctx.AnyEvents = true;
             yield return evt;
         }
 
         await FinishProcess(process, token);
-        try { await stderrTask; } catch (Exception ex) { _logger.LogDebug(ex, "Stderr collection task ended"); }
+        try { await stderrTask; }
+        catch (OperationCanceledException) { /* expected on cancellation */ }
+        catch (Exception ex) { _logger.LogWarning(ex, "Stderr collection task failed unexpectedly"); }
 
-        var stderr = stderrBuilder.ToString().Trim();
-
-        // Retry with --verbose if process failed before producing events
-        if (!anyEvents && process.ExitCode != 0
-            && stderr.Contains("requires --verbose", StringComparison.OrdinalIgnoreCase)
-            && !caps.RequiresVerboseForStreamJson)
-        {
-            _logger.LogInformation("Retrying Claude process with --verbose flag");
-            caps.RequiresVerboseForStreamJson = true;
-            caps.SupportsVerbose = true;
-            process.Dispose();
-
-            arguments = ClaudeArgumentBuilder.Build(baseArgs, model, permissionMode, caps, conversationId, systemPrompt, effortLevel, continueMode, forkSession, maxTurns, maxBudgetUsd, settings.FallbackModel, settings.McpConfigPath, settings.DebugMode, additionalDirs, allowedTools, disallowedTools);
-            _logger.LogDebug("Executing (retry): {FileName} {Arguments}", fileName, arguments);
-            process = StartProcess(fileName, arguments, workingDir, envVars);
-            agent = new AgentProcess(process, cts);
-            _agents[agentKey] = agent;
-
-            if (!continueMode)
-                await process.StandardInput.WriteAsync(message);
-            process.StandardInput.Close();
-
-            stderrBuilder.Clear();
-            stderrTask = CollectStderrAsync(process, stderrBuilder, token);
-            reader = process.StandardOutput;
-
-            await foreach (var evt in ReadStreamEventsAsync(reader, token))
-            {
-                yield return evt;
-            }
-
-            await FinishProcess(process, token);
-            try { await stderrTask; } catch (Exception ex) { _logger.LogDebug(ex, "Stderr collection task ended (retry)"); }
-            stderr = stderrBuilder.ToString().Trim();
-        }
-
-        var hasStderrError = false;
-        var exitCode = 0;
-        try
-        {
-            exitCode = process.ExitCode;
-            hasStderrError = !string.IsNullOrEmpty(stderr) && exitCode != 0;
-        }
-        catch { /* process disposed during cancellation */ }
-
-        if (hasStderrError)
-        {
-            _logger.LogWarning("Claude process exited with code {ExitCode}: {Stderr}", exitCode, stderr);
-            yield return new StreamEvent
-            {
-                Type = "error",
-                Error = JsonSerializer.SerializeToElement(stderr)
-            };
-        }
+        try { ctx.ExitCode = process.ExitCode; } catch { /* process disposed during cancellation */ }
+        ctx.Stderr = stderrBuilder.ToString().Trim();
 
         try { process.Dispose(); } catch { /* process may already be disposed */ }
-        _agents.TryRemove(agentKey, out _);
     }
 
     private static Process StartProcess(string fileName, string arguments, string workingDir, Dictionary<string, string>? envVars = null)
@@ -180,7 +185,7 @@ public class ClaudeService : IClaudeService, IDisposable
         return process;
     }
 
-    private static Task CollectStderrAsync(Process process, StringBuilder sb, CancellationToken token)
+    private Task CollectStderrAsync(Process process, StringBuilder sb, CancellationToken token)
     {
         return Task.Run(async () =>
         {
@@ -190,7 +195,8 @@ public class ClaudeService : IClaudeService, IDisposable
                 if (!string.IsNullOrWhiteSpace(errLine))
                     sb.Append(errLine);
             }
-            catch (Exception) { /* expected: stream cancelled or disposed during shutdown */ }
+            catch (OperationCanceledException) { /* expected: stream cancelled during shutdown */ }
+            catch (Exception ex) { _logger.LogWarning(ex, "Stderr collection encountered an error"); }
         }, token);
     }
 
@@ -369,15 +375,24 @@ public class ClaudeService : IClaudeService, IDisposable
         _capLock.Dispose();
     }
 
+    private sealed class StreamingContext
+    {
+        public bool AnyEvents;
+        public int ExitCode;
+        public string Stderr = "";
+    }
+
     private sealed class AgentProcess : IDisposable
     {
         private readonly Process _process;
         private readonly CancellationTokenSource _cts;
+        private readonly ILogger _logger;
 
-        public AgentProcess(Process process, CancellationTokenSource cts)
+        public AgentProcess(Process process, CancellationTokenSource cts, ILogger logger)
         {
             _process = process;
             _cts = cts;
+            _logger = logger;
         }
 
         public void Cancel()
@@ -386,7 +401,14 @@ public class ClaudeService : IClaudeService, IDisposable
             try
             {
                 if (_process is { HasExited: false })
-                    try { _process.Kill(entireProcessTree: true); } catch { /* best-effort: process may have already exited */ }
+                {
+                    // Graceful shutdown: wait briefly for process to exit on its own after CTS cancel
+                    if (!_process.WaitForExit(GracefulShutdownTimeout))
+                    {
+                        _logger.LogDebug("Process did not exit gracefully, sending kill signal");
+                        try { _process.Kill(entireProcessTree: true); } catch { /* best-effort: process may have already exited */ }
+                    }
+                }
             }
             catch { /* process already disposed */ }
         }
