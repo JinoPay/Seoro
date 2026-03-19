@@ -3,7 +3,7 @@
 > 이 문서는 Cominomi의 모든 시스템을 해부하여 **현재 동작**, **데이터 흐름**, **의존관계**, **빠진 것/문제점**을 기술합니다.
 > 각 섹션을 가리켜 "이 부분은 이렇게 변경되어야 한다"고 지휘하는 데 사용하세요.
 
-**코드 규모**: ~217개 소스 파일, ~23,799줄 (Cominomi.Shared에 집중, tests/Cominomi.Shared.Tests 포함)
+**코드 규모**: ~235개 소스 파일, ~24,057줄 (Cominomi.Shared에 집중, tests/Cominomi.Shared.Tests 포함)
 **프레임워크**: .NET 10.0, MAUI + Blazor, MudBlazor UI
 **외부 도구**: Claude CLI (subprocess), Git CLI, GitHub CLI (gh)
 
@@ -301,22 +301,25 @@
 ### 관련 파일
 | 파일 | 줄수 | 역할 |
 |------|------|------|
-| `src/Cominomi/MauiProgram.cs` | 142 | DI 컨테이너 전체 설정 + Spotlight 복구 + 옵션 패턴 |
-| `src/Cominomi/App.xaml.cs` | 22 | MAUI App 수명주기 |
-| `src/Cominomi/MainPage.xaml` | 9 | BlazorWebView 호스트 |
-| `src/Cominomi/Components/Routes.razor` | - | Blazor 라우팅 |
+| `src/Cominomi/MauiProgram.cs` | 156 | DI 컨테이너 전체 설정 + Spotlight 복구 + 플러그인 엔진 초기화 + 옵션 패턴 |
+| `src/Cominomi/App.xaml.cs` | 41 | MAUI App 수명주기 + Graceful shutdown (서비스 Dispose) |
+| `src/Cominomi/MainPage.xaml` | 14 | BlazorWebView 호스트 |
+| `src/Cominomi/Components/Routes.razor` | 8 | Blazor 라우팅 |
 
 ### 현재 동작
-`MauiProgram.cs:14-118`에서 앱이 부트스트랩됨:
+`MauiProgram.cs:17-154`에서 앱이 부트스트랩됨:
 
-1. **Serilog 초기화** (`:16-33`): 콘솔 + 롤링 파일 로그 (14일 보관)
-2. **MAUI 설정** (`:35-41`): BlazorWebView + OpenSans 폰트
-3. **MudBlazor** (`:50-59`): Snackbar 설정 (하단 우측, 3초, 최대 3개)
-4. **서비스 등록** (`:63-92`): **36개 전부 Singleton** (옵션 패턴 헬퍼 포함)
-5. **Spotlight 크래시 복구** (`:104-113`): 앱 시작 시 `ISpotlightService.RecoverAsync()` 호출 — 이전 실행에서 비정상 종료된 Spotlight 상태 자동 복원
+1. **Serilog 초기화** (`:19-36`): 콘솔 + 롤링 파일 로그 (14일 보관). Debug 빌드 시 Debug 레벨 + Debug 출력 추가
+2. **MAUI 설정** (`:38-44`): BlazorWebView + OpenSans 폰트
+3. **MudBlazor** (`:52-62`): Snackbar 설정 (하단 우측, 3초, 최대 3개, 중복 방지)
+4. **옵션 패턴 설정** (`:64-69`): `AppSettingsChangeNotifier` + `IOptionsFactory<AppSettings>` 등록
+5. **서비스 등록** (`:72-116`): **45개 전부 Singleton** (옵션 패턴 헬퍼 + 핸들러 레지스트리 포함)
+6. **모델 정의 로딩** (`:118-120`): `models.json` 외부 파일에서 가격/모델 정보 로드
+7. **Spotlight 크래시 복구** (`:129-138`): 앱 시작 시 `ISpotlightService.RecoverAsync()` 호출 — 이전 실행에서 비정상 종료된 Spotlight 상태 자동 복원
+8. **플러그인 엔진 초기화** (`:140-152`): `IPluginService` ↔ `IPluginExecutionEngine` 연결 + 활성 플러그인 로드
 
 ```
-등록 순서 (MauiProgram.cs:63-91):
+등록 순서 (MauiProgram.cs:72-116):
   IShellService         → ShellService
   IChatState            → ChatState
   IGitService           → GitService
@@ -337,23 +340,40 @@
   IFilePickerService    → FilePickerService (플랫폼별)
   IAttachmentService    → AttachmentService
   IPluginService        → PluginService
+  IPluginExecutionEngine → PluginExecutionEngine        ← Phase 6+ 추가
   IUsageService         → UsageService
   IMcpService           → McpService
   INotificationService  → NotificationService (플랫폼별)
+  INotificationHistoryService → NotificationHistoryService ← 추가
   IActivityService      → ActivityService
+  IStreamEventHandler   → 10개 핸들러 (핸들러 레지스트리 패턴) ← Phase 16 변경
   IStreamEventProcessor → StreamEventProcessor
   IProcessRunner        → ProcessRunner
   ISystemPromptBuilder  → SystemPromptBuilder          ← Phase 3 추가
   ISessionInitializer   → SessionInitializer           ← Phase 3 추가
   IChatPrWorkflowService → ChatPrWorkflowService       ← Phase 3 추가
+  IChatMessageOrchestrator → ChatMessageOrchestrator   ← Phase 16 추가
   SessionListDataService → SessionListDataService      ← Phase 4 추가
+  ISessionListFacade    → SessionListFacade            ← 추가
+  IThemeService         → ThemeService                 ← 추가
 ```
+
+**스트림 이벤트 핸들러 레지스트리** (`:98-107`): `IStreamEventHandler` 10개를 DI 다중 등록하여 `StreamEventProcessor`가 이벤트 타입별로 디스패치:
+`SystemInitHandler`, `ContentBlockStartHandler`, `ContentBlockDeltaHandler`, `ContentBlockStopHandler`, `AssistantMessageHandler`, `UserMessageHandler`, `MessageStartHandler`, `MessageDeltaHandler`, `ResultHandler`, `ErrorHandler`
+
+**Graceful Shutdown** (`App.xaml.cs:21-40`): `CleanUp()` 오버라이드로 서비스 정리:
+- `IClaudeService` Dispose — 활성 CLI 프로세스 종료
+- `ISpotlightService` Dispose — Spotlight 상태 정리
+- `ChatState` Dispose — 리소스 해제
+- `SessionListDataService` Dispose — 캐시 정리
+- `Log.CloseAndFlush()` — Serilog 버퍼 플러시
 
 `MainPage.xaml`은 `<BlazorWebView>`를 호스트하며, `Routes.razor`가 `MainLayout`으로 라우팅.
 
 ### 빠진 것 / 문제점
-- **모든 서비스가 Singleton**: `ChatState`는 가변 `ConcurrentDictionary`를 가지고, `SkillRegistry`는 가변 `List`를 가짐. 스레드 안전성이 관례에만 의존
-- **서비스 건강 체크 없음**: Git/gh/Claude CLI가 없어도 앱이 시작됨 (런타임에만 실패). 다만 Spotlight 복구는 실패 시 로그 경고 후 계속 진행
+- ~~**SkillRegistry 스레드 안전성**: 가변 `List`를 동기화 없이 읽기/쓰기~~ → ✅ **해결**: `lock` 패턴 적용. `GetAll()` 스냅샷 반환, `LoadCustomCommandsAsync()` 원자적 교체
+- ~~**ChatState 디바운스 타이머 레이스**: `_debounceTimer ??=` 패턴이 동시 호출 시 이중 생성~~ → ✅ **해결**: `_timerLock` 보호 추가
+- ~~**서비스 건강 체크 없음**~~ → ✅ **해결**: `DependencyCheckService` + `SetupDialog`가 앱 시작 시 Git/gh/Claude CLI 존재 검사
 
 ---
 
@@ -362,18 +382,20 @@
 ### 관련 파일
 | 파일 | 줄수 | 역할 |
 |------|------|------|
-| `Shared/Services/AppPaths.cs` | 23 | 디렉토리 경로 정의 |
+| `Shared/Services/AppPaths.cs` | 24 | 디렉토리 경로 정의 (EnsureDir 자동 생성) |
 | `Shared/Services/JsonDefaults.cs` | 12 | 공유 직렬화 옵션 |
-| `Shared/Services/SettingsService.cs` | 38 | settings.json 캐시 |
-| `Shared/Services/UsageService.cs` | 196 | usage.jsonl (`AppPaths.Usage` 통합) |
+| `Shared/Services/AtomicFileWriter.cs` | - | 임시파일→원자적 이동 패턴 (Write + Append) |
+| `Shared/Services/SettingsService.cs` | 48 | settings.json 캐시 + MigratingJsonReader/Writer + AtomicFileWriter |
+| `Shared/Services/UsageService.cs` | 370 | usage.jsonl — 중복 제거 + 자동 로테이션 + CSV 내보내기 + 비용 계산 |
+| `Shared/Services/Migration/` | - | 스키마 마이그레이션 인프라 (`MigratingJsonReader`, `MigratingJsonWriter`, `SchemaMigrator` 등) |
 
 ### 현재 동작
 
-**디렉토리 구조** (`AppPaths.cs:5-16`):
+**디렉토리 구조** (`AppPaths.cs:5-17`):
 ```
 %APPDATA%/Cominomi/
 ├── settings.json          ← SettingsService (인메모리 캐시)
-├── hooks.json             ← HooksEngine
+├── hooks.json             ← HooksEngine (엔벨로프 형식: {$schemaVersion, hooks})
 ├── sessions/              ← SessionService
 │   ├── {uuid}.json        ← 세션 메타데이터만 (Phase 4에서 분리)
 │   └── {uuid}.messages.json ← 메시지 별도 저장 (Phase 4 추가)
@@ -390,11 +412,22 @@
     └── {workspaceName}/{sessionName}/.context/
 ```
 
-~~**별도 위치**: `UsageService`는 `Environment.SpecialFolder.LocalApplicationData`에 `usage.jsonl`을 저장 (다른 데이터와 불일치).~~ → ✅ **해결**: `AppPaths.Usage`로 통합, 모든 데이터가 `ApplicationData/Cominomi/` 하위에 저장.
+**쓰기 패턴**: `AtomicFileWriter`를 사용한 원자적 쓰기 — 임시 파일에 쓴 후 `File.Move()`로 교체. `AppendAsync()`도 지원하여 JSONL 추가 쓰기에도 적용.
 
-**읽기 패턴**: 모든 서비스가 `Directory.GetFiles(dir, "*.json")` → 파일마다 `File.ReadAllTextAsync` → `JsonSerializer.Deserialize` → 실패 시 로그 경고 후 건너뜀.
+**읽기 패턴**: `MigratingJsonReader.Read<T>(json, options)` — 역직렬화 시 `$schemaVersion` 검사 → 필요 시 자동 마이그레이션 → write-back용 JSON 반환. 레거시 서비스는 직접 `JsonSerializer.Deserialize` 사용.
 
-**쓰기 패턴**: `JsonSerializer.Serialize` → `File.WriteAllTextAsync`로 전체 파일 덮어쓰기. 원자적 쓰기가 아님.
+**SettingsService** (`SettingsService.cs`):
+- `LoadAsync()`: `MigratingJsonReader` 사용, `ModelDefinitions.NormalizeModelId()` 정규화, 마이그레이션 발생 시 즉시 AtomicFileWriter로 write-back
+- `SaveAsync()`: `MigratingJsonWriter.Write()` → `AtomicFileWriter.WriteAsync()` → `AppSettingsChangeNotifier.NotifyChanged()` 발행 (IOptionsMonitor 갱신 트리거)
+
+**UsageService** (`UsageService.cs:370줄`):
+- **SHA256 기반 중복 제거**: `DedupHash` 필드로 엔트리별 해시 영속화. 앱 재시작 시 기존 해시 로드하여 중복 방지
+- **SemaphoreSlim 쓰기 잠금**: 동시 쓰기 보호
+- **자동 로테이션**: 10MB 초과 시 90일 이전 엔트리 자동 제거 + `AtomicFileWriter`로 재작성
+- **비용 계산**: `ModelDefinitions.GetPricing()` 위임 — 입력/출력/캐시 생성/캐시 읽기 토큰별 단가 적용
+- **통계 집계**: 모델별/날짜별/프로젝트별 `UsageStats` 생성
+- **CSV 내보내기**: `ExportCsvAsync()` — 지정 기간의 엔트리를 CSV 형식으로 반환
+- **수동 퍼지**: `PurgeOldEntriesAsync()` — 보존 기간 지정 가능 (기본 90일)
 
 **세션 파일 구조** (Phase 4에서 분리):
 - `SaveSessionAsync()`: 메타데이터(`{uuid}.json`)와 메시지(`{uuid}.messages.json`)를 별도 파일로 저장. `ToolCall.Output`이 2,000자 초과 시 `[truncated, N chars]`로 절단
@@ -403,6 +436,7 @@
 
 ### 빠진 것 / 문제점
 - ~~**Usage 위치 불일치**: `AppData/Roaming`과 `AppData/Local`에 분산 저장~~ → ✅ **해결**
+- ~~**비원자적 쓰기**: `File.WriteAllTextAsync`로 전체 덮어쓰기~~ → ✅ **해결** (`AtomicFileWriter` 도입)
 
 ---
 
@@ -411,27 +445,31 @@
 ### 관련 파일
 | 파일 | 줄수 | 역할 |
 |------|------|------|
-| `Shared/Models/Session.cs` | 78 | 핵심 엔티티 + 상태 전이 검증, `Git`/`Pr` 서브 객체로 관심사 분리 |
-| `Shared/Models/GitContext.cs` | 15 | Git worktree/branch 관련 속성 그룹 |
-| `Shared/Models/PrContext.cs` | 15 | PR/이슈 관련 속성 그룹 |
-| `Shared/Models/SessionJsonConverter.cs` | 205 | 기존 플랫 JSON ↔ 신규 중첩 JSON 하위호환 컨버터 |
-| `Shared/Models/Workspace.cs` | 42 | 리포 설정 |
-| `Shared/Models/ChatMessage.cs` | 53 | 메시지 + Parts |
+| `Shared/Models/Session.cs` | 89 | 핵심 엔티티 + 상태 전이 검증 + `init` 불변성, `Git`/`Pr` 서브 객체로 관심사 분리 |
+| `Shared/Models/SessionStatusMachine.cs` | 27 | 상태 전이 규칙 정의 + 유효성 검증 |
+| `Shared/Models/GitContext.cs` | 14 | Git worktree/branch 관련 속성 그룹 |
+| `Shared/Models/PrContext.cs` | 14 | PR/이슈 관련 속성 그룹 |
+| `Shared/Models/SessionJsonConverter.cs` | 240 | 기존 플랫 JSON ↔ 신규 중첩 JSON 하위호환 컨버터 + `$schemaVersion` 스탬핑 |
+| `Shared/Models/Workspace.cs` | 46 | 리포 설정 + 스크립트 + 선호도 |
+| `Shared/Models/ChatMessage.cs` | 53 | 메시지 + Parts + 첨부파일 + 스트리밍 시간 |
 | `Shared/Models/StreamEvent.cs` | 165 | Claude CLI 스트림 프로토콜 |
 | `Shared/Models/ToolCall.cs` | 11 | 도구 호출 기록 |
-| `Shared/Models/AppSettings.cs` | 35 | 앱 설정 + 요약 모델/프롬프트 + 타임아웃 설정 |
-| `Shared/CominomiConstants.cs` | 45 | 공유 상수 (기본값, 환경변수, 브랜치 접두사) |
+| `Shared/Models/AppSettings.cs` | 39 | 앱 설정 + 요약 모델/프롬프트 + 타임아웃 + 플러그인 설정 |
+| `Shared/CominomiConstants.cs` | 53 | 공유 상수 (기본값, 토큰 한도, 환경변수 블록) |
+| `Shared/Models/AppError.cs` | - | 에러 레코드 + `ErrorCode` enum + 에러 분류 |
+| `Shared/Models/ViewModels/` | - | UI 전용 모델 (`ContentGroup`, `ActivitySummaryInfo`, `MainTab`, `PlanReviewAction`) |
 
 ### Session (핵심 엔티티)
 
-`Session.cs` — 3가지 관심사를 `GitContext`/`PrContext` 서브 객체로 분리:
+`Session.cs` — 3가지 관심사를 `GitContext`/`PrContext` 서브 객체로 분리. `init` 프로퍼티로 생성 후 불변 보장:
 
 ```
 [대화 관심사 — Session 루트]
-  Id, Title, Messages, Model, PermissionMode, EffortLevel, AgentType
-  ConversationId, MaxTurns, MaxBudgetUsd
-  TotalInputTokens, TotalOutputTokens, WorkspaceId
-  Status, ErrorMessage, PlanCompleted, PlanFilePath
+  Id(init), Title, Messages, Model, PermissionMode, EffortLevel, AgentType(init)
+  CityName(init), ConversationId, MaxTurns(init), MaxBudgetUsd(init)
+  TotalInputTokens(Guard), TotalOutputTokens(Guard), WorkspaceId(init)
+  Status(private set), Error(AppError?), PlanCompleted, PlanFilePath
+  CreatedAt(init), UpdatedAt, ResolvedModel([JsonIgnore])
 
 [Git 관심사 — session.Git (GitContext)]
   WorktreePath, BranchName, BaseBranch, IsLocalDir, AdditionalDirs
@@ -440,11 +478,14 @@
   PrUrl, PrNumber, IssueNumber, IssueUrl, ConflictFiles
 ```
 
-`SessionJsonConverter`가 기존 플랫 포맷(v1)과 중첩 포맷(v2) 모두 역직렬화 지원.
+**SessionJsonConverter** (240줄):
+- **읽기**: 기존 플랫 포맷(v1)과 중첩 포맷(v2) 모두 역직렬화 지원. `init` 프로퍼티는 객체 이니셜라이저로, 가변 프로퍼티는 생성 후 할당
+- **쓰기**: 항상 중첩 포맷 + `$schemaVersion` 자동 스탬핑 (`SchemaMigratorRegistry`에서 현재 버전 조회)
+- **Error 하위호환**: 구조화 `AppError` 객체 우선, 레거시 `errorMessage` 문자열 폴백
 
-### 상태 머신 (SessionStatus) — Phase 4에서 검증 추가
+### 상태 머신 (SessionStatus)
 
-`Session.cs:7-17` — 9가지 상태. Phase 4에서 `SessionStatusMachine`(27줄)으로 전이 규칙 명시 + `Session.Status`를 `private set`으로 보호:
+`Session.cs:8-19` — 9가지 상태. `SessionStatusMachine`(27줄)으로 전이 규칙 명시 + `Session.Status`를 `private set`으로 보호:
 
 ```
 Pending → Initializing, Ready, Error
@@ -466,17 +507,55 @@ Error → Ready, Initializing, Archived
 `ChatMessage.cs:17-46`:
 ```csharp
 public string Text { get; set; }           // 레거시: 전체 텍스트
-public List<ToolCall> ToolCalls { get; set; } // 레거시: 도구 호출 목록
-public List<ContentPart> Parts { get; set; }  // 신규: 인터리브 렌더링
+public List<ToolCall> ToolCalls { get; init; } = [];  // 레거시: 도구 호출 목록 (init)
+public List<ContentPart> Parts { get; init; } = [];   // 신규: 인터리브 렌더링 (init)
+public List<FileAttachment> Attachments { get; init; } = [];  // 첨부파일
 ```
 
 `MigrateToParts()` (`:36-45`): 매 로드마다 호출. Parts가 비어있으면 ToolCalls→Parts, Text→Parts로 변환.
+스트리밍 시간 추적: `StreamingStartedAt`, `StreamingFinishedAt` → `Duration` 계산 프로퍼티.
+
+### AppSettings (39줄)
+
+```
+[기본값] DefaultModel, Theme, ClaudePath, DefaultCloneDirectory, DefaultEffortLevel, DefaultPermissionMode
+[세션 한도] DefaultMaxTurns, DefaultMaxBudgetUsd, FallbackModel
+[요약] SummarizationModel("haiku"), SummarizationPrompt
+[타임아웃] DefaultProcessTimeoutSeconds(30), HookTimeoutSeconds(5),
+          SummarizationTimeoutSeconds(15), VersionCheckTimeoutSeconds(5)
+[알림] NotificationsEnabled, NotificationSound
+[플러그인] DisabledPlugins
+[기타] McpConfigPath, DebugMode, EnvironmentVariables, DefaultMergeStrategy,
+       DefaultPrBodyTemplate, LastWorkspaceId, LastSessionId
+```
+
+### CominomiConstants (53줄)
+
+```
+[앱] AppName, BranchPrefix("cominomi/")
+[기본값] DefaultPermissionMode("bypassAll"), DefaultEffortLevel("auto"), DefaultMergeStrategy("squash")
+[토큰 한도] MaxContextPromptTokens(5,000), MaxContextItemTokens(2,000),
+            MaxMemoryPromptTokens(2,500), MaxMemoryEntryTokens(1,000),
+            MaxSystemPromptTokens(10,000), TruncationMarker
+[환경변수 — Env 내부 클래스]
+  NoColorEnv: { NO_COLOR=1 }
+  GitEnv: { GIT_TERMINAL_PROMPT=0, NO_COLOR=1 }
+  GhEnv: { GH_NO_UPDATE_NOTIFIER=1, NO_COLOR=1 }
+  HookEvent: COMINOMI_HOOK_EVENT
+```
+
+### Workspace (46줄)
+
+기존 리포 설정에 스크립트/선호도 확장:
+- `SetupScript`, `RunScript`, `ArchiveScript` — 워크스페이스별 자동화 스크립트
+- `CodeReviewPreferences`, `CreatePrPreferences`, `BranchRenamePreferences`, `GeneralPreferences` — 워크스페이스별 AI 지침
+- `Error` → `AppError?` 구조화 에러 (레거시 `ErrorMessage`는 `[JsonIgnore]` 계산 프로퍼티)
 
 ### 빠진 것 / 문제점
-- **기타 검증 없음**: 빈 `WorkspaceId`로 Session 생성 가능. 음수 토큰 카운트 가능
-- **Session이 너무 큼**: 대화 + Git + PR을 하나에 담아서, 하나를 변경하면 전체를 다시 직렬화
-- **Parts 이중 저장**: `Text`와 `Parts[].Text`가 동시에 존재. `AppendText()`가 양쪽 다 업데이트 (`ChatState.cs:184-202`)
-- **UI 전용 모델이 도메인과 혼재**: `ContentGroup`, `ActivitySummaryInfo` 등이 `Models/` 네임스페이스에 있음
+- ~~**음수 토큰 카운트 가능**~~ → ✅ **해결**: `Guard.NonNegative()` 검증 추가
+- ~~**Session이 너무 큼**~~ → ✅ **해결**: 메타데이터/메시지 별도 파일 + `GitContext`/`PrContext` 서브 객체로 관심사 분리
+- ~~**Parts 이중 저장 발산 위험**~~ → ✅ **해결**: `FinishMessage()`에서 `Text`를 `Parts`로부터 재구성하여 일관성 보장. `Parts`가 정식 소스, `Text`는 스트리밍 중 성능 최적화 + 호환용 캐시
+- ~~**UI 전용 모델이 도메인과 혼재**~~ → ✅ **해결**: `ContentGroup`, `ActivitySummaryInfo`, `MainTab`, `PlanReviewAction`을 `Models/ViewModels/` 네임스페이스로 분리
 
 ---
 

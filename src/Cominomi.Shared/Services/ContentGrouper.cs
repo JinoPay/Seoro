@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Cominomi.Shared.Models;
+using Cominomi.Shared.Models.ViewModels;
 
 namespace Cominomi.Shared.Services;
 

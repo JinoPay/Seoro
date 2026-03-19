@@ -27,6 +27,7 @@ public class ChatState : IChatState
     // Debounce
     private Timer? _debounceTimer;
     private volatile bool _pendingNotification;
+    private readonly object _timerLock = new();
     private const int DebounceMs = 50;
 
     public event Action? OnChange;
@@ -190,21 +191,27 @@ public class ChatState : IChatState
         if (Streaming.HasAnyStreaming())
         {
             _pendingNotification = true;
-            _debounceTimer ??= new Timer(_ =>
+            lock (_timerLock)
             {
-                if (_pendingNotification)
+                _debounceTimer ??= new Timer(_ =>
                 {
-                    _pendingNotification = false;
-                    OnChange?.Invoke();
-                }
-            }, null, DebounceMs, DebounceMs);
+                    if (_pendingNotification)
+                    {
+                        _pendingNotification = false;
+                        OnChange?.Invoke();
+                    }
+                }, null, DebounceMs, DebounceMs);
+            }
         }
         else
         {
-            if (_debounceTimer != null)
+            lock (_timerLock)
             {
-                _debounceTimer.Dispose();
-                _debounceTimer = null;
+                if (_debounceTimer != null)
+                {
+                    _debounceTimer.Dispose();
+                    _debounceTimer = null;
+                }
             }
             _pendingNotification = false;
             OnChange?.Invoke();
@@ -213,7 +220,10 @@ public class ChatState : IChatState
 
     public void Dispose()
     {
-        _debounceTimer?.Dispose();
-        _debounceTimer = null;
+        lock (_timerLock)
+        {
+            _debounceTimer?.Dispose();
+            _debounceTimer = null;
+        }
     }
 }
