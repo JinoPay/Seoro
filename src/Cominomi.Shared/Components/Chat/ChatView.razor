@@ -93,8 +93,7 @@
     private bool _shouldAutoScroll;
     private bool _isLoadingBranches;
     private LandingPage? _landingPage;
-    private CancellationTokenSource? _messageCts;
-    private Task? _messageTask;
+    private readonly Dictionary<string, (CancellationTokenSource Cts, Task Task)> _sessionTasks = new();
     private List<SkillChainStep>? _pendingChain;
 
     protected override void OnInitialized()
@@ -305,15 +304,23 @@
             input.PendingChain = null;
         }
 
-        _messageCts?.Cancel();
-        _messageCts?.Dispose();
-        _messageCts = new CancellationTokenSource();
-        var ct = _messageCts.Token;
         var session = ChatState.CurrentSession;
         var workspace = ChatState.CurrentWorkspace;
         var branch = _selectedBranch;
+        var sessionId = session.Id;
 
-        _messageTask = Task.Run(async () =>
+        // Cancel previous task only for the SAME session
+        if (_sessionTasks.TryGetValue(sessionId, out var prev))
+        {
+            prev.Cts.Cancel();
+            prev.Cts.Dispose();
+            _sessionTasks.Remove(sessionId);
+        }
+
+        var cts = new CancellationTokenSource();
+        var ct = cts.Token;
+
+        var task = Task.Run(async () =>
         {
             try
             {
@@ -323,9 +330,15 @@
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Unhandled exception in SendAsync for session {SessionId}", session.Id);
+                Logger.LogError(ex, "Unhandled exception in SendAsync for session {SessionId}", sessionId);
+            }
+            finally
+            {
+                _sessionTasks.Remove(sessionId);
             }
         });
+
+        _sessionTasks[sessionId] = (cts, task);
         return Task.CompletedTask;
     }
 
@@ -412,7 +425,12 @@
     private void HandleCancel()
     {
         _pendingChain = null;
-        ClaudeService.Cancel(ChatState.CurrentSession?.Id);
+        var sessionId = ChatState.CurrentSession?.Id;
+        ClaudeService.Cancel(sessionId);
+        if (sessionId != null && _sessionTasks.TryGetValue(sessionId, out var entry))
+        {
+            entry.Cts.Cancel();
+        }
     }
 
     private async Task HandleIssueLinked(IssueInfo issue)
@@ -427,12 +445,15 @@
     public void Dispose()
     {
         ChatState.OnChange -= HandleStateChanged;
-        _messageCts?.Cancel();
 
-        // Observe the task to prevent UnobservedTaskException
-        if (_messageTask is { IsCompleted: false })
-            _messageTask.ContinueWith(static t => { _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
-
-        _messageCts?.Dispose();
+        foreach (var (_, (cts, task)) in _sessionTasks)
+        {
+            cts.Cancel();
+            // Observe the task to prevent UnobservedTaskException
+            if (task is { IsCompleted: false })
+                task.ContinueWith(static t => { _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
+            cts.Dispose();
+        }
+        _sessionTasks.Clear();
     }
 }

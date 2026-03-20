@@ -15,6 +15,7 @@ public class SessionListFacade : ISessionListFacade
     private readonly IDialogService _dialogService;
     private readonly ISnackbar _snackbar;
     private readonly ISkillRegistry _skillRegistry;
+    private readonly IClaudeService _claudeService;
 
     public SessionListFacade(
         IChatState chatState,
@@ -25,7 +26,8 @@ public class SessionListFacade : ISessionListFacade
         SessionListDataService dataService,
         IDialogService dialogService,
         ISnackbar snackbar,
-        ISkillRegistry skillRegistry)
+        ISkillRegistry skillRegistry,
+        IClaudeService claudeService)
     {
         _chatState = chatState;
         _sessionService = sessionService;
@@ -36,6 +38,7 @@ public class SessionListFacade : ISessionListFacade
         _dialogService = dialogService;
         _snackbar = snackbar;
         _skillRegistry = skillRegistry;
+        _claudeService = claudeService;
     }
 
     public Task<(Workspace? Workspace, Session? Session, string? ProjectName)> RestoreLastSelectionAsync(
@@ -105,12 +108,19 @@ public class SessionListFacade : ISessionListFacade
 
     public async Task<bool> DeleteSessionAsync(Session session)
     {
+        var isStreaming = _chatState.IsSessionStreaming(session.Id);
+        var confirmMessage = isStreaming
+            ? $"'{session.Title}' 세션이 현재 진행 중입니다. Claude 프로세스를 종료하고 삭제하시겠습니까?"
+            : $"'{session.Title}' 세션을 삭제하시겠습니까?";
+
         var result = await _dialogService.ShowMessageBoxAsync(
-            "세션 삭제",
-            $"'{session.Title}' 세션을 삭제하시겠습니까?",
+            "세션 삭제", confirmMessage,
             yesText: "삭제", cancelText: "취소");
 
         if (result != true) return false;
+
+        // Stop Claude process before deletion
+        _claudeService.Cancel(session.Id);
 
         await _sessionService.DeleteSessionAsync(session.Id);
 

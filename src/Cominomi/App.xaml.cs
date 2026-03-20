@@ -6,6 +6,7 @@ namespace Cominomi;
 public partial class App : Application
 {
 	private readonly IServiceProvider _services;
+	private bool _closeConfirmed;
 
 	public App(IServiceProvider services)
 	{
@@ -29,8 +30,60 @@ public partial class App : Application
 
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		return new Window(new MainPage()) { Title = "Cominomi" };
+		var window = new Window(new MainPage()) { Title = "Cominomi" };
+
+#if WINDOWS
+		window.HandlerChanged += (s, e) =>
+		{
+			if (window.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
+			{
+				nativeWindow.AppWindow.Closing += (sender, args) =>
+				{
+					if (_closeConfirmed) return;
+
+					var chatState = _services.GetService<IChatState>();
+					if (chatState?.HasAnyStreaming() != true) return;
+
+					args.Cancel = true;
+					_ = ShowCloseConfirmationAsync(nativeWindow, chatState);
+				};
+			}
+		};
+#endif
+
+		return window;
 	}
+
+#if WINDOWS
+	private async Task ShowCloseConfirmationAsync(
+		Microsoft.UI.Xaml.Window nativeWindow, IChatState chatState)
+	{
+		var streamingIds = chatState.GetStreamingSessionIds();
+		var registry = _services.GetService<IActiveSessionRegistry>();
+		var names = streamingIds
+			.Select(id => registry?.Get(id)?.CityName ?? id)
+			.ToList();
+
+		var content = names.Count > 0
+			? $"진행 중인 세션이 있습니다:\n{string.Join("\n", names.Select(n => $"• {n}"))}\n\n종료하시겠습니까?"
+			: "진행 중인 세션이 있습니다. 종료하시겠습니까?";
+
+		var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+		{
+			Title = "프로그램 종료",
+			Content = content,
+			PrimaryButtonText = "종료",
+			CloseButtonText = "취소",
+			XamlRoot = nativeWindow.Content.XamlRoot
+		};
+
+		if (await dialog.ShowAsync() == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+		{
+			_closeConfirmed = true;
+			Current?.Quit();
+		}
+	}
+#endif
 
 	protected override void CleanUp()
 	{
