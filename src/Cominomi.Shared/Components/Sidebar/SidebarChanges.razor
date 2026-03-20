@@ -58,11 +58,13 @@
 @code {
     [Parameter] public EventCallback<FileDiff> OnFileSelected { get; set; }
     [Parameter] public string? SelectedFilePath { get; set; }
+    [Parameter] public EventCallback OnChangesDetected { get; set; }
 
     private DiffSummary? _diff;
     private bool _loading;
     private string? _error;
     private string? _lastSessionId;
+    private int _previousFileCount;
     private FileSystemWatcher? _watcher;
     private System.Timers.Timer? _debounceTimer;
 
@@ -79,6 +81,7 @@
         if (sessionId != _lastSessionId)
         {
             _lastSessionId = sessionId;
+            _previousFileCount = 0;
             await LoadDiffAsync();
             StartWatching();
         }
@@ -160,6 +163,13 @@
         {
             var diffBase = !string.IsNullOrEmpty(session.Git.BaseBranch) ? session.Git.BaseBranch : "HEAD";
             _diff = await GitService.GetDiffSummaryAsync(session.Git.WorktreePath, diffBase);
+
+            var newCount = _diff?.Files.Count ?? 0;
+            if (_previousFileCount == 0 && newCount > 0)
+            {
+                _ = OnChangesDetected.InvokeAsync();
+            }
+            _previousFileCount = newCount;
         }
         catch (Exception ex)
         {
@@ -220,6 +230,7 @@
                 {
                     _diff = null;
                     _error = null;
+                    _previousFileCount = 0;
                     StopWatching();
                     StateHasChanged();
                 }

@@ -9,23 +9,31 @@
 
     <div class="embedded-diff-toolbar">
         <div class="embedded-diff-tabs">
-            <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Changes ? "active" : "")"
-                  @onclick="@(() => _activeTab = DiffPanelTab.Changes)">
-                Changes
-            </span>
             <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Explorer ? "active" : "")"
                   @onclick="@(() => _activeTab = DiffPanelTab.Explorer)">
                 Explorer
+            </span>
+            <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Changes ? "active" : "")"
+                  @onclick="@(() => _activeTab = DiffPanelTab.Changes)">
+                Changes
             </span>
         </div>
     </div>
 
     <div class="embedded-diff-content">
-        @if (_activeTab == DiffPanelTab.Changes)
-        {
+        <div style="@(_activeTab == DiffPanelTab.Explorer
+            ? "flex:1;min-height:0;display:flex;flex-direction:column"
+            : "display:none;height:0;overflow:hidden")">
+            <SidebarExplorer />
+        </div>
+
+        <div style="@(_activeTab == DiffPanelTab.Changes
+            ? "flex:1;min-height:0;display:flex;flex-direction:column"
+            : "display:none;height:0;overflow:hidden")">
             <div class="embedded-diff-file-list">
                 <SidebarChanges OnFileSelected="HandleFileSelected"
-                                SelectedFilePath="@_selectedFile?.FilePath" />
+                                SelectedFilePath="@_selectedFile?.FilePath"
+                                OnChangesDetected="HandleChangesDetected" />
             </div>
 
             @if (_selectedFile != null)
@@ -34,11 +42,7 @@
                     <FileDiffView Diff="_selectedFile" />
                 </div>
             }
-        }
-        else
-        {
-            <SidebarExplorer />
-        }
+        </div>
     </div>
 </div>
 
@@ -46,9 +50,10 @@
     [Parameter] public EventCallback OnLinkIssueRequested { get; set; }
     [Parameter] public EventCallback<ChatInputMessage> OnSendMessage { get; set; }
 
-    private DiffPanelTab _activeTab = DiffPanelTab.Changes;
+    private DiffPanelTab _activeTab = DiffPanelTab.Explorer;
     private FileDiff? _selectedFile;
     private string? _lastSessionId;
+    private bool _hasAutoSwitched;
 
     protected override void OnInitialized()
     {
@@ -71,6 +76,8 @@
             {
                 _lastSessionId = sessionId;
                 _selectedFile = null;
+                _hasAutoSwitched = false;
+                _activeTab = DiffPanelTab.Explorer;
             }
             StateHasChanged();
         });
@@ -79,6 +86,16 @@
     public void Dispose()
     {
         ChatState.OnChange -= HandleStateChanged;
+    }
+
+    private void HandleChangesDetected()
+    {
+        if (_activeTab != DiffPanelTab.Changes && !_hasAutoSwitched)
+        {
+            _hasAutoSwitched = true;
+            _activeTab = DiffPanelTab.Changes;
+            StateHasChanged();
+        }
     }
 
     private enum DiffPanelTab { Changes, Explorer }
