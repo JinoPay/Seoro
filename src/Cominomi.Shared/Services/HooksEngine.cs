@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Services;
 
@@ -15,18 +16,25 @@ public class HooksEngine : IHooksEngine
 
     private const int MinTimeoutSeconds = 1;
     private const int MaxTimeoutSeconds = 300;
+    private const int MaxConcurrency = 8;
 
     private readonly ILogger<HooksEngine> _logger;
     private readonly IShellService _shellService;
     private readonly IProcessRunner _processRunner;
+    private readonly IOptionsMonitor<AppSettings> _appSettings;
     private readonly string _hooksFile;
     private List<HookDefinition> _hooks = [];
 
-    public HooksEngine(ILogger<HooksEngine> logger, IShellService shellService, IProcessRunner processRunner)
+    public HooksEngine(
+        ILogger<HooksEngine> logger,
+        IShellService shellService,
+        IProcessRunner processRunner,
+        IOptionsMonitor<AppSettings> appSettings)
     {
         _logger = logger;
         _shellService = shellService;
         _processRunner = processRunner;
+        _appSettings = appSettings;
         _hooksFile = Path.Combine(AppPaths.Settings, "hooks.json");
     }
 
@@ -82,7 +90,21 @@ public class HooksEngine : IHooksEngine
         _logger.LogInformation("Firing hook event {Event} ({Count} hooks)", hookEvent, hooks.Count);
 
         var shell = await _shellService.GetShellAsync();
-        var tasks = hooks.Select(hook => ExecuteHookAsync(hook, hookEvent, shell, env));
+
+        // Concurrent execution with bounded parallelism to prevent resource exhaustion
+        using var semaphore = new SemaphoreSlim(MaxConcurrency);
+        var tasks = hooks.Select(async hook =>
+        {
+            await semaphore.WaitAsync();
+            try
+            {
+                return await ExecuteHookAsync(hook, hookEvent, shell, env);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        });
         var results = await Task.WhenAll(tasks);
         return [.. results];
     }
@@ -102,12 +124,14 @@ public class HooksEngine : IHooksEngine
                     envVars[key] = value;
             }
 
-            var timeoutSeconds = Math.Clamp(hook.TimeoutSeconds, MinTimeoutSeconds, MaxTimeoutSeconds);
-            if (hook.TimeoutSeconds != timeoutSeconds)
+            var globalDefault = _appSettings.CurrentValue.HookTimeoutSeconds;
+            var rawTimeout = hook.TimeoutSeconds ?? globalDefault;
+            var timeoutSeconds = Math.Clamp(rawTimeout, MinTimeoutSeconds, MaxTimeoutSeconds);
+            if (rawTimeout != timeoutSeconds)
             {
                 _logger.LogWarning(
                     "Hook '{Command}' timeout {Original}s clamped to {Clamped}s (allowed: {Min}-{Max})",
-                    hook.Command, hook.TimeoutSeconds, timeoutSeconds, MinTimeoutSeconds, MaxTimeoutSeconds);
+                    hook.Command, rawTimeout, timeoutSeconds, MinTimeoutSeconds, MaxTimeoutSeconds);
             }
 
             var result = await _processRunner.RunAsync(new ProcessRunOptions
