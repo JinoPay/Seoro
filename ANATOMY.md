@@ -658,9 +658,9 @@ case "error"                            → 에러 메시지 추가
 2. **플랜 감지** (3계층): tool_use 기반 → 텍스트 패턴 검색 → 파일 존재 감지
 3. **질문 감지**: `QuestionDetector` → `QuickResponseBar` 제안
 
-### 빠진 것 / 문제점
-- **ChatState 직접 변경**: 각 핸들러에서 `ChatState`의 가변 상태를 직접 수정. 부수효과 추적 어려움
-- **`StreamProcessingContext` 가변 DTO**: 참조 타입으로 컨텍스트 상태 공유. 호출자와 핸들러가 같은 객체를 변경
+### 설계 결정 메모
+- **ChatState Facade 패턴**: 핸들러는 `ChatState` 필드를 직접 수정하지 않음. `AppendText`, `SetPhase`, `AddToolCall` 등 메서드를 통해 변경하며, 내부적으로 `MessageManager`·`StreamingStateManager`·`SettingsStateManager` 서브매니저에 위임. 모든 변경은 디바운스된 `NotifyStateChanged`로 UI에 전파
+- **`StreamProcessingContext` 단일 스레드 누적기**: 가변 참조 타입이지만, 단일 메시지 교환의 순차 이벤트 루프 내에서만 사용되는 의도적 설계. `UsageRecorded` 플래그·토큰 누적기 등으로 중복 기록 방지. 클래스 주석에 "Mutable context shared across stream event processing for a single message exchange"로 명시
 
 ---
 
