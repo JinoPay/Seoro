@@ -1,6 +1,6 @@
 @using Cominomi.Shared.Models
 
-<MudTooltip Text="@(ResolvedModel ?? GetModelDisplayName())">
+<MudTooltip Text="@GetTooltip()">
     <button class="model-selector-pill" type="button"
             @onclick="ToggleModelMenu"
             disabled="@(Disabled || IsStreaming)">
@@ -15,7 +15,7 @@
         @foreach (var model in ModelDefinitions.All)
         {
             <MudListItem T="string" OnClick="@(() => SelectModel(model.Id))"
-                         Class="@(Model == model.Id ? "model-item-active" : "")">
+                         Class="@(IsModelActive(model.Id) ? "model-item-active" : "")">
                 @model.DisplayName
             </MudListItem>
         }
@@ -55,12 +55,39 @@
     private bool _modelMenuOpen;
     private bool _customModelInput;
     private string _customModelId = "";
-    private bool _isCustomModel => !ModelDefinitions.All.Any(m => m.Id == Model) && !string.IsNullOrEmpty(Model);
+    private bool _isCustomModel => !string.IsNullOrEmpty(Model)
+        && !ModelDefinitions.All.Any(m => m.Id == Model)
+        && ModelDefinitions.NormalizeModelId(Model) == Model; // truly custom: normalization couldn't resolve it
 
     private string GetModelDisplayName()
     {
+        if (string.IsNullOrEmpty(Model))
+            return ModelDefinitions.Default.DisplayName;
+
         var model = ModelDefinitions.All.FirstOrDefault(m => m.Id == Model);
-        return model?.DisplayName ?? Model;
+        if (model != null) return model.DisplayName;
+
+        // Try keyword normalization for non-standard IDs (e.g. "claude-opus-4-6-...")
+        var normalized = ModelDefinitions.NormalizeModelId(Model);
+        var normalizedModel = ModelDefinitions.All.FirstOrDefault(m => m.Id == normalized);
+        return normalizedModel?.DisplayName ?? Model;
+    }
+
+    private string GetTooltip()
+    {
+        var displayName = GetModelDisplayName();
+        if (!string.IsNullOrEmpty(ResolvedModel) && ResolvedModel != Model)
+            return $"{displayName} ({ResolvedModel})";
+        return displayName;
+    }
+
+    private bool IsModelActive(string modelId)
+    {
+        if (Model == modelId) return true;
+        // Handle non-standard IDs — normalize and compare
+        if (!string.IsNullOrEmpty(Model) && ModelDefinitions.NormalizeModelId(Model) == modelId)
+            return true;
+        return false;
     }
 
     private void ToggleModelMenu()
