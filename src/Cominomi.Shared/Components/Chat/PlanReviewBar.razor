@@ -18,20 +18,26 @@
                     }
                 </div>
             </div>
-            @if (!string.IsNullOrEmpty(PlanContent))
-            {
-                <MudIcon Icon="@(_showPreview ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                         Size="Size.Small" Style="width: 18px; height: 18px; opacity: 0.5;" />
-            }
+            <MudIcon Icon="@(_showPreview ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                     Size="Size.Small" Style="width: 18px; height: 18px; opacity: 0.5;" />
         </div>
 
         @* Plan content markdown *@
-        @if (_showPreview && !string.IsNullOrEmpty(PlanContent))
+        @if (_showPreview)
         {
             <div class="plan-review-content">
-                <div class="markdown-body">
-                    @((MarkupString)Markdown.ToHtml(PlanContent, _pipeline))
-                </div>
+                @if (!string.IsNullOrEmpty(PlanContent))
+                {
+                    <div class="markdown-body">
+                        @((MarkupString)Markdown.ToHtml(PlanContent, _pipeline))
+                    </div>
+                }
+                else
+                {
+                    <div style="opacity: 0.5; font-size: var(--text-sm); padding: 8px 0;">
+                        플랜 내용을 불러오는 중...
+                    </div>
+                }
             </div>
         }
 

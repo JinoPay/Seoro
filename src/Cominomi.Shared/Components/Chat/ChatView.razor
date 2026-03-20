@@ -167,13 +167,13 @@
 
     private async Task RestorePlanContentAsync(string worktreePath, string? savedPlanFilePath = null)
     {
-        _planFilePath = null;
-        _planContent = null;
+        string? filePath = null;
+        string? content = null;
 
         if (!string.IsNullOrEmpty(savedPlanFilePath) && File.Exists(savedPlanFilePath))
         {
-            _planFilePath = savedPlanFilePath;
-            _planContent = await File.ReadAllTextAsync(savedPlanFilePath);
+            filePath = savedPlanFilePath;
+            content = await File.ReadAllTextAsync(savedPlanFilePath);
         }
         else
         {
@@ -185,13 +185,20 @@
                     .FirstOrDefault();
                 if (planFile != null)
                 {
-                    _planFilePath = planFile;
-                    _planContent = await File.ReadAllTextAsync(planFile);
+                    filePath = planFile;
+                    content = await File.ReadAllTextAsync(planFile);
                 }
             }
         }
 
-        await InvokeAsync(StateHasChanged);
+        // Only overwrite if content was found — avoid nulling out content
+        // that ApplyResultAsync may have already set (race condition)
+        if (content != null)
+        {
+            _planFilePath = filePath;
+            _planContent = content;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task LoadBranchesInBackground()

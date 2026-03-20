@@ -73,6 +73,11 @@ public class StreamEventProcessor : IStreamEventProcessor
             {
                 if (ctx.PlanContent == null)
                     await DetectPlanFileAsync(ctx);
+
+                // Fallback: use assistant message text as plan content
+                if (ctx.PlanContent == null && !string.IsNullOrEmpty(ctx.AssistantMessage.Text))
+                    ctx.PlanContent = ctx.AssistantMessage.Text;
+
                 ctx.Session.PlanCompleted = true;
                 ctx.Session.PlanFilePath = ctx.PlanFilePath;
                 ctx.PlanReviewVisible = true;
