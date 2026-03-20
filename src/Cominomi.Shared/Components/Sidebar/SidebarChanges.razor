@@ -205,7 +205,28 @@
 
     private void HandleStateChanged()
     {
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            var sessionId = ChatState.CurrentSession?.Id;
+            if (sessionId != _lastSessionId)
+            {
+                _lastSessionId = sessionId;
+                if (sessionId != null)
+                {
+                    await LoadDiffAsync();
+                    StartWatching();
+                }
+                else
+                {
+                    _diff = null;
+                    _error = null;
+                    StopWatching();
+                    StateHasChanged();
+                }
+                return;
+            }
+            StateHasChanged();
+        });
     }
 
     public void Dispose()

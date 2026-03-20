@@ -296,7 +296,44 @@
 
     private void HandleStateChanged()
     {
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            var sessionId = ChatState.CurrentSession?.Id;
+            if (sessionId != _lastSessionId)
+            {
+                // Save current session's expanded state
+                if (_lastSessionId != null)
+                    _sessionExpandedDirs[_lastSessionId] = _expandedDirs;
+
+                _lastSessionId = sessionId;
+
+                if (sessionId != null)
+                {
+                    // Restore or initialize expanded state for this session
+                    if (_sessionExpandedDirs.TryGetValue(sessionId, out var saved))
+                        _expandedDirs = saved;
+                    else
+                        _expandedDirs = new HashSet<string>();
+
+                    await LoadFilesAsync();
+                    StartWatching();
+
+                    if (!_sessionExpandedDirs.ContainsKey(sessionId))
+                        _sessionExpandedDirs[sessionId] = _expandedDirs;
+                }
+                else
+                {
+                    _tree = new();
+                    _diff = null;
+                    _error = null;
+                    _expandedDirs = new HashSet<string>();
+                    StopWatching();
+                    StateHasChanged();
+                }
+                return;
+            }
+            StateHasChanged();
+        });
     }
 
     public void Dispose()
