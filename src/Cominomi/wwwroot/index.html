@@ -103,24 +103,66 @@
 
             // --- Paste (images/files from clipboard) ---
             inputEl._pasteHandler = async function(e) {
+                if (e._cominomiHandled) return; // prevent duplicate via bubbling
+                e._cominomiHandled = true;
+
                 var items = e.clipboardData?.items;
-                if (!items) return;
-                for (var i = 0; i < items.length; i++) {
-                    var item = items[i];
-                    if (item.kind === 'file') {
-                        e.preventDefault();
-                        var file = item.getAsFile();
-                        if (!file) continue;
-                        var buffer = await file.arrayBuffer();
-                        var bytes = new Uint8Array(buffer);
-                        await dotNetRef.invokeMethodAsync('OnFilePasted',
-                            file.name || 'pasted-image.png',
-                            file.type || 'application/octet-stream',
-                            Array.from(bytes));
+                var hasFileItem = false;
+
+                // Primary: extract files from clipboardData.items
+                if (items && items.length > 0) {
+                    for (var i = 0; i < items.length; i++) {
+                        var item = items[i];
+                        if (item.kind === 'file') {
+                            hasFileItem = true;
+                            e.preventDefault();
+                            var file = item.getAsFile();
+                            if (!file) continue;
+                            try {
+                                var buffer = await file.arrayBuffer();
+                                var bytes = new Uint8Array(buffer);
+                                await dotNetRef.invokeMethodAsync('OnFilePasted',
+                                    file.name || 'pasted-image.png',
+                                    file.type || 'application/octet-stream',
+                                    Array.from(bytes));
+                            } catch (err) {
+                                console.error('[Cominomi:paste] file read error:', err);
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: if no file items in clipboardData, try Clipboard API
+                if (!hasFileItem && navigator.clipboard && navigator.clipboard.read) {
+                    try {
+                        var clipboardItems = await navigator.clipboard.read();
+                        for (var ci = 0; ci < clipboardItems.length; ci++) {
+                            var types = clipboardItems[ci].types;
+                            for (var ti = 0; ti < types.length; ti++) {
+                                var type = types[ti];
+                                if (type.startsWith('image/')) {
+                                    e.preventDefault();
+                                    var blob = await clipboardItems[ci].getType(type);
+                                    var buf = await blob.arrayBuffer();
+                                    var arr = new Uint8Array(buf);
+                                    var ext = type.split('/')[1] || 'png';
+                                    await dotNetRef.invokeMethodAsync('OnFilePasted',
+                                        'pasted-image.' + ext, type, Array.from(arr));
+                                }
+                            }
+                        }
+                    } catch (_) {
+                        // Permission denied or no image — let text paste proceed normally
                     }
                 }
             };
             inputEl.addEventListener('paste', inputEl._pasteHandler);
+
+            // Also listen on container for paste capture when textarea isn't focused
+            if (container && !container._cominomiPasteHandler) {
+                container._cominomiPasteHandler = inputEl._pasteHandler;
+                container.addEventListener('paste', container._cominomiPasteHandler);
+            }
         };
 
         // Detach all handlers from an input element.
@@ -194,6 +236,11 @@
             // Detach input element handlers
             var inputEl = window._findInputEl(container);
             window._detachInputHandlers(inputEl);
+            // Detach container paste handler
+            if (container._cominomiPasteHandler) {
+                container.removeEventListener('paste', container._cominomiPasteHandler);
+                container._cominomiPasteHandler = null;
+            }
             // Detach drop handlers
             if (container._dragOverHandler) container.removeEventListener('dragover', container._dragOverHandler);
             if (container._dragLeaveHandler) container.removeEventListener('dragleave', container._dragLeaveHandler);

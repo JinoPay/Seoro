@@ -16,6 +16,15 @@ public partial class MainPage : ContentPage
 				Log.Error("WebView2 process failed: Kind={Kind}, Reason={Reason}",
 					e.ProcessFailedKind, e.Reason);
 			};
+
+			// Auto-approve clipboard read permission so paste (Ctrl+V) works for images/files
+			args.WebView.CoreWebView2.PermissionRequested += (_, permArgs) =>
+			{
+				if (permArgs.PermissionKind == Microsoft.Web.WebView2.Core.CoreWebView2PermissionKind.ClipboardRead)
+				{
+					permArgs.State = Microsoft.Web.WebView2.Core.CoreWebView2PermissionState.Allow;
+				}
+			};
 #endif
 		};
 	}
