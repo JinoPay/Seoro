@@ -134,11 +134,14 @@ public partial class SessionService : ISessionService
         var branchName = $"{CominomiConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
         var worktreesDir = await _workspaceService.GetWorktreesDirAsync();
 
+        var settings = _appSettings.CurrentValue;
         var session = new Session
         {
             Model = model,
             WorkspaceId = workspaceId,
-            Git = { BranchName = branchName, BaseBranch = baseBranch }
+            Git = { BranchName = branchName, BaseBranch = baseBranch },
+            EffortLevel = settings.DefaultEffortLevel,
+            PermissionMode = settings.DefaultPermissionMode
         };
         session.TransitionStatus(SessionStatus.Initializing);
 

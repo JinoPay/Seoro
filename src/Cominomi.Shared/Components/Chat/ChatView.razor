@@ -413,6 +413,7 @@
         if (ChatState.CurrentSession != null)
         {
             ChatState.CurrentSession.Model = model;
+            ChatState.NotifyStateChanged();
             await SessionService.SaveSessionAsync(ChatState.CurrentSession);
         }
     }
