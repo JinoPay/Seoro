@@ -12,7 +12,7 @@ public static class SettingsValidator
     private static readonly HashSet<string> ValidThemes = ["dark", "light", "system"];
     private static readonly HashSet<string> ValidPermissionModes =
         ["default", "plan", "acceptEdits", "dontAsk", "bypassPermissions", "bypassAll"];
-    private static readonly HashSet<string> ValidEffortLevels = ["auto", "low", "medium", "high"];
+    private static readonly HashSet<string> ValidEffortLevels = ["auto", "low", "medium", "high", "max"];
     private static readonly HashSet<string> ValidMergeStrategies = ["squash", "merge", "rebase"];
 
     public static List<string> Validate(AppSettings settings)
