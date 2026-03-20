@@ -107,6 +107,36 @@ html, body {
     font-weight: 600;
 }
 
+/* ===== Sidebar Footer ===== */
+.sidebar-footer {
+    display: flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-4);
+    border-top: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+    gap: var(--space-3);
+}
+
+.sidebar-footer-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity var(--transition), background var(--transition);
+    background: transparent;
+    border: none;
+    color: inherit;
+}
+
+.sidebar-footer-btn:hover {
+    opacity: 0.8;
+    background: var(--bg-hover);
+}
+
 /* ===== Tree Sidebar ===== */
 .sidebar-tree {
     display: flex;
@@ -333,14 +363,22 @@ html, body {
     50% { opacity: 1; }
 }
 
-/* Keyboard shortcut badge */
+/* Keyboard shortcut badge — visible only while Ctrl/⌘ held */
 .tree-session-shortcut {
     font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
     font-size: 0.6rem;
-    opacity: 0.25;
+    opacity: 0;
+    transform: translateX(4px);
+    transition: opacity 200ms ease, transform 200ms ease;
     flex-shrink: 0;
     align-self: center;
     color: var(--text-secondary);
+    pointer-events: none;
+}
+
+.tree-session-shortcut.visible {
+    opacity: 0.25;
+    transform: translateX(0);
 }
 
 /* Status dots */

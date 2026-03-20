@@ -23,10 +23,10 @@ else
         @* === Left Panel: Sidebar === *@
         <aside class="cominomi-sidebar">
             <SidebarToolbar OnOpenActivity="OpenActivity"
-                            OnOpenNotifications="OpenNotifications"
-                            OnOpenUsageDashboard="@(() => _usageDashboardOpen = true)"
-                            OnOpenSettings="@(() => ChatState.OpenSettings())" />
+                            OnOpenNotifications="OpenNotifications" />
             <SessionList />
+            <SidebarFooter OnOpenUsageDashboard="@(() => _usageDashboardOpen = true)"
+                           OnOpenSettings="@(() => ChatState.OpenSettings())" />
         </aside>
 
         @* === Sidebar ↔ Main Resizer === *@

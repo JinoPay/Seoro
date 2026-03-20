@@ -81,6 +81,7 @@
                                      DiffAdditions="@(hasDiffStats ? stats.Additions : 0)"
                                      DiffDeletions="@(hasDiffStats ? stats.Deletions : 0)"
                                      ShortcutLabel="@(row.SessionIndex < 5 ? GetShortcutLabel(row.SessionIndex) : null)"
+                                     ShowShortcuts="@_ctrlHeld"
                                      OnClick="@(() => SelectSession(row.Session!, row.Workspace))"
                                      OnDelete="@(() => DeleteSession(row.Session!))"
                                      OnCleanup="@(() => CleanupSession(row.Session!))" />
@@ -113,6 +114,7 @@
     private bool _createDialogOpen;
     private bool _isCreatingSession;
     private bool _filterVisible;
+    private bool _ctrlHeld;
     private string? _filterText;
     private DotNetObjectReference<SessionList>? _dotNetRef;
     private List<SidebarRow> _flatRows = new();
@@ -205,7 +207,15 @@
         {
             _dotNetRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("registerSessionShortcuts", _dotNetRef);
+            await JS.InvokeVoidAsync("registerCtrlWatcher", _dotNetRef);
         }
+    }
+
+    [JSInvokable]
+    public void OnCtrlStateChanged(bool pressed)
+    {
+        _ctrlHeld = pressed;
+        InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]
@@ -374,6 +384,7 @@
         ChatState.OnRequestCreateWorkspace -= HandleCreateWorkspaceRequest;
         DataService.OnDataChanged -= OnDataServiceChanged;
         _ = JS.InvokeVoidAsync("unregisterSessionShortcuts");
+        _ = JS.InvokeVoidAsync("unregisterCtrlWatcher");
         _dotNetRef?.Dispose();
     }
 }
