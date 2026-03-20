@@ -114,6 +114,24 @@ public class UsageService : IUsageService
         return sb.ToString();
     }
 
+    public async Task<string> ExportJsonAsync(int? days = null)
+    {
+        var cutoff = days.HasValue ? DateTime.UtcNow.AddDays(-days.Value) : DateTime.MinValue;
+        var entries = await ReadEntriesAsync();
+        var filtered = entries.Where(e => e.Timestamp >= cutoff).OrderBy(e => e.Timestamp).ToList();
+        var stats = Aggregate(filtered);
+
+        var export = new
+        {
+            exportedAt = DateTime.UtcNow.ToString("O"),
+            period = days.HasValue ? $"{days}d" : "all",
+            summary = stats,
+            entries = filtered
+        };
+
+        return JsonSerializer.Serialize(export, new JsonSerializerOptions { WriteIndented = true });
+    }
+
     public async Task<int> PurgeOldEntriesAsync(int retentionDays = DefaultRetentionDays)
     {
         await _writeLock.WaitAsync();
