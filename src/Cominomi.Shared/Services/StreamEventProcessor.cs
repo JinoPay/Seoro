@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services.StreamEventHandlers;
 using Microsoft.Extensions.Logging;
@@ -71,6 +72,10 @@ public class StreamEventProcessor : IStreamEventProcessor
 
             if (ctx.ExitPlanModeDetected)
             {
+                // Extract plan file path from Write/Edit tool calls before scanning filesystem
+                if (ctx.DetectedPlanFilePath == null)
+                    DetectPlanFileFromToolCalls(ctx);
+
                 if (ctx.PlanContent == null)
                     await DetectPlanFileAsync(ctx);
 
@@ -101,11 +106,59 @@ public class StreamEventProcessor : IStreamEventProcessor
         }
     }
 
+    /// <summary>
+    /// Scans the assistant message's tool calls for Write/Edit operations targeting .claude/plans/*.md
+    /// to precisely identify which plan file belongs to this session.
+    /// </summary>
+    private static void DetectPlanFileFromToolCalls(StreamProcessingContext ctx)
+    {
+        var writeEditNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "Write", "write", "write_file", "Edit", "edit", "edit_file" };
+
+        foreach (var part in ctx.AssistantMessage.Parts)
+        {
+            if (part.Type != ContentPartType.ToolCall || part.ToolCall == null)
+                continue;
+            if (!writeEditNames.Contains(part.ToolCall.Name))
+                continue;
+            if (string.IsNullOrEmpty(part.ToolCall.Input))
+                continue;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(part.ToolCall.Input);
+                if (doc.RootElement.TryGetProperty("file_path", out var fp))
+                {
+                    var path = fp.GetString();
+                    if (path != null)
+                    {
+                        var normalized = path.Replace('\\', '/');
+                        if (normalized.Contains(".claude/plans/") && normalized.EndsWith(".md"))
+                        {
+                            ctx.DetectedPlanFilePath = path;
+                            return;
+                        }
+                    }
+                }
+            }
+            catch { /* ignore parse errors */ }
+        }
+    }
+
     private static async Task DetectPlanFileAsync(StreamProcessingContext ctx)
     {
         ctx.PlanFilePath = null;
         ctx.PlanContent = null;
 
+        // Prefer the exact plan file detected from Write/Edit tool calls
+        if (!string.IsNullOrEmpty(ctx.DetectedPlanFilePath) && File.Exists(ctx.DetectedPlanFilePath))
+        {
+            ctx.PlanFilePath = ctx.DetectedPlanFilePath;
+            ctx.PlanContent = await File.ReadAllTextAsync(ctx.DetectedPlanFilePath);
+            return;
+        }
+
+        // Fallback: scan filesystem for recent plan files
         var candidates = new List<string>();
 
         // Primary: ~/.claude/plans/ (where Claude CLI actually saves plan files)

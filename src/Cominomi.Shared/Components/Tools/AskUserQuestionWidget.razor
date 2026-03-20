@@ -1,0 +1,129 @@
+@using System.Text.Json
+
+<div class="tool-widget tool-widget-askuser">
+    @if (_questions.Count == 0 && !Tool.IsComplete)
+    {
+        <div class="askuser-loading">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                 Style="width: 14px; height: 14px;" Color="Color.Warning" />
+            <span style="opacity: 0.5; font-size: var(--text-xs);">질문 수신 중…</span>
+        </div>
+    }
+    else
+    {
+        @foreach (var q in _questions)
+        {
+            <div class="askuser-question-block">
+                @if (!string.IsNullOrEmpty(q.Header))
+                {
+                    <div class="askuser-header">@q.Header</div>
+                }
+                <div class="askuser-question">@q.Question</div>
+
+                <div class="askuser-options">
+                    @foreach (var opt in q.Options)
+                    {
+                        var isSelected = _selectedLabel == opt.Label;
+                        var isDisabled = _selectedLabel != null && !isSelected;
+
+                        <button class="askuser-option @(isSelected ? "selected" : "") @(isDisabled ? "disabled" : "")"
+                                disabled="@(isDisabled || isSelected)"
+                                @onclick="@(() => SelectOption(opt.Label))"
+                                @onclick:stopPropagation="true">
+                            <span class="askuser-option-label">
+                                @if (isSelected)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                             Style="width: 14px; height: 14px; color: var(--accent);" />
+                                }
+                                @opt.Label
+                            </span>
+                            @if (!string.IsNullOrEmpty(opt.Description))
+                            {
+                                <span class="askuser-option-desc">@opt.Description</span>
+                            }
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ToolCall Tool { get; set; } = default!;
+
+    [CascadingParameter(Name = "OnAskUserResponse")]
+    public EventCallback<string> OnResponse { get; set; }
+
+    private record AskUserOption(string Label, string? Description);
+    private record AskUserQuestionItem(string? Header, string Question, List<AskUserOption> Options, bool MultiSelect);
+
+    private List<AskUserQuestionItem> _questions = [];
+    private string? _selectedLabel;
+    private string? _lastInput;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_lastInput, Tool.Input))
+            return;
+
+        _lastInput = Tool.Input;
+        _questions = ParseQuestions(Tool.Input);
+    }
+
+    private async Task SelectOption(string label)
+    {
+        if (_selectedLabel != null) return;
+        _selectedLabel = label;
+
+        if (OnResponse.HasDelegate)
+            await OnResponse.InvokeAsync(label);
+    }
+
+    private static List<AskUserQuestionItem> ParseQuestions(string? input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return [];
+
+        try
+        {
+            using var doc = JsonDocument.Parse(input);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("questions", out var questionsArr) ||
+                questionsArr.ValueKind != JsonValueKind.Array)
+                return [];
+
+            var result = new List<AskUserQuestionItem>();
+            foreach (var q in questionsArr.EnumerateArray())
+            {
+                var question = q.TryGetProperty("question", out var qProp) ? qProp.GetString() ?? "" : "";
+                var header = q.TryGetProperty("header", out var hProp) ? hProp.GetString() : null;
+                var multiSelect = q.TryGetProperty("multiSelect", out var mProp) && mProp.GetBoolean();
+
+                var options = new List<AskUserOption>();
+                if (q.TryGetProperty("options", out var optsArr) && optsArr.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var opt in optsArr.EnumerateArray())
+                    {
+                        var label = opt.TryGetProperty("label", out var lProp) ? lProp.GetString() ?? "" : "";
+                        var desc = opt.TryGetProperty("description", out var dProp) ? dProp.GetString() : null;
+                        if (!string.IsNullOrEmpty(label))
+                            options.Add(new AskUserOption(label, desc));
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(question) || options.Count > 0)
+                    result.Add(new AskUserQuestionItem(header, question, options, multiSelect));
+            }
+
+            return result;
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+}
