@@ -95,6 +95,14 @@ public class StreamEventProcessor : IStreamEventProcessor
                 ctx.QuickResponseVisible = false;
                 ctx.QuickResponseOptions = [];
             }
+
+            // AskUserQuestion takes priority over plan review
+            if (HasAskUserQuestionToolCall(ctx))
+            {
+                ctx.PlanReviewVisible = false;
+                ctx.QuickResponseVisible = true;
+                ctx.QuickResponseOptions = [];
+            }
         }
         else
         {
@@ -104,6 +112,19 @@ public class StreamEventProcessor : IStreamEventProcessor
             ctx.QuickResponseVisible = isQuestion;
             ctx.QuickResponseOptions = options;
         }
+    }
+
+    private static bool HasAskUserQuestionToolCall(StreamProcessingContext ctx)
+    {
+        foreach (var part in ctx.AssistantMessage.Parts)
+        {
+            if (part.Type != ContentPartType.ToolCall || part.ToolCall == null)
+                continue;
+            if (part.ToolCall.Name.Equals("AskUserQuestion", StringComparison.OrdinalIgnoreCase)
+                || part.ToolCall.Name.Equals("ask_user_question", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
