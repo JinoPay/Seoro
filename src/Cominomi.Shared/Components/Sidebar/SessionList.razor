@@ -177,13 +177,19 @@
         {
             await DataService.LoadWorkspacesAsync();
 
-            var (ws, lastSession, projectName) = await Facade.RestoreLastSelectionAsync(
+            // 1차: 워크스페이스와 프로젝트명 결정 (세션 캐시 아직 비어있음)
+            var (ws, _, projectName) = await Facade.RestoreLastSelectionAsync(
                 DataService.Workspaces, DataService.SessionCache);
 
             if (ws != null)
             {
                 _expandedProjects.Add(projectName!);
                 await DataService.LoadSessionsForProjectAsync(projectName!);
+
+                // 2차: 세션 캐시 채워진 후 마지막 세션 조회
+                var (_, lastSession, _) = await Facade.RestoreLastSelectionAsync(
+                    DataService.Workspaces, DataService.SessionCache);
+
                 ChatState.SetWorkspace(ws);
                 // Load custom skills for the initial workspace
                 await SkillRegistry.LoadCustomCommandsAsync(ws.RepoLocalPath);
