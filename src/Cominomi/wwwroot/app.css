@@ -696,6 +696,8 @@ html, body {
 .detail-content.no-padding {
     padding: 0;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .detail-empty {

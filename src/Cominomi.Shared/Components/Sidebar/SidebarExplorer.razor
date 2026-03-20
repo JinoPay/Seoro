@@ -87,10 +87,9 @@
             await LoadFilesAsync();
             StartWatching();
 
-            // Only expand all if first time seeing this session (empty state)
+            // Save initial (collapsed) state for this session
             if (sessionId != null && !_sessionExpandedDirs.ContainsKey(sessionId))
             {
-                ExpandAllDirs(_tree);
                 _sessionExpandedDirs[sessionId] = _expandedDirs;
             }
         }
@@ -191,12 +190,7 @@
 
             _tree = BuildTree(files);
 
-            if (!preserveExpanded)
-            {
-                // Only expand all on initial load (not on watcher refresh)
-                if (_expandedDirs.Count == 0)
-                    ExpandAllDirs(_tree);
-            }
+            // No auto-expand: tree starts collapsed by default
 
             // Always ensure diff file parents are expanded
             if (_diff != null)
