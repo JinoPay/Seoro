@@ -17,9 +17,9 @@
 {
     <SettingsPage />
 }
-else
-{
-    <div class="cominomi-shell @(ChatState.RightPanel != RightPanelMode.None ? "detail-open" : "") @(!_sidebarOpen ? "sidebar-collapsed" : "")">
+
+<div class="cominomi-shell @(ChatState.RightPanel != RightPanelMode.None ? "detail-open" : "") @(!_sidebarOpen ? "sidebar-collapsed" : "")"
+     style="@(ChatState.ShowSettings ? "display:none;height:0;overflow:hidden" : "")">
         @* === Left Panel: Sidebar === *@
         <aside class="cominomi-sidebar">
             <SidebarToolbar OnOpenActivity="OpenActivity"
@@ -98,7 +98,6 @@ else
             </aside>
         }
     </div>
-}
 
 <SetupDialog @bind-IsOpen="_setupOpen" />
 <UsageDashboard @bind-IsOpen="_usageDashboardOpen" />
