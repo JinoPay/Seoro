@@ -59,6 +59,7 @@ public partial class WorkspaceService : IWorkspaceService
                 var (workspace, migrated, migratedJson) = MigratingJsonReader.Read<Workspace>(json, JsonDefaults.Options);
                 if (workspace != null)
                 {
+                    workspace.MigratePreferences();
                     workspaces.Add(workspace);
                     if (migrated && migratedJson != null)
                         await AtomicFileWriter.WriteAsync(file, migratedJson);
@@ -81,6 +82,7 @@ public partial class WorkspaceService : IWorkspaceService
 
         var json = await File.ReadAllTextAsync(path);
         var (workspace, migrated, migratedJson) = MigratingJsonReader.Read<Workspace>(json, JsonDefaults.Options);
+        workspace?.MigratePreferences();
         if (migrated && migratedJson != null)
             await AtomicFileWriter.WriteAsync(path, migratedJson);
         return workspace;
@@ -88,6 +90,7 @@ public partial class WorkspaceService : IWorkspaceService
 
     public async Task SaveWorkspaceAsync(Workspace workspace)
     {
+        SettingsValidator.SanitizeWorkspace(workspace);
         workspace.UpdatedAt = DateTime.UtcNow;
         var path = Path.Combine(_workspacesDir, $"{workspace.Id}.json");
         var json = MigratingJsonWriter.Write(workspace, JsonDefaults.Options);

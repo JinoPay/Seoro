@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Cominomi.Shared.Services;
 
 namespace Cominomi.Shared.Models;
 
@@ -100,26 +101,16 @@ public record AppError(
         new(ErrorCode.Unknown, ErrorCategory.Unknown, message);
 
     /// <summary>
-    /// Classify a git push error as Rejected (force-pushable) or generic failure
-    /// by inspecting the error text.
+    /// Classify a git push error as Rejected (force-pushable) or generic failure.
+    /// Delegates to <see cref="ProcessErrorClassifier"/>.
     /// </summary>
     public static AppError ClassifyPushError(string errorText)
-    {
-        if (errorText.Contains("rejected", StringComparison.OrdinalIgnoreCase))
-            return PushRejected(errorText);
-        return PushFailed(errorText);
-    }
+        => ProcessErrorClassifier.ClassifyPushError(errorText);
 
     /// <summary>
-    /// Classify a merge error as Conflict or generic failure
-    /// by inspecting the error text with specific patterns to reduce false positives.
+    /// Classify a merge error as Conflict or generic failure.
+    /// Delegates to <see cref="ProcessErrorClassifier"/>.
     /// </summary>
     public static AppError ClassifyMergeError(string errorText, string? output = null)
-    {
-        var combined = (errorText + " " + output).ToLowerInvariant();
-        if (combined.Contains("merge conflict") || combined.Contains("not mergeable")
-            || combined.Contains("conflicting files") || combined.Contains("required status check"))
-            return PrConflict(errorText);
-        return PrMerge(errorText);
-    }
+        => ProcessErrorClassifier.ClassifyMergeError(errorText, output);
 }

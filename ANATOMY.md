@@ -1097,17 +1097,19 @@ case "error"                            → 에러 메시지 추가
 ### 관련 파일
 | 파일 | 줄수 | 역할 |
 |------|------|------|
-| `Shared/Services/SettingsService.cs` | ~38 | JSON 캐시 |
-| `Shared/Models/AppSettings.cs` | ~35 | 설정 모델 + 요약/타임아웃 설정 |
+| `Shared/Services/SettingsService.cs` | ~49 | JSON 캐시 + 검증 |
+| `Shared/Services/SettingsValidator.cs` | ~130 | 설정/워크스페이스 검증 및 새니타이즈 |
+| `Shared/Models/AppSettings.cs` | ~42 | 설정 모델 + 요약/타임아웃 설정 |
+| `Shared/Models/WorkspacePreferences.cs` | ~45 | 구조화된 워크스페이스 환경설정 |
 | `Shared/Components/Settings/AppSettingsContent.razor` | ~377 | 설정 UI |
 | `Shared/Components/Settings/WorkspaceSettingsContent.razor` | ~282 | 워크스페이스 설정 |
 
 ### 현재 동작
 `settings.json` 1회 로드 → 인메모리 캐시. `SaveAsync()` 시 파일 + `OnSettingsChanged` 이벤트 발사. Phase 7에서 `IOptionsMonitor<AppSettings>` 패턴 도입: `AppSettingsFactory`가 설정 파일에서 인스턴스 생성, `AppSettingsChangeNotifier`가 저장 시 change token 발행. 8개 서비스/컴포넌트가 `IOptionsMonitor<AppSettings>` 주입으로 전환.
 
-### 빠진 것 / 문제점
-- **검증 없음**: 잘못된 경로, 음수 값 허용
-- **워크스페이스 Preferences가 자유 텍스트**: 구조화된 설정이 아닌 자유 형식 문자열
+### 해결됨
+- ~~**검증 없음**~~: `SettingsValidator` 도입 — `Validate()` / `Sanitize()` / `ValidateWorkspace()` / `SanitizeWorkspace()`. 테마, 권한 모드, 노력 수준, 머지 전략 등 허용 값 검증. 타임아웃 음수→1초 클램핑, 잘못된 경로 문자 검출. `SettingsService.LoadAsync()`/`SaveAsync()` 및 `WorkspaceService.SaveWorkspaceAsync()`에서 자동 적용
+- ~~**워크스페이스 Preferences가 자유 텍스트**~~: `WorkspacePreferences` 구조화 클래스 도입 — `CodeReviewPrompt`, `CreatePrPrompt`, `BranchRenamePrompt`, `GeneralPrompt` + `CodeReviewFocusAreas`, `PrTitleMaxLength` 등 타입드 필드. 기존 자유 텍스트 필드는 `[Obsolete]`로 마킹, `MigratePreferences()`로 자동 마이그레이션
 
 ---
 
@@ -1150,15 +1152,22 @@ ConcurrentDictionary<string, SessionStreamingState> _streamingStates
 ConcurrentDictionary<string, Session> _activeSessions
 ```
 
-### 빠진 것 / 문제점
-- **Session 가변 참조 공유**: `AppendText()`가 `ChatMessage.Text`와 `ChatMessage.Parts`를 직접 수정. ChatState와 Session이 같은 객체를 참조
-- **디바운스 Timer 생성/소멸 반복**: 스트리밍 시작/종료 시 Timer를 만들었다 지웠다 함. 전환 시점에 알림 누락 가능
-- **ConsumePendingMessage 1회성**: 두 번 호출하면 두 번째는 null. 메시지 손실 가능
-- **Undo/Redo 없음**: 상태 변경 이력 없음
+### 해결됨
+- **Session 가변 참조 공유**: 스트리밍 특성상 의도적 공유. `FinishMessage()`에서 Parts→Text 동기화로 일관성 보장 (기존 설계 유지)
+- ~~**디바운스 Timer 생성/소멸 반복**~~: 단일 영속 Timer로 전환 — `Timeout.Infinite`로 비활성 시작, `Change()`로 활성/비활성 전환. 매 전환마다 new/Dispose 없음
+- ~~**ConsumePendingMessage 1회성**~~: `Interlocked.Exchange()`로 원자적 소비. `PeekPendingMessage()` 추가로 소비 없이 확인 가능. `volatile` 필드로 스레드 안전성 확보
+
+### 남은 문제
+- **Undo/Redo 없음**: 상태 변경 이력 없음 — 향후 커맨드 패턴 도입 검토
 
 ---
 
 ## 24. 에러 처리 패턴
+
+### 관련 파일 (신규)
+| 파일 | 줄수 | 역할 |
+|------|------|------|
+| `Shared/Services/ProcessErrorClassifier.cs` | ~115 | 통합 stderr 에러 분류기 (git/gh/claude) |
 
 ### 현재 패턴
 
@@ -1181,8 +1190,8 @@ ConcurrentDictionary<string, Session> _activeSessions
 
 프로세스 정리 시 예외 발생은 합리적이나, 일괄 무시로 디버깅 정보 손실.
 
-### 빠진 것 / 문제점
-- **프로세스 stderr 파싱 ad-hoc**: git/gh/claude 각각 다른 방식으로 에러 텍스트 해석
+### 해결됨
+- ~~**프로세스 stderr 파싱 ad-hoc**~~: `ProcessErrorClassifier` 도입 — `ClassifyGitError()`, `ClassifyGhError()`, `ClassifyClaudeError()`, `IsGhRateLimitError()` 등 통합 API. 키워드 패턴 기반 `ErrorPattern[]` 레지스트리로 일관된 분류. `AppError.ClassifyPushError()`/`ClassifyMergeError()`도 `ProcessErrorClassifier`로 위임. `GhService.IsRateLimitError()` 인라인 로직 제거
 
 ---
 

@@ -64,6 +64,7 @@ public interface IChatState : IDisposable
     void RequestCreateWorkspace();
     void SetPendingMessage(string? message);
     string? ConsumePendingMessage();
+    string? PeekPendingMessage();
     void SetRightPanel(RightPanelMode mode);
     void ToggleRightPanel(RightPanelMode mode);
 
