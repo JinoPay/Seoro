@@ -1,6 +1,7 @@
 @inject IChatState ChatState
 @inject SessionListDataService DataService
 @inject ISessionListFacade Facade
+@inject ISkillRegistry SkillRegistry
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -178,6 +179,8 @@
             _expandedProjects.Add(projectName!);
             await DataService.LoadSessionsForProjectAsync(projectName!);
             ChatState.SetWorkspace(ws);
+            // Load custom skills for the initial workspace
+            await SkillRegistry.LoadCustomCommandsAsync(ws.RepoLocalPath);
 
             if (lastSession != null)
                 await SelectSession(lastSession, ws);

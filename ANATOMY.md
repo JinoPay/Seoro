@@ -887,12 +887,13 @@ case "error"                            → 에러 메시지 추가
 ### 관련 파일
 | 파일 | 줄수 | 역할 |
 |------|------|------|
-| `Shared/Services/SkillRegistry.cs` | ~191 | 빌트인 + 커스텀 스킬 |
-| `Shared/Services/SkillFileStore.cs` | ~179 | 파일 기반 커스텀 스킬 |
+| `Shared/Services/SkillRegistry.cs` | ~300 | 빌트인 + 커스텀 스킬 + 체인 |
+| `Shared/Services/SkillFileStore.cs` | ~219 | 파일 기반 커스텀 스킬 I/O |
+| `Shared/Services/SessionListFacade.cs` | ~143 | 워크스페이스 전환 시 스킬 리로드 |
 
 ### 현재 동작
 
-**빌트인 스킬 11개** (하드코딩):
+**빌트인 스킬 11개** (코드 내 기본값, 커스텀으로 오버라이드 가능):
 ```
 /commit, /review, /simplify, /test, /explain, /fix,
 /plan, /compact, /security-review, /pr-comments, /debug
@@ -902,12 +903,19 @@ case "error"                            → 에러 메시지 추가
 - `~/.claude/commands/*.md` (사용자 범위)
 - `<project>/.claude/commands/*.md` (프로젝트 범위)
 
-**확장**: `{args}` 또는 `$ARGUMENTS` 플레이스홀더 → 호출 시 실제 인자로 치환
+**빌트인 오버라이드**: 커스텀 스킬이 빌트인과 같은 이름이면 빌트인을 대체.
+예: `~/.claude/commands/commit.md` → 빌트인 `/commit` 프롬프트를 사용자 정의로 교체.
+
+**플레이스홀더**: `$ARGUMENTS`가 표준. `{args}`는 레거시 호환용으로 유지.
+
+**워크스페이스 전환 시 스킬 리로드**:
+- `SessionListFacade.SwitchWorkspaceAsync()` — 워크스페이스 ID가 변경될 때 자동으로 `LoadCustomCommandsAsync(ws.RepoLocalPath)` 호출
+- 초기 로드: `SessionList.razor`의 `OnInitializedAsync`에서 직접 호출
 
 ### 빠진 것 / 문제점
-- **빌트인 프롬프트 하드코딩**: 스킬 내용 변경이 코드 변경 필요
-- **`{args}` vs `$ARGUMENTS` 이중 표준**: 어느 것을 쓸지 문서화 없음
-- **프로젝트 경로 의존**: 워크스페이스 변경 시에만 커스텀 스킬 리로드
+- ~~**빌트인 프롬프트 하드코딩**: 스킬 내용 변경이 코드 변경 필요~~ → ✅ 해결: 같은 이름의 커스텀 스킬로 오버라이드 가능
+- ~~**`{args}` vs `$ARGUMENTS` 이중 표준**: 어느 것을 쓸지 문서화 없음~~ → ✅ 해결: `$ARGUMENTS`로 표준 통일, `{args}`는 레거시 호환
+- ~~**프로젝트 경로 의존**: 워크스페이스 변경 시에만 커스텀 스킬 리로드~~ → ✅ 해결: `SessionListFacade.SwitchWorkspaceAsync()`에서 자동 리로드
 
 ---
 

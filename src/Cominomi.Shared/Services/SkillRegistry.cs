@@ -20,83 +20,96 @@ public class SkillRegistry : ISkillRegistry
 
     private void RegisterBuiltIns()
     {
+        // All built-in skills use $ARGUMENTS as the standard placeholder.
+        // {args} is still supported for backward compatibility in ExpandSkill().
         _skills.AddRange([
             new SkillDefinition
             {
                 Name = "commit",
                 Description = "Commit current changes with a descriptive message",
-                PromptTemplate = "Review all current changes with `git diff` and `git status`, then create a git commit with a clear, descriptive commit message that explains what changed and why. {args}",
-                IsBuiltIn = true
+                PromptTemplate = "Review all current changes with `git diff` and `git status`, then create a git commit with a clear, descriptive commit message that explains what changed and why. $ARGUMENTS",
+                IsBuiltIn = true,
+                AcceptsArguments = true
             },
             new SkillDefinition
             {
                 Name = "review",
                 Description = "Review code changes and provide feedback",
-                PromptTemplate = "Review the current code changes (`git diff`) and provide detailed feedback on code quality, potential bugs, and improvements. {args}",
-                IsBuiltIn = true
+                PromptTemplate = "Review the current code changes (`git diff`) and provide detailed feedback on code quality, potential bugs, and improvements. $ARGUMENTS",
+                IsBuiltIn = true,
+                AcceptsArguments = true
             },
             new SkillDefinition
             {
                 Name = "simplify",
                 Description = "Review changed code for reuse, quality, and efficiency",
-                PromptTemplate = "Review the recently changed code for opportunities to simplify, improve reuse, and increase efficiency. Fix any issues found. {args}",
-                IsBuiltIn = true
+                PromptTemplate = "Review the recently changed code for opportunities to simplify, improve reuse, and increase efficiency. Fix any issues found. $ARGUMENTS",
+                IsBuiltIn = true,
+                AcceptsArguments = true
             },
             new SkillDefinition
             {
                 Name = "test",
                 Description = "Run tests and report results",
-                PromptTemplate = "Find and run the project's test suite. Report any failures with details. {args}",
-                IsBuiltIn = true
+                PromptTemplate = "Find and run the project's test suite. Report any failures with details. $ARGUMENTS",
+                IsBuiltIn = true,
+                AcceptsArguments = true
             },
             new SkillDefinition
             {
                 Name = "explain",
                 Description = "Explain how the codebase works",
-                PromptTemplate = "Explain how the codebase or the specified part works in detail. {args}",
-                IsBuiltIn = true
+                PromptTemplate = "Explain how the codebase or the specified part works in detail. $ARGUMENTS",
+                IsBuiltIn = true,
+                AcceptsArguments = true
             },
             new SkillDefinition
             {
                 Name = "fix",
                 Description = "Fix a bug or issue",
-                PromptTemplate = "Investigate and fix the following issue: {args}",
-                IsBuiltIn = true
+                PromptTemplate = "Investigate and fix the following issue: $ARGUMENTS",
+                IsBuiltIn = true,
+                AcceptsArguments = true
             },
             new SkillDefinition
             {
                 Name = "plan",
                 Description = "Create a detailed implementation plan",
-                PromptTemplate = "Create a detailed implementation plan for the following task. Include file paths, code changes, and verification steps. Save the plan to .context/plans/. Task: {args}",
-                IsBuiltIn = true
+                PromptTemplate = "Create a detailed implementation plan for the following task. Include file paths, code changes, and verification steps. Save the plan to .context/plans/. Task: $ARGUMENTS",
+                IsBuiltIn = true,
+                AcceptsArguments = true
             },
             new SkillDefinition
             {
                 Name = "compact",
                 Description = "Compact conversation to free context space",
-                PromptTemplate = "Summarize the conversation so far into a compact context, focusing on key decisions, code changes made, and current state. Discard verbose tool outputs and intermediate reasoning. {args}",
-                IsBuiltIn = true
+                PromptTemplate = "Summarize the conversation so far into a compact context, focusing on key decisions, code changes made, and current state. Discard verbose tool outputs and intermediate reasoning. $ARGUMENTS",
+                IsBuiltIn = true,
+                AcceptsArguments = true
             },
             new SkillDefinition
             {
                 Name = "security-review",
                 Description = "Analyze changes for security vulnerabilities",
-                PromptTemplate = "Analyze the pending changes on the current branch for security vulnerabilities. Review the git diff and identify risks like injection, auth issues, data exposure, and other OWASP top 10 concerns. {args}",
-                IsBuiltIn = true
+                PromptTemplate = "Analyze the pending changes on the current branch for security vulnerabilities. Review the git diff and identify risks like injection, auth issues, data exposure, and other OWASP top 10 concerns. $ARGUMENTS",
+                IsBuiltIn = true,
+                AcceptsArguments = true
             },
             new SkillDefinition
             {
                 Name = "pr-comments",
                 Description = "Fetch and address PR comments",
-                PromptTemplate = "Fetch the comments from the current pull request using `gh pr view --comments` and address any feedback or requested changes. {args}",
-                IsBuiltIn = true
+                PromptTemplate = "Fetch the comments from the current pull request using `gh pr view --comments` and address any feedback or requested changes. $ARGUMENTS",
+                IsBuiltIn = true,
+                AcceptsArguments = true
             },
             new SkillDefinition
             {
                 Name = "debug",
                 Description = "Debug and diagnose an issue",
-                PromptTemplate = "Debug and diagnose the following issue. Check logs, error messages, and code paths to find the root cause and suggest a fix: {args}",
-                IsBuiltIn = true
+                PromptTemplate = "Debug and diagnose the following issue. Check logs, error messages, and code paths to find the root cause and suggest a fix: $ARGUMENTS",
+                IsBuiltIn = true,
+                AcceptsArguments = true
             }
         ]);
     }
@@ -141,14 +154,15 @@ public class SkillRegistry : ISkillRegistry
         Guard.NotNull(session, nameof(session));
 
         var template = skill.PromptTemplate;
+        var value = args ?? "";
 
-        // Handle $ARGUMENTS placeholder (custom commands convention)
-        if (template.Contains("$ARGUMENTS"))
-            template = template.Replace("$ARGUMENTS", args ?? "");
+        // Standard placeholder: $ARGUMENTS (used by both built-in and custom skills)
+        template = template.Replace("$ARGUMENTS", value);
 
-        // Handle {args} placeholder (built-in convention)
-        var expanded = template.Replace("{args}", args ?? "").Trim();
-        return expanded;
+        // Legacy placeholder: {args} (backward compatibility for older custom commands)
+        template = template.Replace("{args}", value);
+
+        return template.Trim();
     }
 
     public bool TryParseSkillChain(string input, Session session, out List<SkillChainStep> steps)
@@ -263,10 +277,23 @@ public class SkillRegistry : ISkillRegistry
 
         lock (_lock)
         {
+            // Remove all non-built-in skills first
             _skills.RemoveAll(s => !s.IsBuiltIn);
+
+            // Collect custom skill names that override built-ins
+            var customNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var s in userSkills) customNames.Add(s.Name);
+            foreach (var s in projectSkills) customNames.Add(s.Name);
+
+            // Remove built-ins that are overridden by custom skills
+            _skills.RemoveAll(s => s.IsBuiltIn && customNames.Contains(s.Name));
+
             _skills.AddRange(userSkills);
             _skills.AddRange(projectSkills);
         }
+
+        _logger.LogInformation("Loaded {Count} custom skills (project: {ProjectPath})",
+            userSkills.Count + projectSkills.Count, projectPath ?? "(none)");
     }
 
     public async Task SaveCommandAsync(SkillDefinition command)
