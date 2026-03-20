@@ -1,7 +1,9 @@
 @using Cominomi.Shared.Models
 @using Microsoft.Extensions.Logging
+@implements IDisposable
 @inject IChatState ChatState
 @inject IChatPrWorkflowService PrWorkflow
+@inject IChatEventBus EventBus
 @inject ISessionService SessionService
 @inject ISnackbar Snackbar
 @inject INotificationService NotificationService
@@ -143,6 +145,25 @@
     private MergeReadiness _readiness = MergeReadiness.Unknown;
     private bool _isCheckingReadiness;
     private string? _lastCheckedSessionId;
+    private IDisposable? _syncSub;
+
+    protected override void OnInitialized()
+    {
+        _syncSub = EventBus.Subscribe<SessionSyncCompletedEvent>(OnSyncCompleted);
+    }
+
+    private void OnSyncCompleted(SessionSyncCompletedEvent evt)
+    {
+        if (Session == null || evt.SessionId != Session.Id) return;
+
+        if (evt.Result.Readiness is { } readiness)
+        {
+            _readiness = readiness;
+            _lastCheckedSessionId = Session.Id;
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -296,5 +317,10 @@
         {
             Logger.LogDebug(ex, "Failed to send notification for session {SessionId}", session.Id);
         }
+    }
+
+    public void Dispose()
+    {
+        _syncSub?.Dispose();
     }
 }
