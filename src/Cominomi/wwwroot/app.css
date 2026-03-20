@@ -864,6 +864,52 @@ html, body {
     overflow-y: auto;
 }
 
+/* ===== PR Status Bar (in diff panel header) ===== */
+.pr-status-bar {
+    display: flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    gap: var(--space-2);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+    min-height: 32px;
+}
+
+.pr-readiness-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    font-size: var(--text-xs);
+    border-radius: var(--radius-full);
+    border: 1px solid;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.pr-readiness-badge.mergeable {
+    color: #a6e3a1;
+    border-color: rgba(166, 227, 161, 0.3);
+    background: rgba(166, 227, 161, 0.08);
+}
+
+.pr-readiness-badge.pending {
+    color: #f9e2af;
+    border-color: rgba(249, 226, 175, 0.3);
+    background: rgba(249, 226, 175, 0.08);
+}
+
+.pr-readiness-badge.failed {
+    color: #f38ba8;
+    border-color: rgba(243, 139, 168, 0.3);
+    background: rgba(243, 139, 168, 0.08);
+}
+
+.pr-readiness-badge.conflict {
+    color: #f38ba8;
+    border-color: rgba(243, 139, 168, 0.3);
+    background: rgba(243, 139, 168, 0.08);
+}
+
 /* Selected file highlight in SidebarChanges */
 .sidebar-file-item.selected {
     background: var(--bg-elevated);
@@ -1169,13 +1215,6 @@ html, body {
 @keyframes stop-glow {
     0%, 100% { box-shadow: 0 0 8px rgba(244, 67, 54, 0.3); }
     50% { box-shadow: 0 0 20px rgba(244, 67, 54, 0.6); }
-}
-
-/* ===== Session Workflow (in toolbar) ===== */
-.session-workflow {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
 }
 
 /* ===== Markdown Styling ===== */

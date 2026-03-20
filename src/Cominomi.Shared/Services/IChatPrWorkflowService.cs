@@ -30,4 +30,9 @@ public interface IChatPrWorkflowService
     /// Returns (prNumber, prUrl) if found and open, null otherwise.
     /// </summary>
     Task<(int? PrNumber, string? PrUrl)?> CheckPrStatusAsync(Session session);
+
+    /// <summary>
+    /// Determines the merge readiness of a session's PR (CI status, conflict state).
+    /// </summary>
+    Task<MergeReadiness> CheckMergeReadinessAsync(Session session);
 }

@@ -136,6 +136,26 @@ public class GhService : IGhService
         }
     }
 
+    public async Task<PrCheckResult> GetChecksStatusAsync(string repoDir, int prNumber, CancellationToken ct = default)
+    {
+        var result = await RunGhAsync(repoDir, ct,
+            "pr", "checks", prNumber.ToString(),
+            "--json", "name,state,conclusion");
+
+        if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
+            return new PrCheckResult(true, false, "No checks configured");
+
+        try
+        {
+            return ParseChecksJson(result.Output);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogDebug(ex, "Failed to parse PR checks JSON");
+            return new PrCheckResult(true, false, "No checks configured");
+        }
+    }
+
     public async Task<PrCheckResult> WaitForChecksAsync(string repoDir, int prNumber, TimeSpan timeout, CancellationToken ct = default)
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -154,38 +174,9 @@ public class GhService : IGhService
             {
                 try
                 {
-                    using var doc = JsonDocument.Parse(result.Output);
-                    var checks = doc.RootElement;
-
-                    if (checks.GetArrayLength() == 0)
-                        return new PrCheckResult(true, false, "No checks configured");
-
-                    bool anyPending = false;
-                    bool anyFailed = false;
-                    var failedNames = new List<string>();
-
-                    foreach (var check in checks.EnumerateArray())
-                    {
-                        var state = check.GetProperty("state").GetString() ?? "";
-                        var conclusion = check.TryGetProperty("conclusion", out var c) ? c.GetString() ?? "" : "";
-                        var name = check.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-
-                        if (state is "PENDING" or "QUEUED" or "IN_PROGRESS" or "WAITING" or "REQUESTED")
-                        {
-                            anyPending = true;
-                        }
-                        else if (conclusion is not ("SUCCESS" or "NEUTRAL" or "SKIPPED"))
-                        {
-                            anyFailed = true;
-                            failedNames.Add(name);
-                        }
-                    }
-
-                    if (anyFailed)
-                        return new PrCheckResult(false, false, $"Failed checks: {string.Join(", ", failedNames)}");
-
-                    if (!anyPending)
-                        return new PrCheckResult(true, false, "All checks passed");
+                    var parsed = ParseChecksJson(result.Output);
+                    if (!parsed.HasPending)
+                        return parsed;
                 }
                 catch (JsonException ex)
                 {
@@ -198,6 +189,44 @@ public class GhService : IGhService
         }
 
         return new PrCheckResult(false, true, "Timed out waiting for checks");
+    }
+
+    private static PrCheckResult ParseChecksJson(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var checks = doc.RootElement;
+
+        if (checks.GetArrayLength() == 0)
+            return new PrCheckResult(true, false, "No checks configured");
+
+        bool anyPending = false;
+        bool anyFailed = false;
+        var failedNames = new List<string>();
+
+        foreach (var check in checks.EnumerateArray())
+        {
+            var state = check.GetProperty("state").GetString() ?? "";
+            var conclusion = check.TryGetProperty("conclusion", out var c) ? c.GetString() ?? "" : "";
+            var name = check.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+
+            if (state is "PENDING" or "QUEUED" or "IN_PROGRESS" or "WAITING" or "REQUESTED")
+            {
+                anyPending = true;
+            }
+            else if (conclusion is not ("SUCCESS" or "NEUTRAL" or "SKIPPED"))
+            {
+                anyFailed = true;
+                failedNames.Add(name);
+            }
+        }
+
+        if (anyFailed)
+            return new PrCheckResult(false, false, $"Failed checks: {string.Join(", ", failedNames)}");
+
+        if (!anyPending)
+            return new PrCheckResult(true, false, "All checks passed");
+
+        return new PrCheckResult(false, true, "Checks in progress");
     }
 
     private async Task<GitResult> RunGhAsync(string workingDir, CancellationToken ct, params string[] args)
