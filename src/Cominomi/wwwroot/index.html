@@ -287,7 +287,6 @@
                 var data = element._resizerData;
                 var startX = e.clientX;
                 var shell = element.closest('.cominomi-shell');
-                if (!shell) return;
 
                 // Get current computed size of the adjacent panel
                 var panel = reverse
@@ -301,11 +300,16 @@
                     var newSize = reverse ? startWidth - dx : startWidth + dx;
                     newSize = Math.round(Math.max(data.minSize, Math.min(data.maxSize, newSize)));
 
-                    // Update CSS variable on the shell
-                    if (reverse) {
-                        shell.style.setProperty('--detail-width', newSize + 'px');
+                    if (shell) {
+                        // Inside shell: use CSS variables for sidebar/detail
+                        if (reverse) {
+                            shell.style.setProperty('--detail-width', newSize + 'px');
+                        } else {
+                            shell.style.setProperty('--sidebar-width', newSize + 'px');
+                        }
                     } else {
-                        shell.style.setProperty('--sidebar-width', newSize + 'px');
+                        // Outside shell (e.g. chat-split): set width directly
+                        panel.style.width = newSize + 'px';
                     }
 
                     data.dotNetRef.invokeMethodAsync('OnDragResize', newSize);

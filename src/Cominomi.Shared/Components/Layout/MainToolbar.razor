@@ -31,24 +31,6 @@
     <div style="flex: 1;"></div>
 
     <StatusBar />
-
-    @if (ChatState.CurrentSession != null && ChatState.CurrentSession.Status != SessionStatus.Pending)
-    {
-        <MudTooltip Text="파일 탐색기">
-            <MudIconButton Icon="@Icons.Material.Filled.FolderOpen"
-                           Color="@(ChatState.RightPanel == RightPanelMode.Explorer ? Color.Primary : Color.Inherit)"
-                           Size="Size.Small"
-                           Style="width: 28px; height: 28px;"
-                           OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Explorer))" />
-        </MudTooltip>
-        <MudTooltip Text="변경사항">
-            <MudIconButton Icon="@Icons.Material.Filled.Difference"
-                           Color="@(ChatState.RightPanel == RightPanelMode.Changes ? Color.Primary : Color.Inherit)"
-                           Size="Size.Small"
-                           Style="width: 28px; height: 28px;"
-                           OnClick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Changes))" />
-        </MudTooltip>
-    }
 </div>
 
 @code {

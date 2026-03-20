@@ -41,7 +41,7 @@
         <div class="sidebar-changes-list">
             @foreach (var file in _diff.Files)
             {
-                <div class="sidebar-file-item file" @onclick="@(() => OpenFileDiff(file))">
+                <div class="sidebar-file-item file @(file.FilePath == SelectedFilePath ? "selected" : "")" @onclick="@(() => OpenFileDiff(file))">
                     <MudIcon Icon="@GetFileIcon(file.ChangeType)" Size="Size.Small"
                              Style="@($"width: 14px; height: 14px; {GetFileIconStyle(file.ChangeType)}")" />
                     <span class="sidebar-file-name">@GetFileName(file.FilePath)</span>
@@ -56,6 +56,9 @@
 </div>
 
 @code {
+    [Parameter] public EventCallback<FileDiff> OnFileSelected { get; set; }
+    [Parameter] public string? SelectedFilePath { get; set; }
+
     private DiffSummary? _diff;
     private bool _loading;
     private string? _error;
@@ -170,9 +173,12 @@
         }
     }
 
-    private void OpenFileDiff(FileDiff file)
+    private async Task OpenFileDiff(FileDiff file)
     {
-        ChatState.Tabs.OpenFileDiffTab(file.FilePath, file);
+        if (OnFileSelected.HasDelegate)
+            await OnFileSelected.InvokeAsync(file);
+        else
+            ChatState.Tabs.OpenFileDiffTab(file.FilePath, file);
     }
 
     private static string GetFileName(string path)
