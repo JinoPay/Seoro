@@ -89,6 +89,7 @@
     private bool _planReviewVisible;
     private string? _planFilePath;
     private string? _planContent;
+    private string? _planSessionId;
     private string? _lastPrCheckedSessionId;
     private bool _shouldAutoScroll;
     private bool _isLoadingBranches;
@@ -118,17 +119,33 @@
                     return;
                 }
 
-                // Restore plan review state when switching to a session with completed plan
+                // Restore plan review state scoped to the current session
+                var currentId = ChatState.CurrentSession?.Id;
                 if (ChatState.CurrentSession is { PlanCompleted: true, PermissionMode: "plan" } && !ChatState.IsStreaming)
                 {
                     _planReviewVisible = true;
-                    if (_planContent == null && !string.IsNullOrEmpty(ChatState.CurrentSession.Git.WorktreePath))
-                        _ = RestorePlanContentAsync(ChatState.CurrentSession.Git.WorktreePath, ChatState.CurrentSession.PlanFilePath);
+
+                    // Only restore content if we don't already have content for THIS session
+                    if (_planSessionId != currentId || _planContent == null)
+                    {
+                        _planSessionId = currentId;
+                        _planContent = null;
+                        _planFilePath = ChatState.CurrentSession.PlanFilePath;
+
+                        if (!string.IsNullOrEmpty(ChatState.CurrentSession.Git.WorktreePath))
+                            _ = RestorePlanContentAsync(ChatState.CurrentSession.Git.WorktreePath, ChatState.CurrentSession.PlanFilePath);
+                    }
                 }
-                else if (ChatState.CurrentSession?.PermissionMode != "plan" || ChatState.IsStreaming)
+                else
                 {
-                    if (!ChatState.IsStreaming)
-                        _planReviewVisible = false;
+                    _planReviewVisible = false;
+
+                    if (_planSessionId != currentId)
+                    {
+                        _planContent = null;
+                        _planFilePath = null;
+                        _planSessionId = currentId;
+                    }
                 }
 
                 if (ChatState.IsStreaming)
@@ -166,6 +183,9 @@
 
     private async Task RestorePlanContentAsync(string worktreePath, string? savedPlanFilePath = null)
     {
+        // Capture session ID at call time to detect switches during async I/O
+        var targetSessionId = ChatState.CurrentSession?.Id;
+
         string? filePath = null;
         string? content = null;
 
@@ -200,12 +220,12 @@
             }
         }
 
-        // Only overwrite if content was found — avoid nulling out content
-        // that ApplyResultAsync may have already set (race condition)
-        if (content != null)
+        // Guard: only apply if user hasn't switched sessions during async read
+        if (content != null && ChatState.CurrentSession?.Id == targetSessionId)
         {
             _planFilePath = filePath;
             _planContent = content;
+            _planSessionId = targetSessionId;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -274,6 +294,7 @@
                 }
                 _planFilePath = null;
                 _planContent = null;
+                _planSessionId = null;
                 break;
 
             case PlanReviewAction.Advice:
@@ -306,6 +327,7 @@
         _quickResponseVisible = false;
         _quickResponseOptions = [];
         _planReviewVisible = false;
+        _planSessionId = null;
 
         // Extract chain state from input
         if (input.PendingChain is { Count: > 0 })
@@ -354,12 +376,29 @@
 
     private async Task ApplyResultAsync(StreamResult result, Session session)
     {
-        _planFilePath = result.PlanFilePath;
-        _planContent = result.PlanContent;
-        _planReviewVisible = result.PlanReviewVisible;
-        _quickResponseVisible = result.QuickResponseVisible;
-        _quickResponseOptions = result.QuickResponseOptions;
-        _shouldAutoScroll = true;
+        var isCurrentSession = ChatState.CurrentSession?.Id == session.Id;
+
+        // Plan state: always store data (for later session switch), but only show UI for current session
+        if (result.PlanReviewVisible)
+        {
+            _planFilePath = result.PlanFilePath;
+            _planContent = result.PlanContent;
+            _planSessionId = session.Id;
+            _planReviewVisible = isCurrentSession;
+        }
+        else if (isCurrentSession)
+        {
+            _planFilePath = result.PlanFilePath;
+            _planContent = result.PlanContent;
+            _planReviewVisible = false;
+        }
+
+        if (isCurrentSession)
+        {
+            _quickResponseVisible = result.QuickResponseVisible;
+            _quickResponseOptions = result.QuickResponseOptions;
+            _shouldAutoScroll = true;
+        }
 
         if (result.ErrorMessage != null)
             await InvokeAsync(() => Snackbar.StreamingError(result.ErrorMessage));
