@@ -1242,8 +1242,8 @@ SessionList ───→ SessionListDataService          ← Phase 4 추출
 ```
 
 ### 빠진 것 / 문제점
-- **미디에이터 패턴 없음**: 모든 통신이 직접 서비스 호출 + ChatState.OnChange
-- **같은 세션을 여러 경로로 로드**: ChatView와 SessionGitWorkflow가 독립적으로 `LoadSessionAsync` 호출. 다른 인스턴스를 가지고 작업할 수 있음
+- ~~**미디에이터 패턴 없음**: 모든 통신이 직접 서비스 호출 + ChatState.OnChange~~ → **해결**: `IChatEventBus` + typed events (`SessionChangedEvent`, `StreamingStartedEvent`, `WorkspaceChangedEvent` 등) 도입. ChatState가 상태 변경 시 이벤트 버스를 통해 타입별 이벤트 발행. UI 컴포넌트는 필요한 이벤트만 구독 가능 (기존 `OnChange`는 하위호환용으로 유지).
+- ~~**같은 세션을 여러 경로로 로드**: ChatView와 SessionGitWorkflow가 독립적으로 `LoadSessionAsync` 호출. 다른 인스턴스를 가지고 작업할 수 있음~~ → **해결**: `IActiveSessionRegistry`를 도입하여 활성 세션 인스턴스를 중앙 관리. `SessionService.LoadSessionAsync()`가 레지스트리를 최우선으로 조회하므로 어디에서 호출하든 동일 인스턴스 반환. `StreamingStateManager`의 `_activeSessions` 딕셔너리를 공유 레지스트리로 대체.
 
 ---
 

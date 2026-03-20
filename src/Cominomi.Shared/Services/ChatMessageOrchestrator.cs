@@ -14,6 +14,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
     private readonly ISessionInitializer _sessionInitializer;
     private readonly IHooksEngine _hooksEngine;
     private readonly IChatPrWorkflowService _prWorkflow;
+    private readonly IActiveSessionRegistry _activeSessionRegistry;
     private readonly ILogger<ChatMessageOrchestrator> _logger;
 
     public ChatMessageOrchestrator(
@@ -26,6 +27,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         ISessionInitializer sessionInitializer,
         IHooksEngine hooksEngine,
         IChatPrWorkflowService prWorkflow,
+        IActiveSessionRegistry activeSessionRegistry,
         ILogger<ChatMessageOrchestrator> logger)
     {
         _chatState = chatState;
@@ -37,6 +39,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         _sessionInitializer = sessionInitializer;
         _hooksEngine = hooksEngine;
         _prWorkflow = prWorkflow;
+        _activeSessionRegistry = activeSessionRegistry;
         _logger = logger;
     }
 
@@ -106,7 +109,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
             _chatState.AddUserMessage(session, input.Text);
 
         await _sessionService.SaveSessionAsync(session);
-        _chatState.RegisterActiveSession(session);
+        _activeSessionRegistry.Register(session);
 
         // --- Streaming setup ---
         var isFirstMessage = session.Messages.Count(m => m.Role == MessageRole.User) == 0;
@@ -162,7 +165,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         _chatState.SetStreaming(true, session.Id);
         _chatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
         var assistantMsg = _chatState.StartAssistantMessage(session);
-        _chatState.RegisterActiveSession(session);
+        _activeSessionRegistry.Register(session);
 
         var systemPrompt = await _systemPromptBuilder.BuildAsync(session, workspace);
 
@@ -261,7 +264,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
 
             _chatState.NotifyStateChanged();
             await _sessionService.SaveSessionAsync(session);
-            _chatState.UnregisterActiveSession(session.Id);
+            _activeSessionRegistry.Unregister(session.Id);
         }
 
         return new StreamResult

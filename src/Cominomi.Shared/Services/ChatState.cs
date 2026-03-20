@@ -17,6 +17,9 @@ public class ChatState : IChatState
     public SettingsStateManager Settings { get; }
     public TabManager Tabs { get; } = new();
 
+    // Mediator: typed event bus
+    private readonly IChatEventBus _eventBus;
+
     // Navigation state
     public Workspace? CurrentWorkspace { get; private set; }
     public Session? CurrentSession { get; private set; }
@@ -33,10 +36,13 @@ public class ChatState : IChatState
     public event Action? OnChange;
     public event Action? OnRequestCreateWorkspace;
 
-    public ChatState()
+    public ChatState(IActiveSessionRegistry activeSessionRegistry, IChatEventBus eventBus)
     {
+        _eventBus = eventBus;
+
         Messages = new MessageManager(NotifyStateChanged);
         Streaming = new StreamingStateManager(NotifyStateChanged);
+        Streaming.BindRegistry(activeSessionRegistry);
         Settings = new SettingsStateManager(NotifyStateChanged);
         Tabs.OnTabChanged += NotifyStateChanged;
     }
@@ -48,6 +54,8 @@ public class ChatState : IChatState
     public string? ActiveToolName => CurrentSession != null ? Streaming.GetSessionToolName(CurrentSession.Id) : null;
 
     // --- Streaming delegation (backward compatible) ---
+    // Streaming methods delegate to StreamingStateManager which calls _notifyChanged
+    // (the debounced path). No separate typed events — streaming is high-frequency.
 
     public bool IsSessionStreaming(string sessionId) => Streaming.IsSessionStreaming(sessionId);
     public StreamingPhase GetSessionPhase(string sessionId) => Streaming.GetSessionPhase(sessionId);
@@ -132,11 +140,13 @@ public class ChatState : IChatState
     {
         CurrentWorkspace = workspace;
         CurrentSession = null;
+        _eventBus.Publish(new WorkspaceChangedEvent(workspace));
         NotifyStateChanged();
     }
 
     public void SetSession(Session? session)
     {
+        var old = CurrentSession;
         CurrentSession = session;
         Tabs.Reset(session?.Title);
 
@@ -145,6 +155,7 @@ public class ChatState : IChatState
         else
             RightPanel = RightPanelMode.None;
 
+        _eventBus.Publish(new SessionChangedEvent(old, session));
         NotifyStateChanged();
     }
 
@@ -175,12 +186,14 @@ public class ChatState : IChatState
     public void SetRightPanel(RightPanelMode mode)
     {
         RightPanel = mode;
+        _eventBus.Publish(new RightPanelChangedEvent(mode));
         NotifyStateChanged();
     }
 
     public void ToggleRightPanel(RightPanelMode mode)
     {
         RightPanel = RightPanel == mode ? RightPanelMode.None : mode;
+        _eventBus.Publish(new RightPanelChangedEvent(RightPanel));
         NotifyStateChanged();
     }
 

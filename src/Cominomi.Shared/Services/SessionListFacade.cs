@@ -8,6 +8,7 @@ public class SessionListFacade : ISessionListFacade
 {
     private readonly IChatState _chatState;
     private readonly ISessionService _sessionService;
+    private readonly IActiveSessionRegistry _activeSessionRegistry;
     private readonly IOptionsMonitor<AppSettings> _appSettings;
     private readonly ISettingsService _settingsService;
     private readonly SessionListDataService _dataService;
@@ -18,6 +19,7 @@ public class SessionListFacade : ISessionListFacade
     public SessionListFacade(
         IChatState chatState,
         ISessionService sessionService,
+        IActiveSessionRegistry activeSessionRegistry,
         IOptionsMonitor<AppSettings> appSettings,
         ISettingsService settingsService,
         SessionListDataService dataService,
@@ -27,6 +29,7 @@ public class SessionListFacade : ISessionListFacade
     {
         _chatState = chatState;
         _sessionService = sessionService;
+        _activeSessionRegistry = activeSessionRegistry;
         _appSettings = appSettings;
         _settingsService = settingsService;
         _dataService = dataService;
@@ -82,16 +85,10 @@ public class SessionListFacade : ISessionListFacade
         if (ws != null)
             await SwitchWorkspaceAsync(ws);
 
-        var activeSession = _chatState.GetActiveSession(session.Id);
-        if (activeSession != null)
-        {
-            _chatState.SetSession(activeSession);
-        }
-        else
-        {
-            var fullSess = await _sessionService.LoadSessionAsync(session.Id);
-            _chatState.SetSession(fullSess ?? session);
-        }
+        // LoadSessionAsync checks the active session registry first,
+        // so we always get the authoritative in-memory instance if one exists.
+        var fullSess = await _sessionService.LoadSessionAsync(session.Id);
+        _chatState.SetSession(fullSess ?? session);
 
         await SaveLastSelectionAsync(session.WorkspaceId, session.Id);
     }

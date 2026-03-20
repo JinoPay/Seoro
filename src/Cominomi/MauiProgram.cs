@@ -70,6 +70,8 @@ public static class MauiProgram
 
         // App Services
         builder.Services.AddSingleton<IShellService, ShellService>();
+        builder.Services.AddSingleton<IActiveSessionRegistry, ActiveSessionRegistry>();
+        builder.Services.AddSingleton<IChatEventBus, ChatEventBus>();
         builder.Services.AddSingleton<IChatState, ChatState>();
         builder.Services.AddSingleton<IGitService, GitService>();
         builder.Services.AddSingleton<IGhService, GhService>();

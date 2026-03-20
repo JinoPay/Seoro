@@ -30,6 +30,7 @@ public class SessionServiceTests : IDisposable
             _optionsMonitor,
             _contextService,
             _hooksEngine,
+            new ActiveSessionRegistry(),
             NullLogger<SessionService>.Instance);
 
         // Override internal _sessionsDir via reflection

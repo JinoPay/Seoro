@@ -6,13 +6,20 @@ namespace Cominomi.Shared.Services;
 public class StreamingStateManager
 {
     private readonly ConcurrentDictionary<string, SessionStreamingState> _streamingStates = new();
-    private readonly ConcurrentDictionary<string, Session> _activeSessions = new();
     private readonly Action _notifyChanged;
+    private IActiveSessionRegistry? _activeSessionRegistry;
 
     public StreamingStateManager(Action notifyChanged)
     {
         _notifyChanged = notifyChanged;
     }
+
+    /// <summary>
+    /// Binds the shared active-session registry. Called once during ChatState construction
+    /// after DI resolves the registry. This avoids a constructor dependency cycle.
+    /// </summary>
+    public void BindRegistry(IActiveSessionRegistry registry)
+        => _activeSessionRegistry = registry;
 
     public bool IsSessionStreaming(string? sessionId)
         => sessionId != null && _streamingStates.TryGetValue(sessionId, out var s) && s.IsStreaming;
@@ -30,13 +37,13 @@ public class StreamingStateManager
         => _streamingStates.Where(kv => kv.Value.IsStreaming).Select(kv => kv.Key).ToList();
 
     public void RegisterActiveSession(Session session)
-        => _activeSessions[session.Id] = session;
+        => _activeSessionRegistry!.Register(session);
 
     public void UnregisterActiveSession(string sessionId)
-        => _activeSessions.TryRemove(sessionId, out _);
+        => _activeSessionRegistry!.Unregister(sessionId);
 
     public Session? GetActiveSession(string sessionId)
-        => _activeSessions.TryGetValue(sessionId, out var session) ? session : null;
+        => _activeSessionRegistry!.Get(sessionId);
 
     public void SetStreaming(bool streaming, string? sessionId)
     {

@@ -17,6 +17,7 @@ public partial class SessionService : ISessionService
     private readonly IOptionsMonitor<AppSettings> _appSettings;
     private readonly IContextService _contextService;
     private readonly IHooksEngine _hooksEngine;
+    private readonly IActiveSessionRegistry _activeSessionRegistry;
     private readonly ILogger<SessionService> _logger;
     private readonly string _sessionsDir = AppPaths.Sessions;
     private readonly string _archiveDir = AppPaths.ArchivedContexts;
@@ -36,6 +37,7 @@ public partial class SessionService : ISessionService
 
     public SessionService(IGitService gitService, IWorkspaceService workspaceService,
         IOptionsMonitor<AppSettings> appSettings, IContextService contextService, IHooksEngine hooksEngine,
+        IActiveSessionRegistry activeSessionRegistry,
         ILogger<SessionService> logger)
     {
         _gitService = gitService;
@@ -43,6 +45,7 @@ public partial class SessionService : ISessionService
         _appSettings = appSettings;
         _contextService = contextService;
         _hooksEngine = hooksEngine;
+        _activeSessionRegistry = activeSessionRegistry;
         _logger = logger;
     }
 
@@ -310,6 +313,11 @@ public partial class SessionService : ISessionService
 
     public async Task<Session?> LoadSessionAsync(string sessionId)
     {
+        // Active sessions (currently streaming) are authoritative — return the same instance
+        var active = _activeSessionRegistry.Get(sessionId);
+        if (active != null)
+            return active;
+
         ScavengeExpiredSessions();
 
         // Return cached session if still fresh (avoids redundant disk I/O in pipelines)
