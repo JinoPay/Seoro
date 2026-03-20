@@ -63,9 +63,13 @@ public class SessionListFacade : ISessionListFacade
 
     public async Task<Session> CreateSessionAsync(Workspace ws, bool localDir = false)
     {
+        // AppSettings.DefaultModel is the user-facing "기본 모델" setting.
+        // Workspace.DefaultModel is kept for per-workspace overrides but app-level takes precedence.
+        var model = _appSettings.CurrentValue.DefaultModel;
+
         var session = localDir
-            ? await _sessionService.CreateLocalDirSessionAsync(ws.DefaultModel, ws.Id)
-            : await _sessionService.CreatePendingSessionAsync(ws.DefaultModel, ws.Id);
+            ? await _sessionService.CreateLocalDirSessionAsync(model, ws.Id)
+            : await _sessionService.CreatePendingSessionAsync(model, ws.Id);
 
         await SwitchWorkspaceAsync(ws);
         _chatState.SetSession(session);
