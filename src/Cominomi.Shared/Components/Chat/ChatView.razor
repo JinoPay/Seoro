@@ -29,7 +29,8 @@
                       OnResize="HandleDiffPanelResize" />
 
         <div class="chat-split-right" style="width: @(_diffPanelWidth)px;">
-            <EmbeddedDiffPanel />
+            <EmbeddedDiffPanel OnLinkIssueRequested="@(() => _linkIssueDialogOpen = true)"
+                               OnSendMessage="HandleSend" />
         </div>
     </div>
 }
@@ -44,11 +45,6 @@ else
     private RenderFragment ChatContentFragment => __builder =>
     {
         <div class="chat-container">
-            @* Workflow actions bar *@
-            <SessionWorkflowBar Session="ChatState.CurrentSession"
-                                OnLinkIssueRequested="@(() => _linkIssueDialogOpen = true)"
-                                OnSendMessage="HandleSend" />
-
             @* Message area *@
             <CascadingValue Value="_askUserResponseCallback" Name="OnAskUserResponse">
             <div class="message-area" id="message-list">

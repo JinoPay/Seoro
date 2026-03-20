@@ -35,3 +35,5 @@ bld/
 *.rsuser
 
 .context/
+
+.cominomi-attachments/
