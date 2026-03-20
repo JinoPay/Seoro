@@ -159,11 +159,6 @@ public class ChatState : IChatState
         CurrentSession = session;
         Tabs.Reset(session?.Title);
 
-        if (session != null && session.Status != SessionStatus.Pending)
-            RightPanel = RightPanelMode.Explorer;
-        else
-            RightPanel = RightPanelMode.None;
-
         _eventBus.Publish(new SessionChangedEvent(old, session));
         NotifyStateChanged();
     }

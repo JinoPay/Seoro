@@ -1,0 +1,67 @@
+@using Cominomi.Shared.Models
+@inject IChatState ChatState
+@implements IDisposable
+
+<div class="embedded-diff-panel">
+    <div class="embedded-diff-toolbar">
+        <div class="embedded-diff-tabs">
+            <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Changes ? "active" : "")"
+                  @onclick="@(() => _activeTab = DiffPanelTab.Changes)">
+                Changes
+            </span>
+            <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Explorer ? "active" : "")"
+                  @onclick="@(() => _activeTab = DiffPanelTab.Explorer)">
+                Explorer
+            </span>
+        </div>
+    </div>
+
+    <div class="embedded-diff-content">
+        @if (_activeTab == DiffPanelTab.Changes)
+        {
+            <div class="embedded-diff-file-list">
+                <SidebarChanges OnFileSelected="HandleFileSelected"
+                                SelectedFilePath="@_selectedFile?.FilePath" />
+            </div>
+
+            @if (_selectedFile != null)
+            {
+                <div class="embedded-diff-viewer">
+                    <FileDiffView Diff="_selectedFile" />
+                </div>
+            }
+        }
+        else
+        {
+            <SidebarExplorer />
+        }
+    </div>
+</div>
+
+@code {
+    private DiffPanelTab _activeTab = DiffPanelTab.Changes;
+    private FileDiff? _selectedFile;
+
+    protected override void OnInitialized()
+    {
+        ChatState.OnChange += HandleStateChanged;
+    }
+
+    private void HandleFileSelected(FileDiff file)
+    {
+        _selectedFile = _selectedFile?.FilePath == file.FilePath ? null : file;
+        StateHasChanged();
+    }
+
+    private void HandleStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= HandleStateChanged;
+    }
+
+    private enum DiffPanelTab { Changes, Explorer }
+}

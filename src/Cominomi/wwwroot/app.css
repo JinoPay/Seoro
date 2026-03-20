@@ -15,15 +15,10 @@ html, body {
 /* ===== 3-Panel Shell Layout ===== */
 .cominomi-shell {
     --sidebar-width: 260px;
-    --detail-width: 400px;
     display: grid;
     grid-template-columns: var(--sidebar-width) auto 1fr;
     height: 100vh;
     overflow: hidden;
-}
-
-.cominomi-shell.detail-open {
-    grid-template-columns: var(--sidebar-width) auto 1fr auto var(--detail-width);
 }
 
 .cominomi-shell.sidebar-collapsed {
@@ -670,87 +665,6 @@ html, body {
     font-size: var(--text-sm);
 }
 
-/* ===== Detail Panel (Right) ===== */
-.cominomi-detail {
-    background: var(--bg-sidebar);
-    border-left: 1px solid var(--border-default);
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.detail-panel {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-}
-
-.detail-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-2) var(--space-3);
-    height: 44px;
-    flex-shrink: 0;
-    border-bottom: 1px solid var(--border-subtle);
-}
-
-.detail-tabs {
-    display: flex;
-    gap: 2px;
-}
-
-.detail-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius-sm);
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: var(--text-sm);
-    font-family: inherit;
-    transition: all var(--transition);
-}
-
-.detail-tab:hover {
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text-primary);
-}
-
-.detail-tab.active {
-    background: var(--accent-dim);
-    color: var(--accent);
-}
-
-.detail-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--space-2);
-}
-
-.detail-content.no-padding {
-    padding: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.detail-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 200px;
-    gap: var(--space-3);
-    font-size: var(--text-sm);
-    opacity: 0.35;
-}
-
 .diff-summary {
     display: flex;
     align-items: center;
@@ -859,6 +773,100 @@ html, body {
 
 .filecontent-text {
     white-space: pre;
+}
+
+/* ===== Chat 2-Split Layout ===== */
+.chat-split-layout {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.chat-split-left {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-split-right {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-sidebar);
+    border-left: 1px solid var(--border-default);
+    flex-shrink: 0;
+}
+
+/* ===== Embedded Diff Panel ===== */
+.embedded-diff-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.embedded-diff-toolbar {
+    display: flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    height: 40px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-subtle);
+    gap: var(--space-2);
+}
+
+.embedded-diff-tabs {
+    display: flex;
+    gap: 2px;
+}
+
+.embedded-diff-tab {
+    font-size: var(--text-xs);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 150ms, background 150ms;
+    user-select: none;
+}
+
+.embedded-diff-tab:hover {
+    opacity: 0.8;
+}
+
+.embedded-diff-tab.active {
+    opacity: 1;
+    background: var(--bg-elevated);
+}
+
+.embedded-diff-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.embedded-diff-file-list {
+    flex-shrink: 0;
+    max-height: 40%;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.embedded-diff-viewer {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* Selected file highlight in SidebarChanges */
+.sidebar-file-item.selected {
+    background: var(--bg-elevated);
 }
 
 /* ===== Chat View ===== */
