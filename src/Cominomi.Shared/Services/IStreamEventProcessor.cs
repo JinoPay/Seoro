@@ -25,6 +25,12 @@ public class StreamProcessingContext
     // Plan mode detection
     public bool ExitPlanModeDetected { get; set; }
 
+    /// <summary>
+    /// Plan file path detected from Write/Edit tool calls targeting .claude/plans/.
+    /// Used to avoid picking up unrelated plan files from other sessions.
+    /// </summary>
+    public string? DetectedPlanFilePath { get; set; }
+
     // Plan file results (populated by FinalizeAsync)
     public string? PlanFilePath { get; set; }
     public string? PlanContent { get; set; }

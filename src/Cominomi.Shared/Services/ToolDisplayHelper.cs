@@ -62,6 +62,7 @@ public static class ToolDisplayHelper
                 "WebSearch" => count == 1 ? Strings.Tool_WebSearchSingle : Strings.Tool_WebSearchMultiple(count),
                 "NotebookEdit" => count == 1 ? Strings.Tool_NotebookSingle : Strings.Tool_NotebookMultiple(count),
                 "TodoWrite" => Strings.Tool_TodoWriteDone,
+                "AskUserQuestion" => "질문 대기 중",
                 _ => count > 1 ? Strings.Tool_DefaultMultiple(name, count) : name
             });
         }
@@ -89,6 +90,7 @@ public static class ToolDisplayHelper
                 "WebFetch" => GetStringProperty(root, "url", 60),
                 "WebSearch" => GetStringProperty(root, "query", 50),
                 "NotebookEdit" => GetFilePath(root),
+                "AskUserQuestion" => GetAskUserHeader(root),
                 _ => null
             };
         }
@@ -156,6 +158,32 @@ public static class ToolDisplayHelper
         return null;
     }
 
+    private static string? GetAskUserHeader(JsonElement root)
+    {
+        if (!root.TryGetProperty("questions", out var questions) ||
+            questions.ValueKind != JsonValueKind.Array ||
+            questions.GetArrayLength() == 0)
+            return null;
+
+        var first = questions[0];
+        // Prefer header, fall back to question text
+        if (first.TryGetProperty("header", out var header))
+        {
+            var text = header.GetString();
+            if (!string.IsNullOrEmpty(text))
+                return text.Length <= 50 ? text : text[..50] + "…";
+        }
+
+        if (first.TryGetProperty("question", out var question))
+        {
+            var text = question.GetString();
+            if (!string.IsNullOrEmpty(text))
+                return text.Length <= 50 ? text : text[..50] + "…";
+        }
+
+        return null;
+    }
+
     private static string? GetReadHint(string output)
     {
         var lineCount = CountLines(output);
@@ -203,6 +231,7 @@ public static class ToolDisplayHelper
         "websearch" or "web_search" => "WebSearch",
         "notebookedit" or "notebook_edit" => "NotebookEdit",
         "todowrite" or "todo_write" => "TodoWrite",
+        "askuserquestion" or "ask_user_question" => "AskUserQuestion",
         _ when name.StartsWith("mcp__", StringComparison.OrdinalIgnoreCase) => ExtractMcpToolName(name),
         _ => name
     };
