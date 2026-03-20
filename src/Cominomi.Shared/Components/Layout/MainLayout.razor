@@ -52,7 +52,7 @@ else
                 }
 
                 @* ChatView는 항상 렌더링 — 탭 전환 시에도 프로세스가 유지되도록 display로 토글 *@
-                <div style="@(isChatTab ? "" : "display:none;height:0;overflow:hidden")">
+                <div style="@(isChatTab ? "flex:1;min-height:0;display:flex;flex-direction:column" : "display:none;height:0;overflow:hidden")">
                     @Body
                 </div>
 
