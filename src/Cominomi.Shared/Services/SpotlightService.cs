@@ -21,6 +21,9 @@ public class SpotlightService : ISpotlightService, IDisposable
 
     public bool IsActive(string sessionId) => _sessions.ContainsKey(sessionId);
 
+    public string? GetSpotlightPath(string sessionId)
+        => _sessions.TryGetValue(sessionId, out var s) ? s.SpotlightWorktreePath : null;
+
     public async Task RecoverAsync()
     {
         if (!File.Exists(StateFilePath))
@@ -39,33 +42,20 @@ public class SpotlightService : ISpotlightService, IDisposable
             return;
         }
 
-        if (state == null || string.IsNullOrEmpty(state.RepoDir) || string.IsNullOrEmpty(state.OriginalBranch))
+        if (state == null || string.IsNullOrEmpty(state.RepoDir) || string.IsNullOrEmpty(state.SpotlightWorktreePath))
         {
             TryDeleteStateFile();
             return;
         }
 
-        if (!Directory.Exists(state.RepoDir))
-        {
-            _logger.LogWarning("Spotlight recovery: repo dir {RepoDir} no longer exists", state.RepoDir);
-            TryDeleteStateFile();
-            return;
-        }
-
-        _logger.LogWarning("Recovering from spotlight crash for session {SessionId} in {RepoDir}",
-            state.SessionId, state.RepoDir);
+        _logger.LogWarning("Recovering from spotlight crash for session {SessionId}", state.SessionId);
 
         try
         {
-            await RunGitAsync("checkout -- .", state.RepoDir);
-            await RunGitAsync("clean -fd", state.RepoDir);
-            await RunGitAsync($"checkout \"{state.OriginalBranch}\"", state.RepoDir);
-
-            var stashMarker = $"cominomi-spotlight-{state.SessionId}";
-            var stashList = await RunGitAsync("stash list", state.RepoDir);
-            if (stashList.Success && stashList.Output.Contains(stashMarker))
+            // Remove the spotlight worktree if it still exists
+            if (Directory.Exists(state.SpotlightWorktreePath))
             {
-                await RunGitAsync("stash pop", state.RepoDir);
+                await RunGitAsync($"worktree remove \"{state.SpotlightWorktreePath}\" --force", state.RepoDir);
             }
 
             _logger.LogInformation("Spotlight recovery completed for session {SessionId}", state.SessionId);
@@ -73,6 +63,17 @@ public class SpotlightService : ISpotlightService, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Spotlight recovery failed for session {SessionId}", state.SessionId);
+            // Force-clean the directory if git worktree remove failed
+            try
+            {
+                if (Directory.Exists(state.SpotlightWorktreePath))
+                    Directory.Delete(state.SpotlightWorktreePath, recursive: true);
+                await RunGitAsync("worktree prune", state.RepoDir);
+            }
+            catch (Exception cleanEx)
+            {
+                _logger.LogDebug(cleanEx, "Spotlight recovery cleanup also failed");
+            }
         }
         finally
         {
@@ -100,33 +101,37 @@ public class SpotlightService : ISpotlightService, IDisposable
         if (string.IsNullOrEmpty(repoDir) || !Directory.Exists(repoDir))
             throw new InvalidOperationException("Repository path not found.");
 
-        // Record original branch so we can restore later
-        var originalBranch = await _gitService.GetCurrentBranchAsync(repoDir);
-        if (originalBranch == null)
-            throw new InvalidOperationException("Could not detect current branch in repository.");
+        // Create a dedicated spotlight worktree (sibling of the main repo)
+        var repoName = Path.GetFileName(repoDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var spotlightDir = Path.Combine(
+            Path.GetDirectoryName(repoDir)!,
+            $".cominomi-spotlight-{repoName}");
 
-        // Persist state BEFORE making changes so crash recovery can clean up
-        await PersistStateAsync(session.Id, originalBranch, repoDir);
-
-        var stashMarker = $"cominomi-spotlight-{session.Id}";
-
-        // Stash any uncommitted changes in the repo root
-        await RunGitAsync($"stash push -m \"{stashMarker}\"", repoDir);
-
-        // Checkout the session branch in the repo root
-        var checkoutResult = await RunGitAsync($"checkout \"{session.Git.BranchName}\"", repoDir);
-        if (!checkoutResult.Success)
+        // Clean up stale spotlight worktree if it exists
+        if (Directory.Exists(spotlightDir))
         {
-            // Restore stash if checkout failed
-            await RunGitAsync("stash pop", repoDir);
-            TryDeleteStateFile();
-            throw new InvalidOperationException($"Failed to checkout branch: {checkoutResult.Error}");
+            await RunGitAsync($"worktree remove \"{spotlightDir}\" --force", repoDir);
+            if (Directory.Exists(spotlightDir))
+                Directory.Delete(spotlightDir, recursive: true);
+            await RunGitAsync("worktree prune", repoDir);
         }
 
-        // Sync uncommitted changes from worktree to repo root
-        await SyncFilesAsync(session.Git.WorktreePath, repoDir);
+        // Persist state BEFORE making changes so crash recovery can clean up
+        await PersistStateAsync(session.Id, repoDir, spotlightDir);
 
-        // Start watching worktree for changes
+        // Create a detached worktree from the session branch
+        var addResult = await RunGitAsync(
+            $"worktree add --detach \"{spotlightDir}\" \"{session.Git.BranchName}\"", repoDir);
+        if (!addResult.Success)
+        {
+            TryDeleteStateFile();
+            throw new InvalidOperationException($"Failed to create spotlight worktree: {addResult.Error}");
+        }
+
+        // Sync uncommitted changes from session worktree to spotlight worktree
+        await SyncFilesAsync(session.Git.WorktreePath, spotlightDir);
+
+        // Start watching session worktree for changes
         var watcher = new FileSystemWatcher(session.Git.WorktreePath)
         {
             IncludeSubdirectories = true,
@@ -138,9 +143,9 @@ public class SpotlightService : ISpotlightService, IDisposable
         var spotlightSession = new SpotlightSession
         {
             SessionId = session.Id,
-            OriginalBranch = originalBranch,
             RepoDir = repoDir,
-            WorktreePath = session.Git.WorktreePath,
+            SessionWorktreePath = session.Git.WorktreePath,
+            SpotlightWorktreePath = spotlightDir,
             Watcher = watcher
         };
 
@@ -159,7 +164,7 @@ public class SpotlightService : ISpotlightService, IDisposable
             }
             try
             {
-                await SyncFilesAsync(spotlightSession.WorktreePath, spotlightSession.RepoDir);
+                await SyncFilesAsync(spotlightSession.SessionWorktreePath, spotlightSession.SpotlightWorktreePath);
             }
             catch (Exception ex)
             {
@@ -190,7 +195,7 @@ public class SpotlightService : ISpotlightService, IDisposable
             _logger.LogWarning(e.GetException(), "FileSystemWatcher buffer overflow for session {SessionId}", session.Id);
 
         _sessions[session.Id] = spotlightSession;
-        _logger.LogInformation("Spotlight started for session {SessionId}", session.Id);
+        _logger.LogInformation("Spotlight started for session {SessionId} at {Path}", session.Id, spotlightDir);
     }
 
     public async Task StopAsync(string sessionId)
@@ -204,30 +209,37 @@ public class SpotlightService : ISpotlightService, IDisposable
         session.SyncTimer?.Dispose();
         session.SyncLock.Dispose();
 
-        // Discard changes in repo root and restore original branch
-        await RunGitAsync("checkout -- .", session.RepoDir);
-        await RunGitAsync("clean -fd", session.RepoDir);
-        await RunGitAsync($"checkout \"{session.OriginalBranch}\"", session.RepoDir);
-
-        // Restore stashed changes if any
-        var stashMarker = $"cominomi-spotlight-{sessionId}";
-        var stashList = await RunGitAsync("stash list", session.RepoDir);
-        if (stashList.Success && stashList.Output.Contains(stashMarker))
+        // Remove the spotlight worktree
+        try
         {
-            await RunGitAsync("stash pop", session.RepoDir);
+            await RunGitAsync($"worktree remove \"{session.SpotlightWorktreePath}\" --force", session.RepoDir);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to remove spotlight worktree, cleaning up manually");
+            try
+            {
+                if (Directory.Exists(session.SpotlightWorktreePath))
+                    Directory.Delete(session.SpotlightWorktreePath, recursive: true);
+                await RunGitAsync("worktree prune", session.RepoDir);
+            }
+            catch (Exception cleanEx)
+            {
+                _logger.LogDebug(cleanEx, "Manual spotlight cleanup also failed");
+            }
         }
 
         TryDeleteStateFile();
         _logger.LogInformation("Spotlight stopped for session {SessionId}", sessionId);
     }
 
-    private async Task PersistStateAsync(string sessionId, string originalBranch, string repoDir)
+    private async Task PersistStateAsync(string sessionId, string repoDir, string spotlightWorktreePath)
     {
         var state = new SpotlightPersistedState
         {
             SessionId = sessionId,
-            OriginalBranch = originalBranch,
-            RepoDir = repoDir
+            RepoDir = repoDir,
+            SpotlightWorktreePath = spotlightWorktreePath
         };
         var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
         await AtomicFileWriter.WriteAsync(StateFilePath, json);
@@ -239,10 +251,10 @@ public class SpotlightService : ISpotlightService, IDisposable
         catch (Exception ex) { _logger.LogDebug(ex, "Failed to delete spotlight state file"); }
     }
 
-    private async Task SyncFilesAsync(string worktreePath, string repoDir)
+    private async Task SyncFilesAsync(string sourceWorktreePath, string destWorktreePath)
     {
         // Only sync files that have actually changed (modified, added, deleted, untracked)
-        var statusResult = await RunGitAsync("status --porcelain -u", worktreePath);
+        var statusResult = await RunGitAsync("status --porcelain -u", sourceWorktreePath);
         if (!statusResult.Success) return;
 
         foreach (var line in statusResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
@@ -256,8 +268,8 @@ public class SpotlightService : ISpotlightService, IDisposable
             if (filePath.Contains(" -> "))
                 filePath = filePath.Split(" -> ")[1];
 
-            var sourcePath = Path.Combine(worktreePath, filePath);
-            var destPath = Path.Combine(repoDir, filePath);
+            var sourcePath = Path.Combine(sourceWorktreePath, filePath);
+            var destPath = Path.Combine(destWorktreePath, filePath);
 
             if (statusCode.Contains('D'))
             {
@@ -303,9 +315,9 @@ public class SpotlightService : ISpotlightService, IDisposable
     private class SpotlightSession
     {
         public required string SessionId { get; init; }
-        public required string OriginalBranch { get; init; }
         public required string RepoDir { get; init; }
-        public required string WorktreePath { get; init; }
+        public required string SessionWorktreePath { get; init; }
+        public required string SpotlightWorktreePath { get; init; }
         public required FileSystemWatcher Watcher { get; init; }
         public Timer? SyncTimer { get; set; }
         public int Dirty; // 0 = clean, 1 = needs sync; accessed via Volatile/Interlocked
@@ -315,7 +327,7 @@ public class SpotlightService : ISpotlightService, IDisposable
     private class SpotlightPersistedState
     {
         public string SessionId { get; set; } = "";
-        public string OriginalBranch { get; set; } = "";
         public string RepoDir { get; set; } = "";
+        public string SpotlightWorktreePath { get; set; } = "";
     }
 }

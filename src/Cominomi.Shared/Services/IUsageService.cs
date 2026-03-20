@@ -9,5 +9,6 @@ public interface IUsageService
     Task<UsageStats> GetStatsByDateRangeAsync(DateTime start, DateTime end);
     decimal CalculateCost(string model, long inputTokens, long outputTokens, long cacheCreationTokens, long cacheReadTokens);
     Task<string> ExportCsvAsync(int? days = null);
+    Task<string> ExportJsonAsync(int? days = null);
     Task<int> PurgeOldEntriesAsync(int retentionDays = 90);
 }
