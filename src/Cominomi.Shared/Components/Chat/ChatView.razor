@@ -50,6 +50,7 @@ else
                                 OnSendMessage="HandleSend" />
 
             @* Message area *@
+            <CascadingValue Value="_askUserResponseCallback" Name="OnAskUserResponse">
             <div class="message-area" id="message-list">
                 @if (ChatState.CurrentSession == null)
                 {
@@ -79,6 +80,7 @@ else
                     </div>
                 }
             </div>
+            </CascadingValue>
 
             @* Quick response bar *@
             <QuickResponseBar IsVisible="@(_quickResponseVisible && !_planReviewVisible)"
@@ -115,6 +117,7 @@ else
     private bool _linkIssueDialogOpen;
     private bool _quickResponseVisible;
     private List<string> _quickResponseOptions = [];
+    private EventCallback<string> _askUserResponseCallback;
     private bool _planReviewVisible;
     private string? _planFilePath;
     private string? _planContent;
@@ -132,6 +135,7 @@ else
     protected override void OnInitialized()
     {
         ChatState.OnChange += HandleStateChanged;
+        _askUserResponseCallback = EventCallback.Factory.Create<string>(this, HandleQuickResponse);
     }
 
     private void HandleStateChanged()

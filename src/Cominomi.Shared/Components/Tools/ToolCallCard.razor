@@ -47,6 +47,9 @@
                 case WidgetType.Glob:
                     <GlobToolWidget Tool="Tool" />
                     break;
+                case WidgetType.AskUserQuestion:
+                    <AskUserQuestionWidget Tool="Tool" />
+                    break;
                 default:
                     @* Generic fallback *@
                     @if (!string.IsNullOrEmpty(Tool.Input))
@@ -111,6 +114,10 @@
         {
             _lastInput = Tool.Input;
             _headerLabel = ToolDisplayHelper.GetHeaderLabel(Tool);
+
+            // AskUserQuestion should always be expanded for user interaction
+            if (GetWidgetType() == WidgetType.AskUserQuestion)
+                _expanded = true;
         }
 
         if (!ReferenceEquals(_lastOutput, Tool.Output) || _lastIsComplete != Tool.IsComplete)
@@ -121,7 +128,7 @@
         }
     }
 
-    private enum WidgetType { Generic, Read, Edit, Bash, Grep, Glob }
+    private enum WidgetType { Generic, Read, Edit, Bash, Grep, Glob, AskUserQuestion }
 
     private WidgetType GetWidgetType() => Tool.Name.ToLowerInvariant() switch
     {
@@ -131,6 +138,7 @@
         "bash" or "execute_bash" => WidgetType.Bash,
         "grep" => WidgetType.Grep,
         "glob" => WidgetType.Glob,
+        "askuserquestion" or "ask_user_question" => WidgetType.AskUserQuestion,
         _ => WidgetType.Generic
     };
 
@@ -147,6 +155,7 @@
         "websearch" or "web_search" => Icons.Material.Filled.TravelExplore,
         "notebookedit" or "notebook_edit" => Icons.Material.Filled.DataObject,
         "todowrite" or "todo_write" => Icons.Material.Filled.Checklist,
+        "askuserquestion" or "ask_user_question" => Icons.Material.Filled.QuestionAnswer,
         _ when Tool.Name.StartsWith("mcp__", StringComparison.OrdinalIgnoreCase) => Icons.Material.Filled.Hub,
         _ => Icons.Material.Filled.Extension
     };
