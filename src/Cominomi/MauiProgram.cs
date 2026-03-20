@@ -90,6 +90,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ITaskService, TaskService>();
         builder.Services.AddSingleton<ISessionService, SessionService>();
         builder.Services.AddSingleton<ISessionGitWorkflowService, SessionGitWorkflowService>();
+        builder.Services.AddSingleton<ISessionSyncService, SessionSyncService>();
         builder.Services.AddSingleton<IWorkspaceService, WorkspaceService>();
         builder.Services.AddSingleton<ISettingsService, SettingsService>();
         builder.Services.AddSingleton<IDependencyCheckService, DependencyCheckService>();

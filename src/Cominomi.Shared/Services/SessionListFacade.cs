@@ -16,6 +16,7 @@ public class SessionListFacade : ISessionListFacade
     private readonly ISnackbar _snackbar;
     private readonly ISkillRegistry _skillRegistry;
     private readonly IClaudeService _claudeService;
+    private readonly ISessionSyncService _sessionSyncService;
 
     public SessionListFacade(
         IChatState chatState,
@@ -27,7 +28,8 @@ public class SessionListFacade : ISessionListFacade
         IDialogService dialogService,
         ISnackbar snackbar,
         ISkillRegistry skillRegistry,
-        IClaudeService claudeService)
+        IClaudeService claudeService,
+        ISessionSyncService sessionSyncService)
     {
         _chatState = chatState;
         _sessionService = sessionService;
@@ -39,6 +41,7 @@ public class SessionListFacade : ISessionListFacade
         _snackbar = snackbar;
         _skillRegistry = skillRegistry;
         _claudeService = claudeService;
+        _sessionSyncService = sessionSyncService;
     }
 
     public Task<(Workspace? Workspace, Session? Session, string? ProjectName)> RestoreLastSelectionAsync(
@@ -98,6 +101,9 @@ public class SessionListFacade : ISessionListFacade
         _chatState.SetSession(fullSess ?? session);
 
         await SaveLastSelectionAsync(session.WorkspaceId, session.Id);
+
+        // 세션 전환 후 리모트 상태 비동기 동기화 (fire-and-forget)
+        _ = _sessionSyncService.SyncAsync(session.Id);
     }
 
     public async Task CleanupSessionAsync(Session session)
