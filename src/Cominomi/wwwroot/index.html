@@ -245,6 +245,38 @@
             }
         };
 
+        // --- Ctrl/⌘ Key Watcher (for shortcut label reveal) ---
+        window.registerCtrlWatcher = function(dotNetRef) {
+            var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            window._ctrlDownHandler = function(e) {
+                if ((isMac && e.key === 'Meta') || (!isMac && e.key === 'Control')) {
+                    dotNetRef.invokeMethodAsync('OnCtrlStateChanged', true);
+                }
+            };
+            window._ctrlUpHandler = function(e) {
+                if ((isMac && e.key === 'Meta') || (!isMac && e.key === 'Control')) {
+                    dotNetRef.invokeMethodAsync('OnCtrlStateChanged', false);
+                }
+            };
+            window._ctrlBlurHandler = function() {
+                dotNetRef.invokeMethodAsync('OnCtrlStateChanged', false);
+            };
+            document.addEventListener('keydown', window._ctrlDownHandler);
+            document.addEventListener('keyup', window._ctrlUpHandler);
+            window.addEventListener('blur', window._ctrlBlurHandler);
+        };
+
+        window.unregisterCtrlWatcher = function() {
+            if (window._ctrlDownHandler) {
+                document.removeEventListener('keydown', window._ctrlDownHandler);
+                document.removeEventListener('keyup', window._ctrlUpHandler);
+                window.removeEventListener('blur', window._ctrlBlurHandler);
+                window._ctrlDownHandler = null;
+                window._ctrlUpHandler = null;
+                window._ctrlBlurHandler = null;
+            }
+        };
+
         // --- Panel Resizer ---
         window.registerPanelResizer = function(element, dotNetRef, minSize, maxSize, reverse) {
             if (!element) return;

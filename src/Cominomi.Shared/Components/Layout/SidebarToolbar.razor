@@ -1,4 +1,3 @@
-@inject IThemeService ThemeService
 @inject INotificationHistoryService NotificationHistory
 @implements IDisposable
 
@@ -12,10 +11,7 @@
         </svg>
         Cominomi
     </span>
-    <div style="display: flex; align-items: center; gap: 2px;">
-        <MudIconButton Icon="@(ThemeService.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
-                       Color="Color.Inherit" Size="Size.Small" OnClick="@ToggleDarkMode"
-                       Style="width: 28px; height: 28px; opacity: 0.5;" />
+    <div style="display: flex; align-items: center; gap: 6px;">
         <MudIconButton Icon="@Icons.Material.Filled.Timeline" Color="Color.Inherit"
                        Size="Size.Small" OnClick="@OnOpenActivity"
                        Style="width: 28px; height: 28px; opacity: 0.5;"
@@ -27,21 +23,12 @@
                            Style="width: 28px; height: 28px; opacity: 0.5;"
                            Title="알림 히스토리" />
         </MudBadge>
-        <MudIconButton Icon="@Icons.Material.Filled.Analytics" Color="Color.Inherit"
-                       Size="Size.Small" OnClick="@OnOpenUsageDashboard"
-                       Style="width: 28px; height: 28px; opacity: 0.5;"
-                       Title="사용량 대시보드" />
-        <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit"
-                       Size="Size.Small" OnClick="@OnOpenSettings"
-                       Style="width: 28px; height: 28px; opacity: 0.5;" />
     </div>
 </div>
 
 @code {
     [Parameter] public EventCallback OnOpenActivity { get; set; }
     [Parameter] public EventCallback OnOpenNotifications { get; set; }
-    [Parameter] public EventCallback OnOpenUsageDashboard { get; set; }
-    [Parameter] public EventCallback OnOpenSettings { get; set; }
 
     private int _unreadCount;
 
@@ -59,8 +46,6 @@
             StateHasChanged();
         });
     }
-
-    private async Task ToggleDarkMode() => await ThemeService.ToggleDarkModeAsync();
 
     public void Dispose()
     {
