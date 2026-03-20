@@ -8,7 +8,7 @@
      !ChatState.CurrentSession.Git.IsLocalDir &&
      !string.IsNullOrEmpty(ChatState.CurrentWorkspace.RepoLocalPath))
 {
-    <MudTooltip Text="@(_isActive ? $"Spotlight: {ShortenPath(ChatState.CurrentWorkspace.RepoLocalPath)}에 동기화 중" : "Spotlight 테스트")">
+    <MudTooltip Text="@(_isActive ? $"Spotlight: {ShortenPath(_spotlightPath ?? "")}에 동기화 중" : "Spotlight 테스트")">
         <MudIconButton Icon="@Icons.Material.Filled.Sync"
                        Color="@(_isActive ? Color.Success : Color.Default)"
                        Size="Size.Small"
@@ -27,11 +27,15 @@
 @code {
     private bool _isActive;
     private bool _loading;
+    private string? _spotlightPath;
 
     protected override void OnParametersSet()
     {
         _isActive = ChatState.CurrentSession != null &&
                     SpotlightService.IsActive(ChatState.CurrentSession.Id);
+        _spotlightPath = _isActive && ChatState.CurrentSession != null
+            ? SpotlightService.GetSpotlightPath(ChatState.CurrentSession.Id)
+            : null;
     }
 
     private async Task ToggleSpotlight()
