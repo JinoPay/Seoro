@@ -26,6 +26,15 @@
     <script src="_framework/blazor.webview.js" autostart="false"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script>
+        // Global error capture — surfaces errors hidden by blazor-error-ui
+        window.addEventListener('error', function(e) {
+            console.error('[Cominomi] Unhandled JS error:', e.message, '\nFile:', e.filename, 'Line:', e.lineno, '\nError:', e.error);
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('[Cominomi] Unhandled promise rejection:', e.reason);
+        });
+    </script>
+    <script>
         window.setTheme = function(theme) {
             document.documentElement.setAttribute('data-theme', theme);
         };
