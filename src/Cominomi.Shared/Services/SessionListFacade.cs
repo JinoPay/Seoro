@@ -135,6 +135,8 @@ public class SessionListFacade : ISessionListFacade
 
         if (_chatState.CurrentSession?.Id == session.Id)
             _chatState.SetSession(null!);
+        else
+            _chatState.NotifyStateChanged(); // Refresh LandingPage recent chats list
 
         _dataService.DiffStatsCache.Remove(session.Id);
         _dataService.RebuildOrderedSessions();
