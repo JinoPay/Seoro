@@ -11,6 +11,20 @@ public partial class App : Application
 	{
 		_services = services;
 		InitializeComponent();
+
+		AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+		{
+			if (e.ExceptionObject is Exception ex)
+				Log.Fatal(ex, "AppDomain unhandled exception (IsTerminating={IsTerminating})", e.IsTerminating);
+			else
+				Log.Fatal("AppDomain unhandled exception: {Error}", e.ExceptionObject);
+			Log.CloseAndFlush();
+		};
+
+		TaskScheduler.UnobservedTaskException += (_, e) =>
+		{
+			Log.Error(e.Exception, "Unobserved task exception");
+		};
 	}
 
 	protected override Window CreateWindow(IActivationState? activationState)

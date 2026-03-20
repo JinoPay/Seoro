@@ -61,6 +61,13 @@ public static class MauiProgram
             config.SnackbarConfiguration.PreventDuplicates = true;
         });
 
+        // Replace MudBlazor's ISnackbar with a deferred version to avoid
+        // NavigationManager.AssertInitialized() crash during MAUI Hybrid startup
+        var snackbarDescriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(ISnackbar));
+        if (snackbarDescriptor != null)
+            builder.Services.Remove(snackbarDescriptor);
+        builder.Services.AddScoped<ISnackbar, DeferredSnackbarService>();
+
         // Options pattern for AppSettings (IOptionsMonitor<AppSettings>)
         builder.Services.AddSingleton<AppSettingsChangeNotifier>();
         builder.Services.AddSingleton<IOptionsChangeTokenSource<AppSettings>>(sp =>
@@ -114,7 +121,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IChatPrWorkflowService, ChatPrWorkflowService>();
         builder.Services.AddSingleton<IChatMessageOrchestrator, ChatMessageOrchestrator>();
         builder.Services.AddSingleton<SessionListDataService>();
-        builder.Services.AddSingleton<ISessionListFacade, SessionListFacade>();
+        builder.Services.AddScoped<ISessionListFacade, SessionListFacade>();
         builder.Services.AddSingleton<IThemeService, ThemeService>();
 
         // Load external model definitions (pricing, model names) if present

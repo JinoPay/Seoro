@@ -1,9 +1,11 @@
+@using Microsoft.Extensions.Logging
 @inherits LayoutComponentBase
 @inject IChatState ChatState
 @inject IGitService GitService
 @inject IJSRuntime JS
 @inject IThemeService ThemeService
 @inject IDependencyCheckService DependencyCheckService
+@inject ILogger<MainLayout> Logger
 @implements IAsyncDisposable
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="ThemeService.Theme" />
@@ -109,13 +111,20 @@ else
         ChatState.OnChange += HandleStateChanged;
         ThemeService.OnThemeChanged += HandleThemeChanged;
 
-        await ThemeService.InitializeAsync();
-        _isDarkMode = ThemeService.IsDarkMode;
-
-        var deps = await DependencyCheckService.CheckAllAsync();
-        if (deps.Any(d => !d.IsInstalled))
+        try
         {
-            _setupOpen = true;
+            await ThemeService.InitializeAsync();
+            _isDarkMode = ThemeService.IsDarkMode;
+
+            var deps = await DependencyCheckService.CheckAllAsync();
+            if (deps.Any(d => !d.IsInstalled))
+            {
+                _setupOpen = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "MainLayout initialization failed");
         }
     }
 

@@ -2,7 +2,24 @@
         AdditionalAssemblies="new[] { typeof(Cominomi.Shared.Services.ChatState).Assembly }"
         NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Cominomi.Shared.Components.Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        <Cominomi.Shared.Components.Layout.LoggingErrorBoundary @ref="_errorBoundary">
+            <ChildContent>
+                <RouteView RouteData="routeData" DefaultLayout="typeof(Cominomi.Shared.Components.Layout.MainLayout)" />
+                <FocusOnNavigate RouteData="routeData" Selector="h1" />
+            </ChildContent>
+            <ErrorContent Context="ex">
+                <div style="padding: 2rem; color: #ff6b6b;">
+                    <h3>렌더링 오류 발생</h3>
+                    <pre style="white-space: pre-wrap; font-size: 0.85rem; opacity: 0.8;">@ex.ToString()</pre>
+                    <button @onclick="Recover" style="margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer;">복구</button>
+                </div>
+            </ErrorContent>
+        </Cominomi.Shared.Components.Layout.LoggingErrorBoundary>
     </Found>
 </Router>
+
+@code {
+    private Cominomi.Shared.Components.Layout.LoggingErrorBoundary? _errorBoundary;
+
+    private void Recover() => _errorBoundary?.Recover();
+}
