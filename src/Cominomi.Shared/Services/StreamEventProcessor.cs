@@ -105,11 +105,29 @@ public class StreamEventProcessor : IStreamEventProcessor
     {
         ctx.PlanFilePath = null;
         ctx.PlanContent = null;
-        var plansDir = Path.Combine(ctx.Session.Git.WorktreePath, ".claude", "plans");
-        if (!Directory.Exists(plansDir)) return;
 
-        var cutoff = ctx.StreamStartTime.AddSeconds(-5);
-        var planFile = Directory.GetFiles(plansDir, "*.md")
+        var candidates = new List<string>();
+
+        // Primary: ~/.claude/plans/ (where Claude CLI actually saves plan files)
+        var homePlansDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".claude", "plans");
+        if (Directory.Exists(homePlansDir))
+            candidates.AddRange(Directory.GetFiles(homePlansDir, "*.md"));
+
+        // Secondary: {WorktreePath}/.claude/plans/ (in case system prompt directed here)
+        if (!string.IsNullOrEmpty(ctx.Session.Git.WorktreePath))
+        {
+            var worktreePlansDir = Path.Combine(ctx.Session.Git.WorktreePath, ".claude", "plans");
+            if (Directory.Exists(worktreePlansDir))
+                candidates.AddRange(Directory.GetFiles(worktreePlansDir, "*.md"));
+        }
+
+        if (candidates.Count == 0) return;
+
+        // Use a generous cutoff to handle multi-turn plan conversations
+        var cutoff = ctx.StreamStartTime.AddMinutes(-30);
+        var planFile = candidates
             .Where(f => File.GetLastWriteTimeUtc(f) > cutoff)
             .OrderByDescending(f => File.GetLastWriteTimeUtc(f))
             .FirstOrDefault();

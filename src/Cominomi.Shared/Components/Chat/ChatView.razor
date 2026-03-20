@@ -176,17 +176,27 @@
         }
         else
         {
-            var plansDir = Path.Combine(worktreePath, ".claude", "plans");
-            if (Directory.Exists(plansDir))
+            // Check both ~/.claude/plans/ (where CLI saves) and worktree .claude/plans/
+            var dirs = new List<string>();
+
+            var homePlansDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".claude", "plans");
+            if (Directory.Exists(homePlansDir))
+                dirs.Add(homePlansDir);
+
+            var worktreePlansDir = Path.Combine(worktreePath, ".claude", "plans");
+            if (Directory.Exists(worktreePlansDir))
+                dirs.Add(worktreePlansDir);
+
+            var planFile = dirs
+                .SelectMany(d => Directory.GetFiles(d, "*.md"))
+                .OrderByDescending(f => File.GetLastWriteTimeUtc(f))
+                .FirstOrDefault();
+            if (planFile != null)
             {
-                var planFile = Directory.GetFiles(plansDir, "*.md")
-                    .OrderByDescending(f => File.GetLastWriteTimeUtc(f))
-                    .FirstOrDefault();
-                if (planFile != null)
-                {
-                    filePath = planFile;
-                    content = await File.ReadAllTextAsync(planFile);
-                }
+                filePath = planFile;
+                content = await File.ReadAllTextAsync(planFile);
             }
         }
 
