@@ -11,10 +11,7 @@
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="ThemeService.Theme" />
 <MudPopoverProvider />
 <MudDialogProvider />
-@if (_mudReady)
-{
-    <MudSnackbarProvider />
-}
+<MudSnackbarProvider />
 
 @if (ChatState.ShowSettings)
 {
@@ -105,7 +102,6 @@ else
     private bool _isDarkMode = true;
     private bool _setupOpen;
     private bool _usageDashboardOpen;
-    private bool _mudReady;
     private int _sidebarWidth = 260;
     private int _detailWidth = 400;
     private DotNetObjectReference<MainLayout>? _panelShortcutRef;
@@ -136,10 +132,6 @@ else
     {
         if (firstRender)
         {
-            // NavigationManager is now initialized — safe to render MudSnackbarProvider
-            _mudReady = true;
-            StateHasChanged();
-
             var effectiveTheme = _isDarkMode ? "dark" : "light";
             await JS.InvokeVoidAsync("setTheme", effectiveTheme);
 
