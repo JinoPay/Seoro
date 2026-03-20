@@ -6,13 +6,12 @@ namespace Cominomi.WinUI;
 public static class Program
 {
     [STAThread]
-    static async Task<int> Main(string[] args)
+    static void Main(string[] args)
     {
         WinRT.ComWrappersSupport.InitializeComWrappers();
 
-        var isRedirect = await HandleSingleInstanceAsync();
-        if (isRedirect)
-            return 0;
+        if (HandleSingleInstance())
+            return;
 
         Microsoft.UI.Xaml.Application.Start(p =>
         {
@@ -22,11 +21,9 @@ public static class Program
 
             new App();
         });
-
-        return 0;
     }
 
-    private static async Task<bool> HandleSingleInstanceAsync()
+    private static bool HandleSingleInstance()
     {
         var mainInstance = AppInstance.FindOrRegisterForKey("CominomiMain");
         var activationArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
@@ -34,7 +31,7 @@ public static class Program
         if (!mainInstance.IsCurrent)
         {
             // 이미 실행 중인 인스턴스로 활성화를 리다이렉트하고 종료
-            await mainInstance.RedirectActivationToAsync(activationArgs);
+            mainInstance.RedirectActivationToAsync(activationArgs).GetAwaiter().GetResult();
             return true;
         }
 
