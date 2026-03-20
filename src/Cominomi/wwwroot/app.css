@@ -1773,6 +1773,8 @@ html, body {
     font-size: var(--text-sm);
     color: var(--text-muted);
     border-top: 1px solid rgba(186, 147, 255, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
 }
 
 .thinking-content .markdown-body {
@@ -1786,6 +1788,7 @@ html, body {
 
 .thinking-block.streaming .thinking-content {
     animation: thinking-fade 1.5s ease-in-out infinite;
+    max-height: 150px;
 }
 
 @keyframes thinking-fade {
