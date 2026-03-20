@@ -73,6 +73,8 @@ public class NotificationService : INotificationService
 #elif WINDOWS
         try
         {
+            // NotificationInvoked must be registered BEFORE Register()
+            AppNotificationManager.Default.NotificationInvoked += OnNotificationInvoked;
             AppNotificationManager.Default.Register();
             _initialized = true;
             _logger.LogInformation("Windows notifications initialized");
@@ -139,4 +141,27 @@ public class NotificationService : INotificationService
         await Task.CompletedTask;
 #endif
     }
+
+#if WINDOWS
+    private void OnNotificationInvoked(
+        AppNotificationManager sender,
+        AppNotificationActivatedEventArgs args)
+    {
+        _logger.LogInformation("Notification clicked: {Arguments}", args.Argument);
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            try
+            {
+                var window = Application.Current?.Windows.FirstOrDefault();
+                if (window?.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
+                    Cominomi.WinUI.WindowHelper.BringToForeground(nativeWindow);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to foreground window on notification click");
+            }
+        });
+    }
+#endif
 }

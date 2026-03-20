@@ -314,7 +314,17 @@ public class GitService : IGitService
     public async Task<bool> IsBranchMergedAsync(string repoDir, string branchName, string baseBranch, CancellationToken ct = default)
     {
         var result = await RunGitAsync(repoDir, ct, "merge-base", "--is-ancestor", branchName, baseBranch);
-        return result.Success;
+        if (!result.Success) return false;
+
+        // Guard: if branch tip == merge-base, the branch never diverged from base.
+        // This happens for newly created branches with no unique commits.
+        var mergeBaseResult = await RunGitAsync(repoDir, ct, "merge-base", branchName, baseBranch);
+        var branchTipResult = await RunGitAsync(repoDir, ct, "rev-parse", branchName);
+        if (mergeBaseResult.Success && branchTipResult.Success
+            && mergeBaseResult.Output.Trim() == branchTipResult.Output.Trim())
+            return false;
+
+        return true;
     }
 
     public async Task<GitResult> PushBranchAsync(string repoDir, string branchName, CancellationToken ct = default)
