@@ -21,4 +21,9 @@ public interface IGhService
     /// Polls PR checks until all pass, any fail, or the timeout elapses.
     /// </summary>
     Task<PrCheckResult> WaitForChecksAsync(string repoDir, int prNumber, TimeSpan timeout, CancellationToken ct = default);
+
+    /// <summary>
+    /// Single-shot: returns current CI check state without polling.
+    /// </summary>
+    Task<PrCheckResult> GetChecksStatusAsync(string repoDir, int prNumber, CancellationToken ct = default);
 }

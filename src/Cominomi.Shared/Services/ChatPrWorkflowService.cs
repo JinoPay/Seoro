@@ -89,4 +89,36 @@ public class ChatPrWorkflowService : IChatPrWorkflowService
             return null;
         }
     }
+
+    public async Task<MergeReadiness> CheckMergeReadinessAsync(Session session)
+    {
+        try
+        {
+            if (session.Status == SessionStatus.Merged)
+                return MergeReadiness.Merged;
+            if (session.Status == SessionStatus.ConflictDetected)
+                return MergeReadiness.Conflict;
+            if (session.Pr.PrNumber == null)
+                return MergeReadiness.NoPr;
+
+            var workspace = await _workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
+            if (workspace == null)
+                return MergeReadiness.Unknown;
+
+            var checkResult = await _ghService.GetChecksStatusAsync(
+                workspace.RepoLocalPath, session.Pr.PrNumber.Value);
+
+            if (checkResult.AllPassed)
+                return MergeReadiness.Mergeable;
+            if (checkResult.HasPending)
+                return MergeReadiness.ChecksPending;
+
+            return MergeReadiness.ChecksFailed;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to check merge readiness for session {SessionId}", session.Id);
+            return MergeReadiness.Unknown;
+        }
+    }
 }

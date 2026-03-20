@@ -7,14 +7,15 @@
 @inject INotificationService NotificationService
 @inject INotificationHistoryService NotificationHistory
 @inject IJSRuntime JSRuntime
-@inject ILogger<SessionWorkflowBar> Logger
+@inject ILogger<PrStatusBar> Logger
 @inject IDialogService DialogService
 
 @if (Session != null && !Session.Git.IsLocalDir
      && Session.Status is SessionStatus.Ready
      or SessionStatus.Pushed or SessionStatus.PrOpen or SessionStatus.ConflictDetected)
 {
-    <div class="session-workflow" style="padding: var(--space-1) var(--space-4); border-bottom: 1px solid var(--border-subtle); justify-content: flex-end;">
+    <div class="pr-status-bar">
+        @* Left: Issue link *@
         @if (Session.Pr.IssueNumber != null)
         {
             <MudLink Href="@Session.Pr.IssueUrl" Target="_blank" Typo="Typo.caption"
@@ -29,6 +30,7 @@
                            Style="width: 24px; height: 24px; opacity: 0.5; margin-right: auto;"
                            Title="이슈 연결" />
         }
+
         @if (_operatingSessionId == Session.Id)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 12px; height: 12px;" />
@@ -50,21 +52,59 @@
                         </MudButton>
                     }
                     break;
+
                 case SessionStatus.PrOpen:
-                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
+                    @* PR number link *@
+                    @if (!string.IsNullOrEmpty(Session.Pr.PrUrl))
+                    {
+                        <MudLink Href="@Session.Pr.PrUrl" Target="_blank" Typo="Typo.caption"
+                                 Style="font-size: var(--text-xs); font-weight: 600;">
+                            PR #@Session.Pr.PrNumber
+                        </MudLink>
+                    }
+
+                    @* Merge readiness badge *@
+                    @switch (_readiness)
+                    {
+                        case MergeReadiness.Mergeable:
+                            <span class="pr-readiness-badge mergeable">Ready to merge</span>
+                            break;
+                        case MergeReadiness.ChecksPending:
+                            <span class="pr-readiness-badge pending">CI 진행 중</span>
+                            break;
+                        case MergeReadiness.ChecksFailed:
+                            <span class="pr-readiness-badge failed">CI 실패</span>
+                            break;
+                        case MergeReadiness.Conflict:
+                            <span class="pr-readiness-badge conflict">충돌</span>
+                            break;
+                        default:
+                            @if (_isCheckingReadiness)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                     Style="width: 10px; height: 10px;" />
+                            }
+                            break;
+                    }
+
+                    @* Merge button *@
+                    <MudButton Size="Size.Small" Variant="Variant.Filled"
+                               Color="@(_readiness == MergeReadiness.Mergeable ? Color.Success : Color.Default)"
+                               Disabled="@(_readiness is not MergeReadiness.Mergeable and not MergeReadiness.Unknown)"
                                StartIcon="@Icons.Material.Filled.MergeType"
                                OnClick="@(() => MergePr(Session))"
                                Style="text-transform: none; font-size: var(--text-xs); min-width: 0; padding: 0 var(--space-2); height: 24px;">
                         병합
                     </MudButton>
-                    @if (!string.IsNullOrEmpty(Session.Pr.PrUrl))
-                    {
-                        <MudLink Href="@Session.Pr.PrUrl" Target="_blank" Typo="Typo.caption"
-                                 Style="font-size: var(--text-xs);">
-                            #@Session.Pr.PrNumber
-                        </MudLink>
-                    }
+
+                    @* Refresh readiness *@
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                                   OnClick="@(() => CheckReadinessAsync())"
+                                   Disabled="_isCheckingReadiness"
+                                   Style="width: 20px; height: 20px; opacity: 0.5;"
+                                   Title="병합 상태 새로고침" />
                     break;
+
                 case SessionStatus.ConflictDetected:
                     <span style="font-size: var(--text-xs); color: #f38ba8; font-weight: 600;">충돌</span>
                     <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error"
@@ -100,6 +140,49 @@
     [Parameter] public EventCallback<ChatInputMessage> OnSendMessage { get; set; }
 
     private string? _operatingSessionId;
+    private MergeReadiness _readiness = MergeReadiness.Unknown;
+    private bool _isCheckingReadiness;
+    private string? _lastCheckedSessionId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Session == null) return;
+
+        // Auto-check readiness when session transitions to PrOpen
+        if (Session.Status == SessionStatus.PrOpen && _lastCheckedSessionId != Session.Id)
+        {
+            _lastCheckedSessionId = Session.Id;
+            await CheckReadinessAsync();
+        }
+        else if (Session.Status != SessionStatus.PrOpen)
+        {
+            _readiness = MergeReadiness.Unknown;
+            _lastCheckedSessionId = null;
+        }
+    }
+
+    private async Task CheckReadinessAsync()
+    {
+        if (Session == null || _isCheckingReadiness) return;
+
+        _isCheckingReadiness = true;
+        StateHasChanged();
+
+        try
+        {
+            _readiness = await PrWorkflow.CheckMergeReadinessAsync(Session);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "CheckReadiness failed for session {SessionId}", Session.Id);
+            _readiness = MergeReadiness.Unknown;
+        }
+        finally
+        {
+            _isCheckingReadiness = false;
+            StateHasChanged();
+        }
+    }
 
     private async Task CreatePr(Session session)
     {
