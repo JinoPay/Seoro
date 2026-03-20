@@ -98,7 +98,9 @@ public class PluginService : IPluginService
 
         if (!Directory.Exists(PluginsDirectory))
         {
-            _logger.LogDebug("Plugins directory does not exist: {Path}", PluginsDirectory);
+            _logger.LogInformation(
+                "플러그인 디렉토리가 없습니다. 플러그인을 사용하려면 {Path} 디렉토리를 생성하고 플러그인 폴더와 manifest.json을 추가하세요.",
+                PluginsDirectory);
             return plugins;
         }
 

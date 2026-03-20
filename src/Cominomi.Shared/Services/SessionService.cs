@@ -529,8 +529,9 @@ public partial class SessionService : ISessionService
         {
             try
             {
-                var archiveName = SanitizePathSegment(
+                var baseName = SanitizePathSegment(
                     !string.IsNullOrEmpty(session.CityName) ? session.CityName : session.Id);
+                var archiveName = $"{baseName}_{session.Id[..Math.Min(8, session.Id.Length)]}";
                 var archivePath = Path.Combine(_archiveDir, SanitizePathSegment(workspace.Name), archiveName);
                 await _contextService.ArchiveContextAsync(session.Git.WorktreePath, archivePath);
             }

@@ -117,18 +117,18 @@ public class McpService : IMcpService
             if (scope != "user")
                 cmdParts.AddRange(["--scope", scope]);
 
-            cmdParts.Add(EscapeArg(name));
+            cmdParts.Add(QuoteForShell(name, shell.Type));
 
             if (transport == "sse" && !string.IsNullOrEmpty(url))
             {
-                cmdParts.Add(EscapeArg(url));
+                cmdParts.Add(QuoteForShell(url, shell.Type));
             }
             else if (!string.IsNullOrEmpty(command))
             {
-                cmdParts.Add(EscapeArg(command));
+                cmdParts.Add(QuoteForShell(command, shell.Type));
                 if (args != null)
                     foreach (var arg in args)
-                        cmdParts.Add(EscapeArg(arg));
+                        cmdParts.Add(QuoteForShell(arg, shell.Type));
             }
 
             // Add environment variables
@@ -157,7 +157,7 @@ public class McpService : IMcpService
         {
             var shell = await _shellService.GetShellAsync();
             var scopeArg = scope != "user" ? $" --scope {scope}" : "";
-            var output = await RunClaudeCommandAsync(shell, $"mcp remove{scopeArg} {EscapeArg(name)}");
+            var output = await RunClaudeCommandAsync(shell, $"mcp remove{scopeArg} {QuoteForShell(name, shell.Type)}");
             return output != null;
         }
         catch (Exception ex)
@@ -218,9 +218,9 @@ public class McpService : IMcpService
         try
         {
             var shell = await _shellService.GetShellAsync();
-            var escapedJson = json.Replace("'", "'\\''");
             var scopeArg = scope != "user" ? $" --scope {scope}" : "";
-            var output = await RunClaudeCommandAsync(shell, $"mcp add-json{scopeArg} '{escapedJson}'");
+            var quotedJson = QuoteForShell(json, shell.Type);
+            var output = await RunClaudeCommandAsync(shell, $"mcp add-json{scopeArg} {quotedJson}");
             return output != null;
         }
         catch (Exception ex)
@@ -258,10 +258,16 @@ public class McpService : IMcpService
         return result.Stdout;
     }
 
-    private static string EscapeArg(string arg)
+    private static string QuoteForShell(string arg, ShellType shellType)
     {
-        // Use single quotes for shell safety — escape any embedded single quotes
-        var escaped = arg.Replace("'", "'\\''");
-        return $"'{escaped}'";
+        if (shellType == ShellType.Cmd)
+        {
+            // cmd.exe: use double quotes, escape internal double quotes with backslash
+            var escaped = arg.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            return $"\"{escaped}\"";
+        }
+        // bash/zsh: use single quotes, escape embedded single quotes
+        var bashEscaped = arg.Replace("'", "'\\''");
+        return $"'{bashEscaped}'";
     }
 }
