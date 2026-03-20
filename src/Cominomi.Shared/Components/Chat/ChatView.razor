@@ -76,6 +76,12 @@ else
                     </div>
                 }
             </div>
+            @if (!_isAtBottom && ChatState.CurrentSession?.Messages.Count > 0)
+            {
+                <div class="scroll-to-bottom-btn" @onclick="ScrollToBottom">
+                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                </div>
+            }
             </CascadingValue>
 
             @* Quick response bar *@
@@ -120,6 +126,8 @@ else
     private string? _planSessionId;
     private string? _lastPrCheckedSessionId;
     private bool _shouldAutoScroll;
+    private bool _isAtBottom = true;
+    private DotNetObjectReference<ChatView>? _selfRef;
     private bool _isLoadingBranches;
     private LandingPage? _landingPage;
     private readonly Dictionary<string, (CancellationTokenSource Cts, Task Task)> _sessionTasks = new();
@@ -282,11 +290,32 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            _selfRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("registerScrollWatcher", "message-list", _selfRef);
+        }
+
         if (_shouldAutoScroll)
         {
             _shouldAutoScroll = false;
-            await JSRuntime.InvokeVoidAsync("scrollToBottom", "message-list");
+            if (_isAtBottom)
+                await JSRuntime.InvokeVoidAsync("scrollToBottom", "message-list");
         }
+    }
+
+    [JSInvokable]
+    public void OnScrollPositionChanged(bool isAtBottom)
+    {
+        var changed = _isAtBottom != isAtBottom;
+        _isAtBottom = isAtBottom;
+        if (changed) InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ScrollToBottom()
+    {
+        _isAtBottom = true;
+        await JSRuntime.InvokeVoidAsync("scrollToBottom", "message-list");
     }
 
     private async Task HandlePermissionModeChanged(string mode)
@@ -526,6 +555,7 @@ else
     public void Dispose()
     {
         ChatState.OnChange -= HandleStateChanged;
+        _selfRef?.Dispose();
 
         foreach (var (_, (cts, task)) in _sessionTasks)
         {

@@ -44,6 +44,27 @@
             if (el) el.scrollTop = el.scrollHeight;
         };
 
+        // Scroll position watcher — reports whether user is near bottom
+        window.registerScrollWatcher = function(elementId, dotNetRef) {
+            var el = document.getElementById(elementId);
+            if (!el) return;
+            var threshold = 80;
+            el._scrollHandler = function() {
+                var isAtBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) < threshold;
+                dotNetRef.invokeMethodAsync('OnScrollPositionChanged', isAtBottom);
+            };
+            el.addEventListener('scroll', el._scrollHandler, { passive: true });
+            el._scrollDotNetRef = dotNetRef;
+        };
+
+        window.unregisterScrollWatcher = function(elementId) {
+            var el = document.getElementById(elementId);
+            if (!el || !el._scrollHandler) return;
+            el.removeEventListener('scroll', el._scrollHandler);
+            el._scrollHandler = null;
+            el._scrollDotNetRef = null;
+        };
+
         // --- Input area handler helpers ---
         // Find the actual input element (textarea or input) inside a container.
         // MudBlazor may render <textarea> or <input> depending on timing/config.

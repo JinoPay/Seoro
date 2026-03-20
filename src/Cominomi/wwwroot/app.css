@@ -918,6 +918,7 @@ html, body {
 
 /* ===== Chat View ===== */
 .chat-container {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -931,6 +932,32 @@ html, body {
     min-height: 0;
     background: transparent;
     scroll-behavior: smooth;
+}
+
+/* ===== Scroll to Bottom Button ===== */
+.scroll-to-bottom-btn {
+    position: absolute;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    opacity: 0.85;
+    transition: opacity 0.15s ease;
+}
+
+.scroll-to-bottom-btn:hover {
+    opacity: 1;
+    background: var(--surface-3);
 }
 
 .message-container {
