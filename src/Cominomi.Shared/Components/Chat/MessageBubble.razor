@@ -89,7 +89,8 @@
                             if (!_autoExpandedThinking.Contains(idx))
                             {
                                 _autoExpandedThinking.Add(idx);
-                                _thinkingExpanded.Add(idx);
+                                // 새 thinking 등장 시 이전에 수동 펼친 블록들 자동 접힘
+                                _thinkingExpanded.Clear();
                             }
 
                             <div class="thinking-block @(_thinkingExpanded.Contains(idx) ? "expanded" : "") streaming"
