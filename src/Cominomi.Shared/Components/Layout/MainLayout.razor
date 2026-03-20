@@ -46,15 +46,25 @@ else
             }
 
             <div class="main-content">
-                @if (ChatState.Tabs.ActiveTab?.Type == MainTabType.Activity)
+                @{
+                    var activeType = ChatState.Tabs.ActiveTab?.Type;
+                    var isChatTab = activeType is null or MainTabType.Chat;
+                }
+
+                @* ChatView는 항상 렌더링 — 탭 전환 시에도 프로세스가 유지되도록 display로 토글 *@
+                <div style="@(isChatTab ? "" : "display:none;height:0;overflow:hidden")">
+                    @Body
+                </div>
+
+                @if (activeType == MainTabType.Activity)
                 {
                     <ActivityView />
                 }
-                else if (ChatState.Tabs.ActiveTab?.Type == MainTabType.Notifications)
+                else if (activeType == MainTabType.Notifications)
                 {
                     <NotificationHistoryView />
                 }
-                else if (ChatState.Tabs.ActiveTab?.Type == MainTabType.FileContent && ChatState.Tabs.ActiveTab.FilePath != null)
+                else if (activeType == MainTabType.FileContent && ChatState.Tabs.ActiveTab?.FilePath != null)
                 {
                     @if (ChatState.Tabs.ActiveTab.ContentEvicted)
                     {
@@ -69,13 +79,9 @@ else
                                          Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")" />
                     }
                 }
-                else if (ChatState.Tabs.ActiveTab?.Type == MainTabType.FileDiff && ChatState.Tabs.ActiveTab.DiffData != null)
+                else if (activeType == MainTabType.FileDiff && ChatState.Tabs.ActiveTab?.DiffData != null)
                 {
                     <FileDiffView Diff="ChatState.Tabs.ActiveTab.DiffData" />
-                }
-                else
-                {
-                    @Body
                 }
             </div>
         </main>
