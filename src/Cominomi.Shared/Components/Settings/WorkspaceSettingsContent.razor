@@ -140,22 +140,22 @@
                 <div class="settings-section-desc">에이전트에 전달할 커스텀 지침을 설정합니다.</div>
 
                 <MudStack Spacing="4">
-                    <MudTextField @bind-Value="_workspace.CodeReviewPreferences"
+                    <MudTextField @bind-Value="_workspace.Preferences.CodeReviewPrompt"
                                   Label="코드 리뷰 프롬프트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
                                   Placeholder="코드 리뷰 시 에이전트에 전달할 지침입니다." />
 
-                    <MudTextField @bind-Value="_workspace.CreatePrPreferences"
+                    <MudTextField @bind-Value="_workspace.Preferences.CreatePrPrompt"
                                   Label="PR 생성 프롬프트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
                                   Placeholder="PR 생성 시 에이전트에 전달할 지침입니다." />
 
-                    <MudTextField @bind-Value="_workspace.BranchRenamePreferences"
+                    <MudTextField @bind-Value="_workspace.Preferences.BranchRenamePrompt"
                                   Label="브랜치 리네임 프롬프트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
                                   Placeholder="브랜치 리네임 시 에이전트에 전달할 지침입니다." />
 
-                    <MudTextField @bind-Value="_workspace.GeneralPreferences"
+                    <MudTextField @bind-Value="_workspace.Preferences.GeneralPrompt"
                                   Label="일반 프롬프트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
                                   Placeholder="모든 새 대화 시작 시 에이전트에 전달할 지침입니다." />

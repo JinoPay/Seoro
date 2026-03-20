@@ -220,7 +220,7 @@ public class GhService : IGhService
         {
             var result = await RunGhAsync(workingDir, ct, args);
 
-            if (result.Success || !IsRateLimitError(result.Error))
+            if (result.Success || !ProcessErrorClassifier.IsGhRateLimitError(result.Error))
                 return result;
 
             if (attempt < CominomiConstants.GhMaxRetries)
@@ -242,12 +242,4 @@ public class GhService : IGhService
         return await RunGhAsync(workingDir, ct, args);
     }
 
-    private static bool IsRateLimitError(string stderr)
-    {
-        if (string.IsNullOrEmpty(stderr)) return false;
-        return stderr.Contains("rate limit", StringComparison.OrdinalIgnoreCase)
-            || stderr.Contains("secondary rate", StringComparison.OrdinalIgnoreCase)
-            || stderr.Contains("API rate limit exceeded", StringComparison.OrdinalIgnoreCase)
-            || stderr.Contains("abuse detection", StringComparison.OrdinalIgnoreCase);
-    }
 }

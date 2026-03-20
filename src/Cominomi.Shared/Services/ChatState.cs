@@ -24,13 +24,14 @@ public class ChatState : IChatState
     public Workspace? CurrentWorkspace { get; private set; }
     public Session? CurrentSession { get; private set; }
     public bool IsSpotlightActive { get; private set; }
-    public string? PendingMessage { get; private set; }
+    private volatile string? _pendingMessage;
+    public string? PendingMessage => _pendingMessage;
     public RightPanelMode RightPanel { get; private set; }
 
-    // Debounce
-    private Timer? _debounceTimer;
+    // Debounce — single persistent timer, enabled/disabled via Change()
+    private readonly Timer _debounceTimer;
     private volatile bool _pendingNotification;
-    private readonly object _timerLock = new();
+    private volatile bool _timerActive;
     private const int DebounceMs = 50;
 
     public event Action? OnChange;
@@ -39,6 +40,14 @@ public class ChatState : IChatState
     public ChatState(IActiveSessionRegistry activeSessionRegistry, IChatEventBus eventBus)
     {
         _eventBus = eventBus;
+        _debounceTimer = new Timer(_ =>
+        {
+            if (_pendingNotification)
+            {
+                _pendingNotification = false;
+                OnChange?.Invoke();
+            }
+        }, null, Timeout.Infinite, Timeout.Infinite); // starts disabled
 
         Messages = new MessageManager(NotifyStateChanged);
         Streaming = new StreamingStateManager(NotifyStateChanged);
@@ -172,16 +181,23 @@ public class ChatState : IChatState
 
     public void SetPendingMessage(string? message)
     {
-        PendingMessage = message;
+        _pendingMessage = message;
         NotifyStateChanged();
     }
 
+    /// <summary>
+    /// Atomically reads and clears the pending message.
+    /// Thread-safe: concurrent calls will never return the same message twice.
+    /// </summary>
     public string? ConsumePendingMessage()
     {
-        var msg = PendingMessage;
-        PendingMessage = null;
-        return msg;
+        return Interlocked.Exchange(ref _pendingMessage, null);
     }
+
+    /// <summary>
+    /// Peeks at the pending message without consuming it.
+    /// </summary>
+    public string? PeekPendingMessage() => _pendingMessage;
 
     public void SetRightPanel(RightPanelMode mode)
     {
@@ -204,27 +220,19 @@ public class ChatState : IChatState
         if (Streaming.HasAnyStreaming())
         {
             _pendingNotification = true;
-            lock (_timerLock)
+            if (!_timerActive)
             {
-                _debounceTimer ??= new Timer(_ =>
-                {
-                    if (_pendingNotification)
-                    {
-                        _pendingNotification = false;
-                        OnChange?.Invoke();
-                    }
-                }, null, DebounceMs, DebounceMs);
+                _timerActive = true;
+                _debounceTimer.Change(DebounceMs, DebounceMs);
             }
         }
         else
         {
-            lock (_timerLock)
+            // Streaming stopped — disable timer and fire immediately
+            if (_timerActive)
             {
-                if (_debounceTimer != null)
-                {
-                    _debounceTimer.Dispose();
-                    _debounceTimer = null;
-                }
+                _timerActive = false;
+                _debounceTimer.Change(Timeout.Infinite, Timeout.Infinite);
             }
             _pendingNotification = false;
             OnChange?.Invoke();
@@ -233,10 +241,6 @@ public class ChatState : IChatState
 
     public void Dispose()
     {
-        lock (_timerLock)
-        {
-            _debounceTimer?.Dispose();
-            _debounceTimer = null;
-        }
+        _debounceTimer.Dispose();
     }
 }

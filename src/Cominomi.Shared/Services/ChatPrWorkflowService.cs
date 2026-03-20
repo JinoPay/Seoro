@@ -32,7 +32,7 @@ public class ChatPrWorkflowService : IChatPrWorkflowService
     public async Task<string> BuildCreatePrPromptAsync(Session session)
     {
         var workspace = await _workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
-        var preferences = workspace?.CreatePrPreferences;
+        var preferences = workspace?.Preferences?.CreatePrPrompt;
 
         var prompt = "PR을 생성해주세요. diff를 확인하고, 커밋 상태를 점검하고, 브랜치를 푸시한 뒤 `gh pr create`로 PR을 만들어주세요.";
 
