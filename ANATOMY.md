@@ -453,8 +453,11 @@ ChatView.ProcessMessageAsync()
   └─ ClaudeService.SummarizeAsync() ←── string? (제목)
 ```
 
+### 설계 특성
+- **메시지당 프로세스 생성**: Claude CLI `--print` 모드는 단발 실행. 매 메시지마다 새 프로세스를 생성하고, `--resume {conversationId}`로 대화 맥락을 유지. 이전 세션 프로세스는 `_agents` 딕셔너리로 추적하여 중복 실행 방지 (`ConcurrentDictionary<string, AgentProcess>`)
+
 ### 빠진 것 / 문제점
-- **프로세스 재사용 없음**: 아키텍처 제약 — Claude CLI는 단발 명령 모드. `--resume`으로 맥락 유지하나 매 메시지 새 프로세스 생성. API 직접 연동으로만 해결 가능
+(없음)
 
 ---
 
