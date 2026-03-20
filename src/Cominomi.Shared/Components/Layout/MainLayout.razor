@@ -1,15 +1,20 @@
+@using Microsoft.Extensions.Logging
 @inherits LayoutComponentBase
 @inject IChatState ChatState
 @inject IGitService GitService
 @inject IJSRuntime JS
 @inject IThemeService ThemeService
 @inject IDependencyCheckService DependencyCheckService
+@inject ILogger<MainLayout> Logger
 @implements IAsyncDisposable
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="ThemeService.Theme" />
 <MudPopoverProvider />
 <MudDialogProvider />
-<MudSnackbarProvider />
+@if (_mudReady)
+{
+    <MudSnackbarProvider />
+}
 
 @if (ChatState.ShowSettings)
 {
@@ -100,6 +105,7 @@ else
     private bool _isDarkMode = true;
     private bool _setupOpen;
     private bool _usageDashboardOpen;
+    private bool _mudReady;
     private int _sidebarWidth = 260;
     private int _detailWidth = 400;
     private DotNetObjectReference<MainLayout>? _panelShortcutRef;
@@ -109,13 +115,20 @@ else
         ChatState.OnChange += HandleStateChanged;
         ThemeService.OnThemeChanged += HandleThemeChanged;
 
-        await ThemeService.InitializeAsync();
-        _isDarkMode = ThemeService.IsDarkMode;
-
-        var deps = await DependencyCheckService.CheckAllAsync();
-        if (deps.Any(d => !d.IsInstalled))
+        try
         {
-            _setupOpen = true;
+            await ThemeService.InitializeAsync();
+            _isDarkMode = ThemeService.IsDarkMode;
+
+            var deps = await DependencyCheckService.CheckAllAsync();
+            if (deps.Any(d => !d.IsInstalled))
+            {
+                _setupOpen = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "MainLayout initialization failed");
         }
     }
 
@@ -123,6 +136,10 @@ else
     {
         if (firstRender)
         {
+            // NavigationManager is now initialized — safe to render MudSnackbarProvider
+            _mudReady = true;
+            StateHasChanged();
+
             var effectiveTheme = _isDarkMode ? "dark" : "light";
             await JS.InvokeVoidAsync("setTheme", effectiveTheme);
 

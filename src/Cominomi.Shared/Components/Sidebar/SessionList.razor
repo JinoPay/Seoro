@@ -1,8 +1,10 @@
+@using Microsoft.Extensions.Logging
 @inject IChatState ChatState
 @inject SessionListDataService DataService
 @inject ISessionListFacade Facade
 @inject ISkillRegistry SkillRegistry
 @inject IJSRuntime JS
+@inject ILogger<SessionList> Logger
 @implements IDisposable
 
 <div class="sidebar-tree">
@@ -169,25 +171,32 @@
         ChatState.OnRequestCreateWorkspace += HandleCreateWorkspaceRequest;
         DataService.OnDataChanged += OnDataServiceChanged;
 
-        await DataService.LoadWorkspacesAsync();
-
-        var (ws, lastSession, projectName) = await Facade.RestoreLastSelectionAsync(
-            DataService.Workspaces, DataService.SessionCache);
-
-        if (ws != null)
+        try
         {
-            _expandedProjects.Add(projectName!);
-            await DataService.LoadSessionsForProjectAsync(projectName!);
-            ChatState.SetWorkspace(ws);
-            // Load custom skills for the initial workspace
-            await SkillRegistry.LoadCustomCommandsAsync(ws.RepoLocalPath);
+            await DataService.LoadWorkspacesAsync();
 
-            if (lastSession != null)
-                await SelectSession(lastSession, ws);
+            var (ws, lastSession, projectName) = await Facade.RestoreLastSelectionAsync(
+                DataService.Workspaces, DataService.SessionCache);
+
+            if (ws != null)
+            {
+                _expandedProjects.Add(projectName!);
+                await DataService.LoadSessionsForProjectAsync(projectName!);
+                ChatState.SetWorkspace(ws);
+                // Load custom skills for the initial workspace
+                await SkillRegistry.LoadCustomCommandsAsync(ws.RepoLocalPath);
+
+                if (lastSession != null)
+                    await SelectSession(lastSession, ws);
+            }
+
+            DataService.RebuildOrderedSessions();
+            RebuildFlatRows();
         }
-
-        DataService.RebuildOrderedSessions();
-        RebuildFlatRows();
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "SessionList initialization failed");
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
