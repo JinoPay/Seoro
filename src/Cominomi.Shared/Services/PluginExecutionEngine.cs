@@ -278,7 +278,7 @@ public class PluginExecutionEngine : IPluginExecutionEngine
             };
             var stdinJson = JsonSerializer.Serialize(request, JsonOptions);
 
-            var escapedCommand = command.Replace("\"", "\\\"");
+            var escapedCommand = EscapeShellCommand(command, shell.Type);
             var result = await _processRunner.RunAsync(new ProcessRunOptions
             {
                 FileName = shell.FileName,
@@ -430,5 +430,36 @@ public class PluginExecutionEngine : IPluginExecutionEngine
         public string Name { get; set; } = "";
         public string Command { get; set; } = "";
         public string? Description { get; set; }
+    }
+
+    /// <summary>
+    /// Escape a command string for safe shell execution.
+    /// For cmd.exe: escapes &amp;, |, &gt;, &lt;, ^, %, and double-quotes.
+    /// For bash/zsh: escapes backslashes, double-quotes, backticks, $, and !.
+    /// </summary>
+    internal static string EscapeShellCommand(string command, ShellType shellType)
+    {
+        if (string.IsNullOrEmpty(command))
+            return command;
+
+        if (shellType == ShellType.Cmd)
+        {
+            // cmd.exe uses ^ as escape character for special characters
+            return command
+                .Replace("^", "^^")
+                .Replace("&", "^&")
+                .Replace("|", "^|")
+                .Replace("<", "^<")
+                .Replace(">", "^>")
+                .Replace("%", "%%");
+        }
+
+        // POSIX shells (bash, zsh) — escape within double-quoted context
+        return command
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("`", "\\`")
+            .Replace("$", "\\$")
+            .Replace("!", "\\!");
     }
 }

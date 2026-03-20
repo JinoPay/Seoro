@@ -317,6 +317,22 @@ public class PluginExecutionEngineTests
         }
     }
 
+    [Theory]
+    [InlineData("echo hello", ShellType.Bash, "echo hello")]
+    [InlineData("echo \"hello world\"", ShellType.Bash, "echo \\\"hello world\\\"")]
+    [InlineData("echo $HOME", ShellType.Bash, "echo \\$HOME")]
+    [InlineData("echo `date`", ShellType.Bash, "echo \\`date\\`")]
+    [InlineData("echo C:\\path", ShellType.Bash, "echo C:\\\\path")]
+    [InlineData("echo hello", ShellType.Cmd, "echo hello")]
+    [InlineData("echo foo&bar", ShellType.Cmd, "echo foo^&bar")]
+    [InlineData("echo foo|bar", ShellType.Cmd, "echo foo^|bar")]
+    [InlineData("echo 50%", ShellType.Cmd, "echo 50%%")]
+    public void EscapeShellCommand_EscapesCorrectly(string input, ShellType shellType, string expected)
+    {
+        var result = PluginExecutionEngine.EscapeShellCommand(input, shellType);
+        Assert.Equal(expected, result);
+    }
+
     // --- Helpers ---
 
     private static PluginInfo MakePlugin(string id, PluginStatus status,

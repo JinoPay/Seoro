@@ -35,7 +35,10 @@ public class HookDefinition
     public string? WorkingDirectory { get; set; }
     public string? Matcher { get; set; }
     public bool Enabled { get; set; } = true;
-    public int TimeoutSeconds { get; set; } = 5;
+    /// <summary>
+    /// Per-hook timeout override in seconds. Null = use AppSettings.HookTimeoutSeconds global default.
+    /// </summary>
+    public int? TimeoutSeconds { get; set; }
 }
 
 public record HookExecutionResult(
