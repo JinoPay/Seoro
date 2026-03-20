@@ -23,6 +23,7 @@ html, body {
 
 .cominomi-shell.sidebar-collapsed {
     --sidebar-width: 0px;
+    grid-template-columns: 0px 1fr;
 }
 
 .cominomi-shell.sidebar-collapsed .cominomi-sidebar,
