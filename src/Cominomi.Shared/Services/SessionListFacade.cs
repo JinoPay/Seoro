@@ -13,6 +13,7 @@ public class SessionListFacade : ISessionListFacade
     private readonly SessionListDataService _dataService;
     private readonly IDialogService _dialogService;
     private readonly ISnackbar _snackbar;
+    private readonly ISkillRegistry _skillRegistry;
 
     public SessionListFacade(
         IChatState chatState,
@@ -21,7 +22,8 @@ public class SessionListFacade : ISessionListFacade
         ISettingsService settingsService,
         SessionListDataService dataService,
         IDialogService dialogService,
-        ISnackbar snackbar)
+        ISnackbar snackbar,
+        ISkillRegistry skillRegistry)
     {
         _chatState = chatState;
         _sessionService = sessionService;
@@ -30,6 +32,7 @@ public class SessionListFacade : ISessionListFacade
         _dataService = dataService;
         _dialogService = dialogService;
         _snackbar = snackbar;
+        _skillRegistry = skillRegistry;
     }
 
     public Task<(Workspace? Workspace, Session? Session, string? ProjectName)> RestoreLastSelectionAsync(
@@ -61,7 +64,7 @@ public class SessionListFacade : ISessionListFacade
             ? await _sessionService.CreateLocalDirSessionAsync(ws.DefaultModel, ws.Id)
             : await _sessionService.CreatePendingSessionAsync(ws.DefaultModel, ws.Id);
 
-        _chatState.SetWorkspace(ws);
+        await SwitchWorkspaceAsync(ws);
         _chatState.SetSession(session);
 
         if (_dataService.SessionCache.TryGetValue(ws.Id, out var sessions))
@@ -77,7 +80,7 @@ public class SessionListFacade : ISessionListFacade
     {
         ws ??= workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);
         if (ws != null)
-            _chatState.SetWorkspace(ws);
+            await SwitchWorkspaceAsync(ws);
 
         var activeSession = _chatState.GetActiveSession(session.Id);
         if (activeSession != null)
@@ -121,6 +124,16 @@ public class SessionListFacade : ISessionListFacade
         _snackbar.SessionDeleted();
 
         return true;
+    }
+
+    private async Task SwitchWorkspaceAsync(Workspace ws)
+    {
+        var previousId = _chatState.CurrentWorkspace?.Id;
+        _chatState.SetWorkspace(ws);
+
+        // Reload custom skills when workspace changes (different project path)
+        if (previousId != ws.Id)
+            await _skillRegistry.LoadCustomCommandsAsync(ws.RepoLocalPath);
     }
 
     private async Task SaveLastSelectionAsync(string workspaceId, string sessionId)
