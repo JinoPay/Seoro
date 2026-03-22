@@ -1,7 +1,7 @@
 @using Cominomi.Shared.Models
 
 <div @key="Session.Id"
-     class="tree-session @(IsActive ? "active" : "") @(Session.Status == SessionStatus.Archived ? "archived" : "")"
+     class="tree-session @(IsActive ? "active" : "") @(IsStreaming ? "is-streaming" : "") @(Session.Status == SessionStatus.Archived ? "archived" : "")"
      @onclick="@OnClick">
 
     <div class="tree-session-actions">
@@ -18,7 +18,16 @@
                        OnClickStopPropagation="true" />
     </div>
 
-    <span class="status-dot @GetStatusDotClass(Session.Status) @(IsStreaming ? "streaming" : "")"></span>
+    @if (IsStreaming)
+    {
+        <span class="status-badge streaming">
+            <span class="status-badge-dot"></span>
+        </span>
+    }
+    else
+    {
+        <span class="status-badge @GetStatusBadgeClass(Session.Status)">@GetStatusLabel(Session.Status)</span>
+    }
 
     <div class="tree-session-info">
         <span class="tree-session-title">@Session.Title</span>
@@ -77,7 +86,7 @@
     [Parameter] public EventCallback OnDelete { get; set; }
     [Parameter] public EventCallback OnCleanup { get; set; }
 
-    private static string GetStatusDotClass(SessionStatus status) => status switch
+    private static string GetStatusBadgeClass(SessionStatus status) => status switch
     {
         SessionStatus.Ready => "ready",
         SessionStatus.Pushed => "pushed",
@@ -88,5 +97,19 @@
         SessionStatus.Pending => "pending",
         SessionStatus.Archived => "archived",
         _ => "pending"
+    };
+
+    private static string GetStatusLabel(SessionStatus status) => status switch
+    {
+        SessionStatus.Initializing => "초기화",
+        SessionStatus.Pending => "대기",
+        SessionStatus.Ready => "준비",
+        SessionStatus.Pushed => "Push",
+        SessionStatus.PrOpen => "PR",
+        SessionStatus.Merged => "병합",
+        SessionStatus.ConflictDetected => "충돌",
+        SessionStatus.Error => "오류",
+        SessionStatus.Archived => "보관",
+        _ => ""
     };
 }

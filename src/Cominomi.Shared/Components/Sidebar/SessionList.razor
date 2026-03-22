@@ -246,18 +246,30 @@
     private string GetStreamingStatusText(Session session)
     {
         if (session.PermissionMode == "plan")
-            return "Planning...";
+            return "계획 중...";
 
         var phase = ChatState.GetSessionPhase(session.Id);
         return phase switch
         {
-            StreamingPhase.Preparing or StreamingPhase.Sending => "Starting...",
-            StreamingPhase.Thinking => "Thinking...",
-            StreamingPhase.WritingText => "Writing...",
-            StreamingPhase.UsingTool => ChatState.GetSessionToolName(session.Id) ?? "Working...",
-            _ => "Working..."
+            StreamingPhase.Preparing or StreamingPhase.Sending => "준비 중...",
+            StreamingPhase.Thinking => "생각 중...",
+            StreamingPhase.WritingText => "작성 중...",
+            StreamingPhase.UsingTool => GetSidebarToolLabel(ChatState.GetSessionToolName(session.Id)),
+            _ => "작업 중..."
         };
     }
+
+    private static string GetSidebarToolLabel(string? toolName) => (toolName?.ToLowerInvariant()) switch
+    {
+        "bash" or "execute_bash" => "명령 실행 중...",
+        "read" or "read_file" => "파일 읽는 중...",
+        "write" or "write_file" => "파일 작성 중...",
+        "edit" or "edit_file" => "파일 수정 중...",
+        "glob" => "파일 검색 중...",
+        "grep" => "내용 검색 중...",
+        "agent" => "에이전트...",
+        _ => "도구 사용 중..."
+    };
 
     private void ToggleFilter()
     {
@@ -347,7 +359,9 @@
             var streamingHash = 0;
             foreach (var sid in ChatState.GetStreamingSessionIds())
             {
-                streamingHash ^= sid.GetHashCode() ^ ChatState.GetSessionPhase(sid).GetHashCode();
+                streamingHash ^= sid.GetHashCode()
+                    ^ ChatState.GetSessionPhase(sid).GetHashCode()
+                    ^ (ChatState.GetSessionToolName(sid)?.GetHashCode() ?? 0);
             }
 
             if (currentId == _lastSessionId && hasStreaming == _lastHasStreaming && streamingHash == _lastStreamingHash)
