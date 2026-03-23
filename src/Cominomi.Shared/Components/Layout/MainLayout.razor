@@ -47,46 +47,64 @@
                           OnResize="HandleSidebarResize" />
         }
 
-        @* === Center Panel: Chat === *@
+        @* === Center Panel: Chat + Right Panel === *@
+        @{
+            bool showRightPanel = ChatState.CurrentSession != null
+                                  && ChatState.CurrentSession.Status != SessionStatus.Pending;
+        }
         <main class="cominomi-main">
-            <MainToolbar SidebarOpen="_sidebarOpen" OnToggleSidebar="@(() => _sidebarOpen = !_sidebarOpen)" />
+            <div class="main-left-col">
+                <MainToolbar SidebarOpen="_sidebarOpen" OnToggleSidebar="@(() => _sidebarOpen = !_sidebarOpen)" />
 
-            @if (ChatState.Tabs.OpenTabs.Count > 1)
-            {
-                <MainTabBar />
-            }
-
-            <div class="main-content">
-                @{
-                    var activeType = ChatState.Tabs.ActiveTab?.Type;
-                    var isChatTab = activeType is null or MainTabType.Chat;
+                @if (ChatState.Tabs.OpenTabs.Count > 1)
+                {
+                    <MainTabBar />
                 }
 
-                @* ChatView는 항상 렌더링 — 탭 전환 시에도 프로세스가 유지되도록 display로 토글 *@
-                <div style="@(isChatTab ? "flex:1;min-height:0;display:flex;flex-direction:column" : "display:none;height:0;overflow:hidden")">
-                    @Body
+                <div class="main-content">
+                    @{
+                        var activeType = ChatState.Tabs.ActiveTab?.Type;
+                        var isChatTab = activeType is null or MainTabType.Chat;
+                    }
+
+                    @* ChatView는 항상 렌더링 — 탭 전환 시에도 프로세스가 유지되도록 display로 토글 *@
+                    <div style="@(isChatTab ? "flex:1;min-height:0;display:flex;flex-direction:column" : "display:none;height:0;overflow:hidden")">
+                        @Body
+                    </div>
+
+                    @if (activeType == MainTabType.FileContent && ChatState.Tabs.ActiveTab?.FilePath != null)
+                    {
+                        @if (ChatState.Tabs.ActiveTab.ContentEvicted)
+                        {
+                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; opacity: 0.5;">
+                                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+                                <span>Reloading…</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <FileContentView FilePath="ChatState.Tabs.ActiveTab.FilePath"
+                                             Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")" />
+                        }
+                    }
+                    else if (activeType == MainTabType.FileDiff && ChatState.Tabs.ActiveTab?.DiffData != null)
+                    {
+                        <FileDiffView Diff="ChatState.Tabs.ActiveTab.DiffData" />
+                    }
                 </div>
-
-                @if (activeType == MainTabType.FileContent && ChatState.Tabs.ActiveTab?.FilePath != null)
-                {
-                    @if (ChatState.Tabs.ActiveTab.ContentEvicted)
-                    {
-                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; opacity: 0.5;">
-                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
-                            <span>Reloading…</span>
-                        </div>
-                    }
-                    else
-                    {
-                        <FileContentView FilePath="ChatState.Tabs.ActiveTab.FilePath"
-                                         Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")" />
-                    }
-                }
-                else if (activeType == MainTabType.FileDiff && ChatState.Tabs.ActiveTab?.DiffData != null)
-                {
-                    <FileDiffView Diff="ChatState.Tabs.ActiveTab.DiffData" />
-                }
             </div>
+
+            @if (showRightPanel)
+            {
+                <PanelResizer PanelId="rightpanel" CurrentSize="_rightPanelWidth"
+                              MinSize="280" MaxSize="600" Reverse="true"
+                              OnResize="HandleRightPanelResize" />
+
+                <div class="main-right-col" style="width: @(_rightPanelWidth)px;">
+                    <div class="right-panel-spacer"></div>
+                    <EmbeddedDiffPanel />
+                </div>
+            }
         </main>
 
     </div>
@@ -100,6 +118,7 @@
     private bool _setupOpen;
     private bool _usageDashboardOpen;
     private int _sidebarWidth = 260;
+    private int _rightPanelWidth = 400;
     private DotNetObjectReference<MainLayout>? _panelShortcutRef;
 
     protected override async Task OnInitializedAsync()
@@ -136,10 +155,8 @@
         }
     }
 
-    private void HandleSidebarResize(int newWidth)
-    {
-        _sidebarWidth = newWidth;
-    }
+    private void HandleSidebarResize(int newWidth) => _sidebarWidth = newWidth;
+    private void HandleRightPanelResize(int newWidth) => _rightPanelWidth = newWidth;
 
     [JSInvokable]
     public void OnToggleSidebarShortcut()
@@ -151,7 +168,7 @@
     [JSInvokable]
     public void OnToggleDetailShortcut()
     {
-        // No-op: diff panel is now always embedded in ChatView
+        // Right panel visibility is driven by session state, no toggle needed
     }
 
     private void HandleThemeChanged()

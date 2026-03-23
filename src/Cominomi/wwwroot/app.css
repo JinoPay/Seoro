@@ -532,11 +532,34 @@ html *::after {
 /* ===== Main Panel ===== */
 .cominomi-main {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     height: 100vh;
     overflow: hidden;
     background: var(--bg-base);
     min-width: 0;
+}
+
+.main-left-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.main-right-col {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-sidebar);
+    border-left: 1px solid var(--border-default);
+    flex-shrink: 0;
+}
+
+.right-panel-spacer {
+    height: 44px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-default);
 }
 
 .main-toolbar {
@@ -899,32 +922,6 @@ html *::after {
     white-space: pre;
 }
 
-/* ===== Chat 2-Split Layout ===== */
-.chat-split-layout {
-    display: flex;
-    flex-direction: row;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.chat-split-left {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.chat-split-right {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--bg-sidebar);
-    border-left: 1px solid var(--border-default);
-    flex-shrink: 0;
-}
-
 /* ===== Embedded Diff Panel ===== */
 .embedded-diff-panel {
     display: flex;
@@ -975,18 +972,6 @@ html *::after {
     min-height: 0;
 }
 
-.embedded-diff-file-list {
-    flex-shrink: 0;
-    max-height: 40%;
-    overflow-y: auto;
-    border-bottom: 1px solid var(--border-subtle);
-}
-
-.embedded-diff-viewer {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-}
 
 /* ===== PR Status Bar (in diff panel header) ===== */
 .pr-status-bar {

@@ -1,5 +1,6 @@
 @using Cominomi.Shared.Models
 @inject IChatState ChatState
+@implements IDisposable
 
 <div class="main-tab-bar">
     @foreach (var tab in ChatState.Tabs.OpenTabs)
@@ -7,7 +8,7 @@
         <div class="main-tab @(ChatState.Tabs.ActiveTab?.Id == tab.Id ? "active" : "")"
              @onclick="@(() => ChatState.Tabs.SetActiveTab(tab.Id))">
             <MudIcon Icon="@GetTabIcon(tab)" Size="Size.Small" Style="width: 14px; height: 14px;" />
-            <span class="main-tab-title">@tab.Title</span>
+            <span class="main-tab-title">@(tab.DisambiguatedTitle ?? tab.Title)</span>
             @if (tab.Type != MainTabType.Chat)
             {
                 <button class="main-tab-close" @onclick="@(() => ChatState.Tabs.CloseTab(tab.Id))" @onclick:stopPropagation="true">
@@ -19,6 +20,16 @@
 </div>
 
 @code {
+    protected override void OnInitialized()
+    {
+        ChatState.Tabs.OnTabChanged += HandleTabChanged;
+    }
+
+    private void HandleTabChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
     private static string GetTabIcon(MainTab tab) => tab.Type switch
     {
         MainTabType.Chat => Icons.Material.Filled.Chat,
@@ -26,4 +37,9 @@
         MainTabType.FileDiff => Icons.Material.Filled.Description,
         _ => Icons.Material.Filled.Tab
     };
+
+    public void Dispose()
+    {
+        ChatState.Tabs.OnTabChanged -= HandleTabChanged;
+    }
 }
