@@ -13,7 +13,6 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
     private readonly ISystemPromptBuilder _systemPromptBuilder;
     private readonly ISessionInitializer _sessionInitializer;
     private readonly IHooksEngine _hooksEngine;
-    private readonly IChatPrWorkflowService _prWorkflow;
     private readonly IActiveSessionRegistry _activeSessionRegistry;
     private readonly ILogger<ChatMessageOrchestrator> _logger;
 
@@ -26,7 +25,6 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         ISystemPromptBuilder systemPromptBuilder,
         ISessionInitializer sessionInitializer,
         IHooksEngine hooksEngine,
-        IChatPrWorkflowService prWorkflow,
         IActiveSessionRegistry activeSessionRegistry,
         ILogger<ChatMessageOrchestrator> logger)
     {
@@ -38,7 +36,6 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         _systemPromptBuilder = systemPromptBuilder;
         _sessionInitializer = sessionInitializer;
         _hooksEngine = hooksEngine;
-        _prWorkflow = prWorkflow;
         _activeSessionRegistry = activeSessionRegistry;
         _logger = logger;
     }
@@ -147,11 +144,8 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
             session, assistantMsg, systemPrompt, messageForClaude,
             conversationId, continueMode: false, ct);
 
-        // --- Post-stream: hooks + PR check ---
+        // --- Post-stream: hooks ---
         FireHooksInBackground(session);
-
-        if (session.Status == SessionStatus.Pushed && !string.IsNullOrEmpty(session.Git.BranchName))
-            _ = CheckAndUpdatePrStatusAsync(session);
 
         return result;
     }
@@ -172,26 +166,6 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         return await RunStreamingLoopAsync(
             session, assistantMsg, systemPrompt, string.Empty,
             session.ConversationId, continueMode: true, ct);
-    }
-
-    public async Task CheckAndUpdatePrStatusAsync(Session session)
-    {
-        try
-        {
-            var result = await _prWorkflow.CheckPrStatusAsync(session);
-            if (result is var (prNumber, prUrl))
-            {
-                session.TransitionStatus(SessionStatus.PrOpen);
-                session.Pr.PrUrl = prUrl;
-                session.Pr.PrNumber = prNumber;
-                await _sessionService.SaveSessionAsync(session);
-                _chatState.NotifyStateChanged();
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "PR status check failed for session {SessionId}", session.Id);
-        }
     }
 
     // ──────────────────────────────────────────────

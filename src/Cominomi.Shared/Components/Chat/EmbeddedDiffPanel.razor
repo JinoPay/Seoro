@@ -3,10 +3,6 @@
 @implements IDisposable
 
 <div class="embedded-diff-panel">
-    <PrStatusBar Session="ChatState.CurrentSession"
-                 OnLinkIssueRequested="OnLinkIssueRequested"
-                 OnSendMessage="OnSendMessage" />
-
     <div class="embedded-diff-toolbar">
         <div class="embedded-diff-tabs">
             <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Explorer ? "active" : "")"

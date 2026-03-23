@@ -6,9 +6,7 @@ namespace Cominomi.Shared.Services;
 public class SessionListDataService : IDisposable
 {
     private readonly ISessionService _sessionService;
-    private readonly ISessionGitWorkflowService _gitWorkflow;
     private readonly IGitService _gitService;
-    private readonly IGhService _ghService;
     private readonly IWorkspaceService _workspaceService;
     private readonly ILogger<SessionListDataService> _logger;
 
@@ -20,14 +18,12 @@ public class SessionListDataService : IDisposable
     public event Action? OnDataChanged;
 
     public SessionListDataService(
-        ISessionService sessionService, ISessionGitWorkflowService gitWorkflow,
-        IGitService gitService, IGhService ghService, IWorkspaceService workspaceService,
+        ISessionService sessionService,
+        IGitService gitService, IWorkspaceService workspaceService,
         ILogger<SessionListDataService> logger)
     {
         _sessionService = sessionService;
-        _gitWorkflow = gitWorkflow;
         _gitService = gitService;
-        _ghService = ghService;
         _workspaceService = workspaceService;
         _logger = logger;
     }
@@ -61,7 +57,6 @@ public class SessionListDataService : IDisposable
             {
                 var sessions = await _sessionService.GetSessionsByWorkspaceAsync(ws.Id);
                 SessionCache[ws.Id] = sessions;
-                _ = CheckMergeStatusesAsync(ws.Id);
                 _ = LoadDiffStatsForWorkspaceAsync(ws, sessions);
             }
         }
@@ -108,58 +103,6 @@ public class SessionListDataService : IDisposable
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Failed to refresh diff stats for session {SessionId}", sessionId);
-        }
-    }
-
-    public async Task CheckMergeStatusesAsync(string workspaceId)
-    {
-        if (!SessionCache.TryGetValue(workspaceId, out var sessions)) return;
-
-        var targetSessions = sessions
-            .Where(s => s.Status is SessionStatus.Ready or SessionStatus.Pushed)
-            .ToList();
-
-        foreach (var session in targetSessions)
-        {
-            try
-            {
-                if (session.Status == SessionStatus.Ready)
-                {
-                    var merged = await _gitWorkflow.CheckMergeStatusAsync(session.Id);
-                    if (merged)
-                    {
-                        session.TransitionStatus(SessionStatus.Merged);
-                        OnDataChanged?.Invoke();
-                        continue;
-                    }
-                }
-
-                if (session.Pr.PrNumber == null && !session.Git.IsLocalDir
-                    && !string.IsNullOrEmpty(session.Git.BranchName))
-                {
-                    await CheckAndUpdatePrForSessionAsync(session);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to check merge/PR status for session {SessionId}", session.Id);
-            }
-        }
-    }
-
-    public async Task CheckAndUpdatePrForSessionAsync(Session session)
-    {
-        var workspace = Workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);
-        if (workspace == null) return;
-
-        var prInfo = await _ghService.GetPrForBranchAsync(workspace.RepoLocalPath, session.Git.BranchName);
-        if (prInfo != null && prInfo.State is "OPEN" or "open")
-        {
-            session.TransitionStatus(SessionStatus.PrOpen);
-            session.Pr.PrUrl = prInfo.Url;
-            session.Pr.PrNumber = prInfo.Number;
-            await _sessionService.SaveSessionAsync(session);
-            OnDataChanged?.Invoke();
         }
     }
 

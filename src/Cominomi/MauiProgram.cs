@@ -89,9 +89,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISkillRegistry, SkillRegistry>();
         builder.Services.AddSingleton<ITaskService, TaskService>();
         builder.Services.AddSingleton<ISessionService, SessionService>();
-        builder.Services.AddSingleton<ISessionGitWorkflowService, SessionGitWorkflowService>();
-        builder.Services.AddSingleton<ISessionSyncService, SessionSyncService>();
-        builder.Services.AddSingleton<GitStatusTracker>();
         builder.Services.AddSingleton<IWorkspaceService, WorkspaceService>();
         builder.Services.AddSingleton<ISettingsService, SettingsService>();
         builder.Services.AddSingleton<IDependencyCheckService, DependencyCheckService>();
@@ -119,7 +116,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
         builder.Services.AddSingleton<ISystemPromptBuilder, SystemPromptBuilder>();
         builder.Services.AddSingleton<ISessionInitializer, SessionInitializer>();
-        builder.Services.AddSingleton<IChatPrWorkflowService, ChatPrWorkflowService>();
         builder.Services.AddSingleton<IChatMessageOrchestrator, ChatMessageOrchestrator>();
         builder.Services.AddSingleton<SessionListDataService>();
         builder.Services.AddScoped<ISessionListFacade, SessionListFacade>();

@@ -16,12 +16,8 @@ public interface IGitService
     Task<bool> BranchExistsAsync(string repoDir, string branchName);
     Task<GitResult> RenameBranchAsync(string workingDir, string oldName, string newName, CancellationToken ct = default);
     Task<GitResult> DeleteBranchAsync(string repoDir, string branchName, CancellationToken ct = default);
-    Task<bool> IsBranchMergedAsync(string repoDir, string branchName, string baseBranch, CancellationToken ct = default);
-    Task<GitResult> PushBranchAsync(string repoDir, string branchName, CancellationToken ct = default);
-    Task<GitResult> PushForceBranchAsync(string repoDir, string branchName, CancellationToken ct = default);
     Task<GitResult> FetchAsync(string repoDir, CancellationToken ct = default);
     Task<GitResult> FetchAllAsync(string repoDir, CancellationToken ct = default);
-    Task<GitResult> RebaseAsync(string workingDir, string baseBranch, CancellationToken ct = default);
     Task<List<BranchGroup>> ListAllBranchesGroupedAsync(string repoDir);
     Task<string> GetNameStatusAsync(string workingDir, string baseBranch, CancellationToken ct = default);
     Task<string> GetUnifiedDiffAsync(string workingDir, string baseBranch, CancellationToken ct = default);
@@ -32,5 +28,4 @@ public interface IGitService
     Task<(int Additions, int Deletions)> GetDiffStatAsync(string workingDir, string baseBranch, CancellationToken ct = default);
     Task<DiffSummary> GetDiffSummaryAsync(string workingDir, string baseBranch, CancellationToken ct = default);
     Task<GitResult> RunAsync(string arguments, string workingDir, CancellationToken ct = default);
-    Task<(int Ahead, int Behind)> GetAheadBehindAsync(string workingDir, string baseBranch, CancellationToken ct = default);
 }

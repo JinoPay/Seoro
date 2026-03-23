@@ -22,13 +22,6 @@ public class ProcessErrorClassifierTests
     }
 
     [Fact]
-    public void ClassifyGitError_MergeConflict_ReturnsPrMergeConflict()
-    {
-        var error = ProcessErrorClassifier.ClassifyGitError("CONFLICT (content): Merge conflict in file.cs");
-        Assert.Equal(ErrorCode.PrMergeConflict, error.Code);
-    }
-
-    [Fact]
     public void ClassifyGitError_Unknown_ReturnsFallback()
     {
         var error = ProcessErrorClassifier.ClassifyGitError("some unknown error");
@@ -56,13 +49,6 @@ public class ProcessErrorClassifierTests
     public void IsGhRateLimitError_NonRateLimit_ReturnsFalse()
     {
         Assert.False(ProcessErrorClassifier.IsGhRateLimitError("permission denied"));
-    }
-
-    [Fact]
-    public void ClassifyGhError_NotFound_ReturnsPrNotFound()
-    {
-        var error = ProcessErrorClassifier.ClassifyGhError("Could not resolve to a PullRequest with the number of 999");
-        Assert.Equal(ErrorCode.PrNotFound, error.Code);
     }
 
     // --- Claude ---
@@ -105,21 +91,4 @@ public class ProcessErrorClassifierTests
         Assert.Equal(ErrorCode.BranchPushFailed, error.Code);
     }
 
-    [Theory]
-    [InlineData("merge conflict detected", null)]
-    [InlineData("error", "not mergeable")]
-    [InlineData("", "conflicting files found")]
-    [InlineData("required status check is failing", null)]
-    public void ClassifyMergeError_ConflictPatterns_ReturnsPrConflict(string stderr, string? stdout)
-    {
-        var error = ProcessErrorClassifier.ClassifyMergeError(stderr, stdout);
-        Assert.Equal(ErrorCode.PrMergeConflict, error.Code);
-    }
-
-    [Fact]
-    public void ClassifyMergeError_Other_ReturnsPrMerge()
-    {
-        var error = ProcessErrorClassifier.ClassifyMergeError("internal server error");
-        Assert.Equal(ErrorCode.PrMergeFailed, error.Code);
-    }
 }

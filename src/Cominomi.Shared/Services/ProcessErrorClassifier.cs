@@ -14,18 +14,12 @@ public static class ProcessErrorClassifier
     [
         new(["rejected"], ErrorCode.BranchPushRejected, ErrorCategory.Transient),
         new(["not a git repository"], ErrorCode.NotAGitRepo, ErrorCategory.Permanent),
-        new(["merge conflict", "not mergeable", "conflicting files"], ErrorCode.PrMergeConflict, ErrorCategory.Transient),
         new(["fatal: unable to create", "worktree"], ErrorCode.WorktreeCreationFailed, ErrorCategory.Permanent),
-        new(["required status check"], ErrorCode.CiChecksFailed, ErrorCategory.Transient),
     ];
 
     private static readonly ErrorPattern[] GhPatterns =
     [
         new(["rate limit", "secondary rate", "API rate limit exceeded", "abuse detection"], ErrorCode.ProcessFailed, ErrorCategory.Transient, true),
-        new(["already exists"], ErrorCode.PrCreationFailed, ErrorCategory.Permanent),
-        new(["not found", "Could not resolve"], ErrorCode.PrNotFound, ErrorCategory.Permanent),
-        new(["merge conflict", "not mergeable", "conflicting files"], ErrorCode.PrMergeConflict, ErrorCategory.Transient),
-        new(["required status check"], ErrorCode.CiChecksFailed, ErrorCategory.Transient),
     ];
 
     private static readonly ErrorPattern[] ClaudePatterns =
@@ -86,18 +80,6 @@ public static class ProcessErrorClassifier
         if (errorText.Contains("rejected", StringComparison.OrdinalIgnoreCase))
             return AppError.PushRejected(errorText);
         return AppError.PushFailed(errorText);
-    }
-
-    /// <summary>
-    /// Classify a merge error specifically (backward compatible with AppError.ClassifyMergeError).
-    /// </summary>
-    public static AppError ClassifyMergeError(string errorText, string? output = null)
-    {
-        var combined = (errorText + " " + output).ToLowerInvariant();
-        if (combined.Contains("merge conflict") || combined.Contains("not mergeable")
-            || combined.Contains("conflicting files") || combined.Contains("required status check"))
-            return AppError.PrConflict(errorText);
-        return AppError.PrMerge(errorText);
     }
 
     // ─── Internals ──────────────────────────────────────────────────

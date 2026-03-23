@@ -204,33 +204,6 @@ public class GitServiceTests
         Assert.Equal(3, branches.Count);
     }
 
-    // --- RebaseAsync (auto-abort on failure) ---
-
-    [Fact]
-    public async Task RebaseAsync_OnFailure_AutoAborts()
-    {
-        _processRunner.ResultQueue.Enqueue(new ProcessResult(false, "", "CONFLICT", 1)); // rebase fails
-        _processRunner.ResultQueue.Enqueue(new ProcessResult(true, "", "", 0)); // abort succeeds
-
-        var result = await _sut.RebaseAsync("/repo", "main");
-
-        Assert.False(result.Success);
-        // Should have called rebase then rebase --abort
-        Assert.Equal(2, _processRunner.Invocations.Count);
-        Assert.Contains("--abort", _processRunner.Invocations[1].Arguments);
-    }
-
-    [Fact]
-    public async Task RebaseAsync_OnSuccess_NoAbort()
-    {
-        _processRunner.NextResult = new ProcessResult(true, "", "", 0);
-
-        var result = await _sut.RebaseAsync("/repo", "main");
-
-        Assert.True(result.Success);
-        Assert.Single(_processRunner.Invocations);
-    }
-
     // --- GetNameStatusAsync ---
 
     [Fact]

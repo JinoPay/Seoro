@@ -131,7 +131,6 @@ else
     private string? _planFilePath;
     private string? _planContent;
     private string? _planSessionId;
-    private string? _lastPrCheckedSessionId;
     private bool _shouldAutoScroll;
     private bool _isAtBottom = true;
     private DotNetObjectReference<ChatView>? _selfRef;
@@ -229,18 +228,6 @@ else
 
                 if (ChatState.CurrentSession == null)
                     _ = _landingPage?.RefreshAsync();
-
-                // 세션 전환 시 GitHub PR 상태 자동 확인
-                if (ChatState.CurrentSession != null
-                    && !ChatState.CurrentSession.Git.IsLocalDir
-                    && ChatState.CurrentSession.Id != _lastPrCheckedSessionId
-                    && ChatState.CurrentSession.Status is SessionStatus.Ready or SessionStatus.Pushed
-                    && ChatState.CurrentSession.Pr.PrNumber == null
-                    && !string.IsNullOrEmpty(ChatState.CurrentSession.Git.BranchName))
-                {
-                    _lastPrCheckedSessionId = ChatState.CurrentSession.Id;
-                    _ = Orchestrator.CheckAndUpdatePrStatusAsync(ChatState.CurrentSession);
-                }
             }
             catch (Exception ex)
             {

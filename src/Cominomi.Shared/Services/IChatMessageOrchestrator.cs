@@ -26,13 +26,13 @@ public class StreamResult
 
 /// <summary>
 /// Orchestrates message send / continue flows that were previously inlined in ChatView.
-/// Owns: worktree init, attachment handling, streaming loop, finalize, hooks, PR status check.
+/// Owns: worktree init, attachment handling, streaming loop, finalize, hooks.
 /// Does NOT own: UI rendering, Snackbar, JS interop, plan review UI actions.
 /// </summary>
 public interface IChatMessageOrchestrator
 {
     /// <summary>
-    /// Full send flow: worktree init → attachments → user message → first-message rename → stream → finalize → hooks → PR check.
+    /// Full send flow: worktree init → attachments → user message → first-message rename → stream → finalize → hooks.
     /// </summary>
     Task<StreamResult> SendAsync(
         Session session,
@@ -49,8 +49,4 @@ public interface IChatMessageOrchestrator
         Workspace? workspace,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// Check if a PR exists for the session's branch and update session state.
-    /// </summary>
-    Task CheckAndUpdatePrStatusAsync(Session session);
 }

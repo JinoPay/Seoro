@@ -311,32 +311,6 @@ public class GitService : IGitService
         return await RunGitAsync(repoDir, ct, "branch", "-D", branchName);
     }
 
-    public async Task<bool> IsBranchMergedAsync(string repoDir, string branchName, string baseBranch, CancellationToken ct = default)
-    {
-        var result = await RunGitAsync(repoDir, ct, "merge-base", "--is-ancestor", branchName, baseBranch);
-        if (!result.Success) return false;
-
-        // Guard: if branch tip == merge-base, the branch never diverged from base.
-        // This happens for newly created branches with no unique commits.
-        var mergeBaseResult = await RunGitAsync(repoDir, ct, "merge-base", branchName, baseBranch);
-        var branchTipResult = await RunGitAsync(repoDir, ct, "rev-parse", branchName);
-        if (mergeBaseResult.Success && branchTipResult.Success
-            && mergeBaseResult.Output.Trim() == branchTipResult.Output.Trim())
-            return false;
-
-        return true;
-    }
-
-    public async Task<GitResult> PushBranchAsync(string repoDir, string branchName, CancellationToken ct = default)
-    {
-        return await RunGitAsync(repoDir, ct, "push", "-u", "origin", branchName);
-    }
-
-    public async Task<GitResult> PushForceBranchAsync(string repoDir, string branchName, CancellationToken ct = default)
-    {
-        return await RunGitAsync(repoDir, ct, "push", "--force-with-lease", "origin", branchName);
-    }
-
     public async Task<GitResult> FetchAsync(string repoDir, CancellationToken ct = default)
     {
         var result = await RunGitAsync(repoDir, ct, "fetch", "origin");
@@ -348,17 +322,6 @@ public class GitService : IGitService
     {
         var result = await RunGitAsync(repoDir, ct, "fetch", "--all", "--prune");
         if (result.Success) InvalidateBranchCaches(repoDir);
-        return result;
-    }
-
-    public async Task<GitResult> RebaseAsync(string workingDir, string baseBranch, CancellationToken ct = default)
-    {
-        var result = await RunGitAsync(workingDir, ct, "rebase", $"origin/{baseBranch}");
-        if (!result.Success)
-        {
-            // Abort failed rebase to leave worktree clean
-            await RunGitAsync(workingDir, ct, "rebase", "--abort");
-        }
         return result;
     }
 
@@ -624,21 +587,6 @@ public class GitService : IGitService
         fileDiff.UnifiedDiff = diffContent.ToString();
         fileDiff.Additions = additions;
         fileDiff.Deletions = deletions;
-    }
-
-    public async Task<(int Ahead, int Behind)> GetAheadBehindAsync(string workingDir, string baseBranch, CancellationToken ct = default)
-    {
-        var result = await RunGitAsync(workingDir, ct, "rev-list", "--count", "--left-right", $"{baseBranch}...HEAD");
-        if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
-            return (0, 0);
-
-        // Output format: "behind\tahead" (left = base side = behind, right = HEAD side = ahead)
-        var parts = result.Output.Trim().Split('\t');
-        if (parts.Length != 2) return (0, 0);
-
-        int.TryParse(parts[0], out var behind);
-        int.TryParse(parts[1], out var ahead);
-        return (ahead, behind);
     }
 
     private void InvalidateBranchCaches(string repoDir)

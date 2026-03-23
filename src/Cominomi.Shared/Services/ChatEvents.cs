@@ -18,5 +18,3 @@ public sealed record MessageAddedEvent(string SessionId, MessageRole Role) : Cha
 public sealed record RightPanelChangedEvent(RightPanelMode Mode) : ChatEvent;
 public sealed record TabChangedEvent : ChatEvent;
 public sealed record SettingsChangedEvent : ChatEvent;
-
-public sealed record SessionSyncCompletedEvent(string SessionId, SessionSyncResult Result) : ChatEvent;
