@@ -17,11 +17,6 @@ public static class ProcessErrorClassifier
         new(["fatal: unable to create", "worktree"], ErrorCode.WorktreeCreationFailed, ErrorCategory.Permanent),
     ];
 
-    private static readonly ErrorPattern[] GhPatterns =
-    [
-        new(["rate limit", "secondary rate", "API rate limit exceeded", "abuse detection"], ErrorCode.ProcessFailed, ErrorCategory.Transient, true),
-    ];
-
     private static readonly ErrorPattern[] ClaudePatterns =
     [
         new(["requires --verbose"], ErrorCode.ClaudeProcessFailed, ErrorCategory.Transient),
@@ -42,16 +37,6 @@ public static class ProcessErrorClassifier
     }
 
     /// <summary>
-    /// Classify a GitHub CLI error.
-    /// </summary>
-    public static AppError ClassifyGhError(string stderr, string? stdout = null)
-    {
-        var combined = CombineText(stderr, stdout);
-        return MatchPatterns(combined, stderr, GhPatterns)
-               ?? new AppError(ErrorCode.ProcessFailed, ErrorCategory.Unknown, stderr);
-    }
-
-    /// <summary>
     /// Classify a Claude CLI error.
     /// </summary>
     public static AppError ClassifyClaudeError(string stderr, string? stdout = null)
@@ -59,17 +44,6 @@ public static class ProcessErrorClassifier
         var combined = CombineText(stderr, stdout);
         return MatchPatterns(combined, stderr, ClaudePatterns)
                ?? new AppError(ErrorCode.ClaudeProcessFailed, ErrorCategory.Unknown, stderr);
-    }
-
-    /// <summary>
-    /// Check if stderr indicates a GitHub API rate limit error.
-    /// </summary>
-    public static bool IsGhRateLimitError(string stderr)
-    {
-        if (string.IsNullOrEmpty(stderr)) return false;
-        var pattern = GhPatterns.FirstOrDefault(p => p.IsRateLimit);
-        return pattern != null && pattern.Keywords.Any(
-            k => stderr.Contains(k, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

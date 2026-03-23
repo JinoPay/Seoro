@@ -43,7 +43,6 @@
 </div>
 
 @code {
-    [Parameter] public EventCallback OnLinkIssueRequested { get; set; }
     [Parameter] public EventCallback<ChatInputMessage> OnSendMessage { get; set; }
 
     private DiffPanelTab _activeTab = DiffPanelTab.Explorer;

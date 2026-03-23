@@ -28,29 +28,6 @@ public class ProcessErrorClassifierTests
         Assert.Equal(ErrorCode.BranchPushFailed, error.Code);
     }
 
-    // --- GitHub ---
-
-    [Theory]
-    [InlineData("API rate limit exceeded")]
-    [InlineData("secondary rate limit")]
-    [InlineData("abuse detection mechanism")]
-    public void IsGhRateLimitError_RateLimitTexts_ReturnsTrue(string stderr)
-    {
-        Assert.True(ProcessErrorClassifier.IsGhRateLimitError(stderr));
-    }
-
-    [Fact]
-    public void IsGhRateLimitError_EmptyString_ReturnsFalse()
-    {
-        Assert.False(ProcessErrorClassifier.IsGhRateLimitError(""));
-    }
-
-    [Fact]
-    public void IsGhRateLimitError_NonRateLimit_ReturnsFalse()
-    {
-        Assert.False(ProcessErrorClassifier.IsGhRateLimitError("permission denied"));
-    }
-
     // --- Claude ---
 
     [Fact]

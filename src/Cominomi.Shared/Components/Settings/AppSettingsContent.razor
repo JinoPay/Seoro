@@ -1,6 +1,5 @@
 @inject ISettingsService SettingsService
 @inject IFolderPickerService FolderPickerService
-@inject IGhService GhService
 @inject IClaudeService ClaudeService
 @inject ISnackbar Snackbar
 
@@ -39,19 +38,6 @@
                            Disabled="@(!_settings.NotificationsEnabled)" />
 
                 <div class="settings-group-title" style="margin-top: 16px;">Git 워크플로우</div>
-
-                <MudSelect T="string" @bind-Value="_settings.DefaultMergeStrategy" Label="기본 병합 방식"
-                           Variant="Variant.Outlined" Margin="Margin.Dense"
-                           HelperText="PR 병합 시 사용할 기본 방식입니다.">
-                    <MudSelectItem T="string" Value="@("squash")">스쿼시 후 병합</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("merge")">병합 커밋 생성</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("rebase")">리베이스 후 병합</MudSelectItem>
-                </MudSelect>
-
-                <MudTextField @bind-Value="_settings.DefaultPrBodyTemplate" Label="PR 본문 템플릿"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
-                              Placeholder="비워두면 커밋 로그에서 자동 생성됩니다."
-                              HelperText="사용 가능한 변수: {branchName}, {baseBranch}, {sessionTitle}" />
 
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                     <MudTextField @bind-Value="_settings.DefaultCloneDirectory" Label="클론 디렉토리"
@@ -113,44 +99,6 @@
         {
             <div class="settings-section-title">연동</div>
             <div class="settings-section-desc">외부 서비스 연결 상태를 확인합니다.</div>
-
-            <div class="settings-group">
-                <div class="settings-group-title">GitHub</div>
-                <div class="integration-status">
-                    @if (_ghAuthChecking)
-                    {
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                             Style="width: 18px; height: 18px;" />
-                        <span class="status-text">확인 중...</span>
-                    }
-                    else if (_ghAuthenticated == true)
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
-                                 Class="status-ok" />
-                        <span class="status-text">인증됨</span>
-                    }
-                    else if (_ghAuthenticated == false)
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
-                                 Class="status-warn" />
-                        <span class="status-text">인증되지 않음</span>
-                    }
-                    else
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small"
-                                 Class="status-warn" />
-                        <span class="status-text">상태 미확인</span>
-                    }
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                                   OnClick="CheckGhAuth" Title="다시 확인" />
-                </div>
-                @if (_ghAuthenticated == false)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                        터미널에서 <code>gh auth login</code> 명령어로 인증하세요.
-                    </MudText>
-                }
-            </div>
 
             <div class="settings-group">
                 <div class="settings-group-title">Claude CLI</div>
@@ -302,8 +250,6 @@
     private AppSettings _settings = new();
     private string _lastSection = "";
 
-    private bool _ghAuthChecking;
-    private bool? _ghAuthenticated;
     private bool _claudeCliChecking;
     private bool _claudeCliFound;
     private string? _claudeCliResolvedPath;
@@ -332,25 +278,7 @@
 
     private async Task CheckIntegrations()
     {
-        var ghTask = CheckGhAuth();
-        var cliTask = CheckClaudeCli();
-        await Task.WhenAll(ghTask, cliTask);
-    }
-
-    private async Task CheckGhAuth()
-    {
-        _ghAuthChecking = true;
-        StateHasChanged();
-        try
-        {
-            _ghAuthenticated = await GhService.IsAuthenticatedAsync();
-        }
-        catch
-        {
-            _ghAuthenticated = false;
-        }
-        _ghAuthChecking = false;
-        StateHasChanged();
+        await CheckClaudeCli();
     }
 
     private async Task CheckClaudeCli()

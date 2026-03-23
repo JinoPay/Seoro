@@ -29,8 +29,7 @@
                       OnResize="HandleDiffPanelResize" />
 
         <div class="chat-split-right" style="width: @(_diffPanelWidth)px;">
-            <EmbeddedDiffPanel OnLinkIssueRequested="@(() => _linkIssueDialogOpen = true)"
-                               OnSendMessage="HandleSend" />
+            <EmbeddedDiffPanel OnSendMessage="HandleSend" />
         </div>
     </div>
 }
@@ -38,8 +37,6 @@ else
 {
     @ChatContentFragment
 }
-
-<LinkIssueDialog @bind-IsOpen="_linkIssueDialogOpen" OnIssueLinked="HandleIssueLinked" />
 
 @code {
     private RenderFragment ChatContentFragment => __builder =>
@@ -121,7 +118,6 @@ else
 
     private List<BranchGroup> _branchGroups = [];
     private string _selectedBranch = "";
-    private bool _linkIssueDialogOpen;
     private bool _quickResponseVisible;
     private List<string> _quickResponseOptions = [];
     private EventCallback<string> _askUserResponseCallback;
@@ -576,15 +572,6 @@ else
         {
             entry.Cts.Cancel();
         }
-    }
-
-    private async Task HandleIssueLinked(IssueInfo issue)
-    {
-        if (ChatState.CurrentSession == null) return;
-        ChatState.CurrentSession.Pr.IssueNumber = issue.Number;
-        ChatState.CurrentSession.Pr.IssueUrl = issue.Url;
-        await SessionService.SaveSessionAsync(ChatState.CurrentSession);
-        StateHasChanged();
     }
 
     public void Dispose()

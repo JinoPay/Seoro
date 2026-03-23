@@ -262,12 +262,6 @@ public class GitService : IGitService
         return result.Success;
     }
 
-    public async Task<GitResult> RunAsync(string arguments, string workingDir, CancellationToken ct = default)
-    {
-        var args = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return await RunGitBoundedAsync(workingDir, ct, args);
-    }
-
     /// <summary>
     /// Maximum stdout bytes for git commands that may produce large output (diff, ls-files, log).
     /// 1 MB — large enough for practical use, prevents unbounded memory growth.
@@ -388,23 +382,6 @@ public class GitService : IGitService
         // Use baseBranch (not baseBranch...HEAD) to include uncommitted working tree changes
         var result = await RunGitBoundedAsync(workingDir, ct, "diff", "--name-status", baseBranch);
         return result.Success ? result.Output : "";
-    }
-
-    public async Task<string> GetUnifiedDiffAsync(string workingDir, string baseBranch, CancellationToken ct = default)
-    {
-        // Use baseBranch (not baseBranch...HEAD) to include uncommitted working tree changes
-        var result = await RunGitBoundedAsync(workingDir, ct, "diff", baseBranch);
-        return result.Success ? result.Output : "";
-    }
-
-    public async Task<GitResult> GetCommitLogAsync(string repoDir, string baseBranch, CancellationToken ct = default)
-    {
-        return await RunGitBoundedAsync(repoDir, ct, "log", $"{baseBranch}..HEAD", "--oneline");
-    }
-
-    public async Task<GitResult> GetFormattedCommitLogAsync(string repoDir, string baseBranch, int maxCount = 50, CancellationToken ct = default)
-    {
-        return await RunGitBoundedAsync(repoDir, ct, "log", $"{baseBranch}..HEAD", "--format=%H%x00%h%x00%an%x00%aI%x00%s", "-n", maxCount.ToString());
     }
 
     public async Task<List<string>> ListTrackedFilesAsync(string workingDir, CancellationToken ct = default)

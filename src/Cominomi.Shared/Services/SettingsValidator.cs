@@ -13,8 +13,6 @@ public static class SettingsValidator
     private static readonly HashSet<string> ValidPermissionModes =
         ["default", "plan", "acceptEdits", "dontAsk", "bypassPermissions", "bypassAll"];
     private static readonly HashSet<string> ValidEffortLevels = ["auto", "low", "medium", "high", "max"];
-    private static readonly HashSet<string> ValidMergeStrategies = ["squash", "merge", "rebase"];
-
     public static List<string> Validate(AppSettings settings)
     {
         var issues = new List<string>();
@@ -31,10 +29,6 @@ public static class SettingsValidator
         if (!ValidEffortLevels.Contains(settings.DefaultEffortLevel))
             issues.Add($"Invalid effort level '{settings.DefaultEffortLevel}'. Must be one of: {string.Join(", ", ValidEffortLevels)}");
 
-        // Merge strategy
-        if (!ValidMergeStrategies.Contains(settings.DefaultMergeStrategy))
-            issues.Add($"Invalid merge strategy '{settings.DefaultMergeStrategy}'. Must be one of: {string.Join(", ", ValidMergeStrategies)}");
-
         // Timeouts — must be positive
         if (settings.DefaultProcessTimeoutSeconds <= 0)
             issues.Add($"DefaultProcessTimeoutSeconds must be positive, got {settings.DefaultProcessTimeoutSeconds}");
@@ -44,9 +38,6 @@ public static class SettingsValidator
             issues.Add($"SummarizationTimeoutSeconds must be positive, got {settings.SummarizationTimeoutSeconds}");
         if (settings.VersionCheckTimeoutSeconds <= 0)
             issues.Add($"VersionCheckTimeoutSeconds must be positive, got {settings.VersionCheckTimeoutSeconds}");
-        if (settings.CiCheckTimeoutSeconds <= 0)
-            issues.Add($"CiCheckTimeoutSeconds must be positive, got {settings.CiCheckTimeoutSeconds}");
-
         // Optional numeric constraints
         if (settings.DefaultMaxTurns is < 1)
             issues.Add($"DefaultMaxTurns must be >= 1, got {settings.DefaultMaxTurns}");
@@ -77,16 +68,11 @@ public static class SettingsValidator
         if (!ValidEffortLevels.Contains(settings.DefaultEffortLevel))
             settings.DefaultEffortLevel = CominomiConstants.DefaultEffortLevel;
 
-        if (!ValidMergeStrategies.Contains(settings.DefaultMergeStrategy))
-            settings.DefaultMergeStrategy = CominomiConstants.DefaultMergeStrategy;
-
         // Clamp timeouts to minimum 1 second
         settings.DefaultProcessTimeoutSeconds = Math.Max(1, settings.DefaultProcessTimeoutSeconds);
         settings.HookTimeoutSeconds = Math.Max(1, settings.HookTimeoutSeconds);
         settings.SummarizationTimeoutSeconds = Math.Max(1, settings.SummarizationTimeoutSeconds);
         settings.VersionCheckTimeoutSeconds = Math.Max(1, settings.VersionCheckTimeoutSeconds);
-        settings.CiCheckTimeoutSeconds = Math.Max(1, settings.CiCheckTimeoutSeconds);
-
         // Clamp optional numeric values
         if (settings.DefaultMaxTurns is < 1)
             settings.DefaultMaxTurns = null;
