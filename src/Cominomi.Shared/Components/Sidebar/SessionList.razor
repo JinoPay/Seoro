@@ -83,8 +83,7 @@
                                      ShortcutLabel="@(row.SessionIndex < 5 ? GetShortcutLabel(row.SessionIndex) : null)"
                                      ShowShortcuts="@_ctrlHeld"
                                      OnClick="@(() => SelectSession(row.Session!, row.Workspace))"
-                                     OnDelete="@(() => DeleteSession(row.Session!))"
-                                     OnCleanup="@(() => CleanupSession(row.Session!))" />
+                                     OnDelete="@(() => DeleteSession(row.Session!))" />
                         break;
                 }
             </Virtualize>
@@ -329,12 +328,6 @@
     private async Task SelectSession(Session session, Workspace? ws = null)
     {
         await Facade.SelectSessionAsync(session, ws, DataService.Workspaces);
-    }
-
-    private async Task CleanupSession(Session session)
-    {
-        await Facade.CleanupSessionAsync(session);
-        StateHasChanged();
     }
 
     private async Task DeleteSession(Session session)

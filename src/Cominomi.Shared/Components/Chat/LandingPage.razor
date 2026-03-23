@@ -55,10 +55,6 @@
     private static string GetStatusDotClass(SessionStatus status) => status switch
     {
         SessionStatus.Ready => "ready",
-        SessionStatus.Pushed => "pushed",
-        SessionStatus.PrOpen => "pr-open",
-        SessionStatus.Merged => "merged",
-        SessionStatus.ConflictDetected => "conflict",
         SessionStatus.Error => "error",
         SessionStatus.Pending => "pending",
         _ => "pending"

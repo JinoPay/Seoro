@@ -33,11 +33,6 @@ public class Workspace
     public string? DefaultBaseBranch { get; set; }
     public string DefaultRemote { get; set; } = "origin";
 
-    // Scripts
-    public string? SetupScript { get; set; }
-    public string? RunScript { get; set; }
-    public string? ArchiveScript { get; set; }
-
     // Structured preferences
     public WorkspacePreferences Preferences { get; set; } = new();
 
@@ -45,10 +40,6 @@ public class Workspace
     // New code should use Preferences.* instead.
     [Obsolete("Use Preferences.CodeReviewPrompt instead")]
     public string? CodeReviewPreferences { get; set; }
-    [Obsolete("Use Preferences.CreatePrPrompt instead")]
-    public string? CreatePrPreferences { get; set; }
-    [Obsolete("Use Preferences.BranchRenamePrompt instead")]
-    public string? BranchRenamePreferences { get; set; }
     [Obsolete("Use Preferences.GeneralPrompt instead")]
     public string? GeneralPreferences { get; set; }
 
@@ -65,16 +56,6 @@ public class Workspace
         {
             Preferences.CodeReviewPrompt = CodeReviewPreferences;
             CodeReviewPreferences = null;
-        }
-        if (!string.IsNullOrWhiteSpace(CreatePrPreferences) && string.IsNullOrWhiteSpace(Preferences.CreatePrPrompt))
-        {
-            Preferences.CreatePrPrompt = CreatePrPreferences;
-            CreatePrPreferences = null;
-        }
-        if (!string.IsNullOrWhiteSpace(BranchRenamePreferences) && string.IsNullOrWhiteSpace(Preferences.BranchRenamePrompt))
-        {
-            Preferences.BranchRenamePrompt = BranchRenamePreferences;
-            BranchRenamePreferences = null;
         }
         if (!string.IsNullOrWhiteSpace(GeneralPreferences) && string.IsNullOrWhiteSpace(Preferences.GeneralPrompt))
         {

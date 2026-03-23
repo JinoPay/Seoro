@@ -6,7 +6,7 @@ using Cominomi.Shared.Services.Migration;
 namespace Cominomi.Shared.Models;
 
 /// <summary>
-/// 기존 플랫 JSON 포맷과 새 중첩 포맷(git/pr) 모두 지원하는 컨버터.
+/// 기존 플랫 JSON 포맷과 새 중첩 포맷(git) 모두 지원하는 컨버터.
 /// 읽기: 플랫(기존) → 중첩(신규) 양쪽 모두 역직렬화 가능.
 /// 쓰기: 항상 중첩 포맷으로 직렬화.
 /// </summary>
@@ -54,26 +54,6 @@ public class SessionJsonConverter : JsonConverter<Session>
                 git.AdditionalDirs = JsonSerializer.Deserialize<List<string>>(ad.GetRawText(), options) ?? [];
         }
 
-        // PR context: try nested "pr" first, then flat properties
-        PrContext pr;
-        if (root.TryGetProperty("pr", out var prEl) && prEl.ValueKind == JsonValueKind.Object)
-        {
-            pr = DeserializePrContext(prEl, options);
-        }
-        else
-        {
-            // Legacy flat format
-            pr = new PrContext();
-            if (root.TryGet("prUrl", out var pu)) pr.PrUrl = pu;
-            if (root.TryGetProperty("prNumber", out var pn) && pn.ValueKind == JsonValueKind.Number)
-                pr.PrNumber = pn.GetInt32();
-            if (root.TryGetProperty("issueNumber", out var inEl) && inEl.ValueKind == JsonValueKind.Number)
-                pr.IssueNumber = inEl.GetInt32();
-            if (root.TryGet("issueUrl", out var iu)) pr.IssueUrl = iu;
-            if (root.TryGetProperty("conflictFiles", out var cf) && cf.ValueKind == JsonValueKind.Array)
-                pr.ConflictFiles = JsonSerializer.Deserialize<List<string>>(cf.GetRawText(), options);
-        }
-
         // Messages (may be empty array in metadata file)
         List<ChatMessage> messages = [];
         if (root.TryGetProperty("messages", out var msgsEl) && msgsEl.ValueKind == JsonValueKind.Array)
@@ -90,7 +70,6 @@ public class SessionJsonConverter : JsonConverter<Session>
             MaxBudgetUsd = maxBudgetUsd,
             CreatedAt = createdAt,
             Git = git,
-            Pr = pr,
             Messages = messages,
         };
 
@@ -111,8 +90,11 @@ public class SessionJsonConverter : JsonConverter<Session>
 
         if (root.TryGetProperty("status", out var stEl) && stEl.ValueKind == JsonValueKind.String)
         {
-            if (Enum.TryParse<SessionStatus>(stEl.GetString(), true, out var st))
+            var statusStr = stEl.GetString();
+            if (Enum.TryParse<SessionStatus>(statusStr, true, out var st))
                 session.SetInitialStatus(st);
+            else if (statusStr is "Pushed" or "PrOpen" or "ConflictDetected" or "Merged")
+                session.SetInitialStatus(SessionStatus.Ready);
         }
 
         if (root.TryGetProperty("totalInputTokens", out var tit) && tit.ValueKind == JsonValueKind.Number)
@@ -173,20 +155,6 @@ public class SessionJsonConverter : JsonConverter<Session>
         JsonSerializer.Serialize(writer, value.Git.AdditionalDirs, options);
         writer.WriteEndObject();
 
-        // PR context (nested)
-        writer.WritePropertyName("pr");
-        writer.WriteStartObject();
-        if (value.Pr.PrUrl != null) writer.WriteString("prUrl", value.Pr.PrUrl);
-        if (value.Pr.PrNumber != null) writer.WriteNumber("prNumber", value.Pr.PrNumber.Value);
-        if (value.Pr.IssueNumber != null) writer.WriteNumber("issueNumber", value.Pr.IssueNumber.Value);
-        if (value.Pr.IssueUrl != null) writer.WriteString("issueUrl", value.Pr.IssueUrl);
-        if (value.Pr.ConflictFiles != null)
-        {
-            writer.WritePropertyName("conflictFiles");
-            JsonSerializer.Serialize(writer, value.Pr.ConflictFiles, options);
-        }
-        writer.WriteEndObject();
-
         if (value.MaxTurns != null) writer.WriteNumber("maxTurns", value.MaxTurns.Value);
         if (value.MaxBudgetUsd != null) writer.WriteNumber("maxBudgetUsd", value.MaxBudgetUsd.Value);
         writer.WriteNumber("totalInputTokens", value.TotalInputTokens);
@@ -213,19 +181,6 @@ public class SessionJsonConverter : JsonConverter<Session>
         return git;
     }
 
-    private static PrContext DeserializePrContext(JsonElement el, JsonSerializerOptions options)
-    {
-        var pr = new PrContext();
-        if (el.TryGet("prUrl", out var pu)) pr.PrUrl = pu;
-        if (el.TryGetProperty("prNumber", out var pn) && pn.ValueKind == JsonValueKind.Number)
-            pr.PrNumber = pn.GetInt32();
-        if (el.TryGetProperty("issueNumber", out var inEl) && inEl.ValueKind == JsonValueKind.Number)
-            pr.IssueNumber = inEl.GetInt32();
-        if (el.TryGet("issueUrl", out var iu)) pr.IssueUrl = iu;
-        if (el.TryGetProperty("conflictFiles", out var cf) && cf.ValueKind == JsonValueKind.Array)
-            pr.ConflictFiles = JsonSerializer.Deserialize<List<string>>(cf.GetRawText(), options);
-        return pr;
-    }
 }
 
 internal static class JsonElementExtensions

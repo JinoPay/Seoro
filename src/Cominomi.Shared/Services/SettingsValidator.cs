@@ -97,8 +97,6 @@ public static class SettingsValidator
             var prefs = workspace.Preferences;
             if (prefs.CodeReviewMaxFileCount is < 1)
                 issues.Add($"CodeReviewMaxFileCount must be >= 1, got {prefs.CodeReviewMaxFileCount}");
-            if (prefs.PrTitleMaxLength is < 10 or > 200)
-                issues.Add($"PrTitleMaxLength must be 10-200, got {prefs.PrTitleMaxLength}");
         }
 
         return issues;
@@ -116,8 +114,6 @@ public static class SettingsValidator
         var prefs = workspace.Preferences;
         if (prefs.CodeReviewMaxFileCount is < 1)
             prefs.CodeReviewMaxFileCount = null;
-        if (prefs.PrTitleMaxLength is < 10 or > 200)
-            prefs.PrTitleMaxLength = null;
 
         return workspace;
     }

@@ -589,7 +589,7 @@ public partial class SessionService : ISessionService
     {
         // Clean up worktree/branch before deleting
         var session = await LoadSessionAsync(sessionId);
-        if (session != null && session.Status is SessionStatus.Ready or SessionStatus.Merged)
+        if (session != null && session.Status is SessionStatus.Ready)
         {
             try { await CleanupSessionAsync(sessionId); }
             catch (Exception ex) { _logger.LogWarning(ex, "Cleanup failed during session delete: {SessionId}", sessionId); }
