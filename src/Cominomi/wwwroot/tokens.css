@@ -1,6 +1,81 @@
+/* ===== Font Loading ===== */
+
+@font-face {
+    font-family: 'Pretendard';
+    src: url('fonts/Pretendard-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Pretendard';
+    src: url('fonts/Pretendard-Medium.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Pretendard';
+    src: url('fonts/Pretendard-SemiBold.otf') format('opentype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Pretendard';
+    src: url('fonts/Pretendard-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('fonts/JetBrainsMono-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('fonts/JetBrainsMono-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('fonts/JetBrainsMono-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* ===== Design Tokens ===== */
 :root {
-    /* Spacing scale (4px base) */
+    /* --- Typography --- */
+    --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+
+    /* Type Scale */
+    --text-2xs: 0.65rem;
+    --text-xs: 0.75rem;
+    --text-sm: 0.8125rem;
+    --text-base: 0.875rem;
+    --text-lg: 1rem;
+    --text-xl: 1.25rem;
+
+    /* Line Heights */
+    --leading-tight: 1.3;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.7;
+
+    /* --- Spacing (4px base) --- */
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
@@ -9,65 +84,140 @@
     --space-6: 24px;
     --space-8: 32px;
 
-    /* Typography (4 sizes only) */
-    --text-xs: 0.75rem;
-    --text-sm: 0.875rem;
-    --text-base: 1rem;
-    --text-lg: 1.125rem;
+    /* --- Backgrounds (elevation-based, dark navy) --- */
+    --bg-base:      #0f172a;
+    --bg-sidebar:   #0c1322;
+    --bg-surface:   #1e293b;
+    --bg-elevated:  #273548;
+    --bg-overlay:   #2d3d52;
+    --bg-input:     #1e293b;
+    --bg-code:      rgba(0, 0, 0, 0.25);
 
-    /* Colors */
-    --bg-base: #1e1e2e;
-    --bg-sidebar: #181825;
-    --bg-surface: #252536;
-    --bg-elevated: #2a2a3c;
-    --bg-input: #252536;
+    /* Hover / Active / Selected */
+    --bg-hover:     rgba(255, 255, 255, 0.05);
+    --bg-active:    rgba(255, 255, 255, 0.08);
+    --bg-selected:  rgba(167, 139, 250, 0.08);
 
-    --border-default: rgba(166, 173, 200, 0.12);
-    --border-active: rgba(167, 139, 250, 0.4);
-    --border-subtle: rgba(166, 173, 200, 0.06);
+    /* --- Text (white + opacity hierarchy) --- */
+    --text-primary:   rgba(255, 255, 255, 0.87);
+    --text-secondary: rgba(255, 255, 255, 0.60);
+    --text-muted:     rgba(255, 255, 255, 0.38);
+    --text-inverse:   #0f172a;
 
-    --text-primary: #cdd6f4;
-    --text-secondary: #a6adc8;
-    --text-muted: rgba(166, 173, 200, 0.5);
+    /* --- Borders --- */
+    --border-default: rgba(255, 255, 255, 0.10);
+    --border-active:  rgba(167, 139, 250, 0.40);
+    --border-subtle:  rgba(255, 255, 255, 0.05);
+    --border-strong:  rgba(255, 255, 255, 0.16);
 
-    --accent: #a78bfa;
-    --accent-dim: rgba(167, 139, 250, 0.1);
-    --accent-hover: rgba(167, 139, 250, 0.15);
+    /* --- Accent: Violet (dark = bright, soft purple) --- */
+    --accent:         #a78bfa;
+    --accent-hover:   #c4b5fd;
+    --accent-dim:     rgba(167, 139, 250, 0.10);
+    --accent-subtle:  rgba(167, 139, 250, 0.06);
 
-    /* Radii */
+    /* --- Semantic Colors (dark = desaturated/pastel) --- */
+    --color-success:        #86efac;
+    --color-success-bg:     rgba(134, 239, 172, 0.10);
+    --color-success-border: rgba(134, 239, 172, 0.25);
+
+    --color-warning:        #fcd34d;
+    --color-warning-bg:     rgba(252, 211, 77, 0.10);
+    --color-warning-border: rgba(252, 211, 77, 0.25);
+
+    --color-error:          #fca5a5;
+    --color-error-bg:       rgba(252, 165, 165, 0.10);
+    --color-error-border:   rgba(252, 165, 165, 0.25);
+
+    --color-info:           #93c5fd;
+    --color-info-bg:        rgba(147, 197, 253, 0.10);
+    --color-info-border:    rgba(147, 197, 253, 0.25);
+
+    /* --- Diff Colors --- */
+    --diff-add-fg:    #86efac;
+    --diff-add-bg:    rgba(134, 239, 172, 0.12);
+    --diff-del-fg:    #fca5a5;
+    --diff-del-bg:    rgba(252, 165, 165, 0.12);
+    --diff-hunk-fg:   #93c5fd;
+
+    /* --- Radii --- */
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 14px;
     --radius-full: 9999px;
 
-    /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+    /* --- Shadows --- */
+    --shadow-sm:    0 1px 2px rgba(0, 0, 0, 0.30);
+    --shadow-md:    0 4px 12px rgba(0, 0, 0, 0.40);
+    --shadow-lg:    0 8px 24px rgba(0, 0, 0, 0.50);
+    --shadow-focus: 0 0 0 2px rgba(167, 139, 250, 0.30);
+    --focus-ring:   0 0 0 2px var(--bg-base), 0 0 0 4px var(--accent);
 
-    /* Transitions */
+    /* --- Transitions --- */
     --transition: 150ms ease;
 }
 
-/* Light mode overrides */
+/* ===== Light Mode ===== */
 [data-theme="light"] {
-    --bg-base: #ffffff;
-    --bg-sidebar: #f8f9fa;
-    --bg-surface: #f0f0f5;
-    --bg-elevated: #e8e8f0;
-    --bg-input: #f5f5fa;
+    /* Backgrounds */
+    --bg-base:      #ffffff;
+    --bg-sidebar:   #f8fafc;
+    --bg-surface:   #f1f5f9;
+    --bg-elevated:  #ffffff;
+    --bg-overlay:   #ffffff;
+    --bg-input:     #f1f5f9;
+    --bg-code:      rgba(0, 0, 0, 0.04);
 
-    --border-default: rgba(0, 0, 0, 0.12);
-    --border-active: rgba(124, 58, 237, 0.4);
-    --border-subtle: rgba(0, 0, 0, 0.06);
+    --bg-hover:     rgba(0, 0, 0, 0.04);
+    --bg-active:    rgba(0, 0, 0, 0.06);
+    --bg-selected:  rgba(124, 58, 237, 0.06);
 
-    --text-primary: #1a1a2e;
-    --text-secondary: #555570;
-    --text-muted: rgba(0, 0, 0, 0.4);
+    /* Text */
+    --text-primary:   rgba(0, 0, 0, 0.87);
+    --text-secondary: rgba(0, 0, 0, 0.60);
+    --text-muted:     rgba(0, 0, 0, 0.38);
+    --text-inverse:   #ffffff;
 
-    --accent: #7c3aed;
-    --accent-dim: rgba(124, 58, 237, 0.08);
-    --accent-hover: rgba(124, 58, 237, 0.12);
+    /* Borders */
+    --border-default: rgba(0, 0, 0, 0.10);
+    --border-active:  rgba(124, 58, 237, 0.50);
+    --border-subtle:  rgba(0, 0, 0, 0.05);
+    --border-strong:  rgba(0, 0, 0, 0.16);
 
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    /* Accent: Violet (light = deep, saturated) */
+    --accent:         #7c3aed;
+    --accent-hover:   #6d28d9;
+    --accent-dim:     rgba(124, 58, 237, 0.08);
+    --accent-subtle:  rgba(124, 58, 237, 0.04);
+
+    /* Semantic Colors (light = saturated) */
+    --color-success:        #16a34a;
+    --color-success-bg:     rgba(22, 163, 74, 0.08);
+    --color-success-border: rgba(22, 163, 74, 0.20);
+
+    --color-warning:        #d97706;
+    --color-warning-bg:     rgba(217, 119, 6, 0.08);
+    --color-warning-border: rgba(217, 119, 6, 0.20);
+
+    --color-error:          #dc2626;
+    --color-error-bg:       rgba(220, 38, 38, 0.08);
+    --color-error-border:   rgba(220, 38, 38, 0.20);
+
+    --color-info:           #2563eb;
+    --color-info-bg:        rgba(37, 99, 235, 0.08);
+    --color-info-border:    rgba(37, 99, 235, 0.20);
+
+    /* Diff */
+    --diff-add-fg:    #16a34a;
+    --diff-add-bg:    rgba(22, 163, 74, 0.10);
+    --diff-del-fg:    #dc2626;
+    --diff-del-bg:    rgba(220, 38, 38, 0.10);
+    --diff-hunk-fg:   #2563eb;
+
+    /* Shadows (light = real shadows) */
+    --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.10);
+    --shadow-md:  0 4px 6px rgba(0, 0, 0, 0.05), 0 10px 15px rgba(0, 0, 0, 0.10);
+    --shadow-lg:  0 10px 15px rgba(0, 0, 0, 0.04), 0 20px 25px rgba(0, 0, 0, 0.10);
+    --shadow-focus: 0 0 0 2px rgba(124, 58, 237, 0.25);
+    --focus-ring:   0 0 0 2px var(--bg-base), 0 0 0 4px var(--accent);
 }

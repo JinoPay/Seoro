@@ -41,6 +41,13 @@ public static class MauiProgram
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                fonts.AddFont("Pretendard-Regular.otf", "PretendardRegular");
+                fonts.AddFont("Pretendard-Medium.otf", "PretendardMedium");
+                fonts.AddFont("Pretendard-SemiBold.otf", "PretendardSemiBold");
+                fonts.AddFont("Pretendard-Bold.otf", "PretendardBold");
+                fonts.AddFont("JetBrainsMono-Regular.ttf", "JetBrainsMonoRegular");
+                fonts.AddFont("JetBrainsMono-Medium.ttf", "JetBrainsMonoMedium");
+                fonts.AddFont("JetBrainsMono-Bold.ttf", "JetBrainsMonoBold");
             });
 
         builder.Services.AddMauiBlazorWebView();

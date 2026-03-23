@@ -207,10 +207,10 @@
 
     private static string GetFileIconStyle(FileChangeType type) => type switch
     {
-        FileChangeType.Added => "color: #a6e3a1;",
-        FileChangeType.Deleted => "color: #f38ba8;",
-        FileChangeType.Renamed => "color: #fab387;",
-        _ => "color: #89b4fa;"
+        FileChangeType.Added => "color: var(--color-success);",
+        FileChangeType.Deleted => "color: var(--color-error);",
+        FileChangeType.Renamed => "color: var(--color-warning);",
+        _ => "color: var(--color-info);"
     };
 
     private void HandleStateChanged()
