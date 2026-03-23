@@ -12,6 +12,9 @@ public class ContentBlockStartHandler : IStreamEventHandler
 
     public Task HandleAsync(StreamEvent evt, StreamProcessingContext ctx)
     {
+        // Track parent context for subagent tool calls
+        ctx.CurrentParentToolUseId = evt.ParentToolUseId;
+
         switch (evt.ContentBlock?.Type)
         {
             case "thinking":
@@ -27,7 +30,8 @@ public class ContentBlockStartHandler : IStreamEventHandler
                 ctx.CurrentToolCall = new ToolCall
                 {
                     Id = evt.ContentBlock.Id ?? "",
-                    Name = evt.ContentBlock.Name ?? ""
+                    Name = evt.ContentBlock.Name ?? "",
+                    ParentToolUseId = evt.ParentToolUseId
                 };
                 _chatState.AddToolCall(ctx.AssistantMessage, ctx.CurrentToolCall);
                 _chatState.SetPhase(StreamingPhase.UsingTool, evt.ContentBlock.Name, ctx.Session.Id);

@@ -27,6 +27,10 @@ public static partial class ContentGrouper
 
             if (part.Type == ContentPartType.ToolCall && part.ToolCall != null)
             {
+                // Skip child tool calls — they render inside their parent Agent widget
+                if (part.ToolCall.ParentToolUseId != null)
+                    continue;
+
                 currentToolGroup ??= new ContentGroup { Type = ContentGroupType.ToolGroup };
                 currentToolGroup.Parts.Add(part);
             }

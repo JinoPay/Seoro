@@ -50,24 +50,19 @@
                 case WidgetType.AskUserQuestion:
                     <AskUserQuestionWidget Tool="Tool" />
                     break;
+                case WidgetType.Agent:
+                    <AgentToolWidget Tool="Tool" />
+                    break;
                 default:
                     @* Generic fallback *@
                     @if (!string.IsNullOrEmpty(Tool.Input))
                     {
-                        var isAgent = Tool.Name.Equals("agent", StringComparison.OrdinalIgnoreCase);
                         var inputLineCount = Tool.Input.Split('\n').Length;
                         <div class="tool-card-section">
                             <div class="tool-card-section-label">입력 @(inputLineCount > 1 ? $"({inputLineCount}줄)" : "")</div>
-                            <div class="tool-card-content @(isAgent && inputLineCount > 5 && !_inputExpanded ? "tool-output-collapsed" : "")">
+                            <div class="tool-card-content">
                                 <pre>@Tool.Input</pre>
                             </div>
-                            @if (isAgent && inputLineCount > 5)
-                            {
-                                <div class="tool-output-toggle" @onclick="@(() => _inputExpanded = !_inputExpanded)"
-                                     @onclick:stopPropagation="true">
-                                    @(_inputExpanded ? "접기" : "전체 보기")
-                                </div>
-                            }
                         </div>
                     }
                     @if (!string.IsNullOrEmpty(Tool.Output))
@@ -98,7 +93,6 @@
     public ToolCall Tool { get; set; } = default!;
 
     private bool _expanded;
-    private bool _inputExpanded;
     private bool _outputExpanded;
 
     // Cached header values to avoid JSON re-parsing on every render
@@ -126,7 +120,7 @@
         }
     }
 
-    private enum WidgetType { Generic, Read, Edit, Bash, Grep, Glob, AskUserQuestion }
+    private enum WidgetType { Generic, Read, Edit, Bash, Grep, Glob, AskUserQuestion, Agent }
 
     private WidgetType GetWidgetType() => Tool.Name.ToLowerInvariant() switch
     {
@@ -137,6 +131,7 @@
         "grep" => WidgetType.Grep,
         "glob" => WidgetType.Glob,
         "askuserquestion" or "ask_user_question" => WidgetType.AskUserQuestion,
+        "agent" => WidgetType.Agent,
         _ => WidgetType.Generic
     };
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Resources;
 using MudBlazor;
@@ -31,6 +32,7 @@ public static class ToolDisplayHelper
             "Read" => GetReadHint(tool.Output),
             "Grep" => GetGrepHint(tool.Output),
             "Glob" => GetGlobHint(tool.Output),
+            "Agent" => GetAgentHint(tool.Output),
             _ => null
         };
     }
@@ -203,6 +205,26 @@ public static class ToolDisplayHelper
         var lineCount = CountLines(output);
         if (lineCount <= 0) return null;
         return Strings.Tool_GlobHint(lineCount);
+    }
+
+    private static string? GetAgentHint(string output)
+    {
+        if (string.IsNullOrEmpty(output)) return null;
+
+        var toolUsesMatch = Regex.Match(output, @"tool_uses:\s*(\d+)");
+        var durationMatch = Regex.Match(output, @"duration_ms:\s*(\d+)");
+
+        if (!toolUsesMatch.Success) return null;
+
+        var parts = new List<string> { $"{toolUsesMatch.Groups[1].Value}개 도구 사용" };
+
+        if (durationMatch.Success && long.TryParse(durationMatch.Groups[1].Value, out var ms))
+        {
+            var sec = ms / 1000;
+            parts.Add(sec < 60 ? $"{sec}초" : $"{sec / 60}분 {sec % 60}초");
+        }
+
+        return string.Join(" | ", parts);
     }
 
     private static int CountLines(string text)

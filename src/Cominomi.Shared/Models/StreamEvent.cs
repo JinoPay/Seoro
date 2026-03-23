@@ -41,6 +41,9 @@ public class StreamEvent
     [JsonPropertyName("session_id")]
     public string? SessionId { get; set; }
 
+    [JsonPropertyName("parent_tool_use_id")]
+    public string? ParentToolUseId { get; set; }
+
     [JsonPropertyName("usage")]
     public UsageInfo? Usage { get; set; }
 

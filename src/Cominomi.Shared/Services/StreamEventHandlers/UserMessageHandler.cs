@@ -14,6 +14,9 @@ public class UserMessageHandler : IStreamEventHandler
     {
         if (evt.Message?.Content == null) return Task.CompletedTask;
 
+        // Track parent context for subagent tool results
+        ctx.CurrentParentToolUseId = evt.ParentToolUseId;
+
         foreach (var block in evt.Message.Content)
         {
             if (block.Type is "tool_result" or "server_tool_result" && !string.IsNullOrEmpty(block.ToolUseId))
