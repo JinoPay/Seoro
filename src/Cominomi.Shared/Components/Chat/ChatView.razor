@@ -85,9 +85,14 @@ else
             </CascadingValue>
 
             @* Quick response bar *@
-            <QuickResponseBar IsVisible="@(_quickResponseVisible && !_planReviewVisible)"
+            <QuickResponseBar IsVisible="@(_quickResponseVisible && !_planReviewVisible && !_askUserBarVisible)"
                               Options="_quickResponseOptions"
                               OnResponse="HandleQuickResponse" />
+
+            @* AskUserQuestion bar *@
+            <AskUserQuestionBar IsVisible="@(_askUserBarVisible && !_planReviewVisible)"
+                                QuestionInput="@_askUserQuestionInput"
+                                OnResponse="HandleAskUserBarResponse" />
 
             @* Plan review bar *@
             <PlanReviewBar IsVisible="_planReviewVisible"
@@ -120,6 +125,8 @@ else
     private bool _quickResponseVisible;
     private List<string> _quickResponseOptions = [];
     private EventCallback<string> _askUserResponseCallback;
+    private bool _askUserBarVisible;
+    private string? _askUserQuestionInput;
     private bool _planReviewVisible;
     private string? _planFilePath;
     private string? _planContent;
@@ -333,6 +340,13 @@ else
         return HandleSend(new ChatInputMessage { Text = response });
     }
 
+    private Task HandleAskUserBarResponse(string response)
+    {
+        _askUserBarVisible = false;
+        _askUserQuestionInput = null;
+        return HandleSend(new ChatInputMessage { Text = response });
+    }
+
     private async Task HandlePlanReviewAction(PlanReviewAction action)
     {
         _planReviewVisible = false;
@@ -387,6 +401,8 @@ else
 
         _quickResponseVisible = false;
         _quickResponseOptions = [];
+        _askUserBarVisible = false;
+        _askUserQuestionInput = null;
         _planReviewVisible = false;
         _planSessionId = null;
 
@@ -458,6 +474,8 @@ else
         {
             _quickResponseVisible = result.QuickResponseVisible;
             _quickResponseOptions = result.QuickResponseOptions;
+            _askUserBarVisible = result.AskUserQuestionInput != null;
+            _askUserQuestionInput = result.AskUserQuestionInput;
             _shouldAutoScroll = true;
         }
 
@@ -478,7 +496,8 @@ else
             && !result.WasCancelled
             && result.ErrorMessage == null
             && !result.PlanReviewVisible
-            && !result.QuickResponseVisible)
+            && !result.QuickResponseVisible
+            && result.AskUserQuestionInput == null)
         {
             var nextStep = _pendingChain[0];
             _pendingChain.RemoveAt(0);

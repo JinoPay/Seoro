@@ -115,9 +115,7 @@
             _lastInput = Tool.Input;
             _headerLabel = ToolDisplayHelper.GetHeaderLabel(Tool);
 
-            // AskUserQuestion should always be expanded for user interaction
-            if (GetWidgetType() == WidgetType.AskUserQuestion)
-                _expanded = true;
+            // AskUserQuestion is handled by the bottom bar; keep collapsed by default
         }
 
         if (!ReferenceEquals(_lastOutput, Tool.Output) || _lastIsComplete != Tool.IsComplete)

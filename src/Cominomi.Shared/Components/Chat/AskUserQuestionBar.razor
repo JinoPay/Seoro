@@ -1,0 +1,168 @@
+@using System.Text.Json
+
+@if (IsVisible && _questions.Count > 0)
+{
+    <div class="askbar-panel">
+        @* Header *@
+        <div class="askbar-header">
+            <div class="askbar-header-left">
+                <div class="askbar-icon-badge">
+                    <MudIcon Icon="@Icons.Material.Filled.QuestionAnswer" Size="Size.Small"
+                             Style="width: 18px; height: 18px;" />
+                </div>
+                <span class="askbar-title">응답 필요</span>
+                @if (_questions.Count > 1)
+                {
+                    <span class="askbar-progress">@_selections.Count(s => s != null) / @_questions.Count</span>
+                }
+            </div>
+        </div>
+
+        @* Questions *@
+        @for (var i = 0; i < _questions.Count; i++)
+        {
+            var idx = i;
+            var q = _questions[idx];
+            var selectedForThis = _selections[idx];
+
+            <div class="askbar-body">
+                @if (!string.IsNullOrEmpty(q.Header))
+                {
+                    <div class="askbar-question-header">@q.Header</div>
+                }
+                <div class="askbar-question-text">@q.Question</div>
+
+                <div class="askbar-options">
+                    @foreach (var opt in q.Options)
+                    {
+                        var isSelected = selectedForThis == opt.Label;
+                        var isOther = selectedForThis != null && !isSelected;
+
+                        <button class="askbar-option @(isSelected ? "selected" : "") @(isOther ? "dimmed" : "")"
+                                @onclick="@(() => SelectOption(idx, opt.Label))"
+                                @onclick:stopPropagation="true">
+                            <span class="askbar-option-label">
+                                @if (isSelected)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                             Style="width: 14px; height: 14px; color: var(--accent);" />
+                                }
+                                @opt.Label
+                            </span>
+                            @if (!string.IsNullOrEmpty(opt.Description))
+                            {
+                                <span class="askbar-option-desc">@opt.Description</span>
+                            }
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+
+        @* Submit button *@
+        <div class="askbar-actions">
+            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Send"
+                       Disabled="@(!AllAnswered || _submitted)"
+                       OnClick="Submit"
+                       Class="askbar-submit-btn">
+                @(AllAnswered ? "응답 보내기" : "모든 질문에 답변해주세요")
+            </MudButton>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string? QuestionInput { get; set; }
+    [Parameter] public EventCallback<string> OnResponse { get; set; }
+
+    private record AskOption(string Label, string? Description);
+    private record AskQuestion(string? Header, string Question, List<AskOption> Options);
+
+    private List<AskQuestion> _questions = [];
+    private string?[] _selections = [];
+    private bool _submitted;
+    private string? _lastInput;
+
+    private bool AllAnswered => _selections.Length > 0 && _selections.All(s => s != null);
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_lastInput, QuestionInput))
+            return;
+
+        _lastInput = QuestionInput;
+        _questions = ParseQuestions(QuestionInput);
+        _selections = new string?[_questions.Count];
+        _submitted = false;
+    }
+
+    private void SelectOption(int questionIndex, string label)
+    {
+        if (_submitted) return;
+
+        // Toggle: clicking the same option deselects it
+        _selections[questionIndex] = _selections[questionIndex] == label ? null : label;
+    }
+
+    private async Task Submit()
+    {
+        if (!AllAnswered || _submitted) return;
+        _submitted = true;
+
+        if (OnResponse.HasDelegate)
+        {
+            var response = _questions.Count == 1
+                ? _selections[0]!
+                : string.Join("\n", _questions.Select((q, i) =>
+                    $"{q.Header ?? q.Question}: {_selections[i]}"));
+
+            await OnResponse.InvokeAsync(response);
+        }
+    }
+
+    private static List<AskQuestion> ParseQuestions(string? input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return [];
+
+        try
+        {
+            using var doc = JsonDocument.Parse(input);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("questions", out var questionsArr) ||
+                questionsArr.ValueKind != JsonValueKind.Array)
+                return [];
+
+            var result = new List<AskQuestion>();
+            foreach (var q in questionsArr.EnumerateArray())
+            {
+                var question = q.TryGetProperty("question", out var qProp) ? qProp.GetString() ?? "" : "";
+                var header = q.TryGetProperty("header", out var hProp) ? hProp.GetString() : null;
+
+                var options = new List<AskOption>();
+                if (q.TryGetProperty("options", out var optsArr) && optsArr.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var opt in optsArr.EnumerateArray())
+                    {
+                        var label = opt.TryGetProperty("label", out var lProp) ? lProp.GetString() ?? "" : "";
+                        var desc = opt.TryGetProperty("description", out var dProp) ? dProp.GetString() : null;
+                        if (!string.IsNullOrEmpty(label))
+                            options.Add(new AskOption(label, desc));
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(question) || options.Count > 0)
+                    result.Add(new AskQuestion(header, question, options));
+            }
+
+            return result;
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+}
