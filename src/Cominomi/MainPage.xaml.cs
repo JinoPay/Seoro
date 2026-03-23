@@ -1,4 +1,6 @@
-﻿using Microsoft.Web.WebView2.Core;
+﻿#if WINDOWS
+using Microsoft.Web.WebView2.Core;
+#endif
 using Serilog;
 
 namespace Cominomi;
