@@ -606,6 +606,35 @@ html *::after {
     color: var(--color-success);
 }
 
+.toolbar-effort-badge {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.toolbar-effort-badge.low {
+    background: var(--color-info-bg);
+    color: var(--color-info);
+}
+
+.toolbar-effort-badge.medium {
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+}
+
+.toolbar-effort-badge.high {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.toolbar-effort-badge.max {
+    background: var(--color-error-bg);
+    color: var(--color-error);
+}
+
 .main-content {
     flex: 1;
     min-height: 0;

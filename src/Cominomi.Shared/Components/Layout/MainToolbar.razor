@@ -23,6 +23,13 @@
         {
             <span class="toolbar-mode-badge plan">플랜</span>
         }
+
+        @if (ChatState.CurrentSession.EffortLevel is not (null or "" or "auto"))
+        {
+            <span class="toolbar-effort-badge @ChatState.CurrentSession.EffortLevel">
+                @ChatState.CurrentSession.EffortLevel
+            </span>
+        }
     }
     else
     {
