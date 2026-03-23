@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Resources;
+using MudBlazor;
 
 namespace Cominomi.Shared.Services;
 
@@ -218,6 +219,60 @@ public static class ToolDisplayHelper
         return count;
     }
 
+    /// <summary>
+    /// Returns a Material Design icon string for the given tool name.
+    /// </summary>
+    public static string GetToolIcon(string? name)
+    {
+        var normalized = NormalizeToolName(name ?? "");
+        return normalized switch
+        {
+            "Bash" => Icons.Material.Filled.Terminal,
+            "Read" => Icons.Material.Filled.Description,
+            "Write" => Icons.Material.Filled.Edit,
+            "Edit" => Icons.Material.Filled.EditNote,
+            "Glob" => Icons.Material.Filled.Search,
+            "Grep" => Icons.Material.Filled.FindInPage,
+            "Agent" => Icons.Material.Filled.SmartToy,
+            "WebFetch" => Icons.Material.Filled.Language,
+            "WebSearch" => Icons.Material.Filled.TravelExplore,
+            "NotebookEdit" => Icons.Material.Filled.DataObject,
+            "TodoWrite" => Icons.Material.Filled.Checklist,
+            "AskUserQuestion" => Icons.Material.Filled.QuestionAnswer,
+            "Skill" => Icons.Material.Filled.AutoAwesome,
+            "ToolSearch" => Icons.Material.Filled.ManageSearch,
+            _ when (name ?? "").StartsWith("mcp__", StringComparison.OrdinalIgnoreCase)
+                => Icons.Material.Filled.Hub,
+            _ => Icons.Material.Filled.Extension
+        };
+    }
+
+    /// <summary>
+    /// Returns a localized streaming label like "파일 읽는 중..." for the given tool name.
+    /// </summary>
+    public static string GetStreamingLabel(string? name)
+    {
+        var normalized = NormalizeToolName(name ?? "");
+        return normalized switch
+        {
+            "Bash" => "명령 실행 중...",
+            "Read" => "파일 읽는 중...",
+            "Write" => "파일 작성 중...",
+            "Edit" => "파일 수정 중...",
+            "Glob" => "파일 검색 중...",
+            "Grep" => "내용 검색 중...",
+            "Agent" => "에이전트 실행 중...",
+            "WebFetch" => "웹 페이지 가져오는 중...",
+            "WebSearch" => "웹 검색 중...",
+            "NotebookEdit" => "노트북 수정 중...",
+            "TodoWrite" => "할일 목록 업데이트 중...",
+            "AskUserQuestion" => "질문 대기 중...",
+            "Skill" => "스킬 실행 중...",
+            "ToolSearch" => "도구 검색 중...",
+            _ => $"{normalized} 사용 중..."
+        };
+    }
+
     internal static string NormalizeToolName(string name) => name.ToLowerInvariant() switch
     {
         "read" or "read_file" => "Read",
@@ -232,6 +287,8 @@ public static class ToolDisplayHelper
         "notebookedit" or "notebook_edit" => "NotebookEdit",
         "todowrite" or "todo_write" => "TodoWrite",
         "askuserquestion" or "ask_user_question" => "AskUserQuestion",
+        "skill" => "Skill",
+        "toolsearch" or "tool_search" => "ToolSearch",
         _ when name.StartsWith("mcp__", StringComparison.OrdinalIgnoreCase) => ExtractMcpToolName(name),
         _ => name
     };
