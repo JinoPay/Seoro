@@ -23,26 +23,13 @@
                 <div class="askuser-options">
                     @foreach (var opt in q.Options)
                     {
-                        var isSelected = _selectedLabel == opt.Label;
-                        var isDisabled = _selectedLabel != null && !isSelected;
-
-                        <button class="askuser-option @(isSelected ? "selected" : "") @(isDisabled ? "disabled" : "")"
-                                disabled="@(isDisabled || isSelected)"
-                                @onclick="@(() => SelectOption(opt.Label))"
-                                @onclick:stopPropagation="true">
-                            <span class="askuser-option-label">
-                                @if (isSelected)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
-                                             Style="width: 14px; height: 14px; color: var(--accent);" />
-                                }
-                                @opt.Label
-                            </span>
+                        <div class="askuser-option readonly">
+                            <span class="askuser-option-label">@opt.Label</span>
                             @if (!string.IsNullOrEmpty(opt.Description))
                             {
                                 <span class="askuser-option-desc">@opt.Description</span>
                             }
-                        </button>
+                        </div>
                     }
                 </div>
             </div>
@@ -54,14 +41,10 @@
     [Parameter, EditorRequired]
     public ToolCall Tool { get; set; } = default!;
 
-    [CascadingParameter(Name = "OnAskUserResponse")]
-    public EventCallback<string> OnResponse { get; set; }
-
     private record AskUserOption(string Label, string? Description);
-    private record AskUserQuestionItem(string? Header, string Question, List<AskUserOption> Options, bool MultiSelect);
+    private record AskUserQuestionItem(string? Header, string Question, List<AskUserOption> Options);
 
     private List<AskUserQuestionItem> _questions = [];
-    private string? _selectedLabel;
     private string? _lastInput;
 
     protected override void OnParametersSet()
@@ -71,15 +54,6 @@
 
         _lastInput = Tool.Input;
         _questions = ParseQuestions(Tool.Input);
-    }
-
-    private async Task SelectOption(string label)
-    {
-        if (_selectedLabel != null) return;
-        _selectedLabel = label;
-
-        if (OnResponse.HasDelegate)
-            await OnResponse.InvokeAsync(label);
     }
 
     private static List<AskUserQuestionItem> ParseQuestions(string? input)
@@ -101,7 +75,6 @@
             {
                 var question = q.TryGetProperty("question", out var qProp) ? qProp.GetString() ?? "" : "";
                 var header = q.TryGetProperty("header", out var hProp) ? hProp.GetString() : null;
-                var multiSelect = q.TryGetProperty("multiSelect", out var mProp) && mProp.GetBoolean();
 
                 var options = new List<AskUserOption>();
                 if (q.TryGetProperty("options", out var optsArr) && optsArr.ValueKind == JsonValueKind.Array)
@@ -116,7 +89,7 @@
                 }
 
                 if (!string.IsNullOrEmpty(question) || options.Count > 0)
-                    result.Add(new AskUserQuestionItem(header, question, options, multiSelect));
+                    result.Add(new AskUserQuestionItem(header, question, options));
             }
 
             return result;

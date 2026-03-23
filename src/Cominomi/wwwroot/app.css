@@ -1069,6 +1069,10 @@ html, body {
     background: var(--surface-3);
 }
 
+.scroll-to-bottom-btn.askbar-active {
+    bottom: 300px;
+}
+
 .message-container {
     max-width: 1000px;
     margin: 0 auto;
@@ -3599,56 +3603,32 @@ html, body {
 
 .askuser-options {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    margin-top: var(--space-1);
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
 }
 
 .askuser-option {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: rgba(137, 180, 250, 0.08);
     color: var(--text-primary);
-    cursor: pointer;
-    text-align: left;
-    transition: all var(--transition);
     font-family: inherit;
 }
 
-.askuser-option:hover:not(.selected):not(.disabled) {
-    border-color: var(--accent);
-    background: rgba(137, 180, 250, 0.06);
-}
-
-.askuser-option.selected {
-    border-color: var(--accent);
-    background: rgba(137, 180, 250, 0.1);
-    cursor: default;
-}
-
-.askuser-option.disabled {
-    opacity: 0.35;
-    cursor: default;
-}
-
 .askuser-option-label {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     font-weight: 500;
+    opacity: 0.8;
 }
 
 .askuser-option-desc {
     font-size: var(--text-xs);
-    opacity: 0.6;
-    line-height: 1.4;
-    padding-left: 0;
+    opacity: 0.45;
+    line-height: 1.3;
 }
 
 /* ===== AskUserQuestion Bar ===== */
@@ -3782,9 +3762,22 @@ html, body {
 
 .askbar-actions {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
     padding: 8px 14px 12px;
     border-top: 1px solid rgba(137, 180, 250, 0.08);
+}
+
+.askbar-actions-spacer {
+    flex: 1;
+}
+
+.askbar-nav-btn {
+    text-transform: none !important;
+    font-size: var(--text-sm) !important;
+    min-width: 0 !important;
+    font-weight: 500 !important;
+    color: rgba(137, 180, 250, 0.8) !important;
+    letter-spacing: 0.2px !important;
 }
 
 .askbar-submit-btn {

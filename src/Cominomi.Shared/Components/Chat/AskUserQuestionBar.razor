@@ -13,61 +13,82 @@
                 <span class="askbar-title">응답 필요</span>
                 @if (_questions.Count > 1)
                 {
-                    <span class="askbar-progress">@_selections.Count(s => s != null) / @_questions.Count</span>
+                    <span class="askbar-progress">@(_currentPage + 1) / @_questions.Count</span>
                 }
             </div>
         </div>
 
-        @* Questions *@
-        @for (var i = 0; i < _questions.Count; i++)
-        {
-            var idx = i;
-            var q = _questions[idx];
-            var selectedForThis = _selections[idx];
-
-            <div class="askbar-body">
-                @if (!string.IsNullOrEmpty(q.Header))
-                {
-                    <div class="askbar-question-header">@q.Header</div>
-                }
-                <div class="askbar-question-text">@q.Question</div>
-
-                <div class="askbar-options">
-                    @foreach (var opt in q.Options)
-                    {
-                        var isSelected = selectedForThis == opt.Label;
-                        var isOther = selectedForThis != null && !isSelected;
-
-                        <button class="askbar-option @(isSelected ? "selected" : "") @(isOther ? "dimmed" : "")"
-                                @onclick="@(() => SelectOption(idx, opt.Label))"
-                                @onclick:stopPropagation="true">
-                            <span class="askbar-option-label">
-                                @if (isSelected)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
-                                             Style="width: 14px; height: 14px; color: var(--accent);" />
-                                }
-                                @opt.Label
-                            </span>
-                            @if (!string.IsNullOrEmpty(opt.Description))
-                            {
-                                <span class="askbar-option-desc">@opt.Description</span>
-                            }
-                        </button>
-                    }
-                </div>
-            </div>
+        @* Current question (paginated for 2+) *@
+        @{
+            var q = _questions[_currentPage];
+            var selectedForThis = _selections[_currentPage];
         }
 
-        @* Submit button *@
+        <div class="askbar-body">
+            @if (!string.IsNullOrEmpty(q.Header))
+            {
+                <div class="askbar-question-header">@q.Header</div>
+            }
+            <div class="askbar-question-text">@q.Question</div>
+
+            <div class="askbar-options">
+                @foreach (var opt in q.Options)
+                {
+                    var isSelected = selectedForThis == opt.Label;
+                    var isOther = selectedForThis != null && !isSelected;
+
+                    <button class="askbar-option @(isSelected ? "selected" : "") @(isOther ? "dimmed" : "")"
+                            @onclick="@(() => SelectOption(_currentPage, opt.Label))"
+                            @onclick:stopPropagation="true">
+                        <span class="askbar-option-label">
+                            @if (isSelected)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                         Style="width: 14px; height: 14px; color: var(--accent);" />
+                            }
+                            @opt.Label
+                        </span>
+                        @if (!string.IsNullOrEmpty(opt.Description))
+                        {
+                            <span class="askbar-option-desc">@opt.Description</span>
+                        }
+                    </button>
+                }
+            </div>
+        </div>
+
+        @* Navigation / Submit *@
         <div class="askbar-actions">
-            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Send"
-                       Disabled="@(!AllAnswered || _submitted)"
-                       OnClick="Submit"
-                       Class="askbar-submit-btn">
-                @(AllAnswered ? "응답 보내기" : "모든 질문에 답변해주세요")
-            </MudButton>
+            @if (!IsFirstPage)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Text"
+                           StartIcon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="GoPrevious"
+                           Class="askbar-nav-btn">
+                    이전
+                </MudButton>
+            }
+            <div class="askbar-actions-spacer"></div>
+            @if (IsLastPage)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Send"
+                           Disabled="@(!AllAnswered || _submitted)"
+                           OnClick="Submit"
+                           Class="askbar-submit-btn">
+                    응답 보내기
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                           EndIcon="@Icons.Material.Filled.ArrowForward"
+                           Disabled="@(!CurrentAnswered)"
+                           OnClick="GoNext"
+                           Class="askbar-submit-btn">
+                    다음
+                </MudButton>
+            }
         </div>
     </div>
 }
@@ -84,8 +105,12 @@
     private string?[] _selections = [];
     private bool _submitted;
     private string? _lastInput;
+    private int _currentPage;
 
     private bool AllAnswered => _selections.Length > 0 && _selections.All(s => s != null);
+    private bool CurrentAnswered => _selections.Length > 0 && _selections[_currentPage] != null;
+    private bool IsFirstPage => _currentPage == 0;
+    private bool IsLastPage => _currentPage >= _questions.Count - 1;
 
     protected override void OnParametersSet()
     {
@@ -96,6 +121,19 @@
         _questions = ParseQuestions(QuestionInput);
         _selections = new string?[_questions.Count];
         _submitted = false;
+        _currentPage = 0;
+    }
+
+    private void GoNext()
+    {
+        if (_currentPage < _questions.Count - 1 && CurrentAnswered)
+            _currentPage++;
+    }
+
+    private void GoPrevious()
+    {
+        if (_currentPage > 0)
+            _currentPage--;
     }
 
     private void SelectOption(int questionIndex, string label)

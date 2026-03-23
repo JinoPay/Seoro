@@ -78,7 +78,7 @@ else
             </div>
             @if (!_isAtBottom && ChatState.CurrentSession?.Messages.Count > 0)
             {
-                <div class="scroll-to-bottom-btn" @onclick="ScrollToBottom">
+                <div class="scroll-to-bottom-btn @(_askUserBarVisible ? "askbar-active" : "")" @onclick="ScrollToBottom">
                     <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
                 </div>
             }
