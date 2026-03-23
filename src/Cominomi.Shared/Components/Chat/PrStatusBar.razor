@@ -33,6 +33,14 @@
                            Title="이슈 연결" />
         }
 
+        @if (_commitsAhead > 0 || _commitsBehind > 0)
+        {
+            <span class="pr-ahead-behind">
+                @if (_commitsAhead > 0) { <span class="ahead">↑@_commitsAhead</span> }
+                @if (_commitsBehind > 0) { <span class="behind">↓@_commitsBehind</span> }
+            </span>
+        }
+
         @if (_operatingSessionId == Session.Id)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 12px; height: 12px;" />
@@ -146,6 +154,8 @@
     private bool _isCheckingReadiness;
     private string? _lastCheckedSessionId;
     private IDisposable? _syncSub;
+    private int _commitsAhead;
+    private int _commitsBehind;
 
     protected override void OnInitialized()
     {
@@ -161,6 +171,11 @@
             _readiness = readiness;
             _lastCheckedSessionId = Session.Id;
         }
+
+        if (evt.Result.CommitsAhead is { } ahead)
+            _commitsAhead = ahead;
+        if (evt.Result.CommitsBehind is { } behind)
+            _commitsBehind = behind;
 
         InvokeAsync(StateHasChanged);
     }

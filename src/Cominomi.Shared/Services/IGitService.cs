@@ -32,4 +32,5 @@ public interface IGitService
     Task<(int Additions, int Deletions)> GetDiffStatAsync(string workingDir, string baseBranch, CancellationToken ct = default);
     Task<DiffSummary> GetDiffSummaryAsync(string workingDir, string baseBranch, CancellationToken ct = default);
     Task<GitResult> RunAsync(string arguments, string workingDir, CancellationToken ct = default);
+    Task<(int Ahead, int Behind)> GetAheadBehindAsync(string workingDir, string baseBranch, CancellationToken ct = default);
 }

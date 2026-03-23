@@ -290,6 +290,21 @@
             return document.hasFocus();
         };
 
+        window.registerWindowFocusTracker = function(dotNetRef) {
+            window._focusTrackerRef = dotNetRef;
+            var notify = function(focused) {
+                if (window._focusTrackerRef) {
+                    window._focusTrackerRef.invokeMethodAsync('OnWindowFocusChanged', focused);
+                }
+            };
+            document.addEventListener('visibilitychange', function() { notify(!document.hidden); });
+            window.addEventListener('focus', function() { notify(true); });
+            window.addEventListener('blur', function() { notify(false); });
+        };
+        window.unregisterWindowFocusTracker = function() {
+            window._focusTrackerRef = null;
+        };
+
         window.registerSessionShortcuts = function(dotNetRef) {
             if (window._sessionShortcutHandler) {
                 document.removeEventListener('keydown', window._sessionShortcutHandler);

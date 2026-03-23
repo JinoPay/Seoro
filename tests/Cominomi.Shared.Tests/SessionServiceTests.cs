@@ -361,6 +361,8 @@ public class SessionServiceTests : IDisposable
             => Task.FromResult(new DiffSummary());
         public Task<GitResult> RunAsync(string arguments, string workingDir, CancellationToken ct = default)
             => Task.FromResult(NextResult);
+        public Task<(int Ahead, int Behind)> GetAheadBehindAsync(string workingDir, string baseBranch, CancellationToken ct = default)
+            => Task.FromResult((0, 0));
     }
 
     private class FakeWorkspaceService : IWorkspaceService

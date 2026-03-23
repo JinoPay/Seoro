@@ -626,6 +626,21 @@ public class GitService : IGitService
         fileDiff.Deletions = deletions;
     }
 
+    public async Task<(int Ahead, int Behind)> GetAheadBehindAsync(string workingDir, string baseBranch, CancellationToken ct = default)
+    {
+        var result = await RunGitAsync(workingDir, ct, "rev-list", "--count", "--left-right", $"{baseBranch}...HEAD");
+        if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
+            return (0, 0);
+
+        // Output format: "behind\tahead" (left = base side = behind, right = HEAD side = ahead)
+        var parts = result.Output.Trim().Split('\t');
+        if (parts.Length != 2) return (0, 0);
+
+        int.TryParse(parts[0], out var behind);
+        int.TryParse(parts[1], out var ahead);
+        return (ahead, behind);
+    }
+
     private void InvalidateBranchCaches(string repoDir)
     {
         var key = Path.GetFullPath(repoDir);

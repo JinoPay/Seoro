@@ -144,9 +144,24 @@ public class SessionSyncService : ISessionSyncService
                 }
             }
 
+            // Collect ahead/behind info
+            int? commitsAhead = null, commitsBehind = null;
+            try
+            {
+                var (ahead, behind) = await _gitService.GetAheadBehindAsync(
+                    session.Git.WorktreePath, baseBranch, ct);
+                commitsAhead = ahead;
+                commitsBehind = behind;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to get ahead/behind for session {SessionId}", sessionId);
+            }
+
             // No state change detected
             _lastSyncTimes[sessionId] = DateTime.UtcNow;
-            var noChangeResult = new SessionSyncResult(null, null, fetched, null, null);
+            var noChangeResult = new SessionSyncResult(null, null, fetched, null, null,
+                CommitsAhead: commitsAhead, CommitsBehind: commitsBehind);
             _eventBus.Publish(new SessionSyncCompletedEvent(sessionId, noChangeResult));
             return noChangeResult;
         }
