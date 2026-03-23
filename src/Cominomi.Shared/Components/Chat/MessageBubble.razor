@@ -212,6 +212,7 @@
 
     private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
+        .UseSoftlineBreakAsHardlineBreak()
         .DisableHtml()
         .Build();
 

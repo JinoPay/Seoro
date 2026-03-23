@@ -1218,6 +1218,12 @@ html *::after {
     word-wrap: break-word;
     overflow-wrap: break-word;
     white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.input-area-float .input-textarea-full textarea:focus-visible {
+    box-shadow: none;
 }
 
 .input-area-float .input-textarea-full .mud-input-control {

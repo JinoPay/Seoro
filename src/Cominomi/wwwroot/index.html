@@ -271,8 +271,9 @@
             var container = document.getElementById(elementId);
             if (!container) return;
             var inputEl = window._findInputEl(container);
-            if (inputEl && inputEl.value !== '') {
+            if (inputEl) {
                 inputEl.value = '';
+                inputEl.style.height = '';
                 inputEl.dispatchEvent(new Event('input', { bubbles: true }));
                 inputEl.dispatchEvent(new Event('change', { bubbles: true }));
             }
