@@ -5,10 +5,6 @@ namespace Cominomi.Shared;
 /// </summary>
 public static class CominomiConstants
 {
-    public const int GhDefaultIssueLimit = 100;
-    public const int GhMaxRetries = 3;
-    public const int GhRetryBaseDelaySeconds = 5;
-
     // Session limits
     public const int MaxActiveSessionsPerWorkspace = 20;
     public const int MaxContextItemTokens = 2_000; // single note/todo/plan file
@@ -20,8 +16,6 @@ public static class CominomiConstants
     public const int MaxSystemPromptTokens = 10_000; // overall system prompt budget
     public const string BranchPrefix = "cominomi/";
     public const string DefaultEffortLevel = "auto";
-    public const string DefaultMergeStrategy = "squash";
-
     // Default values duplicated across AppSettings, Session, ClaudeService, etc.
     public const string DefaultPermissionMode = "bypassAll";
     public const string TruncationMarker = "\n\n[...truncated, {0:N0} tokens total]";
@@ -35,7 +29,7 @@ public static class CominomiConstants
     {
         /// <summary>
         ///     Common environment block that suppresses interactive prompts and color codes.
-        ///     Used by GitService, GhService, ClaudeCliResolver, etc.
+        ///     Used by GitService, ClaudeCliResolver, etc.
         /// </summary>
         public static readonly Dictionary<string, string> NoColorEnv = new()
         {
@@ -48,14 +42,6 @@ public static class CominomiConstants
             [NoColor] = "1"
         };
 
-        public static readonly Dictionary<string, string> GhEnv = new()
-        {
-            [GhNoUpdateNotifier] = "1",
-            [NoColor] = "1"
-        };
-
-
-        public const string GhNoUpdateNotifier = "GH_NO_UPDATE_NOTIFIER";
         public const string GitTerminalPrompt = "GIT_TERMINAL_PROMPT";
         public const string HookEvent = "COMINOMI_HOOK_EVENT";
         public const string NoColor = "NO_COLOR";

@@ -76,14 +76,6 @@ public class SettingsValidatorTests
     }
 
     [Fact]
-    public void Sanitize_InvalidMergeStrategy_ClampsToDefault()
-    {
-        var settings = new AppSettings { DefaultMergeStrategy = "yolo" };
-        SettingsValidator.Sanitize(settings);
-        Assert.Equal(CominomiConstants.DefaultMergeStrategy, settings.DefaultMergeStrategy);
-    }
-
-    [Fact]
     public void Sanitize_NegativeMaxBudget_ClearsToNull()
     {
         var settings = new AppSettings { DefaultMaxBudgetUsd = -1m };

@@ -6,7 +6,6 @@
 @inject IThemeService ThemeService
 @inject IDependencyCheckService DependencyCheckService
 @inject ILogger<MainLayout> Logger
-@inject GitStatusTracker StatusTracker
 @implements IAsyncDisposable
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="ThemeService.Theme" />
@@ -102,7 +101,6 @@
     private bool _usageDashboardOpen;
     private int _sidebarWidth = 260;
     private DotNetObjectReference<MainLayout>? _panelShortcutRef;
-    private DotNetObjectReference<GitStatusTracker>? _statusTrackerRef;
 
     protected override async Task OnInitializedAsync()
     {
@@ -135,10 +133,6 @@
 
             _panelShortcutRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("registerPanelShortcuts", _panelShortcutRef);
-
-            _statusTrackerRef = DotNetObjectReference.Create(StatusTracker);
-            await JS.InvokeVoidAsync("registerWindowFocusTracker", _statusTrackerRef);
-            StatusTracker.Start();
         }
     }
 
@@ -223,11 +217,8 @@
         try
         {
             await JS.InvokeVoidAsync("unregisterPanelShortcuts");
-            await JS.InvokeVoidAsync("unregisterWindowFocusTracker");
         }
         catch { /* May already be disposed */ }
         _panelShortcutRef?.Dispose();
-        _statusTrackerRef?.Dispose();
-        StatusTracker.Dispose();
     }
 }

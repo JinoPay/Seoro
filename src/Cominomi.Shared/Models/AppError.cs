@@ -18,13 +18,6 @@ public enum ErrorCode
     GitCloneFailed,
     NotAGitRepo,
 
-    // PR operations
-    PrCreationFailed,
-    PrNotFound,
-    PrMergeFailed,
-    PrMergeConflict,
-    CiChecksFailed,
-
     // Claude / Streaming
     StreamingFailed,
     ClaudeProcessFailed,
@@ -70,23 +63,6 @@ public record AppError(
     public static AppError InvalidGitRepo(string message) =>
         new(ErrorCode.NotAGitRepo, ErrorCategory.Permanent, message);
 
-    // --- PR ---
-
-    public static AppError PrNotFoundError(string message) =>
-        new(ErrorCode.PrNotFound, ErrorCategory.Permanent, message);
-
-    public static AppError PrCreation(string message) =>
-        new(ErrorCode.PrCreationFailed, ErrorCategory.Transient, message);
-
-    public static AppError PrMerge(string message) =>
-        new(ErrorCode.PrMergeFailed, ErrorCategory.Transient, message);
-
-    public static AppError PrConflict(string message) =>
-        new(ErrorCode.PrMergeConflict, ErrorCategory.Transient, message);
-
-    public static AppError CiChecksFailed(string message) =>
-        new(ErrorCode.CiChecksFailed, ErrorCategory.Transient, message);
-
     // --- Streaming ---
 
     public static AppError Streaming(string message, string? details = null) =>
@@ -107,10 +83,4 @@ public record AppError(
     public static AppError ClassifyPushError(string errorText)
         => ProcessErrorClassifier.ClassifyPushError(errorText);
 
-    /// <summary>
-    /// Classify a merge error as Conflict or generic failure.
-    /// Delegates to <see cref="ProcessErrorClassifier"/>.
-    /// </summary>
-    public static AppError ClassifyMergeError(string errorText, string? output = null)
-        => ProcessErrorClassifier.ClassifyMergeError(errorText, output);
 }

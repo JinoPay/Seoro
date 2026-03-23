@@ -14,18 +14,7 @@ public static class ProcessErrorClassifier
     [
         new(["rejected"], ErrorCode.BranchPushRejected, ErrorCategory.Transient),
         new(["not a git repository"], ErrorCode.NotAGitRepo, ErrorCategory.Permanent),
-        new(["merge conflict", "not mergeable", "conflicting files"], ErrorCode.PrMergeConflict, ErrorCategory.Transient),
         new(["fatal: unable to create", "worktree"], ErrorCode.WorktreeCreationFailed, ErrorCategory.Permanent),
-        new(["required status check"], ErrorCode.CiChecksFailed, ErrorCategory.Transient),
-    ];
-
-    private static readonly ErrorPattern[] GhPatterns =
-    [
-        new(["rate limit", "secondary rate", "API rate limit exceeded", "abuse detection"], ErrorCode.ProcessFailed, ErrorCategory.Transient, true),
-        new(["already exists"], ErrorCode.PrCreationFailed, ErrorCategory.Permanent),
-        new(["not found", "Could not resolve"], ErrorCode.PrNotFound, ErrorCategory.Permanent),
-        new(["merge conflict", "not mergeable", "conflicting files"], ErrorCode.PrMergeConflict, ErrorCategory.Transient),
-        new(["required status check"], ErrorCode.CiChecksFailed, ErrorCategory.Transient),
     ];
 
     private static readonly ErrorPattern[] ClaudePatterns =
@@ -48,16 +37,6 @@ public static class ProcessErrorClassifier
     }
 
     /// <summary>
-    /// Classify a GitHub CLI error.
-    /// </summary>
-    public static AppError ClassifyGhError(string stderr, string? stdout = null)
-    {
-        var combined = CombineText(stderr, stdout);
-        return MatchPatterns(combined, stderr, GhPatterns)
-               ?? new AppError(ErrorCode.ProcessFailed, ErrorCategory.Unknown, stderr);
-    }
-
-    /// <summary>
     /// Classify a Claude CLI error.
     /// </summary>
     public static AppError ClassifyClaudeError(string stderr, string? stdout = null)
@@ -68,17 +47,6 @@ public static class ProcessErrorClassifier
     }
 
     /// <summary>
-    /// Check if stderr indicates a GitHub API rate limit error.
-    /// </summary>
-    public static bool IsGhRateLimitError(string stderr)
-    {
-        if (string.IsNullOrEmpty(stderr)) return false;
-        var pattern = GhPatterns.FirstOrDefault(p => p.IsRateLimit);
-        return pattern != null && pattern.Keywords.Any(
-            k => stderr.Contains(k, StringComparison.OrdinalIgnoreCase));
-    }
-
-    /// <summary>
     /// Classify a push error specifically (backward compatible with AppError.ClassifyPushError).
     /// </summary>
     public static AppError ClassifyPushError(string errorText)
@@ -86,18 +54,6 @@ public static class ProcessErrorClassifier
         if (errorText.Contains("rejected", StringComparison.OrdinalIgnoreCase))
             return AppError.PushRejected(errorText);
         return AppError.PushFailed(errorText);
-    }
-
-    /// <summary>
-    /// Classify a merge error specifically (backward compatible with AppError.ClassifyMergeError).
-    /// </summary>
-    public static AppError ClassifyMergeError(string errorText, string? output = null)
-    {
-        var combined = (errorText + " " + output).ToLowerInvariant();
-        if (combined.Contains("merge conflict") || combined.Contains("not mergeable")
-            || combined.Contains("conflicting files") || combined.Contains("required status check"))
-            return AppError.PrConflict(errorText);
-        return AppError.PrMerge(errorText);
     }
 
     // ─── Internals ──────────────────────────────────────────────────
