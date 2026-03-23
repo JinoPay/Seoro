@@ -2,6 +2,14 @@
 @inject IChatState ChatState
 @implements IDisposable
 
+<div class="overlay-page">
+    <div class="overlay-page-header">
+        <button class="settings-back-btn" @onclick="Close">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+            앱으로 돌아가기
+        </button>
+    </div>
+    <div class="overlay-page-content">
 <div class="activity-view">
     <div class="activity-header">
         <span class="activity-header-title">Activity</span>
@@ -49,6 +57,8 @@
             }
         </div>
     }
+</div>
+    </div>
 </div>
 
 @code {
@@ -115,6 +125,8 @@
         if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}일 전";
         return utcTime.ToLocalTime().ToString("M월 d일");
     }
+
+    private void Close() => ChatState.CloseActivity();
 
     private void HandleStateChanged() => InvokeAsync(StateHasChanged);
 

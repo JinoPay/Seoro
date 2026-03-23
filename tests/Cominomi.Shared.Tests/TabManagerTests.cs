@@ -123,17 +123,4 @@ public class TabManagerTests
         Assert.Equal(MainTabType.Chat, mgr.OpenTabs[0].Type);
     }
 
-    [Fact]
-    public void OpenNotificationsTab_CreatesSingletonTab()
-    {
-        var mgr = new TabManager();
-        mgr.EnsureChatTab();
-
-        mgr.OpenNotificationsTab();
-        Assert.Equal(2, mgr.OpenTabs.Count);
-        Assert.Equal(MainTabType.Notifications, mgr.ActiveTab!.Type);
-
-        mgr.OpenNotificationsTab();
-        Assert.Equal(2, mgr.OpenTabs.Count);
-    }
 }

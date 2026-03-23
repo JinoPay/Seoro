@@ -1,6 +1,6 @@
 namespace Cominomi.Shared.Models.ViewModels;
 
-public enum MainTabType { Chat, FileDiff, FileContent, Activity, Notifications }
+public enum MainTabType { Chat, FileDiff, FileContent }
 
 public class MainTab
 {

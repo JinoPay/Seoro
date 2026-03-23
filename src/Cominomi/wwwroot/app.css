@@ -2407,6 +2407,29 @@ html, body {
     min-height: 0;
 }
 
+/* ===== Overlay Page (Activity / Notifications) ===== */
+.overlay-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--mud-palette-background);
+}
+
+.overlay-page-header {
+    padding: var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--border-default);
+    background: var(--bg-sidebar);
+}
+
+.overlay-page-content {
+    flex: 1;
+    overflow-y: auto;
+    max-width: 720px;
+    margin: 0 auto;
+    width: 100%;
+    padding: var(--space-4);
+}
+
 /* ===== Settings Page ===== */
 .settings-page {
     display: flex;

@@ -18,9 +18,20 @@
 {
     <SettingsPage />
 }
+@if (ChatState.ShowActivity)
+{
+    <ActivityView />
+}
+@if (ChatState.ShowNotifications)
+{
+    <NotificationHistoryView />
+}
 
+@{
+    var anyOverlay = ChatState.ShowSettings || ChatState.ShowActivity || ChatState.ShowNotifications;
+}
 <div class="cominomi-shell @(!_sidebarOpen ? "sidebar-collapsed" : "")"
-     style="@(ChatState.ShowSettings ? "display:none;height:0;overflow:hidden" : "")">
+     style="@(anyOverlay ? "display:none;height:0;overflow:hidden" : "")">
         @* === Left Panel: Sidebar === *@
         <aside class="cominomi-sidebar">
             <SidebarToolbar OnOpenActivity="OpenActivity"
@@ -57,15 +68,7 @@
                     @Body
                 </div>
 
-                @if (activeType == MainTabType.Activity)
-                {
-                    <ActivityView />
-                }
-                else if (activeType == MainTabType.Notifications)
-                {
-                    <NotificationHistoryView />
-                }
-                else if (activeType == MainTabType.FileContent && ChatState.Tabs.ActiveTab?.FilePath != null)
+                @if (activeType == MainTabType.FileContent && ChatState.Tabs.ActiveTab?.FilePath != null)
                 {
                     @if (ChatState.Tabs.ActiveTab.ContentEvicted)
                     {
@@ -185,8 +188,8 @@
         });
     }
 
-    private void OpenActivity() => ChatState.Tabs.OpenActivityTab();
-    private void OpenNotifications() => ChatState.Tabs.OpenNotificationsTab();
+    private void OpenActivity() => ChatState.OpenActivity();
+    private void OpenNotifications() => ChatState.OpenNotifications();
 
     private HashSet<string> _reloadingTabs = new();
 

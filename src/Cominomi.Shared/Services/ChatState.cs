@@ -132,10 +132,47 @@ public class ChatState : IChatState
     public string? SettingsWorkspaceId => Settings.SettingsWorkspaceId;
 
     public void OpenSettings(string section = "general", string? workspaceId = null)
-        => Settings.OpenSettings(section, workspaceId);
+    {
+        ShowActivity = false;
+        ShowNotifications = false;
+        Settings.OpenSettings(section, workspaceId);
+    }
 
     public void CloseSettings()
         => Settings.CloseSettings();
+
+    // --- Overlay state (Activity / Notifications) ---
+
+    public bool ShowActivity { get; private set; }
+    public bool ShowNotifications { get; private set; }
+
+    public void OpenActivity()
+    {
+        Settings.CloseSettings();
+        ShowNotifications = false;
+        ShowActivity = true;
+        NotifyStateChanged();
+    }
+
+    public void CloseActivity()
+    {
+        ShowActivity = false;
+        NotifyStateChanged();
+    }
+
+    public void OpenNotifications()
+    {
+        Settings.CloseSettings();
+        ShowActivity = false;
+        ShowNotifications = true;
+        NotifyStateChanged();
+    }
+
+    public void CloseNotifications()
+    {
+        ShowNotifications = false;
+        NotifyStateChanged();
+    }
 
     public void SetSettingsSection(string section)
         => Settings.SetSettingsSection(section);
