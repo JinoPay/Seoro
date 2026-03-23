@@ -7,93 +7,112 @@ namespace Cominomi.Shared.Services;
 public class ActivityService : IActivityService
 {
     private readonly ISessionService _sessionService;
-    private readonly IGitService _gitService;
+    private readonly IWorkspaceService _workspaceService;
     private readonly ILogger<ActivityService> _logger;
 
-    // Cache: avoid re-running git log on every tab switch → 10 sec TTL
-    private readonly ConcurrentDictionary<string, (List<ActivityDateGroup> Groups, DateTime LoadedAt)> _activityCache = new();
-    private static readonly TimeSpan ActivityCacheTtl = TimeSpan.FromSeconds(10);
+    private readonly ConcurrentDictionary<string, (ActionTimelineResult Result, DateTime LoadedAt)> _cache = new();
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(10);
 
-    public ActivityService(ISessionService sessionService, IGitService gitService, ILogger<ActivityService> logger)
+    public ActivityService(ISessionService sessionService, IWorkspaceService workspaceService, ILogger<ActivityService> logger)
     {
         _sessionService = sessionService;
-        _gitService = gitService;
+        _workspaceService = workspaceService;
         _logger = logger;
     }
 
-    public async Task<List<ActivityDateGroup>> GetWorkspaceActivityAsync(string workspaceId, CancellationToken ct = default)
+    public async Task<ActionTimelineResult> GetActionTimelineAsync(ActionTimelineFilter filter, CancellationToken ct = default)
     {
-        if (_activityCache.TryGetValue(workspaceId, out var cached) &&
-            DateTime.UtcNow - cached.LoadedAt < ActivityCacheTtl)
-        {
-            return cached.Groups;
-        }
+        var cacheKey = BuildCacheKey(filter);
+        if (_cache.TryGetValue(cacheKey, out var cached) && DateTime.UtcNow - cached.LoadedAt < CacheTtl)
+            return cached.Result;
 
-        var sessions = await _sessionService.GetSessionsByWorkspaceAsync(workspaceId);
-        var activeSessions = sessions.Where(s =>
-            s.Status != SessionStatus.Pending &&
-            !string.IsNullOrEmpty(s.Git.WorktreePath) &&
-            !string.IsNullOrEmpty(s.Git.BaseBranch)).ToList();
+        var cutoff = filter.DaysBack > 0 ? DateTime.UtcNow.AddDays(-filter.DaysBack) : DateTime.MinValue;
 
-        var allEntries = new List<ActivityEntry>();
-        var tasks = activeSessions.Select(async session =>
+        // Phase 1: Session metadata scan (cheap, in-memory cache)
+        var sessions = await _sessionService.GetSessionsAsync();
+        var candidates = sessions
+            .Where(s => s.UpdatedAt >= cutoff)
+            .Where(s => filter.WorkspaceId == null || s.WorkspaceId == filter.WorkspaceId)
+            .Where(s => filter.SessionId == null || s.Id == filter.SessionId)
+            .OrderByDescending(s => s.UpdatedAt)
+            .ToList();
+
+        // Build workspace name lookup
+        var workspaces = await _workspaceService.GetWorkspacesAsync();
+        var wsNameMap = workspaces.ToDictionary(w => w.Id, w => w.Name);
+
+        // Phase 2: Parallel message extraction with concurrency limit
+        var allEntries = new ConcurrentBag<ActionTimelineEntry>();
+        var semaphore = new SemaphoreSlim(4);
+
+        await Task.WhenAll(candidates.Select(async session =>
         {
+            await semaphore.WaitAsync(ct);
             try
             {
-                var result = await _gitService.GetFormattedCommitLogAsync(
-                    session.Git.WorktreePath, session.Git.BaseBranch, 50, ct);
+                var loaded = await _sessionService.LoadSessionAsync(session.Id);
+                if (loaded == null) return;
 
-                if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
-                    return new List<ActivityEntry>();
+                var wsName = wsNameMap.GetValueOrDefault(session.WorkspaceId, "");
 
-                return result.Output
-                    .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(line => ParseCommitLine(line, session))
-                    .Where(e => e != null)
-                    .Cast<ActivityEntry>()
-                    .ToList();
+                foreach (var msg in loaded.Messages)
+                {
+                    if (msg.Role != MessageRole.Assistant) continue;
+
+                    foreach (var part in msg.Parts)
+                    {
+                        if (part.Type != ContentPartType.ToolCall || part.ToolCall == null) continue;
+
+                        var tc = part.ToolCall;
+                        var timestamp = msg.Timestamp;
+
+                        if (timestamp < cutoff) continue;
+                        if (filter.Before.HasValue && timestamp >= filter.Before.Value) continue;
+
+                        allEntries.Add(new ActionTimelineEntry
+                        {
+                            ToolCallId = tc.Id,
+                            ToolName = ToolDisplayHelper.NormalizeToolName(tc.Name),
+                            HeaderLabel = ToolDisplayHelper.GetHeaderLabel(tc),
+                            ResultHint = ToolDisplayHelper.GetCompactResult(tc),
+                            IsError = tc.IsError,
+                            Timestamp = timestamp,
+                            SessionId = session.Id,
+                            SessionTitle = session.Title,
+                            WorkspaceId = session.WorkspaceId,
+                            WorkspaceName = wsName
+                        });
+                    }
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "Failed to get commit log for session {SessionId}", session.Id);
-                return new List<ActivityEntry>();
+                _logger.LogDebug(ex, "Failed to extract actions for session {SessionId}", session.Id);
             }
-        });
+            finally
+            {
+                semaphore.Release();
+            }
+        }));
 
-        var results = await Task.WhenAll(tasks);
-        foreach (var entries in results)
-            allEntries.AddRange(entries);
+        // Phase 3: Sort, limit, group
+        var sorted = allEntries.OrderByDescending(e => e.Timestamp).ToList();
+        var hasMore = sorted.Count > filter.MaxEntries;
+        var limited = sorted.Take(filter.MaxEntries).ToList();
 
-        allEntries.Sort((a, b) => b.Timestamp.CompareTo(a.Timestamp));
-
-        var groups = GroupByDate(allEntries);
-        _activityCache[workspaceId] = (groups, DateTime.UtcNow);
-        return groups;
-    }
-
-    internal static ActivityEntry? ParseCommitLine(string line, Session session)
-    {
-        var parts = line.Split('\0', 5);
-        if (parts.Length < 5) return null;
-
-        if (!DateTime.TryParse(parts[3], out var timestamp))
-            return null;
-
-        return new ActivityEntry
+        var result = new ActionTimelineResult
         {
-            CommitHash = parts[0],
-            ShortHash = parts[1],
-            Author = parts[2],
-            Timestamp = timestamp.ToUniversalTime(),
-            Message = parts[4],
-            SessionId = session.Id,
-            SessionTitle = session.Title,
-            BranchName = session.Git.BranchName,
-            SessionStatus = session.Status
+            Groups = GroupByDate(limited),
+            TotalEntriesLoaded = limited.Count,
+            OldestTimestamp = limited.Count > 0 ? limited[^1].Timestamp : null,
+            HasMore = hasMore
         };
+
+        _cache[cacheKey] = (result, DateTime.UtcNow);
+        return result;
     }
 
-    private static List<ActivityDateGroup> GroupByDate(List<ActivityEntry> entries)
+    private static List<ActionDateGroup> GroupByDate(List<ActionTimelineEntry> entries)
     {
         var today = DateTime.UtcNow.Date;
         var yesterday = today.AddDays(-1);
@@ -101,7 +120,7 @@ public class ActivityService : IActivityService
         return entries
             .GroupBy(e => e.Timestamp.ToLocalTime().Date)
             .OrderByDescending(g => g.Key)
-            .Select(g => new ActivityDateGroup
+            .Select(g => new ActionDateGroup
             {
                 Label = g.Key == today ? "Today"
                     : g.Key == yesterday ? "Yesterday"
@@ -110,4 +129,7 @@ public class ActivityService : IActivityService
             })
             .ToList();
     }
+
+    private static string BuildCacheKey(ActionTimelineFilter filter) =>
+        $"{filter.WorkspaceId ?? "all"}:{filter.SessionId ?? "all"}:{filter.DaysBack}:{filter.MaxEntries}:{filter.Before?.Ticks}";
 }

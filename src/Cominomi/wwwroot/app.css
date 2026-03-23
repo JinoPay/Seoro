@@ -3393,17 +3393,61 @@ html, body {
     text-overflow: ellipsis;
 }
 
-.activity-hash {
-    font-size: var(--text-xs);
-    font-family: monospace;
-    opacity: 0.4;
-}
-
 .activity-time {
     font-size: var(--text-xs);
     opacity: 0.4;
     white-space: nowrap;
     margin-left: auto;
+}
+
+.activity-filters {
+    padding: 0 0 var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.activity-filter-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.activity-result-hint {
+    font-size: var(--text-xs);
+    opacity: 0.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.activity-error-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mud-palette-error);
+    flex-shrink: 0;
+    margin-top: 6px;
+}
+
+.activity-workspace-badge {
+    font-size: var(--text-xs);
+    padding: 1px 8px;
+    border-radius: var(--radius-full);
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.activity-load-more {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-4) 0;
 }
 
 /* ===== Notification History View ===== */

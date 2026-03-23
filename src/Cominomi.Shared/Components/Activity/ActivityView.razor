@@ -1,4 +1,6 @@
 @inject IActivityService ActivityService
+@inject IWorkspaceService WorkspaceService
+@inject ISessionService SessionService
 @inject IChatState ChatState
 @implements IDisposable
 
@@ -15,45 +17,107 @@
         <span class="activity-header-title">Activity</span>
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                        Style="width: 24px; height: 24px; opacity: 0.5;"
-                       OnClick="@LoadActivity" Disabled="_loading" />
+                       OnClick="@(() => LoadTimeline())" Disabled="_loading" />
     </div>
 
+    @* Filters *@
+    <div class="activity-filters">
+        <div class="activity-filter-row">
+            <MudChipSet T="string" SelectedValue="_selectedRange" SelectedValueChanged="OnRangeChanged"
+                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                        Variant="Variant.Outlined" Color="Color.Primary">
+                <MudChip T="string" Value="@("7")">7일</MudChip>
+                <MudChip T="string" Value="@("30")">30일</MudChip>
+                <MudChip T="string" Value="@("all")">전체</MudChip>
+            </MudChipSet>
+
+            <MudSelect T="string" Value="_selectedWorkspaceId" ValueChanged="OnWorkspaceChanged"
+                       Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense"
+                       Style="max-width: 200px; font-size: var(--text-sm);"
+                       AnchorOrigin="Origin.BottomLeft">
+                <MudSelectItem T="string" Value="@((string?)null)">모든 프로젝트</MudSelectItem>
+                @foreach (var ws in _workspaces)
+                {
+                    <MudSelectItem T="string" Value="@ws.Id">@ws.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="string" Value="_selectedSessionId" ValueChanged="OnSessionChanged"
+                       Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense"
+                       Style="max-width: 200px; font-size: var(--text-sm);"
+                       AnchorOrigin="Origin.BottomLeft">
+                <MudSelectItem T="string" Value="@((string?)null)">모든 세션</MudSelectItem>
+                @foreach (var s in _filteredSessions)
+                {
+                    <MudSelectItem T="string" Value="@s.Id">@s.Title</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+    </div>
+
+    @* Content *@
     @if (_loading)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" Style="margin: var(--space-4) 0;" />
     }
-    else if (_groups.Count == 0)
+    else if (_allGroups.Count == 0)
     {
         <div class="activity-empty">
             <MudIcon Icon="@Icons.Material.Filled.Timeline" Size="Size.Large" Style="opacity: 0.15;" />
-            <MudText Typo="Typo.body2" Style="opacity: 0.4;">아직 커밋이 없습니다</MudText>
+            <MudText Typo="Typo.body2" Style="opacity: 0.4;">아직 활동이 없습니다</MudText>
         </div>
     }
     else
     {
         <div class="activity-list">
-            @foreach (var group in _groups)
+            @foreach (var group in _allGroups)
             {
                 <div class="activity-date-header">@group.Label</div>
 
                 @foreach (var entry in group.Entries)
                 {
-                    <div class="activity-entry" @key="entry.CommitHash">
-                        <MudIcon Icon="@GetStatusIcon(entry.SessionStatus)"
+                    <div class="activity-entry" @key="entry.ToolCallId">
+                        <MudIcon Icon="@ToolDisplayHelper.GetToolIcon(entry.ToolName)"
                                  Size="Size.Small"
-                                 Color="@GetStatusColor(entry.SessionStatus)"
+                                 Color="@(entry.IsError ? Color.Error : Color.Default)"
                                  Style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;" />
 
                         <div class="activity-entry-content">
-                            <span class="activity-message">@entry.Message</span>
+                            <span class="activity-message">@entry.HeaderLabel</span>
+                            @if (!string.IsNullOrEmpty(entry.ResultHint))
+                            {
+                                <span class="activity-result-hint">@entry.ResultHint</span>
+                            }
                             <div class="activity-meta">
                                 <span class="activity-session-badge">@entry.SessionTitle</span>
-                                <span class="activity-hash">@entry.ShortHash</span>
+                                @if (string.IsNullOrEmpty(_selectedWorkspaceId) && !string.IsNullOrEmpty(entry.WorkspaceName))
+                                {
+                                    <span class="activity-workspace-badge">@entry.WorkspaceName</span>
+                                }
                                 <span class="activity-time">@FormatRelativeTime(entry.Timestamp)</span>
                             </div>
                         </div>
+
+                        @if (entry.IsError)
+                        {
+                            <div class="activity-error-dot"></div>
+                        }
                     </div>
                 }
+            }
+
+            @if (_hasMore)
+            {
+                <div class="activity-load-more">
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                               OnClick="@LoadMore" Disabled="_loadingMore">
+                        @if (_loadingMore)
+                        {
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+                        }
+                        더 불러오기
+                    </MudButton>
+                </div>
             }
         </div>
     }
@@ -62,30 +126,52 @@
 </div>
 
 @code {
-    private List<ActivityDateGroup> _groups = [];
+    private List<ActionDateGroup> _allGroups = [];
     private bool _loading;
+    private bool _loadingMore;
+    private bool _hasMore;
+    private DateTime? _oldestTimestamp;
+
+    // Filters
+    private string _selectedRange = "7";
+    private string? _selectedWorkspaceId;
+    private string? _selectedSessionId;
+
+    // Filter dropdown data
+    private List<Workspace> _workspaces = [];
+    private List<Session> _filteredSessions = [];
+    private List<Session> _allSessions = [];
 
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += HandleStateChanged;
-        await LoadActivity();
+
+        _workspaces = await WorkspaceService.GetWorkspacesAsync();
+        _allSessions = await SessionService.GetSessionsAsync();
+        _filteredSessions = _allSessions.OrderByDescending(s => s.UpdatedAt).ToList();
+
+        await LoadTimeline();
     }
 
-    private async Task LoadActivity()
+    private async Task LoadTimeline()
     {
-        var workspace = ChatState.CurrentWorkspace;
-        if (workspace == null) return;
-
         _loading = true;
+        _allGroups = [];
+        _hasMore = false;
+        _oldestTimestamp = null;
         StateHasChanged();
 
         try
         {
-            _groups = await ActivityService.GetWorkspaceActivityAsync(workspace.Id);
+            var filter = BuildFilter();
+            var result = await ActivityService.GetActionTimelineAsync(filter);
+            _allGroups = result.Groups;
+            _hasMore = result.HasMore;
+            _oldestTimestamp = result.OldestTimestamp;
         }
         catch
         {
-            _groups = [];
+            _allGroups = [];
         }
         finally
         {
@@ -94,26 +180,79 @@
         }
     }
 
-    private static string GetStatusIcon(SessionStatus status) => status switch
+    private async Task LoadMore()
     {
-        SessionStatus.Merged => Icons.Material.Filled.CheckCircle,
-        SessionStatus.PrOpen => Icons.Material.Filled.OpenInNew,
-        SessionStatus.Pushed => Icons.Material.Filled.CloudUpload,
-        SessionStatus.ConflictDetected => Icons.Material.Filled.Warning,
-        SessionStatus.Error => Icons.Material.Filled.Error,
-        SessionStatus.Archived => Icons.Material.Filled.Archive,
-        _ => Icons.Material.Filled.Commit
+        if (!_hasMore || _oldestTimestamp == null) return;
+
+        _loadingMore = true;
+        StateHasChanged();
+
+        try
+        {
+            var filter = BuildFilter() with { Before = _oldestTimestamp };
+            var result = await ActivityService.GetActionTimelineAsync(filter);
+
+            MergeGroups(result.Groups);
+            _hasMore = result.HasMore;
+            _oldestTimestamp = result.OldestTimestamp;
+        }
+        catch { /* keep existing data */ }
+        finally
+        {
+            _loadingMore = false;
+            StateHasChanged();
+        }
+    }
+
+    private void MergeGroups(List<ActionDateGroup> newGroups)
+    {
+        foreach (var newGroup in newGroups)
+        {
+            var existing = _allGroups.FirstOrDefault(g => g.Label == newGroup.Label);
+            if (existing != null)
+            {
+                // Append entries to existing date group
+                var merged = existing.Entries.Concat(newGroup.Entries).ToList();
+                var idx = _allGroups.IndexOf(existing);
+                _allGroups[idx] = new ActionDateGroup { Label = existing.Label, Entries = merged };
+            }
+            else
+            {
+                _allGroups.Add(newGroup);
+            }
+        }
+    }
+
+    private ActionTimelineFilter BuildFilter() => new()
+    {
+        WorkspaceId = _selectedWorkspaceId,
+        SessionId = _selectedSessionId,
+        DaysBack = _selectedRange == "all" ? 0 : int.Parse(_selectedRange)
     };
 
-    private static Color GetStatusColor(SessionStatus status) => status switch
+    private async Task OnRangeChanged(string value)
     {
-        SessionStatus.Merged => Color.Success,
-        SessionStatus.PrOpen => Color.Info,
-        SessionStatus.ConflictDetected => Color.Warning,
-        SessionStatus.Error => Color.Error,
-        SessionStatus.Archived => Color.Default,
-        _ => Color.Default
-    };
+        _selectedRange = value ?? "7";
+        await LoadTimeline();
+    }
+
+    private async Task OnWorkspaceChanged(string? value)
+    {
+        _selectedWorkspaceId = value;
+        _selectedSessionId = null;
+
+        _filteredSessions = string.IsNullOrEmpty(value)
+            ? _allSessions.OrderByDescending(s => s.UpdatedAt).ToList()
+            : _allSessions.Where(s => s.WorkspaceId == value).OrderByDescending(s => s.UpdatedAt).ToList();
+
+        await LoadTimeline();
+    }
+
+    private async Task OnSessionChanged(string? value)
+    {
+        _selectedSessionId = value;
+        await LoadTimeline();
+    }
 
     private static string FormatRelativeTime(DateTime utcTime)
     {
