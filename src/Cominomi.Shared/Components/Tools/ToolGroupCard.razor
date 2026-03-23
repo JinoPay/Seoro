@@ -1,4 +1,5 @@
 @using Cominomi.Shared.Models
+@using Cominomi.Shared.Services
 
 <div class="tool-group @(_expanded ? "expanded" : "") @(IsActive ? "running" : "")">
     <div class="tool-group-header" @onclick="Toggle">
@@ -74,19 +75,8 @@
     {
         return Group.Parts
             .Where(p => p.ToolCall != null)
-            .Select(p => GetToolIcon(p.ToolCall!.Name))
+            .Select(p => ToolDisplayHelper.GetToolIcon(p.ToolCall!.Name))
             .Distinct()
             .ToList();
     }
-
-    private static string GetToolIcon(string name) => name.ToLowerInvariant() switch
-    {
-        "bash" or "execute_bash" => Icons.Material.Filled.Terminal,
-        "read" or "read_file" => Icons.Material.Filled.Description,
-        "write" or "write_file" => Icons.Material.Filled.Edit,
-        "edit" or "edit_file" => Icons.Material.Filled.EditNote,
-        "glob" => Icons.Material.Filled.Search,
-        "grep" => Icons.Material.Filled.FindInPage,
-        _ => Icons.Material.Filled.Extension
-    };
 }

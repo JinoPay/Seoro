@@ -17,7 +17,7 @@
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
                      Style="width: 16px; height: 16px;" />
         }
-        <MudIcon Icon="@GetToolIcon()" Size="Size.Small" Style="width: 16px; height: 16px; opacity: 0.6;" />
+        <MudIcon Icon="@ToolDisplayHelper.GetToolIcon(Tool.Name)" Size="Size.Small" Style="width: 16px; height: 16px; opacity: 0.6;" />
         <span class="tool-card-name">@_headerLabel</span>
         @if (Tool.IsComplete && _compactResult is string hint)
         {
@@ -140,21 +140,4 @@
         _ => WidgetType.Generic
     };
 
-    private string GetToolIcon() => Tool.Name.ToLowerInvariant() switch
-    {
-        "bash" or "execute_bash" => Icons.Material.Filled.Terminal,
-        "read" or "read_file" => Icons.Material.Filled.Description,
-        "write" or "write_file" => Icons.Material.Filled.Edit,
-        "edit" or "edit_file" => Icons.Material.Filled.EditNote,
-        "glob" => Icons.Material.Filled.Search,
-        "grep" => Icons.Material.Filled.FindInPage,
-        "agent" => Icons.Material.Filled.SmartToy,
-        "webfetch" or "web_fetch" => Icons.Material.Filled.Language,
-        "websearch" or "web_search" => Icons.Material.Filled.TravelExplore,
-        "notebookedit" or "notebook_edit" => Icons.Material.Filled.DataObject,
-        "todowrite" or "todo_write" => Icons.Material.Filled.Checklist,
-        "askuserquestion" or "ask_user_question" => Icons.Material.Filled.QuestionAnswer,
-        _ when Tool.Name.StartsWith("mcp__", StringComparison.OrdinalIgnoreCase) => Icons.Material.Filled.Hub,
-        _ => Icons.Material.Filled.Extension
-    };
 }
