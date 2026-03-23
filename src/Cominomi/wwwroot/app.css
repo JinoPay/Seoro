@@ -488,10 +488,6 @@ html *::after {
 }
 
 .status-badge.ready { color: var(--accent); background: var(--accent-dim); opacity: 0.7; }
-.status-badge.pushed { color: var(--color-info); background: var(--color-info-bg); }
-.status-badge.pr-open { color: var(--diff-hunk-fg); background: var(--color-info-bg); }
-.status-badge.merged { color: var(--color-success); background: var(--color-success-bg); }
-.status-badge.conflict { color: var(--color-error); background: var(--color-error-bg); }
 .status-badge.error { color: var(--color-error); background: var(--color-error-bg); }
 .status-badge.pending { color: var(--text-secondary); background: var(--bg-hover); opacity: 0.6; }
 .status-badge.archived { color: var(--text-muted); background: var(--bg-hover); }
@@ -982,56 +978,6 @@ html *::after {
     border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
     min-height: 32px;
-}
-
-.pr-readiness-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 1px 8px;
-    font-size: var(--text-xs);
-    border-radius: var(--radius-full);
-    border: 1px solid;
-    white-space: nowrap;
-    font-weight: 600;
-}
-
-.pr-readiness-badge.mergeable {
-    color: var(--color-success);
-    border-color: var(--color-success-border);
-    background: var(--color-success-bg);
-}
-
-.pr-readiness-badge.pending {
-    color: var(--color-warning);
-    border-color: var(--color-warning-border);
-    background: var(--color-warning-bg);
-}
-
-.pr-readiness-badge.failed {
-    color: var(--color-error);
-    border-color: var(--color-error-border);
-    background: var(--color-error-bg);
-}
-
-.pr-readiness-badge.conflict {
-    color: var(--color-error);
-    border-color: var(--color-error-border);
-    background: var(--color-error-bg);
-}
-
-.pr-ahead-behind {
-    font-size: var(--text-xs);
-    opacity: 0.7;
-    display: flex;
-    gap: 4px;
-}
-
-.pr-ahead-behind .ahead {
-    color: var(--color-success);
-}
-
-.pr-ahead-behind .behind {
-    color: var(--color-error);
 }
 
 /* Selected file highlight in SidebarChanges */

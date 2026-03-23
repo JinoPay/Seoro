@@ -22,8 +22,6 @@
                     @onclick="@(() => _tab = "general")">일반</button>
             <button class="ws-settings-tab @(_tab == "git" ? "active" : "")"
                     @onclick="@(() => _tab = "git")">Git</button>
-            <button class="ws-settings-tab @(_tab == "scripts" ? "active" : "")"
-                    @onclick="@(() => _tab = "scripts")">스크립트</button>
             <button class="ws-settings-tab @(_tab == "prompts" ? "active" : "")"
                     @onclick="@(() => _tab = "prompts")">프롬프트</button>
         </div>
@@ -97,43 +95,6 @@
                                   Placeholder="origin" />
                 </MudStack>
             }
-            else if (_tab == "scripts")
-            {
-                <div class="settings-section-title">스크립트</div>
-                <div class="settings-section-desc">워크스페이스 이벤트에 실행할 스크립트를 설정합니다.</div>
-
-                <MudStack Spacing="4">
-                    <div>
-                        <div class="settings-group-title">Setup 스크립트</div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-bottom: 8px;">
-                            새 세션이 생성될 때 실행됩니다.
-                        </MudText>
-                        <MudTextField @bind-Value="_workspace.SetupScript"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="3"
-                                      Placeholder="e.g., npm install" />
-                    </div>
-
-                    <div>
-                        <div class="settings-group-title">Run 스크립트</div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-bottom: 8px;">
-                            플레이 버튼을 클릭할 때 실행됩니다.
-                        </MudText>
-                        <MudTextField @bind-Value="_workspace.RunScript"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="3"
-                                      Placeholder="e.g., npm run dev" />
-                    </div>
-
-                    <div>
-                        <div class="settings-group-title">Archive 스크립트</div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-bottom: 8px;">
-                            세션이 아카이브되기 전에 실행됩니다.
-                        </MudText>
-                        <MudTextField @bind-Value="_workspace.ArchiveScript"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="3"
-                                      Placeholder="e.g., rm -rf node_modules" />
-                    </div>
-                </MudStack>
-            }
             else if (_tab == "prompts")
             {
                 <div class="settings-section-title">프롬프트</div>
@@ -144,16 +105,6 @@
                                   Label="코드 리뷰 프롬프트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
                                   Placeholder="코드 리뷰 시 에이전트에 전달할 지침입니다." />
-
-                    <MudTextField @bind-Value="_workspace.Preferences.CreatePrPrompt"
-                                  Label="PR 생성 프롬프트"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
-                                  Placeholder="PR 생성 시 에이전트에 전달할 지침입니다." />
-
-                    <MudTextField @bind-Value="_workspace.Preferences.BranchRenamePrompt"
-                                  Label="브랜치 리네임 프롬프트"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
-                                  Placeholder="브랜치 리네임 시 에이전트에 전달할 지침입니다." />
 
                     <MudTextField @bind-Value="_workspace.Preferences.GeneralPrompt"
                                   Label="일반 프롬프트"

@@ -15,9 +15,8 @@ public static class SchemaMigratorRegistry
     {
         // Session: v1 had flat format (worktreePath, branchName at root)
         // v2 introduced nested git/pr objects — migration handled by SessionJsonConverter
-        // We register v2 as current but no IJsonMigration needed since SessionJsonConverter
-        // already handles v1→v2 in its Read() method.
-        Register<Session>(new SchemaMigrator(2));
+        // v3 removed PrContext and PR-related status values (Pushed, PrOpen, ConflictDetected, Merged)
+        Register<Session>(new SchemaMigrator(3));
 
         // All other models start at v1 with no migrations yet.
         // When a schema change is needed, bump the version and add migrations.
