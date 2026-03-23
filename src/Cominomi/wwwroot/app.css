@@ -3605,9 +3605,8 @@ html, body {
     cursor: default;
 }
 
-.askbar-option.disabled {
-    opacity: 0.35;
-    cursor: default;
+.askbar-option.dimmed {
+    opacity: 0.45;
 }
 
 .askbar-option-label {
@@ -3622,6 +3621,30 @@ html, body {
     font-size: var(--text-xs);
     opacity: 0.6;
     line-height: 1.4;
+}
+
+.askbar-progress {
+    font-size: var(--text-xs);
+    color: rgba(137, 180, 250, 0.6);
+    font-weight: 500;
+    margin-left: 4px;
+}
+
+.askbar-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 14px 12px;
+    border-top: 1px solid rgba(137, 180, 250, 0.08);
+}
+
+.askbar-submit-btn {
+    text-transform: none !important;
+    border-radius: 8px !important;
+    font-size: var(--text-sm) !important;
+    padding: 4px 16px !important;
+    min-width: 0 !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.2px !important;
 }
 
 /* ===== MCP Manager ===== */
