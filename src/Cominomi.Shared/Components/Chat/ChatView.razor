@@ -166,9 +166,30 @@ else
                     return;
                 }
 
-                // Restore plan review state scoped to the current session
+                // Restore AskUserQuestion bar state from session (survives session switches)
                 var currentId = ChatState.CurrentSession?.Id;
-                if (ChatState.CurrentSession is { PlanCompleted: true, PermissionMode: "plan" } && !ChatState.IsStreaming)
+                var pendingAskInput = ChatState.CurrentSession?.PendingAskUserQuestionInput;
+                if (!ChatState.IsStreaming && pendingAskInput != null)
+                {
+                    _askUserBarVisible = true;
+                    _askUserQuestionInput = pendingAskInput;
+                    // AskUserQuestion supersedes plan review
+                    _planReviewVisible = false;
+                }
+                else
+                {
+                    // Only clear bar if session switched (not just any state change)
+                    if (pendingAskInput == null)
+                    {
+                        _askUserBarVisible = false;
+                        _askUserQuestionInput = null;
+                    }
+                }
+
+                // Restore plan review state scoped to the current session (only if no AskUserQuestion)
+                if (!_askUserBarVisible
+                    && ChatState.CurrentSession is { PlanCompleted: true, PermissionMode: "plan" }
+                    && !ChatState.IsStreaming)
                 {
                     _planReviewVisible = true;
 
@@ -183,7 +204,7 @@ else
                             _ = RestorePlanContentAsync(ChatState.CurrentSession.Git.WorktreePath, ChatState.CurrentSession.PlanFilePath);
                     }
                 }
-                else
+                else if (!_askUserBarVisible)
                 {
                     _planReviewVisible = false;
 
@@ -344,6 +365,9 @@ else
     {
         _askUserBarVisible = false;
         _askUserQuestionInput = null;
+        // Clear persisted state so bar doesn't reappear on session switch
+        if (ChatState.CurrentSession != null)
+            ChatState.CurrentSession.PendingAskUserQuestionInput = null;
         return HandleSend(new ChatInputMessage { Text = response });
     }
 
@@ -405,6 +429,9 @@ else
         _askUserQuestionInput = null;
         _planReviewVisible = false;
         _planSessionId = null;
+        // Clear persisted AskUserQuestion state
+        if (ChatState.CurrentSession != null)
+            ChatState.CurrentSession.PendingAskUserQuestionInput = null;
 
         // Extract chain state from input
         if (input.PendingChain is { Count: > 0 })
@@ -484,6 +511,8 @@ else
 
         if (result.PlanReviewVisible)
             _ = SendNotificationIfNeeded(session, "Plan ready for review", NotificationType.PlanReview);
+        else if (result.AskUserQuestionInput != null)
+            _ = SendNotificationIfNeeded(session, "Response needed", NotificationType.Question);
         else if (result.QuickResponseVisible)
             _ = SendNotificationIfNeeded(session, "Response needed", NotificationType.Question);
         else

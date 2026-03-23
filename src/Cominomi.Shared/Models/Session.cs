@@ -81,6 +81,13 @@ public class Session
     }
     public bool PlanCompleted { get; set; }
     public string? PlanFilePath { get; set; }
+
+    /// <summary>
+    /// Raw JSON input from a pending AskUserQuestion tool call.
+    /// Persisted so the bottom bar survives session switches.
+    /// Cleared when the user responds.
+    /// </summary>
+    public string? PendingAskUserQuestionInput { get; set; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
