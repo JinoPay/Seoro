@@ -38,8 +38,8 @@
         <div class="streaming-pill using-tool">
             <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Warning"
                                  Style="width: 14px; height: 14px;" />
-            <MudIcon Icon="@GetToolIcon()" Size="Size.Small" Style="opacity: 0.7; width: 16px; height: 16px;" />
-            <span class="tool-badge">@GetToolLabel()</span>
+            <MudIcon Icon="@ToolDisplayHelper.GetToolIcon(ActiveToolName)" Size="Size.Small" Style="opacity: 0.7; width: 16px; height: 16px;" />
+            <span class="tool-badge">@ToolDisplayHelper.GetStreamingLabel(ActiveToolName)</span>
             @if (!string.IsNullOrEmpty(_elapsed))
             {
                 <span class="streaming-elapsed">@_elapsed</span>
@@ -89,30 +89,6 @@
             }
         }, null, 1000, 1000);
     }
-
-    private string GetToolIcon() => (ActiveToolName?.ToLowerInvariant()) switch
-    {
-        "bash" or "execute_bash" => Icons.Material.Filled.Terminal,
-        "read" or "read_file" => Icons.Material.Filled.Description,
-        "write" or "write_file" => Icons.Material.Filled.Edit,
-        "edit" or "edit_file" => Icons.Material.Filled.EditNote,
-        "glob" => Icons.Material.Filled.Search,
-        "grep" => Icons.Material.Filled.FindInPage,
-        "agent" => Icons.Material.Filled.SmartToy,
-        _ => Icons.Material.Filled.Extension
-    };
-
-    private string GetToolLabel() => (ActiveToolName?.ToLowerInvariant()) switch
-    {
-        "bash" or "execute_bash" => "명령 실행 중...",
-        "read" or "read_file" => "파일 읽는 중...",
-        "write" or "write_file" => "파일 작성 중...",
-        "edit" or "edit_file" => "파일 수정 중...",
-        "glob" => "파일 검색 중...",
-        "grep" => "내용 검색 중...",
-        "agent" => "에이전트 실행 중...",
-        _ => $"{ActiveToolName} 사용 중..."
-    };
 
     public void Dispose()
     {
