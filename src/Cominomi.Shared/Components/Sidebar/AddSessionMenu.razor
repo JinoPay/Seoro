@@ -1,14 +1,37 @@
-<MudMenu Icon="@Icons.Material.Filled.Add" Size="IconSize"
-         Dense="true" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter"
-         Style="@Style"
-         Class="@ButtonClass"
-         Disabled="Disabled"
-         ActivationEvent="@MouseEvent.LeftClick">
-    <MudMenuItem OnClick="@OnNewChat"
-                 Icon="@Icons.Material.Filled.AccountTree">새 세션</MudMenuItem>
-    <MudMenuItem OnClick="@OnAddLocalDir"
-                 Icon="@Icons.Material.Filled.Folder">로컬 디렉토리</MudMenuItem>
-</MudMenu>
+<div class="add-session-anchor">
+    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="@IconSize"
+                   Disabled="Disabled"
+                   Class="@ButtonClass"
+                   Style="@Style"
+                   OnClick="Toggle" />
+</div>
+
+<MudPopover Open="_open" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter"
+            Class="add-session-popover" OverflowBehavior="OverflowBehavior.FlipAlways">
+    <div class="add-session-header">새로 만들기</div>
+    <div class="add-session-option" @onclick="HandleNewChat">
+        <div class="add-session-icon" style="background: var(--accent-dim);">
+            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
+                     Style="color: var(--accent);" />
+        </div>
+        <div class="add-session-label">
+            <span class="add-session-title">새 세션</span>
+            <span class="add-session-desc">워크스페이스 기본 경로에서 시작</span>
+        </div>
+    </div>
+    <div class="add-session-option" @onclick="HandleAddLocalDir">
+        <div class="add-session-icon" style="background: rgba(250, 204, 21, 0.1);">
+            <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small"
+                     Style="color: #facc15;" />
+        </div>
+        <div class="add-session-label">
+            <span class="add-session-title">로컬 디렉토리</span>
+            <span class="add-session-desc">로컬 저장소 경로를 사용</span>
+        </div>
+    </div>
+</MudPopover>
+
+<MudOverlay Visible="_open" OnClick="Close" LockScroll="false" />
 
 @code {
     [Parameter] public string WorkspaceId { get; set; } = "";
@@ -18,4 +41,26 @@
     [Parameter] public string? ButtonClass { get; set; }
     [Parameter] public string? Style { get; set; }
     [Parameter] public Size IconSize { get; set; } = Size.Small;
+
+    private bool _open;
+
+    private void Toggle()
+    {
+        if (!Disabled)
+            _open = !_open;
+    }
+
+    private void Close() => _open = false;
+
+    private async Task HandleNewChat()
+    {
+        _open = false;
+        await OnNewChat.InvokeAsync();
+    }
+
+    private async Task HandleAddLocalDir()
+    {
+        _open = false;
+        await OnAddLocalDir.InvokeAsync();
+    }
 }
