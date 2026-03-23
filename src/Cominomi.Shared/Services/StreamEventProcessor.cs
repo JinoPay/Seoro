@@ -100,7 +100,9 @@ public class StreamEventProcessor : IStreamEventProcessor
             if (HasAskUserQuestionToolCall(ctx))
             {
                 ctx.PlanReviewVisible = false;
-                ctx.QuickResponseVisible = true;
+                ctx.Session.PlanCompleted = false; // AskUserQuestion supersedes plan review
+                ctx.Session.PendingAskUserQuestionInput = ctx.AskUserQuestionInput;
+                ctx.QuickResponseVisible = false;
                 ctx.QuickResponseOptions = [];
             }
         }
@@ -110,7 +112,8 @@ public class StreamEventProcessor : IStreamEventProcessor
 
             if (HasAskUserQuestionToolCall(ctx))
             {
-                ctx.QuickResponseVisible = true;
+                ctx.Session.PendingAskUserQuestionInput = ctx.AskUserQuestionInput;
+                ctx.QuickResponseVisible = false;
                 ctx.QuickResponseOptions = [];
             }
             else

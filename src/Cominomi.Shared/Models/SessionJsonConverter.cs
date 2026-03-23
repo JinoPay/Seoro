@@ -121,6 +121,8 @@ public class SessionJsonConverter : JsonConverter<Session>
             session.TotalOutputTokens = tot.GetInt64();
         if (root.TryGetProperty("planCompleted", out var pc) && pc.ValueKind is JsonValueKind.True or JsonValueKind.False)
             session.PlanCompleted = pc.GetBoolean();
+        if (root.TryGetProperty("pendingAskUserQuestionInput", out var pauq) && pauq.ValueKind == JsonValueKind.String)
+            session.PendingAskUserQuestionInput = pauq.GetString();
 
         if (root.TryGetProperty("updatedAt", out var ua) && ua.ValueKind == JsonValueKind.String)
         {
@@ -191,6 +193,7 @@ public class SessionJsonConverter : JsonConverter<Session>
         writer.WriteNumber("totalOutputTokens", value.TotalOutputTokens);
         writer.WriteBoolean("planCompleted", value.PlanCompleted);
         if (value.PlanFilePath != null) writer.WriteString("planFilePath", value.PlanFilePath);
+        if (value.PendingAskUserQuestionInput != null) writer.WriteString("pendingAskUserQuestionInput", value.PendingAskUserQuestionInput);
         writer.WriteString("createdAt", value.CreatedAt);
         writer.WriteString("updatedAt", value.UpdatedAt);
 
