@@ -3,6 +3,14 @@
 @inject ISessionService SessionService
 @implements IDisposable
 
+<div class="overlay-page">
+    <div class="overlay-page-header">
+        <button class="settings-back-btn" @onclick="Close">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+            앱으로 돌아가기
+        </button>
+    </div>
+    <div class="overlay-page-content">
 <div class="notification-history-view">
     <div class="notification-history-header">
         <span class="notification-history-title">Notifications</span>
@@ -60,6 +68,8 @@
         </div>
     }
 </div>
+    </div>
+</div>
 
 @code {
     private IReadOnlyList<NotificationRecord> _entries = [];
@@ -77,6 +87,8 @@
         _groups = GroupByDate(_entries);
     }
 
+    private void Close() => ChatState.CloseNotifications();
+
     private async Task HandleClick(NotificationRecord entry)
     {
         if (!entry.IsRead)
@@ -87,8 +99,8 @@
             var session = await SessionService.LoadSessionAsync(entry.SessionId);
             if (session != null)
             {
+                ChatState.CloseNotifications();
                 ChatState.SetSession(session);
-                ChatState.Tabs.SetActiveTab("chat");
             }
         }
     }
