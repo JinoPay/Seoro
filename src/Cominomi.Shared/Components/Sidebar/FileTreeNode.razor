@@ -12,7 +12,7 @@
              @onclick="() => OnToggleDir.InvokeAsync(node.FullPath)">
             <MudIcon Icon="@(expanded ? Icons.Material.Filled.FolderOpen : Icons.Material.Filled.Folder)"
                      Size="Size.Small"
-                     Style="@($"width: 14px; height: 14px; {(hasDiff ? "opacity: 0.8; color: #89b4fa;" : "opacity: 0.6;")}")" />
+                     Style="@($"width: 14px; height: 14px; {(hasDiff ? "opacity: 0.8; color: var(--color-info);" : "opacity: 0.6;")}")" />
             <span class="sidebar-file-name">@node.Name</span>
         </div>
 
@@ -76,10 +76,10 @@
         if (diff == null) return "opacity: 0.4;";
         return diff.ChangeType switch
         {
-            FileChangeType.Added => "color: #a6e3a1;",
-            FileChangeType.Deleted => "color: #f38ba8;",
-            FileChangeType.Renamed => "color: #fab387;",
-            _ => "color: #89b4fa;"
+            FileChangeType.Added => "color: var(--color-success);",
+            FileChangeType.Deleted => "color: var(--color-error);",
+            FileChangeType.Renamed => "color: var(--color-warning);",
+            _ => "color: var(--color-info);"
         };
     }
 }
