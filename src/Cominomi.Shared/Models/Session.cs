@@ -10,10 +10,6 @@ public enum SessionStatus
     Initializing,
     Pending,
     Ready,
-    Pushed,
-    PrOpen,
-    ConflictDetected,
-    Merged,
     Archived,
     Error
 }
@@ -58,9 +54,6 @@ public class Session
 
     // Git 관심사 (worktree, branch)
     public GitContext Git { get; init; } = new();
-
-    // PR/이슈 관심사
-    public PrContext Pr { get; init; } = new();
 
     public string? ConversationId { get; set; }
     public int? MaxTurns { get; init; }

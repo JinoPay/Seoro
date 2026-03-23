@@ -27,6 +27,10 @@ public class SystemPromptBuilder : ISystemPromptBuilder
         if (!string.IsNullOrWhiteSpace(wsPrompt))
             parts.Add(wsPrompt);
 
+        var generalPrompt = workspace?.Preferences?.GeneralPrompt;
+        if (!string.IsNullOrWhiteSpace(generalPrompt))
+            parts.Add(generalPrompt);
+
         if (session.PermissionMode == "plan")
         {
             parts.Add(@"You are in Plan mode. Your goal is to explore the codebase thoroughly and create a detailed implementation plan.

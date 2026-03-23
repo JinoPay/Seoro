@@ -8,11 +8,7 @@ public static class SessionStatusMachine
     {
         [SessionStatus.Initializing] = [SessionStatus.Pending, SessionStatus.Ready, SessionStatus.Error],
         [SessionStatus.Pending] = [SessionStatus.Initializing, SessionStatus.Ready, SessionStatus.Error],
-        [SessionStatus.Ready] = [SessionStatus.Pushed, SessionStatus.PrOpen, SessionStatus.Merged, SessionStatus.Error, SessionStatus.Archived],
-        [SessionStatus.Pushed] = [SessionStatus.PrOpen, SessionStatus.Merged, SessionStatus.Error, SessionStatus.Archived],
-        [SessionStatus.PrOpen] = [SessionStatus.Merged, SessionStatus.ConflictDetected, SessionStatus.Ready, SessionStatus.Error, SessionStatus.Archived],
-        [SessionStatus.ConflictDetected] = [SessionStatus.Ready, SessionStatus.Error, SessionStatus.Archived],
-        [SessionStatus.Merged] = [SessionStatus.Archived],
+        [SessionStatus.Ready] = [SessionStatus.Error, SessionStatus.Archived],
         [SessionStatus.Error] = [SessionStatus.Ready, SessionStatus.Initializing, SessionStatus.Archived],
         [SessionStatus.Archived] = [],
     };

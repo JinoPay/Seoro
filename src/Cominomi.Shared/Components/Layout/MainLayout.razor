@@ -165,12 +165,6 @@
         InvokeAsync(StateHasChanged);
     }
 
-    [JSInvokable]
-    public void OnToggleDetailShortcut()
-    {
-        // Right panel visibility is driven by session state, no toggle needed
-    }
-
     private void HandleThemeChanged()
     {
         _ = InvokeAsync(() =>

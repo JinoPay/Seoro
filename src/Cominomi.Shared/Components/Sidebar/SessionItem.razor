@@ -5,13 +5,6 @@
      @onclick="@OnClick">
 
     <div class="tree-session-actions">
-        @if (Session.Status == SessionStatus.Merged)
-        {
-            <MudIconButton Icon="@Icons.Material.Filled.CleaningServices" Size="Size.Small"
-                           Color="Color.Success" Style="width: 20px; height: 20px;"
-                           OnClick="@OnCleanup"
-                           OnClickStopPropagation="true" />
-        }
         <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
                        Style="width: 20px; height: 20px; opacity: 0.4;"
                        OnClick="@OnDelete"
@@ -39,11 +32,6 @@
             else if (!string.IsNullOrEmpty(Session.Git.BranchName))
             {
                 <span class="tree-session-branch">@Session.Git.BranchName</span>
-            }
-
-            @if (Session.Pr.IssueNumber != null)
-            {
-                <span style="opacity: 0.6; font-size: 0.65rem;">#@Session.Pr.IssueNumber</span>
             }
 
             @if (DiffAdditions > 0 || DiffDeletions > 0)
@@ -84,15 +72,10 @@
     [Parameter] public bool ShowShortcuts { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
-    [Parameter] public EventCallback OnCleanup { get; set; }
 
     private static string GetStatusBadgeClass(SessionStatus status) => status switch
     {
         SessionStatus.Ready => "ready",
-        SessionStatus.Pushed => "pushed",
-        SessionStatus.PrOpen => "pr-open",
-        SessionStatus.Merged => "merged",
-        SessionStatus.ConflictDetected => "conflict",
         SessionStatus.Error => "error",
         SessionStatus.Pending => "pending",
         SessionStatus.Archived => "archived",
@@ -104,10 +87,6 @@
         SessionStatus.Initializing => "초기화",
         SessionStatus.Pending => "대기",
         SessionStatus.Ready => "준비",
-        SessionStatus.Pushed => "Push",
-        SessionStatus.PrOpen => "PR",
-        SessionStatus.Merged => "병합",
-        SessionStatus.ConflictDetected => "충돌",
         SessionStatus.Error => "오류",
         SessionStatus.Archived => "보관",
         _ => ""

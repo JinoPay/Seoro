@@ -123,11 +123,11 @@ public class SchemaMigrationTests
     }
 
     [Fact]
-    public void SchemaMigratorRegistry_SessionVersionIs2()
+    public void SchemaMigratorRegistry_SessionVersionIs3()
     {
         var migrator = SchemaMigratorRegistry.GetMigrator<Session>();
         Assert.NotNull(migrator);
-        Assert.Equal(2, migrator!.CurrentVersion);
+        Assert.Equal(3, migrator!.CurrentVersion);
     }
 
     // Test helpers

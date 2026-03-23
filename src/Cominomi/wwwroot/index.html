@@ -433,9 +433,6 @@
                 if (e.key === 'b' || e.key === 'B') {
                     e.preventDefault();
                     dotNetRef.invokeMethodAsync('OnToggleSidebarShortcut');
-                } else if (e.key === ']') {
-                    e.preventDefault();
-                    dotNetRef.invokeMethodAsync('OnToggleDetailShortcut');
                 }
             };
             document.addEventListener('keydown', window._panelShortcutHandler);
