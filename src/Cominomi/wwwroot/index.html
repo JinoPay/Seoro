@@ -59,6 +59,22 @@
             }
         };
 
+        window.highlightDiffBlock = function(elementId, language) {
+            var el = document.getElementById(elementId);
+            if (!el || !window.hljs) return;
+            var codeSpans = el.querySelectorAll('.diff-code');
+            codeSpans.forEach(function(span) {
+                var text = span.textContent;
+                if (!text) return;
+                try {
+                    var result = language
+                        ? hljs.highlight(text, { language: language, ignoreIllegals: true })
+                        : hljs.highlightAuto(text);
+                    span.innerHTML = result.value;
+                } catch(e) { /* ignore unknown language */ }
+            });
+        };
+
         window.setTheme = function(theme) {
             document.documentElement.setAttribute('data-theme', theme);
         };

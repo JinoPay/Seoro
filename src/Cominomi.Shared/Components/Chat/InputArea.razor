@@ -11,7 +11,8 @@
                            FilteredCommands="_filteredCommands"
                            SelectedIndex="_slashSelectedIndex"
                            OnCommandSelected="SelectSlashCommand"
-                           OnDismiss="DismissSlashPopup" />
+                           OnDismiss="DismissSlashPopup"
+                           OnHover="@(i => { _slashSelectedIndex = i; StateHasChanged(); })" />
 
         <AttachmentChips Attachments="_pendingAttachments" OnRemove="RemoveAttachment" />
 
