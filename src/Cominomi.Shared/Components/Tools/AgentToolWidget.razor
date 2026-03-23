@@ -1,0 +1,231 @@
+@using System.Text.Json
+@using System.Text.RegularExpressions
+@using Markdig
+@using Cominomi.Shared.Models
+@using Cominomi.Shared.Services
+
+<div class="tool-widget tool-widget-agent">
+    <div class="tool-widget-header">
+        <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small"
+                 Style="width: 14px; height: 14px; opacity: 0.6;" />
+        @if (!string.IsNullOrEmpty(_subagentType))
+        {
+            <span class="agent-type-badge">@_subagentType</span>
+        }
+        <span class="tool-widget-command">@_description</span>
+        @{
+            var toolCount = _childTools.Count > 0 ? _childTools.Count : _toolUses;
+            var durationText = Tool.IsComplete
+                ? FormatDuration(_durationMs)
+                : FormatElapsed();
+        }
+        @if (toolCount > 0 || !Tool.IsComplete)
+        {
+            <span class="tool-widget-hint">
+                @if (toolCount > 0)
+                {
+                    @($"{toolCount}개 도구 사용")
+                }
+                @if (durationText is not null)
+                {
+                    @(toolCount > 0 ? $" | {durationText}" : durationText)
+                }
+            </span>
+        }
+    </div>
+
+    @* Child tool calls from the agent *@
+    @if (_childTools.Count > 0)
+    {
+        <div class="agent-children">
+            @foreach (var child in _childTools)
+            {
+                <ToolCallCard Tool="child" />
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_prompt))
+    {
+        <div class="agent-prompt-section">
+            <div class="agent-prompt-label" @onclick="@(() => _promptExpanded = !_promptExpanded)"
+                 @onclick:stopPropagation="true">
+                <span>프롬프트</span>
+                <MudIcon Icon="@(_promptExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                         Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;" />
+            </div>
+            @if (_promptExpanded)
+            {
+                <div class="agent-prompt-content">
+                    <pre>@_prompt</pre>
+                </div>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_resultText))
+    {
+        <div class="tool-widget-output @(_collapsed ? "collapsed" : "")">
+            <div class="markdown-body agent-result-body">
+                @((MarkupString)Markdown.ToHtml(_resultText, Pipeline))
+            </div>
+        </div>
+        @if (_resultLineCount > 15)
+        {
+            <div class="tool-widget-toggle" @onclick="@(() => _collapsed = !_collapsed)"
+                 @onclick:stopPropagation="true">
+                @(_collapsed ? $"전체 보기 ({_resultLineCount}줄)" : "접기")
+            </div>
+        }
+    }
+    else if (!Tool.IsComplete)
+    {
+        <div class="agent-running-indicator">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                 Style="width: 14px; height: 14px;" Color="Color.Warning" />
+            <span>에이전트 실행 중...</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ToolCall Tool { get; set; } = default!;
+
+    [CascadingParameter(Name = "MessageParts")]
+    public List<ContentPart>? MessageParts { get; set; }
+
+    private string _description = "";
+    private string _subagentType = "";
+    private string _prompt = "";
+    private string _resultText = "";
+    private int _resultLineCount;
+    private int _toolUses;
+    private long _durationMs;
+    private bool _collapsed = true;
+    private bool _promptExpanded;
+    private List<ToolCall> _childTools = [];
+    private DateTime? _firstChildSeen;
+
+    private string? _lastInput;
+    private string? _lastOutput;
+    private int _lastPartsCount;
+
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_lastInput, Tool.Input))
+        {
+            _lastInput = Tool.Input;
+            ParseInput();
+        }
+
+        if (!ReferenceEquals(_lastOutput, Tool.Output))
+        {
+            _lastOutput = Tool.Output;
+            ParseOutput();
+        }
+
+        // Refresh child tools when message parts change
+        var partsCount = MessageParts?.Count ?? 0;
+        if (partsCount != _lastPartsCount)
+        {
+            _lastPartsCount = partsCount;
+            CollectChildTools();
+        }
+    }
+
+    private void CollectChildTools()
+    {
+        if (MessageParts == null)
+        {
+            _childTools = [];
+            return;
+        }
+
+        _childTools = MessageParts
+            .Where(p => p.Type == ContentPartType.ToolCall
+                     && p.ToolCall?.ParentToolUseId == Tool.Id)
+            .Select(p => p.ToolCall!)
+            .ToList();
+
+        // Track when the first child tool appeared (for elapsed time during streaming)
+        if (_childTools.Count > 0 && _firstChildSeen == null)
+            _firstChildSeen = DateTime.UtcNow;
+    }
+
+    private string? FormatElapsed()
+    {
+        if (_firstChildSeen == null) return null;
+        var elapsed = DateTime.UtcNow - _firstChildSeen.Value;
+        var sec = (int)elapsed.TotalSeconds;
+        if (sec < 1) return null;
+        if (sec < 60) return $"{sec}초";
+        return $"{sec / 60}분 {sec % 60}초";
+    }
+
+    private void ParseInput()
+    {
+        _description = "";
+        _subagentType = "";
+        _prompt = "";
+        if (string.IsNullOrEmpty(Tool.Input)) return;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(Tool.Input);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("description", out var desc))
+                _description = desc.GetString() ?? "";
+            if (root.TryGetProperty("subagent_type", out var sat))
+                _subagentType = sat.GetString() ?? "";
+            if (root.TryGetProperty("prompt", out var prompt))
+                _prompt = prompt.GetString() ?? "";
+        }
+        catch (JsonException) { /* malformed input — keep defaults */ }
+    }
+
+    private void ParseOutput()
+    {
+        _resultText = "";
+        _toolUses = 0;
+        _durationMs = 0;
+        _resultLineCount = 0;
+        _collapsed = true;
+        if (string.IsNullOrEmpty(Tool.Output)) return;
+
+        var text = Tool.Output;
+
+        // Extract <usage>...</usage> metadata block
+        var usageMatch = Regex.Match(text, @"<usage>(.*?)</usage>", RegexOptions.Singleline);
+        if (usageMatch.Success)
+        {
+            var usage = usageMatch.Groups[1].Value;
+            if (Regex.Match(usage, @"tool_uses:\s*(\d+)") is { Success: true } tu)
+                int.TryParse(tu.Groups[1].Value, out _toolUses);
+            if (Regex.Match(usage, @"duration_ms:\s*(\d+)") is { Success: true } dm)
+                long.TryParse(dm.Groups[1].Value, out _durationMs);
+
+            text = text[..usageMatch.Index] + text[(usageMatch.Index + usageMatch.Length)..];
+        }
+
+        // Remove agentId line
+        text = Regex.Replace(text, @"^agentId:\s+\S+.*$", "", RegexOptions.Multiline);
+
+        _resultText = text.Trim();
+        _resultLineCount = _resultText.Split('\n').Length;
+        _collapsed = _resultLineCount > 15;
+    }
+
+    private static string? FormatDuration(long ms)
+    {
+        if (ms <= 0) return null;
+        var sec = ms / 1000;
+        if (sec < 60) return $"{sec}초";
+        return $"{sec / 60}분 {sec % 60}초";
+    }
+}

@@ -13,6 +13,7 @@ public class StreamProcessingContext
 
     // Tool tracking
     public ToolCall? CurrentToolCall { get; set; }
+    public string? CurrentParentToolUseId { get; set; }
     public Dictionary<int, string> ToolResultBlockMap { get; } = new();
 
     // Token accumulation

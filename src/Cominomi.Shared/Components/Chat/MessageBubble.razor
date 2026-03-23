@@ -74,6 +74,7 @@
             @if (Message.Parts.Count > 0)
             {
                 var groups = ContentGrouper.Group(Message.Parts, Message.IsStreaming);
+                <CascadingValue Value="Message.Parts" Name="MessageParts">
 
                 @if (Message.IsStreaming)
                 {
@@ -178,6 +179,7 @@
                         </div>
                     }
                 }
+                </CascadingValue>
             }
             else
             {

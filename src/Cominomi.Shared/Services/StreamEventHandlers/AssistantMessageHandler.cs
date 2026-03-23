@@ -20,6 +20,9 @@ public class AssistantMessageHandler : IStreamEventHandler
     {
         _chatState.SetPhase(StreamingPhase.WritingText, sessionId: ctx.Session.Id);
 
+        // Track parent context for subagent tool calls
+        ctx.CurrentParentToolUseId = evt.ParentToolUseId;
+
         if (evt.Message?.Content != null)
         {
             foreach (var block in evt.Message.Content)
@@ -41,7 +44,8 @@ public class AssistantMessageHandler : IStreamEventHandler
                         {
                             Id = block.Id ?? "",
                             Name = block.Name ?? "",
-                            IsComplete = true
+                            IsComplete = true,
+                            ParentToolUseId = evt.ParentToolUseId
                         };
                         if (block.Input.HasValue)
                         {
