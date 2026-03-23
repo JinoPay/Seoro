@@ -13,7 +13,6 @@ public interface IChatState : IDisposable
     // Navigation state
     Workspace? CurrentWorkspace { get; }
     Session? CurrentSession { get; }
-    bool IsSpotlightActive { get; }
     string? PendingMessage { get; }
     RightPanelMode RightPanel { get; }
 
@@ -68,7 +67,6 @@ public interface IChatState : IDisposable
     // Navigation & UI state
     void SetWorkspace(Workspace workspace);
     void SetSession(Session? session);
-    void SetSpotlightActive(bool active);
     void RequestCreateWorkspace();
     void SetPendingMessage(string? message);
     string? ConsumePendingMessage();

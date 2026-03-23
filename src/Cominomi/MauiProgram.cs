@@ -95,7 +95,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<IWorkspaceService, WorkspaceService>();
         builder.Services.AddSingleton<ISettingsService, SettingsService>();
         builder.Services.AddSingleton<IDependencyCheckService, DependencyCheckService>();
-        builder.Services.AddSingleton<ISpotlightService, SpotlightService>();
         builder.Services.AddSingleton<IFolderPickerService, FolderPickerService>();
         builder.Services.AddSingleton<IFilePickerService, FilePickerService>();
         builder.Services.AddSingleton<IAttachmentService, AttachmentService>();
@@ -136,17 +135,6 @@ public static class MauiProgram
 #endif
 
         var app = builder.Build();
-
-        // Recover from Spotlight crash if the app was terminated while Spotlight was active
-        try
-        {
-            var spotlight = app.Services.GetRequiredService<ISpotlightService>();
-            spotlight.RecoverAsync().GetAwaiter().GetResult();
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Spotlight crash recovery failed during startup");
-        }
 
         // Wire plugin execution engine and load enabled plugins
         try

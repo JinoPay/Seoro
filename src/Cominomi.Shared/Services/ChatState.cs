@@ -23,7 +23,6 @@ public class ChatState : IChatState
     // Navigation state
     public Workspace? CurrentWorkspace { get; private set; }
     public Session? CurrentSession { get; private set; }
-    public bool IsSpotlightActive { get; private set; }
     private volatile string? _pendingMessage;
     public string? PendingMessage => _pendingMessage;
     public RightPanelMode RightPanel { get; private set; }
@@ -197,12 +196,6 @@ public class ChatState : IChatState
         Tabs.Reset(session?.Title);
 
         _eventBus.Publish(new SessionChangedEvent(old, session));
-        NotifyStateChanged();
-    }
-
-    public void SetSpotlightActive(bool active)
-    {
-        IsSpotlightActive = active;
         NotifyStateChanged();
     }
 

@@ -93,7 +93,6 @@ public partial class App : Application
 			(_services.GetService<IClaudeService>() as IDisposable)?.Dispose();
 
 			// Dispose other services that manage resources
-			(_services.GetService<ISpotlightService>() as IDisposable)?.Dispose();
 			(_services.GetService<ChatState>() as IDisposable)?.Dispose();
 			(_services.GetService<SessionListDataService>() as IDisposable)?.Dispose();
 		}

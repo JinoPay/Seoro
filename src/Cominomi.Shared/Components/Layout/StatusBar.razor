@@ -1,7 +1,6 @@
 @inject IChatState ChatState
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mr-4">
-    <SpotlightToggle />
     @if (!string.IsNullOrEmpty(ChatState.CurrentSession?.Model))
     {
         <span style="font-size: 0.75rem; opacity: 0.5; font-weight: 500;">
