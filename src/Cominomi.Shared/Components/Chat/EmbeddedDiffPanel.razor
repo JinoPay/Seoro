@@ -26,27 +26,13 @@
         <div style="@(_activeTab == DiffPanelTab.Changes
             ? "flex:1;min-height:0;display:flex;flex-direction:column"
             : "display:none;height:0;overflow:hidden")">
-            <div class="embedded-diff-file-list">
-                <SidebarChanges OnFileSelected="HandleFileSelected"
-                                SelectedFilePath="@_selectedFile?.FilePath"
-                                OnChangesDetected="HandleChangesDetected" />
-            </div>
-
-            @if (_selectedFile != null)
-            {
-                <div class="embedded-diff-viewer">
-                    <FileDiffView Diff="_selectedFile" />
-                </div>
-            }
+            <SidebarChanges OnChangesDetected="HandleChangesDetected" />
         </div>
     </div>
 </div>
 
 @code {
-    [Parameter] public EventCallback<ChatInputMessage> OnSendMessage { get; set; }
-
     private DiffPanelTab _activeTab = DiffPanelTab.Explorer;
-    private FileDiff? _selectedFile;
     private string? _lastSessionId;
     private bool _hasAutoSwitched;
 
@@ -54,12 +40,6 @@
     {
         _lastSessionId = ChatState.CurrentSession?.Id;
         ChatState.OnChange += HandleStateChanged;
-    }
-
-    private void HandleFileSelected(FileDiff file)
-    {
-        _selectedFile = _selectedFile?.FilePath == file.FilePath ? null : file;
-        StateHasChanged();
     }
 
     private void HandleStateChanged()
@@ -70,7 +50,6 @@
             if (sessionId != _lastSessionId)
             {
                 _lastSessionId = sessionId;
-                _selectedFile = null;
                 _hasAutoSwitched = false;
                 _activeTab = DiffPanelTab.Explorer;
             }

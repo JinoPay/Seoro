@@ -62,6 +62,7 @@ public class TabManager
             ActiveTab = OpenTabs.ElementAtOrDefault(Math.Min(idx, OpenTabs.Count - 1))
                         ?? OpenTabs.FirstOrDefault();
         }
+        RecalculateDisambiguatedTitles();
         OnTabChanged?.Invoke();
     }
 
@@ -102,6 +103,7 @@ public class TabManager
         }
 
         EvictLruContent();
+        RecalculateDisambiguatedTitles();
         OnTabChanged?.Invoke();
     }
 
@@ -126,6 +128,7 @@ public class TabManager
             OpenTabs.Add(tab);
             ActiveTab = tab;
         }
+        RecalculateDisambiguatedTitles();
         OnTabChanged?.Invoke();
     }
 
@@ -152,6 +155,7 @@ public class TabManager
             OpenTabs.Add(tab);
             ActiveTab = tab;
         }
+        RecalculateDisambiguatedTitles();
         OnTabChanged?.Invoke();
     }
 
@@ -160,6 +164,50 @@ public class TabManager
         var chatTab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.Chat);
         if (chatTab != null) chatTab.Title = title;
         OnTabChanged?.Invoke();
+    }
+
+    private void RecalculateDisambiguatedTitles()
+    {
+        var fileTabs = OpenTabs.Where(t => t.Type is MainTabType.FileContent or MainTabType.FileDiff).ToList();
+
+        // Reset all
+        foreach (var tab in fileTabs)
+            tab.DisambiguatedTitle = null;
+
+        // Group by Title (filename) to find collisions
+        var groups = fileTabs.GroupBy(t => t.Title).Where(g => g.Count() > 1);
+
+        foreach (var group in groups)
+        {
+            var tabs = group.ToList();
+
+            // First: if same path but different types (FileContent vs FileDiff), prefix diff with [diff]
+            var byPath = tabs.GroupBy(t => t.FilePath).Where(g => g.Count() > 1);
+            foreach (var pathGroup in byPath)
+            {
+                foreach (var tab in pathGroup)
+                {
+                    if (tab.Type == MainTabType.FileDiff)
+                        tab.DisambiguatedTitle = $"[diff] {tab.Title}";
+                }
+            }
+
+            // Then: for tabs still colliding (same title, different paths), add parent dir
+            var stillColliding = tabs
+                .Where(t => t.DisambiguatedTitle == null)
+                .GroupBy(t => t.Title)
+                .Where(g => g.Count() > 1)
+                .SelectMany(g => g);
+
+            foreach (var tab in stillColliding)
+            {
+                if (tab.FilePath == null) continue;
+                var dir = Path.GetDirectoryName(tab.FilePath)?.Replace('\\', '/');
+                var lastDir = dir?.Split('/').LastOrDefault();
+                if (!string.IsNullOrEmpty(lastDir))
+                    tab.DisambiguatedTitle = $"{lastDir}/{tab.Title}";
+            }
+        }
     }
 
     private void EvictLruContent()

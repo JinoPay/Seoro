@@ -12,31 +12,7 @@
 @inject INotificationHistoryService NotificationHistory
 @implements IDisposable
 
-@{
-    bool _showDiffPanel = ChatState.CurrentSession != null
-                          && ChatState.CurrentSession.Status != SessionStatus.Pending;
-}
-
-@if (_showDiffPanel)
-{
-    <div class="chat-split-layout">
-        <div class="chat-split-left">
-            @ChatContentFragment
-        </div>
-
-        <PanelResizer PanelId="chatdiff" CurrentSize="_diffPanelWidth"
-                      MinSize="280" MaxSize="600" Reverse="true"
-                      OnResize="HandleDiffPanelResize" />
-
-        <div class="chat-split-right" style="width: @(_diffPanelWidth)px;">
-            <EmbeddedDiffPanel OnSendMessage="HandleSend" />
-        </div>
-    </div>
-}
-else
-{
-    @ChatContentFragment
-}
+@ChatContentFragment
 
 @code {
     private RenderFragment ChatContentFragment => __builder =>
@@ -134,10 +110,6 @@ else
     private LandingPage? _landingPage;
     private readonly Dictionary<string, (CancellationTokenSource Cts, Task Task)> _sessionTasks = new();
     private List<SkillChainStep>? _pendingChain;
-    private int _diffPanelWidth = 400;
-
-    private void HandleDiffPanelResize(int width) => _diffPanelWidth = width;
-
     protected override void OnInitialized()
     {
         ChatState.OnChange += HandleStateChanged;
