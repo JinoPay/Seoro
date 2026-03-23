@@ -3501,6 +3501,152 @@ html, body {
     padding-left: 0;
 }
 
+/* ===== AskUserQuestion Bar ===== */
+.askbar-panel {
+    display: flex;
+    flex-direction: column;
+    margin: 0 12px 8px;
+    border-radius: 12px;
+    background: rgba(137, 180, 250, 0.04);
+    border: 1px solid rgba(137, 180, 250, 0.15);
+    overflow: hidden;
+    animation: askbarSlideIn 0.3s ease-out;
+}
+
+@keyframes askbarSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.askbar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(137, 180, 250, 0.08);
+}
+
+.askbar-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.askbar-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(137, 180, 250, 0.12);
+    color: rgba(137, 180, 250, 0.9);
+    flex-shrink: 0;
+}
+
+.askbar-title {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: rgba(137, 180, 250, 0.9);
+    letter-spacing: 0.2px;
+}
+
+.askbar-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+}
+
+.askbar-question-header {
+    font-weight: 600;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    opacity: 0.9;
+}
+
+.askbar-question-text {
+    font-size: var(--text-sm);
+    opacity: 0.7;
+    line-height: 1.5;
+}
+
+.askbar-options {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.askbar-option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 8px 12px;
+    border: 1px solid rgba(137, 180, 250, 0.2);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.askbar-option:hover:not(.selected):not(.disabled) {
+    border-color: rgba(137, 180, 250, 0.5);
+    background: rgba(137, 180, 250, 0.06);
+}
+
+.askbar-option.selected {
+    border-color: var(--accent);
+    background: rgba(137, 180, 250, 0.1);
+    cursor: default;
+}
+
+.askbar-option.dimmed {
+    opacity: 0.45;
+}
+
+.askbar-option-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-sm);
+    font-weight: 500;
+}
+
+.askbar-option-desc {
+    font-size: var(--text-xs);
+    opacity: 0.6;
+    line-height: 1.4;
+}
+
+.askbar-progress {
+    font-size: var(--text-xs);
+    color: rgba(137, 180, 250, 0.6);
+    font-weight: 500;
+    margin-left: 4px;
+}
+
+.askbar-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 14px 12px;
+    border-top: 1px solid rgba(137, 180, 250, 0.08);
+}
+
+.askbar-submit-btn {
+    text-transform: none !important;
+    border-radius: 8px !important;
+    font-size: var(--text-sm) !important;
+    padding: 4px 16px !important;
+    min-width: 0 !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.2px !important;
+}
+
 /* ===== MCP Manager ===== */
 .mcp-table {
     font-size: var(--text-sm);

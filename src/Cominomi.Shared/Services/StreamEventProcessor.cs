@@ -129,7 +129,10 @@ public class StreamEventProcessor : IStreamEventProcessor
                 continue;
             if (part.ToolCall.Name.Equals("AskUserQuestion", StringComparison.OrdinalIgnoreCase)
                 || part.ToolCall.Name.Equals("ask_user_question", StringComparison.OrdinalIgnoreCase))
+            {
+                ctx.AskUserQuestionInput = part.ToolCall.Input;
                 return true;
+            }
         }
         return false;
     }

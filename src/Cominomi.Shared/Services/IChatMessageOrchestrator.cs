@@ -14,6 +14,9 @@ public class StreamResult
     public bool QuickResponseVisible { get; init; }
     public List<string> QuickResponseOptions { get; init; } = [];
 
+    /// <summary>Raw JSON input from the AskUserQuestion tool call for the bottom bar.</summary>
+    public string? AskUserQuestionInput { get; init; }
+
     /// <summary>Non-null when the streaming loop caught an exception that ChatView should surface via Snackbar.</summary>
     public string? ErrorMessage { get; init; }
 

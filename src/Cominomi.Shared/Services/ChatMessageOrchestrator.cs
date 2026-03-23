@@ -274,6 +274,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
             PlanReviewVisible = streamCtx.PlanReviewVisible,
             QuickResponseVisible = streamCtx.QuickResponseVisible,
             QuickResponseOptions = streamCtx.QuickResponseOptions,
+            AskUserQuestionInput = streamCtx.AskUserQuestionInput,
             ErrorMessage = errorMessage,
             WasCancelled = wasCancelled
         };

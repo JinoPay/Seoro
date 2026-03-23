@@ -37,6 +37,11 @@ public class StreamProcessingContext
     public bool PlanReviewVisible { get; set; }
     public bool QuickResponseVisible { get; set; }
     public List<string> QuickResponseOptions { get; set; } = [];
+
+    /// <summary>
+    /// Raw JSON input from the AskUserQuestion tool call, used to render the bottom bar.
+    /// </summary>
+    public string? AskUserQuestionInput { get; set; }
 }
 
 public interface IStreamEventProcessor
