@@ -87,13 +87,6 @@
                         {
                             var thinkingText = group.Parts[0].Text ?? "";
 
-                            if (!_autoExpandedThinking.Contains(idx))
-                            {
-                                _autoExpandedThinking.Add(idx);
-                                // 새 thinking 등장 시 이전에 수동 펼친 블록들 자동 접힘
-                                _thinkingExpanded.Clear();
-                            }
-
                             <div class="thinking-block @(_thinkingExpanded.Contains(idx) ? "expanded" : "") streaming"
                                  @onclick="@(() => ToggleThinkingBlock(idx))">
                                 <div class="thinking-header">
@@ -221,7 +214,21 @@
     private readonly Dictionary<string, string> _imageCache = new();
     private readonly HashSet<int> _intermediateExpanded = [];
     private readonly HashSet<int> _thinkingExpanded = [];
-    private readonly HashSet<int> _autoExpandedThinking = [];
+    private int _lastThinkingGroupCount;
+
+    protected override void OnParametersSet()
+    {
+        if (!Message.IsStreaming) return;
+
+        var groups = ContentGrouper.Group(Message.Parts, true);
+        var thinkingCount = groups.Count(g => g.Type == ContentGroupType.Thinking);
+
+        if (thinkingCount > _lastThinkingGroupCount)
+        {
+            _thinkingExpanded.Clear();
+            _lastThinkingGroupCount = thinkingCount;
+        }
+    }
 
     private bool HasActivitySummary()
     {
@@ -234,8 +241,6 @@
     {
         if (!_thinkingExpanded.Remove(index))
             _thinkingExpanded.Add(index);
-        // If manually toggled, remove from auto-expanded tracking
-        _autoExpandedThinking.Remove(index);
     }
 
     private void ToggleIntermediate(int index)

@@ -44,7 +44,7 @@
                     <div class="message-container">
                         @foreach (var message in ChatState.CurrentSession.Messages)
                         {
-                            <MessageBubble Message="message" />
+                            <MessageBubble @key="message.Id" Message="message" />
                         }
                     </div>
                 }
