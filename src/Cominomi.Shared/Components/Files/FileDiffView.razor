@@ -1,4 +1,5 @@
 @using Cominomi.Shared.Models
+@inject IJSRuntime JS
 
 <div class="filediff-view">
     <div class="filediff-header">
@@ -11,7 +12,7 @@
         </div>
     </div>
 
-    <div class="filediff-content">
+    <div id="@_elementId" class="filediff-content">
         @if (string.IsNullOrWhiteSpace(Diff.UnifiedDiff))
         {
             <div class="filediff-empty">
@@ -23,7 +24,10 @@
         {
             @foreach (var line in Diff.UnifiedDiff.Split('\n'))
             {
-                <div class="diff-line @GetLineClass(line)">@line</div>
+                var cls = GetLineClass(line);
+                var prefix = GetPrefix(line);
+                var codeText = GetCodeText(line);
+                <div class="diff-line @cls"><span class="diff-prefix">@prefix</span><span class="diff-code">@codeText</span></div>
             }
         }
     </div>
@@ -32,6 +36,38 @@
 @code {
     [Parameter, EditorRequired]
     public FileDiff Diff { get; set; } = default!;
+
+    private string _elementId = "";
+    private string _hljsLang = "";
+    private bool _needsHighlight;
+    private string? _lastFilePath;
+
+    protected override void OnParametersSet()
+    {
+        var filePath = Diff.FilePath;
+        if (_lastFilePath == filePath) return;
+        _lastFilePath = filePath;
+
+        _elementId = $"diff-{filePath.GetHashCode():x8}";
+        _hljsLang = GetHljsLanguage(filePath);
+        _needsHighlight = !string.IsNullOrWhiteSpace(Diff.UnifiedDiff) && _hljsLang.Length > 0;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_needsHighlight)
+        {
+            _needsHighlight = false;
+            try
+            {
+                await JS.InvokeVoidAsync("highlightDiffBlock", _elementId, _hljsLang);
+            }
+            catch
+            {
+                // JS interop may fail during disposal
+            }
+        }
+    }
 
     private static string GetFileIcon(FileChangeType type) => type switch
     {
@@ -55,5 +91,61 @@
         if (line.StartsWith('+') && !line.StartsWith("+++")) return "addition";
         if (line.StartsWith('-') && !line.StartsWith("---")) return "deletion";
         return "";
+    }
+
+    private static string GetPrefix(string line)
+    {
+        if (line.Length == 0) return "";
+        if (line.StartsWith("@@")) return "";
+        if (line.StartsWith('+') || line.StartsWith('-') || line.StartsWith(' '))
+            return line[..1];
+        return "";
+    }
+
+    private static string GetCodeText(string line)
+    {
+        if (line.Length == 0) return "";
+        if (line.StartsWith("@@")) return line;
+        if (line.StartsWith('+') || line.StartsWith('-') || line.StartsWith(' '))
+            return line[1..];
+        return line;
+    }
+
+    private static string GetHljsLanguage(string filePath)
+    {
+        var ext = Path.GetExtension(filePath).ToLowerInvariant();
+        return ext switch
+        {
+            ".cs" => "csharp",
+            ".js" or ".jsx" => "javascript",
+            ".ts" or ".tsx" => "typescript",
+            ".py" => "python",
+            ".rs" => "rust",
+            ".go" => "go",
+            ".java" => "java",
+            ".html" or ".razor" => "xml",
+            ".css" or ".scss" => "css",
+            ".json" => "json",
+            ".yaml" or ".yml" => "yaml",
+            ".xml" or ".csproj" or ".sln" => "xml",
+            ".sh" or ".bash" or ".zsh" => "bash",
+            ".sql" => "sql",
+            ".rb" => "ruby",
+            ".swift" => "swift",
+            ".kt" => "kotlin",
+            ".dart" => "dart",
+            ".php" => "php",
+            ".dockerfile" => "dockerfile",
+            ".toml" or ".ini" or ".cfg" => "ini",
+            ".c" or ".cpp" or ".h" or ".hpp" => "cpp",
+            ".m" or ".mm" => "objectivec",
+            ".r" => "r",
+            ".lua" => "lua",
+            ".pl" => "perl",
+            ".makefile" => "makefile",
+            ".graphql" => "graphql",
+            ".proto" => "protobuf",
+            _ => ""
+        };
     }
 }

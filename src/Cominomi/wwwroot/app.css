@@ -799,7 +799,8 @@ html *::after {
 .filediff-view {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
 }
 
@@ -2289,18 +2290,39 @@ html *::after {
 }
 
 .diff-line {
+    display: flex;
     white-space: pre;
     padding: 0 var(--space-2);
 }
 
+.diff-line .diff-prefix {
+    flex-shrink: 0;
+    width: 1ch;
+    user-select: none;
+    opacity: 0.5;
+}
+
+.diff-line .diff-code {
+    white-space: pre;
+    min-width: 0;
+}
+
 .diff-line.addition {
     background: var(--color-success-bg);
+}
+
+.diff-line.addition .diff-prefix {
     color: var(--color-success);
+    opacity: 1;
 }
 
 .diff-line.deletion {
     background: var(--color-error-bg);
+}
+
+.diff-line.deletion .diff-prefix {
     color: var(--color-error);
+    opacity: 1;
 }
 
 .diff-line.hunk {

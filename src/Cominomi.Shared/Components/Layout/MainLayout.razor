@@ -79,20 +79,21 @@
                     {
                         @if (ChatState.Tabs.ActiveTab.ContentEvicted)
                         {
-                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; opacity: 0.5;">
+                            <div style="display: flex; align-items: center; justify-content: center; flex:1; opacity: 0.5;">
                                 <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
                                 <span>Reloading…</span>
                             </div>
                         }
                         else
                         {
-                            <FileContentView FilePath="ChatState.Tabs.ActiveTab.FilePath"
+                            <FileContentView @key="ChatState.Tabs.ActiveTab.Id"
+                                             FilePath="@ChatState.Tabs.ActiveTab.FilePath"
                                              Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")" />
                         }
                     }
                     else if (activeType == MainTabType.FileDiff && ChatState.Tabs.ActiveTab?.DiffData != null)
                     {
-                        <FileDiffView Diff="ChatState.Tabs.ActiveTab.DiffData" />
+                        <FileDiffView @key="ChatState.Tabs.ActiveTab.Id" Diff="ChatState.Tabs.ActiveTab.DiffData" />
                     }
                 </div>
             </div>
