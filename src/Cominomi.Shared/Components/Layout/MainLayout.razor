@@ -4,6 +4,7 @@
 @inject IGitService GitService
 @inject IJSRuntime JS
 @inject IThemeService ThemeService
+@inject ISettingsService SettingsService
 @inject IDependencyCheckService DependencyCheckService
 @inject ILogger<MainLayout> Logger
 @implements IAsyncDisposable
@@ -125,6 +126,7 @@
     {
         ChatState.OnChange += HandleStateChanged;
         ThemeService.OnThemeChanged += HandleThemeChanged;
+        SettingsService.OnSettingsChanged += HandleUiScaleChanged;
 
         try
         {
@@ -152,6 +154,13 @@
 
             _panelShortcutRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("registerPanelShortcuts", _panelShortcutRef);
+
+            // Apply UI scale from persisted settings
+            var settings = await SettingsService.LoadAsync();
+            double scale = settings.UiScale;
+            if (scale == 0)
+                scale = await JS.InvokeAsync<double>("getDefaultUiScale");
+            await JS.InvokeVoidAsync("setUiScale", scale);
         }
     }
 
@@ -178,6 +187,24 @@
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"HandleThemeChanged failed: {ex}");
+            }
+        });
+    }
+
+    private void HandleUiScaleChanged(AppSettings settings)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                double scale = settings.UiScale;
+                if (scale == 0)
+                    scale = await JS.InvokeAsync<double>("getDefaultUiScale");
+                await JS.InvokeVoidAsync("setUiScale", scale);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"HandleUiScaleChanged failed: {ex}");
             }
         });
     }
@@ -225,6 +252,7 @@
     {
         ChatState.OnChange -= HandleStateChanged;
         ThemeService.OnThemeChanged -= HandleThemeChanged;
+        SettingsService.OnSettingsChanged -= HandleUiScaleChanged;
         try
         {
             await JS.InvokeVoidAsync("unregisterPanelShortcuts");

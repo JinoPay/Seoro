@@ -11,6 +11,18 @@
     <link rel="stylesheet" href="lib/highlightjs/github-dark.min.css" />
     <link rel="stylesheet" href="Cominomi.styles.css" />
     <link rel="icon" href="data:,">
+    <script>
+        // Apply cached UI zoom before first paint to prevent flash
+        (function() {
+            var zoom = localStorage.getItem('cominomi-ui-zoom');
+            if (zoom) {
+                document.documentElement.style.zoom = zoom;
+            } else {
+                var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                document.documentElement.style.zoom = isMac ? '1.1' : '1';
+            }
+        })();
+    </script>
 </head>
 
 <body>
@@ -49,6 +61,16 @@
 
         window.setTheme = function(theme) {
             document.documentElement.setAttribute('data-theme', theme);
+        };
+
+        window.setUiScale = function(scale) {
+            document.documentElement.style.zoom = scale;
+            localStorage.setItem('cominomi-ui-zoom', scale);
+        };
+
+        window.getDefaultUiScale = function() {
+            var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            return isMac ? 1.1 : 1.0;
         };
 
         window.scrollToBottom = function(elementId) {

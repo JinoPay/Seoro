@@ -7,6 +7,7 @@ public class AppSettings
     public int SchemaVersion { get; init; } = 1;
     public string DefaultModel { get; set; } = ModelDefinitions.Default.Id;
     public string Theme { get; set; } = "dark";
+    public double UiScale { get; set; }  // 0 = auto (macOS: 1.1, Windows: 1.0)
     public string? ClaudePath { get; set; }
     public string? GitPath { get; set; }
     public string? DefaultCloneDirectory { get; set; }

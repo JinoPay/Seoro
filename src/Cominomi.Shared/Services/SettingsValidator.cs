@@ -44,6 +44,10 @@ public static class SettingsValidator
         if (settings.DefaultMaxBudgetUsd is < 0)
             issues.Add($"DefaultMaxBudgetUsd must be non-negative, got {settings.DefaultMaxBudgetUsd}");
 
+        // UI scale
+        if (settings.UiScale != 0 && (settings.UiScale < 0.5 || settings.UiScale > 2.0))
+            issues.Add($"UiScale must be 0 (auto) or between 0.5 and 2.0, got {settings.UiScale}");
+
         // Path validation (only if set)
         ValidatePath(settings.ClaudePath, "ClaudePath", issues);
         ValidatePath(settings.GitPath, "GitPath", issues);
@@ -73,6 +77,10 @@ public static class SettingsValidator
         settings.HookTimeoutSeconds = Math.Max(1, settings.HookTimeoutSeconds);
         settings.SummarizationTimeoutSeconds = Math.Max(1, settings.SummarizationTimeoutSeconds);
         settings.VersionCheckTimeoutSeconds = Math.Max(1, settings.VersionCheckTimeoutSeconds);
+        // Clamp UI scale
+        if (settings.UiScale != 0)
+            settings.UiScale = Math.Clamp(settings.UiScale, 0.5, 2.0);
+
         // Clamp optional numeric values
         if (settings.DefaultMaxTurns is < 1)
             settings.DefaultMaxTurns = null;

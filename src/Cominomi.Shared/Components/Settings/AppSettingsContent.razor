@@ -2,6 +2,7 @@
 @inject IFolderPickerService FolderPickerService
 @inject IClaudeService ClaudeService
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 <div class="settings-content-area">
     <div class="settings-content-header">
@@ -24,6 +25,39 @@
                     <MudSelectItem T="string" Value="@("light")">라이트</MudSelectItem>
                     <MudSelectItem T="string" Value="@("system")">시스템</MudSelectItem>
                 </MudSelect>
+
+                <div class="settings-group-title" style="margin-top: 16px;">화면 배율</div>
+
+                <MudStack Spacing="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudSlider T="double"
+                                   Value="@(_settings.UiScale == 0 ? _autoDefault : _settings.UiScale)"
+                                   ValueChanged="@(v => { _settings.UiScale = v; _ = ApplyUiScalePreview(v); })"
+                                   Min="0.8" Max="1.5" Step="0.05"
+                                   Color="Color.Primary"
+                                   Style="flex: 1;" />
+                        <MudText Typo="Typo.body2" Style="min-width: 48px; text-align: right;">
+                            @((_settings.UiScale == 0 ? _autoDefault : _settings.UiScale).ToString("P0"))
+                        </MudText>
+                    </MudStack>
+
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+                                   OnClick="@(() => { _settings.UiScale = 0; _ = ApplyUiScalePreview(_autoDefault); })"
+                                   Style="text-transform: none;">
+                            자동 (플랫폼 기본값)
+                        </MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+                                   OnClick="@(() => { _settings.UiScale = 1.0; _ = ApplyUiScalePreview(1.0); })"
+                                   Style="text-transform: none;">
+                            100%
+                        </MudButton>
+                    </MudStack>
+
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        macOS 기본값: 110%, Windows 기본값: 100%. 슬라이더 조작 시 바로 미리보기됩니다.
+                    </MudText>
+                </MudStack>
 
                 <div class="settings-group-title" style="margin-top: 16px;">알림</div>
 
@@ -258,10 +292,12 @@
     private bool _mcpManagerOpen;
     private bool _slashCommandsOpen;
     private bool _pluginManagerOpen;
+    private double _autoDefault = 1.0;
 
     protected override async Task OnInitializedAsync()
     {
         _settings = await SettingsService.LoadAsync();
+        try { _autoDefault = await JS.InvokeAsync<double>("getDefaultUiScale"); } catch { }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -314,6 +350,11 @@
     private void RemoveEnvVar(string key)
     {
         _settings.EnvironmentVariables.Remove(key);
+    }
+
+    private async Task ApplyUiScalePreview(double scale)
+    {
+        try { await JS.InvokeVoidAsync("setUiScale", scale); } catch { }
     }
 
     private async Task Save()
