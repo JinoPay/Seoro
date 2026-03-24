@@ -31,6 +31,7 @@ public static class Strings
     public static string Snackbar_StreamingError(string error) => Get(nameof(Snackbar_StreamingError), error);
     public static string Snackbar_IssueLinked(int number) => Get(nameof(Snackbar_IssueLinked), number);
     public static string Snackbar_IssueCreated(int number) => Get(nameof(Snackbar_IssueCreated), number);
+    public static string Snackbar_ClaudeUpdateRequired(string current, string required) => Get(nameof(Snackbar_ClaudeUpdateRequired), current, required);
 
     // ── Tool Display ──
 

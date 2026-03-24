@@ -6,6 +6,8 @@
 @inject IThemeService ThemeService
 @inject ISettingsService SettingsService
 @inject IDependencyCheckService DependencyCheckService
+@inject IClaudeService ClaudeService
+@inject ISnackbar Snackbar
 @inject ILogger<MainLayout> Logger
 @implements IAsyncDisposable
 
@@ -143,6 +145,10 @@
             {
                 _setupOpen = true;
             }
+            else
+            {
+                _ = CheckClaudeVersionAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -212,6 +218,27 @@
                 System.Diagnostics.Debug.WriteLine($"HandleUiScaleChanged failed: {ex}");
             }
         });
+    }
+
+    private async Task CheckClaudeVersionAsync()
+    {
+        try
+        {
+            var version = await ClaudeService.GetDetectedVersionAsync();
+            if (VersionComparer.IsOutdated(version, CominomiConstants.RequiredClaudeVersion))
+            {
+                await InvokeAsync(() =>
+                {
+                    Snackbar.ClaudeUpdateRequired(
+                        version ?? "알 수 없음",
+                        CominomiConstants.RequiredClaudeVersion);
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Version check failed silently");
+        }
     }
 
     private void HandleStateChanged()
