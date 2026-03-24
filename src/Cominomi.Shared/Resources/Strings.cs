@@ -32,6 +32,10 @@ public static class Strings
     public static string Snackbar_IssueLinked(int number) => Get(nameof(Snackbar_IssueLinked), number);
     public static string Snackbar_IssueCreated(int number) => Get(nameof(Snackbar_IssueCreated), number);
     public static string Snackbar_ClaudeUpdateRequired(string current, string required) => Get(nameof(Snackbar_ClaudeUpdateRequired), current, required);
+    public static string Snackbar_AppUpdateAvailable(string version) => Get(nameof(Snackbar_AppUpdateAvailable), version);
+    public static string Snackbar_AppUpdateReady => Get(nameof(Snackbar_AppUpdateReady));
+    public static string Snackbar_AppUpdateAction => Get(nameof(Snackbar_AppUpdateAction));
+    public static string Snackbar_AppUpdateRestartAction => Get(nameof(Snackbar_AppUpdateRestartAction));
 
     // ── Tool Display ──
 

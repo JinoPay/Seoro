@@ -8,6 +8,13 @@
         "ilspycmd"
       ],
       "rollForward": false
+    },
+    "vpk": {
+      "version": "0.0.1298",
+      "commands": [
+        "vpk"
+      ],
+      "rollForward": false
     }
   }
 }

@@ -8,6 +8,7 @@
 @inject IDependencyCheckService DependencyCheckService
 @inject IClaudeService ClaudeService
 @inject ISnackbar Snackbar
+@inject IUpdateService UpdateService
 @inject ILogger<MainLayout> Logger
 @implements IAsyncDisposable
 
@@ -148,6 +149,7 @@
             else
             {
                 _ = CheckClaudeVersionAsync();
+                _ = CheckAppUpdateAsync();
             }
         }
         catch (Exception ex)
@@ -238,6 +240,38 @@
         catch (Exception ex)
         {
             Logger.LogDebug(ex, "Version check failed silently");
+        }
+    }
+
+    private async Task CheckAppUpdateAsync()
+    {
+        try
+        {
+            var update = await UpdateService.CheckForUpdateAsync();
+            if (update == null) return;
+
+            await InvokeAsync(() =>
+            {
+                Snackbar.AppUpdateAvailable(update.TargetVersion, async () =>
+                {
+                    try
+                    {
+                        await UpdateService.DownloadUpdateAsync();
+                        await InvokeAsync(() =>
+                        {
+                            Snackbar.AppUpdateReady(() => UpdateService.ApplyUpdateAndRestart());
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Update download failed");
+                    }
+                });
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "App update check failed silently");
         }
     }
 

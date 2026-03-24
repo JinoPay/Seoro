@@ -1,5 +1,6 @@
 using Microsoft.UI.Dispatching;
 using Microsoft.Windows.AppLifecycle;
+using Velopack;
 
 namespace Cominomi.WinUI;
 
@@ -8,6 +9,8 @@ public static class Program
     [STAThread]
     static void Main(string[] args)
     {
+        VelopackApp.Build().Run();
+
         WinRT.ComWrappersSupport.InitializeComWrappers();
 
         if (HandleSingleInstance())

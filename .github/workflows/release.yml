@@ -1,0 +1,131 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Publish
+        run: >
+          dotnet publish src/Cominomi/Cominomi.csproj
+          -c Release
+          -f net10.0-windows10.0.19041.0
+          -r win-x64
+          --self-contained
+          -o publish/win
+
+      - name: Download previous release (for delta updates)
+        run: >
+          dotnet vpk download github
+          --repoUrl https://github.com/${{ github.repository }}
+          --channel win
+          --outputDir releases/win
+          --token ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Pack with Velopack
+        run: >
+          dotnet vpk pack
+          --packId Cominomi
+          --packVersion ${{ steps.version.outputs.VERSION }}
+          --packDir publish/win
+          --mainExe Cominomi.exe
+          --channel win
+          --outputDir releases/win
+          --icon src/Cominomi/Resources/AppIcon/appicon.svg
+
+      # Code signing placeholder:
+      # --signParams "/a /fd sha256 /tr http://timestamp.digicert.com /td sha256"
+
+      - name: Upload to GitHub Release
+        run: >
+          dotnet vpk upload github
+          --repoUrl https://github.com/${{ github.repository }}
+          --tag ${{ github.ref_name }}
+          --channel win
+          --outputDir releases/win
+          --token ${{ secrets.GITHUB_TOKEN }}
+
+  release-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Publish (arm64)
+        run: >
+          dotnet publish src/Cominomi/Cominomi.csproj
+          -c Release
+          -f net10.0-maccatalyst
+          -r maccatalyst-arm64
+          --self-contained
+          -o publish/mac
+
+      - name: Download previous release (for delta updates)
+        run: >
+          dotnet vpk download github
+          --repoUrl https://github.com/${{ github.repository }}
+          --channel osx
+          --outputDir releases/mac
+          --token ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Pack with Velopack
+        run: >
+          dotnet vpk pack
+          --packId Cominomi
+          --packVersion ${{ steps.version.outputs.VERSION }}
+          --packDir publish/mac
+          --mainExe Cominomi
+          --channel osx
+          --outputDir releases/mac
+
+      # Code signing placeholder:
+      # --signAppIdentity "Developer ID Application: Company Name (TEAM_ID)"
+      # --signInstallIdentity "Developer ID Installer: Company Name (TEAM_ID)"
+      # --notaryProfile "MyNotaryProfile"
+
+      - name: Upload to GitHub Release
+        run: >
+          dotnet vpk upload github
+          --repoUrl https://github.com/${{ github.repository }}
+          --tag ${{ github.ref_name }}
+          --channel osx
+          --outputDir releases/mac
+          --token ${{ secrets.GITHUB_TOKEN }}

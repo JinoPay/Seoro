@@ -48,6 +48,12 @@
   <data name="Snackbar_IssueLinked" xml:space="preserve"><value>Issue #{0} linked</value></data>
   <data name="Snackbar_IssueCreated" xml:space="preserve"><value>Issue #{0} created</value></data>
 
+  <data name="Snackbar_ClaudeUpdateRequired" xml:space="preserve"><value>Claude Code update required (current: {0}, recommended: {1})</value></data>
+  <data name="Snackbar_AppUpdateAvailable" xml:space="preserve"><value>Version {0} available</value></data>
+  <data name="Snackbar_AppUpdateReady" xml:space="preserve"><value>Update downloaded. Restart to apply.</value></data>
+  <data name="Snackbar_AppUpdateAction" xml:space="preserve"><value>Update</value></data>
+  <data name="Snackbar_AppUpdateRestartAction" xml:space="preserve"><value>Restart</value></data>
+
   <!-- ToolDisplayHelper -->
   <data name="Tool_FilesRead" xml:space="preserve"><value>{0} file(s) read</value></data>
   <data name="Tool_FileWrittenSingle" xml:space="preserve"><value>1 file written</value></data>

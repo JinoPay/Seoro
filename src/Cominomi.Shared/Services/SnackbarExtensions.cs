@@ -20,4 +20,20 @@ public static class SnackbarExtensions
     public static void ClaudeUpdateRequired(this ISnackbar snackbar, string current, string required)
         => snackbar.Add(Strings.Snackbar_ClaudeUpdateRequired(current, required), Severity.Warning,
             opt => opt.VisibleStateDuration = 8000);
+
+    public static void AppUpdateAvailable(this ISnackbar snackbar, string version, Action onUpdate)
+        => snackbar.Add(Strings.Snackbar_AppUpdateAvailable(version), Severity.Info, opt =>
+        {
+            opt.VisibleStateDuration = 15000;
+            opt.Action = Strings.Snackbar_AppUpdateAction;
+            opt.OnClick = _ => { onUpdate(); return Task.CompletedTask; };
+        });
+
+    public static void AppUpdateReady(this ISnackbar snackbar, Action onRestart)
+        => snackbar.Add(Strings.Snackbar_AppUpdateReady, Severity.Success, opt =>
+        {
+            opt.VisibleStateDuration = 30000;
+            opt.Action = Strings.Snackbar_AppUpdateRestartAction;
+            opt.OnClick = _ => { onRestart(); return Task.CompletedTask; };
+        });
 }

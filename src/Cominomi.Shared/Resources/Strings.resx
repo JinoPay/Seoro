@@ -48,6 +48,10 @@
   <data name="Snackbar_IssueLinked" xml:space="preserve"><value>Issue #{0} 연결됨</value></data>
   <data name="Snackbar_IssueCreated" xml:space="preserve"><value>Issue #{0} 생성 완료</value></data>
   <data name="Snackbar_ClaudeUpdateRequired" xml:space="preserve"><value>Claude Code 업데이트 필요 (현재: {0}, 권장: {1})</value></data>
+  <data name="Snackbar_AppUpdateAvailable" xml:space="preserve"><value>새 버전 {0} 사용 가능</value></data>
+  <data name="Snackbar_AppUpdateReady" xml:space="preserve"><value>업데이트 다운로드 완료. 재시작하여 적용합니다.</value></data>
+  <data name="Snackbar_AppUpdateAction" xml:space="preserve"><value>업데이트</value></data>
+  <data name="Snackbar_AppUpdateRestartAction" xml:space="preserve"><value>재시작</value></data>
 
   <!-- ToolDisplayHelper -->
   <data name="Tool_FilesRead" xml:space="preserve"><value>{0}개 파일 읽음</value></data>
