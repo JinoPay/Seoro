@@ -39,7 +39,7 @@
         </div>
 
         <div class="sidebar-changes-list">
-            @foreach (var file in _diff.Files)
+            @foreach (var file in _diff.Files.OrderBy(f => f.FilePath, StringComparer.OrdinalIgnoreCase))
             {
                 <div @key="file.FilePath" class="sidebar-file-item file" @onclick="@(() => OpenFileDiff(file))">
                     <MudIcon Icon="@GetFileIcon(file.ChangeType)" Size="Size.Small"
