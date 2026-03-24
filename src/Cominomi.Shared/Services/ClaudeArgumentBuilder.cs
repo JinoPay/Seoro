@@ -6,6 +6,16 @@ namespace Cominomi.Shared.Services;
 
 public static class ClaudeArgumentBuilder
 {
+    /// <summary>
+    /// Tools that require explicit --allowedTools to be usable,
+    /// even when --dangerously-skip-permissions is set.
+    /// </summary>
+    private static readonly string[] DefaultAllowedTools =
+    [
+        "WebFetch",
+        "WebSearch"
+    ];
+
     public static string Build(
         string baseArgs,
         string model,
@@ -90,7 +100,9 @@ public static class ClaudeArgumentBuilder
                 sb.Append($" --add-dir \"{dir}\"");
         }
 
-        // Tool restrictions
+        // Tool restrictions: always include default allowed tools, then caller-specified ones
+        foreach (var tool in DefaultAllowedTools)
+            sb.Append($" --allowedTools \"{tool}\"");
         if (allowedTools is { Count: > 0 })
         {
             foreach (var tool in allowedTools)
