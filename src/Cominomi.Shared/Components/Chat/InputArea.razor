@@ -41,7 +41,9 @@
                       HasAttachments="@(_pendingAttachments.Count > 0)"
                       OnSend="Send"
                       OnCancel="@(() => OnCancel.InvokeAsync())"
-                      OnPickFiles="PickFiles" />
+                      OnPickFiles="PickFiles"
+                      PlanFilePath="@PlanFilePath"
+                      PlanContent="@PlanContent" />
     </div>
 </div>
 
@@ -58,6 +60,9 @@
     [Parameter] public string EffortLevel { get; set; } = "auto";
     [Parameter] public EventCallback<string> EffortLevelChanged { get; set; }
     [Parameter] public Session? CurrentSession { get; set; }
+    [Parameter] public string? PlanFilePath { get; set; }
+    [Parameter] public string? PlanContent { get; set; }
+    [Parameter] public bool IsPlanReviewVisible { get; set; }
 
     private string _inputText = string.Empty;
     private List<PendingAttachment> _pendingAttachments = [];
@@ -79,6 +84,9 @@
     private string _prevModel = string.Empty;
     private string? _prevResolvedModel;
     private string _prevEffortLevel = "auto";
+    private string? _prevPlanFilePath;
+    private string? _prevPlanContent;
+    private bool _prevIsPlanReviewVisible;
     private bool _forceRender;
     private bool _isComposing;
 
@@ -102,7 +110,10 @@
             _prevPermissionMode != PermissionMode ||
             _prevModel != Model ||
             _prevResolvedModel != ResolvedModel ||
-            _prevEffortLevel != EffortLevel)
+            _prevEffortLevel != EffortLevel ||
+            _prevPlanFilePath != PlanFilePath ||
+            _prevPlanContent != PlanContent ||
+            _prevIsPlanReviewVisible != IsPlanReviewVisible)
         {
             _prevIsStreaming = IsStreaming;
             _prevDisabled = Disabled;
@@ -110,6 +121,9 @@
             _prevModel = Model;
             _prevResolvedModel = ResolvedModel;
             _prevEffortLevel = EffortLevel;
+            _prevPlanFilePath = PlanFilePath;
+            _prevPlanContent = PlanContent;
+            _prevIsPlanReviewVisible = IsPlanReviewVisible;
             _forceRender = true;
         }
     }
@@ -237,6 +251,7 @@
     {
         if (Disabled) return "먼저 세션을 선택하거나 만드세요...";
         if (IsStreaming) return "Claude가 응답 중...";
+        if (IsPlanReviewVisible) return "플랜에 대한 피드백을 입력하세요...";
         return _currentPermissionMode switch
         {
             "plan" => "플랜 모드: Claude가 읽기와 조사만 합니다...",

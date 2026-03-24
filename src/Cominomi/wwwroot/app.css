@@ -2120,11 +2120,6 @@ html *::after {
     flex-shrink: 0;
 }
 
-.plan-review-btn-advise {
-    border-color: var(--accent-dim) !important;
-    color: var(--accent) !important;
-}
-
 .plan-review-btn-reject {
     margin-left: auto;
     opacity: 0.6;
@@ -2132,21 +2127,6 @@ html *::after {
 
 .plan-review-btn-reject:hover {
     opacity: 1;
-}
-
-.plan-review-advice {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px 14px 12px;
-    border-top: 1px solid var(--color-warning-bg);
-}
-
-.plan-review-advice-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
 }
 
 /* ===== Thinking Block ===== */

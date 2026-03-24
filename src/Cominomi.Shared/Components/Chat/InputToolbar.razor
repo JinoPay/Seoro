@@ -26,6 +26,16 @@
     </div>
 
     <div class="input-toolbar-right">
+        @if (!string.IsNullOrEmpty(PlanFilePath))
+        {
+            <MudTooltip Text="플랜 보기">
+                <MudIconButton Icon="@Icons.Material.Filled.Map"
+                               Color="Color.Warning"
+                               Size="Size.Small"
+                               OnClick="@(() => _planViewerOpen = true)" />
+            </MudTooltip>
+        }
+
         <ModelSelector Model="Model" ResolvedModel="ResolvedModel"
                        OnModelChanged="OnModelChanged"
                        Disabled="Disabled" IsStreaming="IsStreaming" />
@@ -55,6 +65,11 @@
     </div>
 </div>
 
+<PlanViewerDialog IsOpen="_planViewerOpen"
+                  OnVisibleChanged="@(v => _planViewerOpen = v)"
+                  PlanContent="@PlanContent"
+                  PlanFilePath="@PlanFilePath" />
+
 @code {
     [Parameter] public string PermissionMode { get; set; } = "bypassAll";
     [Parameter] public EventCallback<string> OnPermissionModeChanged { get; set; }
@@ -70,6 +85,10 @@
     [Parameter] public EventCallback OnSend { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback OnPickFiles { get; set; }
+    [Parameter] public string? PlanFilePath { get; set; }
+    [Parameter] public string? PlanContent { get; set; }
+
+    private bool _planViewerOpen;
 
     private static readonly string[] PermissionModes = ["bypassAll", "plan"];
     private static readonly string[] EffortLevels = ["auto", "max"];

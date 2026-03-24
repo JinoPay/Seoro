@@ -49,12 +49,6 @@
                        Class="plan-review-btn plan-review-btn-approve">
                 승인 및 실행
             </MudButton>
-            <MudButton Size="Size.Small" Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.EditNote"
-                       OnClick="ToggleAdviceInput"
-                       Class="plan-review-btn plan-review-btn-advise">
-                피드백
-            </MudButton>
             <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
                        StartIcon="@Icons.Material.Filled.Close"
                        OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Reject))"
@@ -63,32 +57,6 @@
             </MudButton>
         </div>
 
-        @* Advice input *@
-        @if (_showAdviceInput)
-        {
-            <div class="plan-review-advice">
-                <MudTextField T="string" @bind-Value="_adviceText"
-                              Placeholder="플랜에 대한 피드백을 입력하세요..."
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Lines="2"
-                              Style="font-size: var(--text-sm); flex: 1;"
-                              OnKeyDown="HandleAdviceKeyDown" />
-                <div class="plan-review-advice-actions">
-                    <MudButton Size="Size.Small" Variant="Variant.Text"
-                               OnClick="ToggleAdviceInput"
-                               Style="text-transform: none; font-size: var(--text-sm); opacity: 0.6;">
-                        취소
-                    </MudButton>
-                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
-                               Disabled="@string.IsNullOrWhiteSpace(_adviceText)"
-                               OnClick="SubmitAdvice"
-                               Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 16px; min-width: 0;">
-                        보내기
-                    </MudButton>
-                </div>
-            </div>
-        }
     </div>
 }
 
@@ -97,11 +65,8 @@
     [Parameter] public string? PlanContent { get; set; }
     [Parameter] public string? PlanFilePath { get; set; }
     [Parameter] public EventCallback<PlanReviewAction> OnAction { get; set; }
-    [Parameter] public EventCallback<string> OnAdvice { get; set; }
 
     private bool _showPreview = true;
-    private bool _showAdviceInput;
-    private string _adviceText = "";
 
     private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
@@ -109,26 +74,4 @@
 
     private void TogglePreview() => _showPreview = !_showPreview;
 
-    private void ToggleAdviceInput()
-    {
-        _showAdviceInput = !_showAdviceInput;
-        if (!_showAdviceInput) _adviceText = "";
-    }
-
-    private async Task SubmitAdvice()
-    {
-        if (string.IsNullOrWhiteSpace(_adviceText)) return;
-        var text = _adviceText;
-        _adviceText = "";
-        _showAdviceInput = false;
-        await OnAdvice.InvokeAsync(text);
-    }
-
-    private async Task HandleAdviceKeyDown(KeyboardEventArgs e)
-    {
-        // Skip during IME composition (e.Key is "Process" on macOS WebView)
-        if (e.Key == "Process") return;
-        if (e.Key == "Enter" && !e.ShiftKey)
-            await SubmitAdvice();
-    }
 }

@@ -42,7 +42,7 @@
                 else
                 {
                     <div class="message-container">
-                        @foreach (var message in ChatState.CurrentSession.Messages)
+                        @foreach (var message in ChatState.CurrentSession.Messages.ToList())
                         {
                             <MessageBubble @key="message.Id" Message="message" />
                         }
@@ -71,8 +71,7 @@
             <PlanReviewBar IsVisible="_planReviewVisible"
                            PlanContent="@_planContent"
                            PlanFilePath="@_planFilePath"
-                           OnAction="HandlePlanReviewAction"
-                           OnAdvice="HandlePlanAdvice" />
+                           OnAction="HandlePlanReviewAction" />
 
             @* Input area *@
             @if (ChatState.CurrentSession != null)
@@ -87,7 +86,10 @@
                            Model="@(ChatState.CurrentSession.Model ?? "")"
                            OnModelChanged="HandleModelChanged"
                            ResolvedModel="@(ChatState.CurrentSession.ResolvedModel)"
-                           CurrentSession="@ChatState.CurrentSession" />
+                           CurrentSession="@ChatState.CurrentSession"
+                           PlanFilePath="@_lastPlanFilePath"
+                           PlanContent="@_lastPlanContent"
+                           IsPlanReviewVisible="_planReviewVisible" />
             }
         </div>
     };
@@ -103,6 +105,8 @@
     private string? _planFilePath;
     private string? _planContent;
     private string? _planSessionId;
+    private string? _lastPlanFilePath;
+    private string? _lastPlanContent;
     private bool _shouldAutoScroll;
     private bool _isAtBottom = true;
     private DotNetObjectReference<ChatView>? _selfRef;
@@ -180,6 +184,8 @@
                         _planContent = null;
                         _planFilePath = null;
                         _planSessionId = currentId;
+                        _lastPlanFilePath = null;
+                        _lastPlanContent = null;
                     }
                 }
 
@@ -249,6 +255,8 @@
             _planFilePath = filePath;
             _planContent = content;
             _planSessionId = targetSessionId;
+            _lastPlanFilePath = filePath;
+            _lastPlanContent = content;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -363,20 +371,15 @@
         }
     }
 
-    private async Task HandlePlanAdvice(string advice)
-    {
-        _planReviewVisible = false;
-        await HandleSend(new ChatInputMessage
-        {
-            Text = $"플랜에 대한 피드백: {advice}\n\n이 피드백을 반영하여 플랜을 수정해주세요."
-        });
-    }
 
     private Task HandleSend(ChatInputMessage input)
     {
         if (ChatState.CurrentSession == null || ChatState.IsStreaming
             || (string.IsNullOrWhiteSpace(input.Text) && input.Attachments.Count == 0))
             return Task.CompletedTask;
+
+        // Capture plan review state before clearing
+        bool wasPlanReviewVisible = _planReviewVisible;
 
         _quickResponseVisible = false;
         _quickResponseOptions = [];
@@ -387,6 +390,12 @@
         // Clear persisted AskUserQuestion state
         if (ChatState.CurrentSession != null)
             ChatState.CurrentSession.PendingAskUserQuestionInput = null;
+
+        // If plan review was visible, treat user input as plan feedback
+        if (wasPlanReviewVisible && !string.IsNullOrWhiteSpace(input.Text))
+        {
+            input.Text = $"플랜에 대한 피드백: {input.Text}\n\n이 피드백을 반영하여 플랜을 수정해주세요.";
+        }
 
         // Extract chain state from input
         if (input.PendingChain is { Count: > 0 })
@@ -444,6 +453,8 @@
             _planContent = result.PlanContent;
             _planSessionId = session.Id;
             _planReviewVisible = isCurrentSession;
+            _lastPlanFilePath = result.PlanFilePath;
+            _lastPlanContent = result.PlanContent;
         }
         else if (isCurrentSession)
         {
