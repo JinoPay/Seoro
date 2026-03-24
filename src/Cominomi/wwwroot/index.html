@@ -64,6 +64,7 @@
             if (!el || !window.hljs) return;
             var codeSpans = el.querySelectorAll('.diff-code');
             codeSpans.forEach(function(span) {
+                if (span.dataset.highlighted) return;
                 var text = span.textContent;
                 if (!text) return;
                 try {
@@ -71,6 +72,7 @@
                         ? hljs.highlight(text, { language: language, ignoreIllegals: true })
                         : hljs.highlightAuto(text);
                     span.innerHTML = result.value;
+                    span.dataset.highlighted = 'true';
                 } catch(e) { /* ignore unknown language */ }
             });
         };

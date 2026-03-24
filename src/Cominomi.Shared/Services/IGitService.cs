@@ -31,4 +31,6 @@ public interface IGitService
     Task<List<string>> ListTrackedFilesAsync(string workingDir, CancellationToken ct = default);
     Task<string> ReadFileAsync(string workingDir, string relativePath, CancellationToken ct = default);
     Task<DiffSummary> GetDiffSummaryAsync(string workingDir, string baseBranch, CancellationToken ct = default);
+    Task<string[]> ReadFileLinesAsync(string workingDir, string relativePath, int startLine, int endLine, CancellationToken ct = default);
+    Task<string[]> ReadBaseFileLinesAsync(string workingDir, string baseBranch, string relativePath, int startLine, int endLine, CancellationToken ct = default);
 }

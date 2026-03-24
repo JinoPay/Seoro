@@ -2,10 +2,6 @@
 @implements IDisposable
 
 <div class="main-toolbar">
-    <MudIconButton Icon="@(SidebarOpen ? Icons.Material.Filled.MenuOpen : Icons.Material.Filled.Menu)"
-                   Color="Color.Inherit" Size="Size.Small" OnClick="@OnToggleSidebar"
-                   Style="width: 28px; height: 28px; opacity: 0.6;" />
-
     @if (ChatState.CurrentSession != null)
     {
         <span class="toolbar-title">@(ChatState.CurrentSession.Title ?? "새 대화")</span>
@@ -42,8 +38,6 @@
 </div>
 
 @code {
-    [Parameter] public bool SidebarOpen { get; set; }
-    [Parameter] public EventCallback OnToggleSidebar { get; set; }
 
     protected override void OnInitialized()
     {
