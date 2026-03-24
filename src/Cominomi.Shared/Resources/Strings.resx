@@ -47,6 +47,7 @@
   <data name="Snackbar_StreamingError" xml:space="preserve"><value>응답 오류: {0}</value></data>
   <data name="Snackbar_IssueLinked" xml:space="preserve"><value>Issue #{0} 연결됨</value></data>
   <data name="Snackbar_IssueCreated" xml:space="preserve"><value>Issue #{0} 생성 완료</value></data>
+  <data name="Snackbar_ClaudeUpdateRequired" xml:space="preserve"><value>Claude Code 업데이트 필요 (현재: {0}, 권장: {1})</value></data>
 
   <!-- ToolDisplayHelper -->
   <data name="Tool_FilesRead" xml:space="preserve"><value>{0}개 파일 읽음</value></data>

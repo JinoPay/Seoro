@@ -28,6 +28,11 @@ public interface IClaudeService : IDisposable
     Task<(bool found, string resolvedPath)> DetectCliAsync();
 
     /// <summary>
+    /// Returns the detected Claude CLI version string, or null if not yet detected.
+    /// </summary>
+    Task<string?> GetDetectedVersionAsync();
+
+    /// <summary>
     /// Summarize a user message into a short title using Haiku.
     /// </summary>
     Task<string?> SummarizeAsync(string message, string workingDir);
