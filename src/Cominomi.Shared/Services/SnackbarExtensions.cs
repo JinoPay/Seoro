@@ -16,4 +16,8 @@ public static class SnackbarExtensions
 
     public static void StreamingError(this ISnackbar snackbar, string error)
         => snackbar.Add(Strings.Snackbar_StreamingError(error), Severity.Error);
+
+    public static void ClaudeUpdateRequired(this ISnackbar snackbar, string current, string required)
+        => snackbar.Add(Strings.Snackbar_ClaudeUpdateRequired(current, required), Severity.Warning,
+            opt => opt.VisibleStateDuration = 8000);
 }

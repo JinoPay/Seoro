@@ -16,6 +16,7 @@ public static class CominomiConstants
     public const int MaxSystemPromptTokens = 10_000; // overall system prompt budget
     public const string BranchPrefix = "cominomi/";
     public const string DefaultEffortLevel = "auto";
+    public const string RequiredClaudeVersion = "2.1.81";
     // Default values duplicated across AppSettings, Session, ClaudeService, etc.
     public const string DefaultPermissionMode = "bypassAll";
     public const string TruncationMarker = "\n\n[...truncated, {0:N0} tokens total]";

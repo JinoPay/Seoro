@@ -289,6 +289,21 @@ public class ClaudeService : IClaudeService, IDisposable
         }
     }
 
+    public async Task<string?> GetDetectedVersionAsync()
+    {
+        try
+        {
+            var settings = _appSettings.CurrentValue;
+            var (fileName, baseArgs) = await _cliResolver.ResolveAsync(settings.ClaudePath);
+            var caps = await DetectCapabilitiesAsync(fileName, baseArgs);
+            return string.IsNullOrEmpty(caps.Version) ? null : caps.Version;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public void Cancel(string? sessionId = null)
     {
         var key = sessionId ?? DefaultAgentKey;
