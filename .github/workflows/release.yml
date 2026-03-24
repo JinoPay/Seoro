@@ -22,6 +22,9 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Install MAUI workload
+        run: dotnet workload install maui-windows
+
       - name: Restore tools
         run: dotnet tool restore
 
@@ -80,6 +83,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-maccatalyst
 
       - name: Restore tools
         run: dotnet tool restore
