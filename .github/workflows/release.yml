@@ -127,7 +127,7 @@ jobs:
           --packId Cominomi
           --packVersion ${{ steps.version.outputs.VERSION }}
           --packDir publish/mac/Cominomi.app
-          --mainExe Contents/MacOS/Cominomi
+          --mainExe Cominomi
           --channel osx
           --outputDir releases/mac
 
