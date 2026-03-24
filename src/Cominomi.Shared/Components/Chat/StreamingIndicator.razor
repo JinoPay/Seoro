@@ -1,67 +1,34 @@
 @using Cominomi.Shared.Services
 @implements IDisposable
 
-@switch (Phase)
-{
-    case StreamingPhase.Preparing:
-        <div class="streaming-pill">
-            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Default"
-                                 Style="width: 14px; height: 14px;" />
-            <span style="font-size: 0.78rem; opacity: 0.7;">준비 중...</span>
-        </div>
-        break;
+<div class="streaming-indicator @PhaseClass">
+    @if (Phase == StreamingPhase.WritingText)
+    {
+        <span class="typing-wave">
+            <span></span><span></span><span></span>
+        </span>
+    }
+    else
+    {
+        <span class="indicator-dot"></span>
+    }
 
-    case StreamingPhase.Sending:
-        <div class="streaming-pill">
-            <span class="pulse-dot"></span>
-            <span style="font-size: 0.78rem; opacity: 0.7;">전송 중...</span>
-            @if (!string.IsNullOrEmpty(_elapsed))
-            {
-                <span class="streaming-elapsed">@_elapsed</span>
-            }
-        </div>
-        break;
+    @if (Phase == StreamingPhase.UsingTool && !string.IsNullOrEmpty(ActiveToolName))
+    {
+        <MudIcon Icon="@ToolDisplayHelper.GetToolIcon(ActiveToolName)" Size="Size.Small"
+                 Style="width: 15px; height: 15px; opacity: 0.8;" />
+        <span class="indicator-label">@ToolDisplayHelper.GetStreamingLabel(ActiveToolName)</span>
+    }
+    else if (Phase != StreamingPhase.WritingText)
+    {
+        <span class="indicator-label">@PhaseLabel</span>
+    }
 
-    case StreamingPhase.Thinking:
-        <div class="streaming-pill thinking">
-            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary"
-                                 Style="width: 14px; height: 14px;" />
-            <span style="font-size: 0.78rem; opacity: 0.7;">생각 중...</span>
-            @if (!string.IsNullOrEmpty(_elapsed))
-            {
-                <span class="streaming-elapsed">@_elapsed</span>
-            }
-        </div>
-        break;
-
-    case StreamingPhase.UsingTool:
-        <div class="streaming-pill using-tool">
-            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Warning"
-                                 Style="width: 14px; height: 14px;" />
-            <MudIcon Icon="@ToolDisplayHelper.GetToolIcon(ActiveToolName)" Size="Size.Small" Style="opacity: 0.7; width: 16px; height: 16px;" />
-            <span class="tool-badge">@ToolDisplayHelper.GetStreamingLabel(ActiveToolName)</span>
-            @if (!string.IsNullOrEmpty(_elapsed))
-            {
-                <span class="streaming-elapsed">@_elapsed</span>
-            }
-        </div>
-        break;
-
-    case StreamingPhase.WritingText:
-        <div class="streaming-pill" style="background: var(--color-success-bg); border-color: var(--color-success-bg);">
-            <span class="typing-dots">
-                <span></span><span></span><span></span>
-            </span>
-            @if (!string.IsNullOrEmpty(_elapsed))
-            {
-                <span class="streaming-elapsed">@_elapsed</span>
-            }
-        </div>
-        break;
-
-    default:
-        break;
-}
+    @if (!string.IsNullOrEmpty(_elapsed))
+    {
+        <span class="indicator-time">@_elapsed</span>
+    }
+</div>
 
 @code {
     [Parameter] public StreamingPhase Phase { get; set; }
@@ -70,6 +37,24 @@
 
     private Timer? _timer;
     private string _elapsed = "";
+
+    private string PhaseClass => Phase switch
+    {
+        StreamingPhase.Preparing => "preparing",
+        StreamingPhase.Sending => "sending",
+        StreamingPhase.Thinking => "thinking",
+        StreamingPhase.UsingTool => "using-tool",
+        StreamingPhase.WritingText => "writing",
+        _ => ""
+    };
+
+    private string PhaseLabel => Phase switch
+    {
+        StreamingPhase.Preparing => "준비 중...",
+        StreamingPhase.Sending => "전송 중...",
+        StreamingPhase.Thinking => "생각 중...",
+        _ => ""
+    };
 
     protected override void OnInitialized()
     {

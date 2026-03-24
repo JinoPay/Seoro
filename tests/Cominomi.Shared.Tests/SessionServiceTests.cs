@@ -359,6 +359,10 @@ public class SessionServiceTests : IDisposable
             => Task.FromResult((0, 0));
         public Task<DiffSummary> GetDiffSummaryAsync(string workingDir, string baseBranch, CancellationToken ct = default)
             => Task.FromResult(new DiffSummary());
+        public Task<string[]> ReadFileLinesAsync(string workingDir, string relativePath, int startLine, int endLine, CancellationToken ct = default)
+            => Task.FromResult(Array.Empty<string>());
+        public Task<string[]> ReadBaseFileLinesAsync(string workingDir, string baseBranch, string relativePath, int startLine, int endLine, CancellationToken ct = default)
+            => Task.FromResult(Array.Empty<string>());
         public Task<GitResult> RunAsync(string arguments, string workingDir, CancellationToken ct = default)
             => Task.FromResult(NextResult);
         public Task<(int Ahead, int Behind)> GetAheadBehindAsync(string workingDir, string baseBranch, CancellationToken ct = default)
