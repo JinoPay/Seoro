@@ -18,7 +18,7 @@
             <div class="settings-section-title">일반</div>
             <div class="settings-section-desc">앱의 기본 동작을 설정합니다.</div>
 
-            <MudStack Spacing="3">
+            <div class="stack gap-3">
                 <MudSelect T="string" @bind-Value="_settings.Theme" Label="테마"
                            Variant="Variant.Outlined" Margin="Margin.Dense">
                     <MudSelectItem T="string" Value="@("dark")">다크</MudSelectItem>
@@ -28,20 +28,20 @@
 
                 <div class="settings-group-title" style="margin-top: 16px;">화면 배율</div>
 
-                <MudStack Spacing="1">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <div class="stack gap-1">
+                    <div class="stack-row items-center gap-2">
                         <MudSlider T="double"
                                    Value="@(_settings.UiScale == 0 ? _autoDefault : _settings.UiScale)"
                                    ValueChanged="@(v => { _settings.UiScale = v; _ = ApplyUiScalePreview(v); })"
                                    Min="0.8" Max="1.5" Step="0.05"
                                    Color="Color.Primary"
                                    Style="flex: 1;" />
-                        <MudText Typo="Typo.body2" Style="min-width: 48px; text-align: right;">
+                        <span class="typo-body2" style="min-width: 48px; text-align: right;">
                             @((_settings.UiScale == 0 ? _autoDefault : _settings.UiScale).ToString("P0"))
-                        </MudText>
-                    </MudStack>
+                        </span>
+                    </div>
 
-                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                    <div class="stack-row gap-1 items-center">
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
                                    OnClick="@(() => { _settings.UiScale = 0; _ = ApplyUiScalePreview(_autoDefault); })"
                                    Style="text-transform: none;">
@@ -52,20 +52,20 @@
                                    Style="text-transform: none;">
                             100%
                         </MudButton>
-                    </MudStack>
+                    </div>
 
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    <small class="typo-caption text-secondary">
                         macOS 기본값: 110%, Windows 기본값: 100%. 슬라이더 조작 시 바로 미리보기됩니다.
-                    </MudText>
-                </MudStack>
+                    </small>
+                </div>
 
                 <div class="settings-group-title" style="margin-top: 16px;">알림</div>
 
                 <MudSwitch T="bool" @bind-Value="_settings.NotificationsEnabled" Label="데스크톱 알림"
                            Color="Color.Primary" UncheckedColor="Color.Default" />
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-top: -8px;">
+                <small class="typo-caption text-secondary" style="margin-top: -8px;">
                     작업 완료, 응답 대기, 플랜 리뷰 시 OS 알림을 발송합니다.
-                </MudText>
+                </small>
 
                 <MudSwitch T="bool" @bind-Value="_settings.NotificationSound" Label="알림 사운드"
                            Color="Color.Primary" UncheckedColor="Color.Default"
@@ -73,7 +73,7 @@
 
                 <div class="settings-group-title" style="margin-top: 16px;">Git 워크플로우</div>
 
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <div class="stack-row items-center gap-1">
                     <MudTextField @bind-Value="_settings.DefaultCloneDirectory" Label="클론 디렉토리"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Placeholder="~/Cominomi"
@@ -81,15 +81,15 @@
                                   Style="flex: 1;" />
                     <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
                                    OnClick="BrowseCloneDirectory" Title="찾아보기..." />
-                </MudStack>
-            </MudStack>
+                </div>
+            </div>
         }
         else if (Section == "ai")
         {
             <div class="settings-section-title">AI 모델</div>
             <div class="settings-section-desc">AI 모델 및 동작 방식을 설정합니다.</div>
 
-            <MudStack Spacing="3">
+            <div class="stack gap-3">
                 <MudSelect T="string" @bind-Value="_settings.DefaultModel" Label="기본 모델"
                            Variant="Variant.Outlined" Margin="Margin.Dense">
                     @foreach (var model in ModelDefinitions.All)
@@ -127,7 +127,7 @@
                            Style="text-transform: none;">
                     MCP 서버 관리
                 </MudButton>
-            </MudStack>
+            </div>
         }
         else if (Section == "integrations")
         {
@@ -174,71 +174,71 @@
             <div class="settings-section-title">MCP 서버</div>
             <div class="settings-section-desc">Model Context Protocol 서버를 관리합니다.</div>
 
-            <MudStack Spacing="3">
+            <div class="stack gap-3">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.Hub"
                            OnClick="@(() => _mcpManagerOpen = true)"
                            Style="text-transform: none; align-self: flex-start;">
                     MCP 서버 관리 열기
                 </MudButton>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                <small class="typo-caption text-secondary">
                     MCP 서버 추가/제거, Claude Desktop에서 가져오기, JSON 가져오기 등을 지원합니다.
-                </MudText>
-            </MudStack>
+                </small>
+            </div>
         }
         else if (Section == "plugins")
         {
             <div class="settings-section-title">플러그인</div>
             <div class="settings-section-desc">플러그인을 설치하고 관리합니다.</div>
 
-            <MudStack Spacing="3">
+            <div class="stack gap-3">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.Extension"
                            OnClick="@(() => _pluginManagerOpen = true)"
                            Style="text-transform: none; align-self: flex-start;">
                     플러그인 관리 열기
                 </MudButton>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                <small class="typo-caption text-secondary">
                     플러그인 설치, 활성화/비활성화, 제거를 관리합니다.
-                </MudText>
-            </MudStack>
+                </small>
+            </div>
         }
         else if (Section == "commands")
         {
             <div class="settings-section-title">슬래시 명령어</div>
             <div class="settings-section-desc">커스텀 슬래시 명령어를 관리합니다.</div>
 
-            <MudStack Spacing="3">
+            <div class="stack gap-3">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.Code"
                            OnClick="@(() => _slashCommandsOpen = true)"
                            Style="text-transform: none; align-self: flex-start;">
                     명령어 관리 열기
                 </MudButton>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                <small class="typo-caption text-secondary">
                     커스텀 슬래시 명령어를 만들고 편집합니다. ~/.claude/commands/ 또는 프로젝트별 .claude/commands/ 에 저장됩니다.
-                </MudText>
-            </MudStack>
+                </small>
+            </div>
         }
         else if (Section == "advanced")
         {
             <div class="settings-section-title">고급</div>
             <div class="settings-section-desc">Claude CLI 고급 설정 및 환경변수를 관리합니다.</div>
 
-            <MudStack Spacing="3">
+            <div class="stack gap-3">
                 <MudSwitch T="bool" @bind-Value="_settings.DebugMode" Label="디버그 모드"
                            Color="Color.Warning" UncheckedColor="Color.Default" />
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-top: -8px;">
+                <small class="typo-caption text-secondary" style="margin-top: -8px;">
                     활성화하면 Claude CLI에 --debug 플래그를 전달합니다.
-                </MudText>
-            </MudStack>
+                </small>
+            </div>
 
             <div class="settings-group-title" style="margin-top: 16px;">환경변수</div>
 
-            <MudStack Spacing="2">
+            <div class="stack gap-2">
                 @foreach (var key in _settings.EnvironmentVariables.Keys.ToList())
                 {
-                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                    <div class="stack-row gap-1 items-center">
                         <MudTextField T="string" Value="@key" ReadOnly="true"
                                       Variant="Variant.Outlined" Margin="Margin.Dense"
                                       Style="flex: 0.4;" />
@@ -250,10 +250,10 @@
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                        Color="Color.Error"
                                        OnClick="@(() => RemoveEnvVar(key))" />
-                    </MudStack>
+                    </div>
                 }
 
-                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                <div class="stack-row gap-1 items-center">
                     <MudTextField @bind-Value="_newEnvKey" Placeholder="변수명"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Style="flex: 0.4;" />
@@ -264,12 +264,12 @@
                                    Color="Color.Primary"
                                    OnClick="AddEnvVar"
                                    Disabled="@(string.IsNullOrWhiteSpace(_newEnvKey))" />
-                </MudStack>
+                </div>
 
-                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                <small class="typo-caption text-secondary">
                     예: ANTHROPIC_API_KEY, CLAUDE_CODE_USE_BEDROCK, CLAUDE_CODE_MAX_OUTPUT_TOKENS
-                </MudText>
-            </MudStack>
+                </small>
+            </div>
         }
     </div>
 </div>

@@ -48,7 +48,7 @@
 
             @if (Message.Attachments.Count > 0)
             {
-                <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap; margin-bottom: 8px;">
+                <div class="stack-row gap-1 flex-wrap" style="margin-bottom: 8px;">
                     @foreach (var attachment in Message.Attachments)
                     {
                         @if (attachment.IsImage)
@@ -71,7 +71,7 @@
                             </MudChip>
                         }
                     }
-                </MudStack>
+                </div>
             }
 
             @if (Message.Parts.Count > 0)

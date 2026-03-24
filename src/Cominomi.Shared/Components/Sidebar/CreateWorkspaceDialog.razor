@@ -5,10 +5,10 @@
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">
+        <div class="typo-h6">
             <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" Style="vertical-align: middle;" />
             새 워크스페이스
-        </MudText>
+        </div>
     </TitleContent>
     <DialogContent>
         <div style="min-width: 420px; position: relative;">
@@ -16,14 +16,14 @@
             {
                 <div class="create-ws-progress-overlay">
                     <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@_progressMessage</MudText>
+                    <p class="typo-body2 text-secondary">@_progressMessage</p>
                 </div>
             }
 
             <MudTabs @bind-ActivePanelIndex="_activeTab" Rounded="true" ApplyEffectsToContainer="true"
                      Class="create-ws-tabs" PanelClass="pa-3">
                 <MudTabPanel Text="URL에서 클론" Icon="@Icons.Material.Filled.Cloud">
-                    <MudStack Spacing="3">
+                    <div class="stack gap-3">
                         <MudTextField @bind-Value="_repoUrl" Label="저장소 URL" Variant="Variant.Outlined"
                                       Margin="Margin.Dense" Placeholder="https://github.com/org/repo"
                                       Immediate="true" TextChanged="OnUrlChanged" />
@@ -36,16 +36,16 @@
                                 <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
                             }
                         </MudSelect>
-                    </MudStack>
+                    </div>
                 </MudTabPanel>
                 <MudTabPanel Text="로컬 저장소" Icon="@Icons.Material.Filled.Folder">
-                    <MudStack Spacing="3">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <div class="stack gap-3">
+                        <div class="stack-row items-center gap-1">
                             <MudTextField @bind-Value="_localPath" Label="저장소 경로" Variant="Variant.Outlined"
                                           Margin="Margin.Dense" Placeholder="/경로/저장소" Style="flex: 1;" />
                             <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
                                            OnClick="BrowseLocalFolder" Title="찾아보기..." />
-                        </MudStack>
+                        </div>
                         @if (_localPathValidation != null)
                         {
                             <MudAlert Severity="@(_isLocalPathGitRepo ? Severity.Success : Severity.Warning)" Dense="true">
@@ -61,7 +61,7 @@
                                 <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
                             }
                         </MudSelect>
-                    </MudStack>
+                    </div>
                 </MudTabPanel>
             </MudTabs>
 

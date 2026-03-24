@@ -9,7 +9,7 @@
     @if (_workspace != null)
     {
         <div class="settings-content-header">
-            <MudText Typo="Typo.h6" Style="font-size: var(--text-lg);">@_workspace.Name</MudText>
+            <h6 class="typo-h6" style="font-size: var(--text-lg);">@_workspace.Name</h6>
             <div style="flex: 1;"></div>
             <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
                        Size="Size.Small" Style="text-transform: none;">
@@ -32,7 +32,7 @@
                 <div class="settings-section-title">일반</div>
                 <div class="settings-section-desc">워크스페이스 기본 정보를 관리합니다.</div>
 
-                <MudStack Spacing="3">
+                <div class="stack gap-3">
                     <MudTextField @bind-Value="_workspace.Name" Label="이름"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" />
 
@@ -60,14 +60,14 @@
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
                                   Placeholder="이 워크스페이스의 모든 세션에 추가될 시스템 프롬프트입니다."
                                   HelperText="비워두면 기본 시스템 프롬프트만 사용합니다." />
-                </MudStack>
+                </div>
             }
             else if (_tab == "git")
             {
                 <div class="settings-section-title">Git</div>
                 <div class="settings-section-desc">Git 기본값을 설정합니다.</div>
 
-                <MudStack Spacing="3">
+                <div class="stack gap-3">
                     @if (_branches.Count > 0)
                     {
                         <MudSelect T="string" @bind-Value="_workspace.DefaultBaseBranch"
@@ -93,14 +93,14 @@
                     <MudTextField @bind-Value="_workspace.DefaultRemote" Label="기본 리모트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Placeholder="origin" />
-                </MudStack>
+                </div>
             }
             else if (_tab == "prompts")
             {
                 <div class="settings-section-title">프롬프트</div>
                 <div class="settings-section-desc">에이전트에 전달할 커스텀 지침을 설정합니다.</div>
 
-                <MudStack Spacing="4">
+                <div class="stack gap-4">
                     <MudTextField @bind-Value="_workspace.Preferences.CodeReviewPrompt"
                                   Label="코드 리뷰 프롬프트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
@@ -110,7 +110,7 @@
                                   Label="일반 프롬프트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
                                   Placeholder="모든 새 대화 시작 시 에이전트에 전달할 지침입니다." />
-                </MudStack>
+                </div>
             }
 
             <div class="settings-danger-zone">
@@ -121,9 +121,9 @@
                            Style="text-transform: none;">
                     워크스페이스 삭제
                 </MudButton>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-top: 4px;">
+                <small class="typo-caption text-secondary" style="margin-top: 4px;">
                     이 워크스페이스와 모든 세션이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
-                </MudText>
+                </small>
             </div>
         </div>
     }

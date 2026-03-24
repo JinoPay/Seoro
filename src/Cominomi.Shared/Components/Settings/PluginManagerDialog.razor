@@ -4,10 +4,10 @@
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">
+        <div class="typo-h6">
             <MudIcon Icon="@Icons.Material.Filled.Extension" Class="mr-2" />
             플러그인 관리
-        </MudText>
+        </div>
     </TitleContent>
     <DialogContent>
         <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
@@ -22,13 +22,13 @@
                 else if (_plugins.Count == 0)
                 {
                     <div class="pa-4" style="text-align: center;">
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        <p class="typo-body2 text-secondary">
                             설치된 플러그인이 없습니다.
-                        </MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                        </p>
+                        <small class="typo-caption text-secondary mt-2">
                             <code>@PluginService.PluginsDirectory</code> 디렉토리에
                             플러그인 폴더와 <code>manifest.json</code>을 추가하세요.
-                        </MudText>
+                        </small>
                     </div>
                 }
                 else
@@ -48,19 +48,19 @@
                                 <tr>
                                     <td>
                                         <div>
-                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@plugin.Name</MudText>
+                                            <span class="typo-body2" style="font-weight: 500;">@plugin.Name</span>
                                             @if (!string.IsNullOrEmpty(plugin.Description))
                                             {
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@plugin.Description</MudText>
+                                                <small class="typo-caption text-secondary">@plugin.Description</small>
                                             }
                                             @if (!string.IsNullOrEmpty(plugin.Author))
                                             {
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">by @plugin.Author</MudText>
+                                                <small class="typo-caption text-secondary">by @plugin.Author</small>
                                             }
                                         </div>
                                     </td>
                                     <td>
-                                        <MudText Typo="Typo.body2">@(plugin.Version ?? "-")</MudText>
+                                        <span class="typo-body2">@(plugin.Version ?? "-")</span>
                                     </td>
                                     <td>
                                         @{
@@ -112,14 +112,14 @@
 
             @* Info Tab *@
             <MudTabPanel Text="플러그인 만들기" Icon="@Icons.Material.Filled.Help">
-                <MudStack Spacing="3" Class="pa-3">
-                    <MudText Typo="Typo.subtitle2">플러그인 구조</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                <div class="stack gap-3 pa-3">
+                    <div class="typo-subtitle2">플러그인 구조</div>
+                    <p class="typo-body2 text-secondary">
                         플러그인은 <code>@PluginService.PluginsDirectory</code> 하위에 폴더로 생성합니다.
                         각 폴더에 <code>manifest.json</code> 파일이 필요합니다.
-                    </MudText>
+                    </p>
 
-                    <MudText Typo="Typo.subtitle2" Class="mt-2">manifest.json 예시</MudText>
+                    <div class="typo-subtitle2 mt-2">manifest.json 예시</div>
                     <pre style="background: var(--mud-palette-background-grey); padding: 12px; border-radius: 4px; font-size: 12px; overflow-x: auto;">
 {
   "name": "My Plugin",
@@ -136,7 +136,7 @@
   ]
 }</pre>
 
-                    <MudText Typo="Typo.subtitle2" Class="mt-2">필드 설명</MudText>
+                    <div class="typo-subtitle2 mt-2">필드 설명</div>
                     <MudSimpleTable Dense="true">
                         <thead>
                             <tr><th>필드</th><th>필수</th><th>설명</th></tr>
@@ -159,7 +159,7 @@
                                Style="text-transform: none; align-self: flex-start;">
                         플러그인 디렉토리 열기
                     </MudButton>
-                </MudStack>
+                </div>
             </MudTabPanel>
         </MudTabs>
     </DialogContent>

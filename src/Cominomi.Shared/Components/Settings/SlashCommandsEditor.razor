@@ -4,10 +4,10 @@
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">
+        <div class="typo-h6">
             <MudIcon Icon="@Icons.Material.Filled.Code" Class="mr-2" />
             슬래시 명령어 관리
-        </MudText>
+        </div>
     </TitleContent>
     <DialogContent>
         <div class="slash-commands-layout">
@@ -15,16 +15,16 @@
             {
                 @* Edit/Create Form *@
                 <div class="slash-command-form">
-                    <MudStack Spacing="3">
-                        <MudStack Row="true" Spacing="2">
+                    <div class="stack gap-3">
+                        <div class="stack-row gap-2">
                             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack"
                                        OnClick="CancelEdit" Size="Size.Small">
                                 목록으로
                             </MudButton>
-                            <MudText Typo="Typo.subtitle1">
+                            <div class="typo-subtitle1">
                                 @(_isNewCommand ? "새 명령어" : $"/{_editingCommand.Name} 편집")
-                            </MudText>
-                        </MudStack>
+                            </div>
+                        </div>
 
                         <MudTextField @bind-Value="_editingCommand.Name" Label="명령어 이름"
                                       Variant="Variant.Outlined" Margin="Margin.Dense"
@@ -46,10 +46,10 @@
                                       Placeholder="$ARGUMENTS 플레이스홀더로 인수를 받을 수 있습니다." />
 
                         <div>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
+                            <small class="typo-caption text-secondary mb-1">
                                 허용된 도구 (선택사항)
-                            </MudText>
-                            <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap;">
+                            </small>
+                            <div class="stack-row gap-1 flex-wrap">
                                 @foreach (var tool in _availableTools)
                                 {
                                     var isChecked = _editingCommand.AllowedTools.Contains(tool);
@@ -60,24 +60,24 @@
                                         @tool
                                     </MudChip>
                                 }
-                            </MudStack>
+                            </div>
                         </div>
 
-                        <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                        <div class="stack-row gap-2 justify-end">
                             <MudButton Variant="Variant.Text" OnClick="CancelEdit">취소</MudButton>
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveCommand"
                                        Disabled="@(string.IsNullOrWhiteSpace(_editingCommand.Name))">
                                 저장
                             </MudButton>
-                        </MudStack>
-                    </MudStack>
+                        </div>
+                    </div>
                 </div>
             }
             else
             {
                 @* Command List *@
                 <div class="slash-command-list">
-                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-3">
+                    <div class="stack-row gap-2 items-center mb-3">
                         <MudTextField @bind-Value="_searchText" Placeholder="명령어 검색..."
                                       Variant="Variant.Outlined" Margin="Margin.Dense"
                                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
@@ -87,13 +87,13 @@
                                    OnClick="CreateNew" Size="Size.Small">
                             새 명령어
                         </MudButton>
-                    </MudStack>
+                    </div>
 
                     @foreach (var group in FilteredCommands.GroupBy(c => c.Scope).OrderBy(g => g.Key))
                     {
-                        <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mt-2">
+                        <span class="typo-overline text-secondary mt-2">
                             @(group.Key switch { "default" => "기본 (내장)", "user" => "사용자", "project" => "프로젝트", _ => group.Key })
-                        </MudText>
+                        </span>
 
                         @foreach (var cmd in group)
                         {
@@ -122,9 +122,9 @@
 
                     @if (!FilteredCommands.Any())
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
+                        <p class="typo-body2 text-secondary pa-4 text-center">
                             명령어를 찾을 수 없습니다.
-                        </MudText>
+                        </p>
                     }
                 </div>
             }
