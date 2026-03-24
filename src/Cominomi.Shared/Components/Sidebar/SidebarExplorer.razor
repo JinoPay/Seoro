@@ -263,7 +263,7 @@
         var root = new List<FileNode>();
         var dirMap = new Dictionary<string, FileNode>();
 
-        foreach (var file in files.OrderBy(f => f))
+        foreach (var file in files)
         {
             var parts = file.Split('/');
             var currentList = root;
@@ -291,7 +291,24 @@
             }
         }
 
+        SortNodes(root);
         return root;
+    }
+
+    private static void SortNodes(List<FileNode> nodes)
+    {
+        nodes.Sort((a, b) =>
+        {
+            if (a.IsDirectory != b.IsDirectory)
+                return a.IsDirectory ? -1 : 1;
+            return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+        });
+
+        foreach (var node in nodes)
+        {
+            if (node.IsDirectory && node.Children.Count > 0)
+                SortNodes(node.Children);
+        }
     }
 
     private void HandleStateChanged()

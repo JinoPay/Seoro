@@ -4,6 +4,7 @@
 @inject ISessionListFacade Facade
 @inject ISkillRegistry SkillRegistry
 @inject IJSRuntime JS
+@inject ILauncherService Launcher
 @inject ILogger<SessionList> Logger
 @implements IDisposable
 
@@ -82,8 +83,11 @@
                                      DiffDeletions="@(hasDiffStats ? stats.Deletions : 0)"
                                      ShortcutLabel="@(row.SessionIndex < 5 ? GetShortcutLabel(row.SessionIndex) : null)"
                                      ShowShortcuts="@_ctrlHeld"
+                                     AvailableIdes="_availableIdes"
                                      OnClick="@(() => SelectSession(row.Session!, row.Workspace))"
-                                     OnDelete="@(() => DeleteSession(row.Session!))" />
+                                     OnDelete="@(() => DeleteSession(row.Session!))"
+                                     OnOpenFolder="@(() => OpenSessionFolder(row.Session!, row.Workspace))"
+                                     OnOpenInIde="@(cmd => OpenSessionInIde(row.Session!, row.Workspace, cmd))" />
                         break;
                 }
             </Virtualize>
@@ -117,6 +121,7 @@
     private string? _filterText;
     private DotNetObjectReference<SessionList>? _dotNetRef;
     private List<SidebarRow> _flatRows = new();
+    private List<IdeInfo> _availableIdes = [];
 
     private enum SidebarRowKind { ProjectHeader, WorkspaceSubheader, Session }
 
@@ -174,6 +179,7 @@
 
         try
         {
+            _availableIdes = await Launcher.GetAvailableIdesAsync();
             await DataService.LoadWorkspacesAsync();
 
             // 1차: 워크스페이스와 프로젝트명 결정 (세션 캐시 아직 비어있음)
@@ -389,6 +395,27 @@
             RebuildFlatRows();
             StateHasChanged();
         });
+    }
+
+    private string? GetSessionPath(Session session, Workspace? ws)
+    {
+        if (!string.IsNullOrEmpty(session.Git.WorktreePath))
+            return session.Git.WorktreePath;
+        return ws?.RepoLocalPath;
+    }
+
+    private async Task OpenSessionFolder(Session session, Workspace? ws)
+    {
+        var path = GetSessionPath(session, ws);
+        if (path != null)
+            await Launcher.OpenFolderAsync(path);
+    }
+
+    private async Task OpenSessionInIde(Session session, Workspace? ws, string ideCommand)
+    {
+        var path = GetSessionPath(session, ws);
+        if (path != null)
+            await Launcher.OpenInIdeAsync(path, ideCommand);
     }
 
     public void Dispose()

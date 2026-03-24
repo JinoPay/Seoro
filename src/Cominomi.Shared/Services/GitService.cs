@@ -447,8 +447,9 @@ public class GitService : IGitService
 
     public async Task<DiffSummary> GetDiffSummaryAsync(string workingDir, string baseBranch, CancellationToken ct = default)
     {
-        // Fetch name-status and stream diff in parallel
+        // Fetch name-status, untracked files, and stream diff in parallel
         var nameStatusTask = GetNameStatusAsync(workingDir, baseBranch, ct);
+        var untrackedTask = GetUntrackedFilesAsync(workingDir, ct);
 
         var gitPath = await ResolveGitPathAsync();
         _logger.LogDebug("git diff {BaseBranch} (streaming)", baseBranch);
@@ -461,6 +462,7 @@ public class GitService : IGitService
         }, ct);
 
         var nameStatus = await nameStatusTask;
+        var untrackedFiles = await untrackedTask;
         var streaming = await streamingTask;
 
         // Parse name-status into file map
@@ -511,7 +513,54 @@ public class GitService : IGitService
                 _logger.LogWarning("git diff exited with {ExitCode}: {Stderr}", exitCode, stderr);
         }
 
+        // Append untracked files as Added
+        foreach (var relPath in untrackedFiles)
+        {
+            try
+            {
+                var fullPath = Path.Combine(workingDir, relPath.Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(fullPath)) continue;
+
+                var content = await File.ReadAllTextAsync(fullPath, ct);
+                var lines = content.Split('\n');
+                var addCount = lines.Length;
+
+                // Build synthetic unified diff
+                var diffBuilder = new StringBuilder();
+                diffBuilder.AppendLine("--- /dev/null");
+                diffBuilder.AppendLine($"+++ b/{relPath}");
+                diffBuilder.AppendLine($"@@ -0,0 +1,{addCount} @@");
+                foreach (var line in lines)
+                    diffBuilder.AppendLine("+" + line);
+
+                summary.Files.Add(new FileDiff
+                {
+                    FilePath = relPath,
+                    ChangeType = FileChangeType.Added,
+                    UnifiedDiff = diffBuilder.ToString(),
+                    Additions = addCount,
+                    Deletions = 0
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to read untracked file: {Path}", relPath);
+            }
+        }
+
         return summary;
+    }
+
+    private async Task<List<string>> GetUntrackedFilesAsync(string workingDir, CancellationToken ct = default)
+    {
+        var result = await RunGitBoundedAsync(workingDir, ct, "ls-files", "--others", "--exclude-standard");
+        if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
+            return [];
+
+        return result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(f => f.Trim())
+            .Where(f => !string.IsNullOrEmpty(f))
+            .ToList();
     }
 
     private static Dictionary<string, FileDiff> ParseNameStatusIntoFileMap(string nameStatus, DiffSummary summary)
