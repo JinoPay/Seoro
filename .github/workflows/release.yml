@@ -126,8 +126,8 @@ jobs:
           dotnet vpk pack
           --packId Cominomi
           --packVersion ${{ steps.version.outputs.VERSION }}
-          --packDir publish/mac/Cominomi.app/Contents/MacOS
-          --mainExe Cominomi
+          --packDir publish/mac/Cominomi.app
+          --mainExe Contents/MacOS/Cominomi
           --channel osx
           --outputDir releases/mac
 
