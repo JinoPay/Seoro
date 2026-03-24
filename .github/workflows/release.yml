@@ -71,6 +71,7 @@ jobs:
           --tag ${{ github.ref_name }}
           --channel win
           --outputDir releases/win
+          --merge
           --token ${{ secrets.GITHUB_TOKEN }}
 
   release-macos:
@@ -142,4 +143,5 @@ jobs:
           --tag ${{ github.ref_name }}
           --channel osx
           --outputDir releases/mac
+          --merge
           --token ${{ secrets.GITHUB_TOKEN }}
