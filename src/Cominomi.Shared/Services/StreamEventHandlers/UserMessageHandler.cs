@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services.StreamEventHandlers;
@@ -16,6 +17,24 @@ public class UserMessageHandler : IStreamEventHandler
 
         // Track parent context for subagent tool results
         ctx.CurrentParentToolUseId = evt.ParentToolUseId;
+
+        // Capture plan file path from tool_use_result (most reliable source)
+        if (ctx.DetectedPlanFilePath == null
+            && evt.ExtensionData?.TryGetValue("tool_use_result", out var toolResult) == true
+            && toolResult.ValueKind == JsonValueKind.Object
+            && toolResult.TryGetProperty("filePath", out var fp))
+        {
+            var path = fp.GetString();
+            if (path != null)
+            {
+                var normalized = path.Replace('\\', '/');
+                if (normalized.Contains(".claude/plans/") && normalized.EndsWith(".md"))
+                {
+                    ctx.DetectedPlanFilePath = path;
+                    ctx.Session.PlanFilePath = path;
+                }
+            }
+        }
 
         foreach (var block in evt.Message.Content)
         {
