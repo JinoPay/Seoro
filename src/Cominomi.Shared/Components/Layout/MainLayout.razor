@@ -36,7 +36,9 @@
      style="@(anyOverlay ? "display:none;height:0;overflow:hidden" : "")">
         @* === Left Panel: Sidebar === *@
         <aside class="cominomi-sidebar">
-            <SidebarToolbar OnOpenActivity="OpenActivity"
+            <SidebarToolbar SidebarOpen="_sidebarOpen"
+                            OnToggleSidebar="@(() => _sidebarOpen = !_sidebarOpen)"
+                            OnOpenActivity="OpenActivity"
                             OnOpenNotifications="OpenNotifications" />
             <SessionList />
             <SidebarFooter OnOpenUsageDashboard="@(() => _usageDashboardOpen = true)"

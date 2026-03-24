@@ -9,24 +9,40 @@
             <polyline points="148,158 208,198 148,238" fill="none" stroke="var(--mud-palette-surface)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" />
             <line x1="228" y1="238" x2="308" y2="238" stroke="var(--mud-palette-surface)" stroke-width="30" stroke-linecap="round" />
         </svg>
-        Cominomi
+        <span class="sidebar-brand-text">Cominomi</span>
     </span>
-    <div style="display: flex; align-items: center; gap: 6px;">
-        <MudIconButton Icon="@Icons.Material.Filled.Timeline" Color="Color.Inherit"
-                       Size="Size.Small" OnClick="@OnOpenActivity"
-                       Style="width: 28px; height: 28px; opacity: 0.5;"
-                       Title="Activity" />
-        <MudBadge Content="@_unreadCount" Visible="@(_unreadCount > 0)" Color="Color.Error"
-                  Overlap="true" Dot="@(_unreadCount <= 0)" Class="notification-badge">
-            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit"
-                           Size="Size.Small" OnClick="@OnOpenNotifications"
+    @if (SidebarOpen)
+    {
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <MudIconButton Icon="@Icons.Material.Filled.Timeline" Color="Color.Inherit"
+                           Size="Size.Small" OnClick="@OnOpenActivity"
                            Style="width: 28px; height: 28px; opacity: 0.5;"
-                           Title="알림 히스토리" />
-        </MudBadge>
-    </div>
+                           Title="Activity" />
+            <MudBadge Content="@_unreadCount" Visible="@(_unreadCount > 0)" Color="Color.Error"
+                      Overlap="true" Dot="@(_unreadCount <= 0)" Class="notification-badge">
+                <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit"
+                               Size="Size.Small" OnClick="@OnOpenNotifications"
+                               Style="width: 28px; height: 28px; opacity: 0.5;"
+                               Title="알림 히스토리" />
+            </MudBadge>
+            <button class="sidebar-collapse-btn" @onclick="@OnToggleSidebar" title="사이드바 접기">
+                <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small"
+                         Style="width: 18px; height: 18px;" />
+            </button>
+        </div>
+    }
+    else
+    {
+        <button class="sidebar-collapse-btn" @onclick="@OnToggleSidebar" title="사이드바 펼치기">
+            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small"
+                     Style="width: 18px; height: 18px;" />
+        </button>
+    }
 </div>
 
 @code {
+    [Parameter] public bool SidebarOpen { get; set; }
+    [Parameter] public EventCallback OnToggleSidebar { get; set; }
     [Parameter] public EventCallback OnOpenActivity { get; set; }
     [Parameter] public EventCallback OnOpenNotifications { get; set; }
 
