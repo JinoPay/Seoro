@@ -451,6 +451,14 @@ html *::after {
     opacity: 1;
 }
 
+.tree-session .mud-menu {
+    position: absolute;
+    visibility: hidden;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
 /* Filter input */
 .tree-filter {
     padding: 0 var(--space-2) var(--space-1);
@@ -683,6 +691,20 @@ html *::after {
 .toolbar-effort-badge.max {
     background: var(--color-error-bg);
     color: var(--color-error);
+}
+
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-right: var(--space-1);
+}
+
+.toolbar-actions .mud-icon-button:hover,
+.toolbar-actions .mud-menu button:hover {
+    opacity: 0.9 !important;
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
 }
 
 .main-content {
