@@ -200,19 +200,20 @@
     }
 
     [JSInvokable]
-    public async Task OnFilePasted(string fileName, string contentType, byte[] data)
+    public void OnFilePasted(string fileName, string contentType, string base64Data)
     {
-        await AddPendingAttachment(fileName, contentType, data);
+        AddPendingAttachmentFromBase64(fileName, contentType, base64Data);
     }
 
     [JSInvokable]
-    public async Task OnFileDropped(string fileName, string contentType, byte[] data)
+    public void OnFileDropped(string fileName, string contentType, string base64Data)
     {
-        await AddPendingAttachment(fileName, contentType, data);
+        AddPendingAttachmentFromBase64(fileName, contentType, base64Data);
     }
 
-    private Task AddPendingAttachment(string fileName, string contentType, byte[] data)
+    private void AddPendingAttachmentFromBase64(string fileName, string contentType, string base64Data)
     {
+        var data = Convert.FromBase64String(base64Data);
         var attachment = new PendingAttachment
         {
             FileName = fileName,
@@ -222,13 +223,12 @@
 
         if (attachment.IsImage)
         {
-            attachment.PreviewDataUrl = $"data:{contentType};base64,{Convert.ToBase64String(data)}";
+            attachment.PreviewDataUrl = $"data:{contentType};base64,{base64Data}";
         }
 
         _pendingAttachments.Add(attachment);
         _forceRender = true;
         StateHasChanged();
-        return Task.CompletedTask;
     }
 
     private async Task PickFiles()

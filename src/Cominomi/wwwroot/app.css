@@ -1933,62 +1933,14 @@ html *::after {
 
 /* ===== Intermediate Text ===== */
 .intermediate-text {
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-1) var(--space-3);
     margin: 2px 0;
-    border-radius: var(--radius-sm);
     font-size: var(--text-sm);
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: color var(--transition), background var(--transition);
-    max-height: 60px;
-    overflow: hidden;
-    position: relative;
-}
-
-.intermediate-text::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 24px;
-    background: linear-gradient(transparent, var(--bg-base));
-    pointer-events: none;
-    transition: opacity var(--transition);
-}
-
-.intermediate-text:hover {
     color: var(--text-secondary);
-    background: var(--bg-hover);
-}
-
-.intermediate-text.expanded {
-    max-height: none;
-    color: var(--text-secondary);
-}
-
-.intermediate-text.expanded::after {
-    display: none;
 }
 
 .intermediate-text .markdown-body {
     font-size: var(--text-sm);
-    opacity: 0.7;
-}
-
-.intermediate-text.streaming-compact {
-    max-height: 32px;
-    padding: var(--space-1) var(--space-2);
-    font-size: var(--text-xs);
-    opacity: 0.5;
-}
-
-.intermediate-text.streaming-compact::after {
-    height: 16px;
-}
-
-.intermediate-text-content {
-    display: block;
 }
 
 /* ===== Quick Response Bar ===== */

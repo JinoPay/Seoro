@@ -124,11 +124,8 @@
                             var text = group.Parts[0].Text ?? "";
                             @if (group.IsIntermediate)
                             {
-                                <div class="intermediate-text streaming-compact @(_intermediateExpanded.Contains(idx) ? "expanded" : "")"
-                                     @onclick="@(() => ToggleIntermediate(idx))">
-                                    <span class="intermediate-text-content">
-                                        @((MarkupString)Markdown.ToHtml(text, _pipeline))
-                                    </span>
+                                <div class="intermediate-text">
+                                    @((MarkupString)Markdown.ToHtml(text, _pipeline))
                                 </div>
                             }
                             else
@@ -215,7 +212,6 @@
         .Build();
 
     private readonly Dictionary<string, string> _imageCache = new();
-    private readonly HashSet<int> _intermediateExpanded = [];
     private readonly HashSet<int> _thinkingExpanded = [];
     private int _lastThinkingGroupCount;
 
@@ -246,11 +242,6 @@
             _thinkingExpanded.Add(index);
     }
 
-    private void ToggleIntermediate(int index)
-    {
-        if (!_intermediateExpanded.Remove(index))
-            _intermediateExpanded.Add(index);
-    }
 
     private static string GetThinkingHeaderText(string thinkingText, bool isExpanded)
     {

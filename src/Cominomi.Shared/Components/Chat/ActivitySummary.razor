@@ -72,12 +72,8 @@
                 else if (group.Type == ContentGroupType.Text)
                 {
                     var text = group.Parts[0].Text ?? "";
-                    <div class="intermediate-text @(_intermediateExpanded.Contains(idx) ? "expanded" : "")"
-                         @onclick:stopPropagation="true"
-                         @onclick="@(() => ToggleIntermediate(idx))">
-                        <span class="intermediate-text-content">
-                            @((MarkupString)Markdown.ToHtml(text, _pipeline))
-                        </span>
+                    <div class="intermediate-text">
+                        @((MarkupString)Markdown.ToHtml(text, _pipeline))
                     </div>
                 }
             }
@@ -97,8 +93,6 @@
 
     private bool _expanded;
     private readonly HashSet<int> _thinkingExpanded = [];
-    private readonly HashSet<int> _intermediateExpanded = [];
-
     private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
         .Build();
@@ -111,11 +105,6 @@
             _thinkingExpanded.Add(index);
     }
 
-    private void ToggleIntermediate(int index)
-    {
-        if (!_intermediateExpanded.Remove(index))
-            _intermediateExpanded.Add(index);
-    }
 
     private static string GetThinkingPreview(string text, bool isExpanded)
     {

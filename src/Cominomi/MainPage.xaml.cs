@@ -20,6 +20,11 @@ public partial class MainPage
                     e.ProcessFailedKind, e.Reason);
             };
 
+            // Allow external drag-and-drop into the WebView
+            // WebView2 default navigation on file drop must be suppressed;
+            // the JS drop handler in index.html calls preventDefault() to handle it.
+            args.WebView.AllowDrop = true;
+
             // Auto-approve clipboard read permission so paste (Ctrl+V) works for images/files
             args.WebView.CoreWebView2.PermissionRequested += (_, permArgs) =>
             {

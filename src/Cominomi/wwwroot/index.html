@@ -219,12 +219,11 @@
                             var file = item.getAsFile();
                             if (!file) continue;
                             try {
-                                var buffer = await file.arrayBuffer();
-                                var bytes = new Uint8Array(buffer);
+                                var base64 = await window._fileToBase64(file);
                                 await dotNetRef.invokeMethodAsync('OnFilePasted',
                                     file.name || 'pasted-image.png',
                                     file.type || 'application/octet-stream',
-                                    Array.from(bytes));
+                                    base64);
                             } catch (err) {
                                 console.error('[Cominomi:paste] file read error:', err);
                             }
@@ -243,11 +242,9 @@
                                 if (type.startsWith('image/')) {
                                     e.preventDefault();
                                     var blob = await clipboardItems[ci].getType(type);
-                                    var buf = await blob.arrayBuffer();
-                                    var arr = new Uint8Array(buf);
-                                    var ext = type.split('/')[1] || 'png';
+                                    var base64 = await window._fileToBase64(new File([blob], 'pasted-image.' + (type.split('/')[1] || 'png'), { type: type }));
                                     await dotNetRef.invokeMethodAsync('OnFilePasted',
-                                        'pasted-image.' + ext, type, Array.from(arr));
+                                        'pasted-image.' + (type.split('/')[1] || 'png'), type, base64);
                                 }
                             }
                         }
@@ -276,6 +273,20 @@
         };
 
         // --- Public registration: uses MutationObserver to handle late/replaced elements ---
+        // Convert a File/Blob to a base64 string (without the data-url prefix)
+        window._fileToBase64 = function(file) {
+            return new Promise(function(resolve, reject) {
+                var reader = new FileReader();
+                reader.onload = function() {
+                    // result is "data:<type>;base64,<data>" — extract the base64 part
+                    var idx = reader.result.indexOf(',');
+                    resolve(idx >= 0 ? reader.result.substring(idx + 1) : reader.result);
+                };
+                reader.onerror = function() { reject(reader.error); };
+                reader.readAsDataURL(file);
+            });
+        };
+
         window.registerInputHandlers = function(elementId, dotNetRef) {
             var container = document.getElementById(elementId);
             if (!container) return;
@@ -310,14 +321,16 @@
                 e.preventDefault();
                 container.classList.remove('drop-active');
                 var files = e.dataTransfer?.files;
-                if (!files) return;
+                if (!files || files.length === 0) return;
                 for (var i = 0; i < files.length; i++) {
-                    var file = files[i];
-                    var buffer = await file.arrayBuffer();
-                    var bytes = new Uint8Array(buffer);
-                    await dotNetRef.invokeMethodAsync('OnFileDropped',
-                        file.name, file.type || 'application/octet-stream',
-                        Array.from(bytes));
+                    try {
+                        var file = files[i];
+                        var base64 = await window._fileToBase64(file);
+                        await dotNetRef.invokeMethodAsync('OnFileDropped',
+                            file.name, file.type || 'application/octet-stream', base64);
+                    } catch (err) {
+                        console.error('[Cominomi:drop] file read error:', err);
+                    }
                 }
             };
             container.addEventListener('dragover', container._dragOverHandler);
