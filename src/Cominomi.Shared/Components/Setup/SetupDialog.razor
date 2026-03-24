@@ -3,16 +3,16 @@
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">
+        <div class="typo-h6">
             <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
             초기 설정
-        </MudText>
+        </div>
     </TitleContent>
     <DialogContent>
-        <MudStack Spacing="3" Class="pa-2" Style="min-width: 440px;">
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
+        <div class="stack gap-3 pa-2" style="min-width: 440px;">
+            <p class="typo-body2 text-secondary">
                 Cominomi를 사용하려면 다음 도구들이 설치되어 있어야 합니다.
-            </MudText>
+            </p>
 
             @if (_loading)
             {
@@ -23,7 +23,7 @@
                 @foreach (var dep in _results)
                 {
                     <MudPaper Class="pa-3" Elevation="0" Outlined="true">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <div class="stack-row items-center gap-2">
                             @if (dep.IsInstalled)
                             {
                                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
@@ -32,44 +32,44 @@
                             {
                                 <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
                             }
-                            <MudStack Spacing="0" Style="flex: 1;">
-                                <MudText Typo="Typo.subtitle2">@dep.Name</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@dep.Description</MudText>
-                            </MudStack>
+                            <div class="stack flex-1">
+                                <div class="typo-subtitle2">@dep.Name</div>
+                                <small class="typo-caption text-secondary">@dep.Description</small>
+                            </div>
                             @if (dep.IsInstalled)
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
                                     @(dep.Version ?? "설치됨")
                                 </MudChip>
                             }
-                        </MudStack>
+                        </div>
 
                         @if (!dep.IsInstalled)
                         {
                             <MudDivider Class="my-2" />
-                            <MudStack Spacing="1">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">설치 방법:</MudText>
+                            <div class="stack gap-1">
+                                <small class="typo-caption text-secondary">설치 방법:</small>
                                 @if (_isMac)
                                 {
-                                    <MudText Typo="Typo.body2">
+                                    <p class="typo-body2">
                                         <code>@dep.MacInstallHint</code>
-                                    </MudText>
+                                    </p>
                                 }
                                 else
                                 {
-                                    <MudText Typo="Typo.body2">
+                                    <p class="typo-body2">
                                         <code>@dep.WindowsInstallHint</code>
-                                    </MudText>
+                                    </p>
                                 }
                                 <MudLink Href="@dep.InstallUrl" Target="_blank" Typo="Typo.caption">
                                     @dep.InstallUrl
                                 </MudLink>
-                            </MudStack>
+                            </div>
                         }
                     </MudPaper>
                 }
             }
-        </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
         @if (_allInstalled)

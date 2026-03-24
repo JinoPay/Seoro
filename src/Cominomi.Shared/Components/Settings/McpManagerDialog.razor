@@ -4,10 +4,10 @@
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">
+        <div class="typo-h6">
             <MudIcon Icon="@Icons.Material.Filled.Hub" Class="mr-2" />
             MCP 서버 관리
-        </MudText>
+        </div>
     </TitleContent>
     <DialogContent>
         <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
@@ -21,9 +21,9 @@
                 }
                 else if (_servers.Count == 0)
                 {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
+                    <p class="typo-body2 text-secondary pa-4 text-center">
                         등록된 MCP 서버가 없습니다.
-                    </MudText>
+                    </p>
                 }
                 else
                 {
@@ -75,7 +75,7 @@
             @* Add/Edit Server Tab *@
             <MudTabPanel Text="@(_editingServer != null ? "서버 수정" : "서버 추가")"
                          Icon="@(_editingServer != null ? Icons.Material.Filled.Edit : Icons.Material.Filled.Add)">
-                <MudStack Spacing="3" Class="pa-3">
+                <div class="stack gap-3 pa-3">
                     <MudTextField @bind-Value="_newName" Label="서버 이름" Variant="Variant.Outlined"
                                   Margin="Margin.Dense" Required="true" />
 
@@ -109,11 +109,11 @@
 
                     @* Environment Variables *@
                     <div>
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">환경변수</MudText>
+                        <div class="typo-subtitle2 mb-1">환경변수</div>
                         @foreach (var (key, idx) in _envKeys.Select((k, i) => (k, i)))
                         {
                             var capturedIdx = idx;
-                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mb-1">
+                            <div class="stack-row gap-1 items-center mb-1">
                                 <MudTextField T="string" Value="@_envKeys[capturedIdx]"
                                               ValueChanged="@(v => _envKeys[capturedIdx] = v)"
                                               Placeholder="KEY" Variant="Variant.Outlined" Margin="Margin.Dense"
@@ -124,13 +124,13 @@
                                               Style="flex: 0.6;" InputType="InputType.Password" />
                                 <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small"
                                                OnClick="@(() => RemoveEnvRow(capturedIdx))" />
-                            </MudStack>
+                            </div>
                         }
                         <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Variant="Variant.Text"
                                    OnClick="AddEnvRow">환경변수 추가</MudButton>
                     </div>
 
-                    <MudStack Row="true" Spacing="2">
+                    <div class="stack-row gap-2">
                         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                    OnClick="@(_editingServer != null ? SaveEdit : AddServer)"
                                    Disabled="@(string.IsNullOrWhiteSpace(_newName) || (_newTransport == "stdio" && string.IsNullOrWhiteSpace(_newCommand)) || (_newTransport == "sse" && string.IsNullOrWhiteSpace(_newUrl)))">
@@ -140,15 +140,15 @@
                         {
                             <MudButton Variant="Variant.Text" OnClick="CancelEdit">취소</MudButton>
                         }
-                    </MudStack>
-                </MudStack>
+                    </div>
+                </div>
             </MudTabPanel>
 
             @* Import/Export Tab *@
             <MudTabPanel Text="가져오기" Icon="@Icons.Material.Filled.FileDownload">
-                <MudStack Spacing="3" Class="pa-3">
+                <div class="stack gap-3 pa-3">
                     <div>
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">Claude Desktop에서 가져오기</MudText>
+                        <div class="typo-subtitle2 mb-2">Claude Desktop에서 가져오기</div>
                         <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                                    StartIcon="@Icons.Material.Filled.DesktopWindows"
                                    OnClick="ImportFromDesktop"
@@ -165,7 +165,7 @@
                     <MudDivider />
 
                     <div>
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">JSON으로 가져오기</MudText>
+                        <div class="typo-subtitle2 mb-2">JSON으로 가져오기</div>
                         <MudTextField @bind-Value="_importJson" Label="MCP 설정 JSON" Variant="Variant.Outlined"
                                       Lines="6" Placeholder='{"mcpServers": {"name": {"command": "...", "args": []}}}' />
                         <MudSelect T="string" @bind-Value="_importScope" Label="범위"
@@ -179,7 +179,7 @@
                             JSON 가져오기
                         </MudButton>
                     </div>
-                </MudStack>
+                </div>
             </MudTabPanel>
         </MudTabs>
     </DialogContent>

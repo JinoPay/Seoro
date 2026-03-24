@@ -1,13 +1,13 @@
 @inject IChatState ChatState
 
-<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mr-4">
+<div class="stack-row items-center gap-2 mr-4">
     @if (!string.IsNullOrEmpty(ChatState.CurrentSession?.Model))
     {
         <span style="font-size: 0.75rem; opacity: 0.5; font-weight: 500;">
             @GetModelDisplayName(ChatState.CurrentSession.Model)
         </span>
     }
-</MudStack>
+</div>
 
 @code {
     private static string GetModelDisplayName(string model) => model switch
