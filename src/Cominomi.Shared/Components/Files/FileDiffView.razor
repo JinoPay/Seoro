@@ -1,5 +1,8 @@
 @using Cominomi.Shared.Models
+@using Cominomi.Shared.Services
 @inject IJSRuntime JS
+@inject IGitService GitService
+@inject IChatState ChatState
 
 <div class="filediff-view">
     <div class="filediff-header">
@@ -13,21 +16,52 @@
     </div>
 
     <div id="@_elementId" class="filediff-content">
-        @if (string.IsNullOrWhiteSpace(Diff.UnifiedDiff))
+        @if (_parsed == null || _parsed.Hunks.Count == 0)
         {
-            <div class="filediff-empty">
-                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Style="opacity: 0.3;" />
-                <span>No diff available</span>
-            </div>
+            @if (string.IsNullOrWhiteSpace(Diff.UnifiedDiff))
+            {
+                <div class="filediff-empty">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Style="opacity: 0.3;" />
+                    <span>No diff available</span>
+                </div>
+            }
         }
         else
         {
-            @foreach (var line in Diff.UnifiedDiff.Split('\n'))
+            @foreach (var hunk in _parsed.Hunks)
             {
-                var cls = GetLineClass(line);
-                var prefix = GetPrefix(line);
-                var codeText = GetCodeText(line);
-                <div class="diff-line @cls"><span class="diff-prefix">@prefix</span><span class="diff-code">@codeText</span></div>
+                var hasGap = hunk.GapEndLine > hunk.GapStartLine;
+
+                @* Expanded gap lines *@
+                @if (hunk.IsExpanded && hunk.ExpandedLines != null)
+                {
+                    @foreach (var line in hunk.ExpandedLines)
+                    {
+                        <div class="diff-line expanded-context"><span class="diff-prefix"> </span><span class="diff-code">@line.Text</span></div>
+                    }
+                }
+
+                @* Hunk header *@
+                @if (hasGap)
+                {
+                    <div class="diff-line hunk expandable" @onclick="() => ToggleHunkAsync(hunk)">
+                        <span class="hunk-expand-icon @(hunk.IsExpanded ? "expanded" : "")">▶</span>
+                        <span class="diff-code">@hunk.HeaderText</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="diff-line hunk">
+                        <span class="diff-code">@hunk.HeaderText</span>
+                    </div>
+                }
+
+                @* Diff lines in this hunk *@
+                @foreach (var line in hunk.Lines)
+                {
+                    var cls = GetLineClass(line.Type);
+                    <div class="diff-line @cls"><span class="diff-prefix">@line.Prefix</span><span class="diff-code">@line.Text</span></div>
+                }
             }
         }
     </div>
@@ -41,6 +75,7 @@
     private string _hljsLang = "";
     private bool _needsHighlight;
     private string? _lastFilePath;
+    private ParsedDiff? _parsed;
 
     protected override void OnParametersSet()
     {
@@ -50,7 +85,8 @@
 
         _elementId = $"diff-{filePath.GetHashCode():x8}";
         _hljsLang = GetHljsLanguage(filePath);
-        _needsHighlight = !string.IsNullOrWhiteSpace(Diff.UnifiedDiff) && _hljsLang.Length > 0;
+        _parsed = DiffParser.Parse(Diff.UnifiedDiff);
+        _needsHighlight = _parsed.Hunks.Count > 0 && _hljsLang.Length > 0;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -69,6 +105,61 @@
         }
     }
 
+    private async Task ToggleHunkAsync(DiffHunk hunk)
+    {
+        if (hunk.IsExpanded)
+        {
+            hunk.IsExpanded = false;
+            hunk.ExpandedLines = null;
+            return;
+        }
+
+        var session = ChatState.CurrentSession;
+        if (session == null) return;
+
+        var worktreePath = session.Git.WorktreePath;
+        var baseBranch = !string.IsNullOrEmpty(session.Git.BaseBranch) ? session.Git.BaseBranch : "HEAD";
+
+        try
+        {
+            string[] lines;
+            if (Diff.ChangeType == FileChangeType.Deleted)
+            {
+                lines = await GitService.ReadBaseFileLinesAsync(
+                    worktreePath, baseBranch, Diff.FilePath,
+                    hunk.GapStartLine, hunk.GapEndLine);
+            }
+            else
+            {
+                lines = await GitService.ReadFileLinesAsync(
+                    worktreePath, Diff.FilePath,
+                    hunk.GapStartLine, hunk.GapEndLine);
+            }
+
+            hunk.ExpandedLines = lines.Select(l => new DiffLine
+            {
+                Type = DiffLineType.Context,
+                Prefix = " ",
+                Text = l
+            }).ToList();
+            hunk.IsExpanded = true;
+
+            _needsHighlight = _hljsLang.Length > 0;
+        }
+        catch
+        {
+            // File may not exist or be inaccessible
+        }
+    }
+
+    private static string GetLineClass(DiffLineType type) => type switch
+    {
+        DiffLineType.Addition => "addition",
+        DiffLineType.Deletion => "deletion",
+        DiffLineType.Hunk => "hunk",
+        _ => ""
+    };
+
     private static string GetFileIcon(FileChangeType type) => type switch
     {
         FileChangeType.Added => Icons.Material.Filled.NoteAdd,
@@ -84,32 +175,6 @@
         FileChangeType.Renamed => "color: var(--color-warning);",
         _ => "color: var(--color-info);"
     };
-
-    private static string GetLineClass(string line)
-    {
-        if (line.StartsWith("@@")) return "hunk";
-        if (line.StartsWith('+') && !line.StartsWith("+++")) return "addition";
-        if (line.StartsWith('-') && !line.StartsWith("---")) return "deletion";
-        return "";
-    }
-
-    private static string GetPrefix(string line)
-    {
-        if (line.Length == 0) return "";
-        if (line.StartsWith("@@")) return "";
-        if (line.StartsWith('+') || line.StartsWith('-') || line.StartsWith(' '))
-            return line[..1];
-        return "";
-    }
-
-    private static string GetCodeText(string line)
-    {
-        if (line.Length == 0) return "";
-        if (line.StartsWith("@@")) return line;
-        if (line.StartsWith('+') || line.StartsWith('-') || line.StartsWith(' '))
-            return line[1..];
-        return line;
-    }
 
     private static string GetHljsLanguage(string filePath)
     {

@@ -27,10 +27,9 @@ html *::after {
 /* Exclude animated elements from theme transition */
 .panel-resizer,
 .panel-resizer *,
-.streaming-pill,
-.streaming-pill *,
+.streaming-indicator,
+.streaming-indicator *,
 .pulse-dot,
-.typing-dots span,
 .tool-card.running,
 .tool-card.running *,
 @keyframes * {
@@ -1062,7 +1061,7 @@ html *::after {
     display: flex;
     align-items: center;
     padding: var(--space-2) var(--space-3);
-    height: 40px;
+    height: 36px;
     flex-shrink: 0;
     border-bottom: 1px solid var(--border-subtle);
     gap: var(--space-2);
@@ -2181,110 +2180,105 @@ html *::after {
 }
 
 /* ===== Streaming Indicator ===== */
-.streaming-pill {
+@property --border-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+
+.streaming-indicator {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
-    padding: 6px 14px;
-    border-radius: var(--radius-full);
-    background: var(--accent-dim);
-    border: 1px solid var(--accent-dim);
-    margin-top: var(--space-1);
-    position: relative;
-    overflow: hidden;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    margin-top: var(--space-2);
+    border: 1.5px solid transparent;
+    background:
+        linear-gradient(var(--bg-base), var(--bg-base)) padding-box,
+        conic-gradient(from var(--border-angle), var(--indicator-accent, var(--accent)) 0%, transparent 25%, transparent 75%, var(--indicator-accent, var(--accent)) 100%) border-box;
+    animation: indicator-enter 0.35s ease-out, gradient-spin 2.5s linear infinite;
 }
 
-.streaming-pill::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, var(--accent-subtle), transparent);
-    animation: shimmer 2s ease-in-out infinite;
+.streaming-indicator.thinking {
+    --indicator-accent: var(--color-info);
 }
 
-@keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 100%; }
+.streaming-indicator.using-tool {
+    --indicator-accent: var(--color-warning);
 }
 
-.streaming-pill.thinking {
-    background: var(--color-info-bg);
-    border-color: var(--color-info-bg);
+.streaming-indicator.sending {
+    --indicator-accent: var(--color-success);
 }
 
-.streaming-pill.thinking::before {
-    background: linear-gradient(90deg, transparent, var(--color-info-bg), transparent);
+.streaming-indicator.writing {
+    --indicator-accent: var(--color-success);
+    background:
+        linear-gradient(
+            color-mix(in srgb, var(--color-success-bg) 40%, var(--bg-base)),
+            color-mix(in srgb, var(--color-success-bg) 40%, var(--bg-base))
+        ) padding-box,
+        conic-gradient(from var(--border-angle), var(--color-success) 0%, transparent 25%, transparent 75%, var(--color-success) 100%) border-box;
 }
 
-.streaming-pill.using-tool {
-    background: var(--color-warning-bg);
-    border-color: var(--color-warning-bg);
+@keyframes gradient-spin {
+    to { --border-angle: 360deg; }
 }
 
-.streaming-pill.using-tool::before {
-    background: linear-gradient(90deg, transparent, var(--color-warning-bg), transparent);
+@keyframes indicator-enter {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.streaming-elapsed {
+.indicator-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--indicator-accent, var(--accent));
+    animation: dot-breathe 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes dot-breathe {
+    0%, 100% { opacity: 0.4; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1.15); }
+}
+
+.indicator-label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    opacity: 0.85;
+    white-space: nowrap;
+}
+
+.indicator-time {
     font-size: var(--text-xs);
     opacity: 0.4;
     font-variant-numeric: tabular-nums;
     margin-left: var(--space-1);
 }
 
-.streaming-pill .tool-badge {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    background: rgba(0, 0, 0, 0.15);
-    padding: 1px 6px;
-    border-radius: 4px;
-}
-
-.streaming-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: var(--space-1) 0;
-    min-height: 24px;
-}
-
-.pulse-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-    animation: pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 0.3; transform: scale(0.8); }
-    50% { opacity: 1; transform: scale(1.2); }
-}
-
-.typing-dots {
+.typing-wave {
     display: flex;
     align-items: center;
     gap: 3px;
-    padding: var(--space-1) 0;
 }
 
-.typing-dots span {
+.typing-wave span {
     width: 5px;
     height: 5px;
     border-radius: 50%;
     background: var(--color-success);
-    animation: typing 1.4s ease-in-out infinite;
+    animation: wave-bounce 1.4s ease-in-out infinite;
 }
 
-.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+.typing-wave span:nth-child(2) { animation-delay: 0.15s; }
+.typing-wave span:nth-child(3) { animation-delay: 0.3s; }
 
-@keyframes typing {
+@keyframes wave-bounce {
     0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
-    30% { opacity: 1; transform: translateY(-3px); }
+    30% { opacity: 1; transform: translateY(-4px); }
 }
 
 /* ===== Diff Panel Styles ===== */
@@ -2379,6 +2373,35 @@ html *::after {
 .diff-line.hunk {
     color: var(--diff-hunk-fg);
     opacity: 0.7;
+}
+
+.diff-line.hunk.expandable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.diff-line.hunk.expandable:hover {
+    opacity: 1;
+    background: var(--bg-hover);
+}
+
+.hunk-expand-icon {
+    font-size: 10px;
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+    opacity: 0.6;
+    transition: transform 0.15s ease;
+    display: inline-block;
+}
+
+.hunk-expand-icon.expanded {
+    transform: rotate(90deg);
+}
+
+.diff-line.expanded-context {
+    background: var(--bg-hover);
+    opacity: 0.65;
 }
 
 /* ===== Scrollbar ===== */

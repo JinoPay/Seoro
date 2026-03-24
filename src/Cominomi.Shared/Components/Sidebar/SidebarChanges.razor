@@ -41,7 +41,7 @@
         <div class="sidebar-changes-list">
             @foreach (var file in _diff.Files)
             {
-                <div class="sidebar-file-item file" @onclick="@(() => OpenFileDiff(file))">
+                <div @key="file.FilePath" class="sidebar-file-item file" @onclick="@(() => OpenFileDiff(file))">
                     <MudIcon Icon="@GetFileIcon(file.ChangeType)" Size="Size.Small"
                              Style="@($"width: 14px; height: 14px; {GetFileIconStyle(file.ChangeType)}")" />
                     <span class="sidebar-file-name">@GetFileName(file.FilePath)</span>
@@ -63,6 +63,7 @@
     private string? _error;
     private string? _lastSessionId;
     private int _previousFileCount;
+    private bool _initialLoaded;
     private FileSystemWatcher? _watcher;
     private System.Timers.Timer? _debounceTimer;
 
@@ -80,6 +81,7 @@
         {
             _lastSessionId = sessionId;
             _previousFileCount = 0;
+            _initialLoaded = false;
             await LoadDiffAsync();
             StartWatching();
         }
@@ -149,36 +151,71 @@
         {
             _diff = null;
             _error = null;
+            _loading = false;
             StateHasChanged();
             return;
         }
 
-        _loading = true;
-        _error = null;
-        StateHasChanged();
+        // Only show loading UI on initial load to prevent flickering
+        if (!_initialLoaded)
+        {
+            _loading = true;
+            _error = null;
+            StateHasChanged();
+        }
 
         try
         {
             var diffBase = !string.IsNullOrEmpty(session.Git.BaseBranch) ? session.Git.BaseBranch : "HEAD";
-            _diff = await GitService.GetDiffSummaryAsync(session.Git.WorktreePath, diffBase);
+            var newDiff = await GitService.GetDiffSummaryAsync(session.Git.WorktreePath, diffBase);
 
-            var newCount = _diff?.Files.Count ?? 0;
-            if (_previousFileCount == 0 && newCount > 0)
+            if (!DiffEquals(_diff, newDiff))
             {
-                _ = OnChangesDetected.InvokeAsync();
+                _diff = newDiff;
+
+                var newCount = _diff?.Files.Count ?? 0;
+                if (_previousFileCount == 0 && newCount > 0)
+                {
+                    _ = OnChangesDetected.InvokeAsync();
+                }
+                _previousFileCount = newCount;
+
+                _error = null;
+                _loading = false;
+                _initialLoaded = true;
+                StateHasChanged();
             }
-            _previousFileCount = newCount;
+            else if (!_initialLoaded)
+            {
+                _loading = false;
+                _initialLoaded = true;
+                StateHasChanged();
+            }
         }
         catch (Exception ex)
         {
             _error = ex.Message;
             _diff = null;
-        }
-        finally
-        {
             _loading = false;
+            _initialLoaded = true;
             StateHasChanged();
         }
+    }
+
+    private static bool DiffEquals(DiffSummary? a, DiffSummary? b)
+    {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        if (a.Files.Count != b.Files.Count) return false;
+        for (int i = 0; i < a.Files.Count; i++)
+        {
+            if (a.Files[i].FilePath != b.Files[i].FilePath ||
+                a.Files[i].Additions != b.Files[i].Additions ||
+                a.Files[i].Deletions != b.Files[i].Deletions ||
+                a.Files[i].ChangeType != b.Files[i].ChangeType)
+                return false;
+        }
+        return true;
     }
 
     private void OpenFileDiff(FileDiff file)
@@ -218,6 +255,7 @@
                 _lastSessionId = sessionId;
                 if (sessionId != null)
                 {
+                    _initialLoaded = false;
                     await LoadDiffAsync();
                     StartWatching();
                 }
@@ -226,6 +264,7 @@
                     _diff = null;
                     _error = null;
                     _previousFileCount = 0;
+                    _initialLoaded = false;
                     StopWatching();
                     StateHasChanged();
                 }
