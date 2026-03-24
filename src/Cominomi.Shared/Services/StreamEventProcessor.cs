@@ -54,6 +54,19 @@ public class StreamEventProcessor : IStreamEventProcessor
         // Detect plan completion
         if (ctx.Session.PermissionMode == "plan")
         {
+            // Layer 1: detect plan file path from Write/Edit tool calls (must run first)
+            if (ctx.DetectedPlanFilePath == null)
+                DetectPlanFileFromToolCalls(ctx);
+
+            // Persist detected path on session so it survives across turns
+            if (ctx.DetectedPlanFilePath != null)
+                ctx.Session.PlanFilePath = ctx.DetectedPlanFilePath;
+
+            // Restore from session if this turn didn't detect (Write and ExitPlanMode in different turns)
+            if (ctx.DetectedPlanFilePath == null && ctx.Session.PlanFilePath != null
+                && File.Exists(ctx.Session.PlanFilePath))
+                ctx.DetectedPlanFilePath = ctx.Session.PlanFilePath;
+
             // Layer 2: text-based detection
             if (!ctx.ExitPlanModeDetected)
             {
@@ -62,7 +75,7 @@ public class StreamEventProcessor : IStreamEventProcessor
                     ctx.ExitPlanModeDetected = true;
             }
 
-            // Layer 3: file system detection
+            // Layer 3: file system detection (now uses DetectedPlanFilePath first)
             if (!ctx.ExitPlanModeDetected && !string.IsNullOrEmpty(ctx.Session.Git.WorktreePath))
             {
                 await DetectPlanFileAsync(ctx);
@@ -72,10 +85,6 @@ public class StreamEventProcessor : IStreamEventProcessor
 
             if (ctx.ExitPlanModeDetected)
             {
-                // Extract plan file path from Write/Edit tool calls before scanning filesystem
-                if (ctx.DetectedPlanFilePath == null)
-                    DetectPlanFileFromToolCalls(ctx);
-
                 if (ctx.PlanContent == null)
                     await DetectPlanFileAsync(ctx);
 

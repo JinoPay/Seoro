@@ -51,11 +51,10 @@ html *::after {
 }
 
 .cominomi-shell.sidebar-collapsed {
-    --sidebar-width: 0px;
-    grid-template-columns: 0px 1fr;
+    --sidebar-width: 48px;
+    grid-template-columns: 48px 0px 1fr;
 }
 
-.cominomi-shell.sidebar-collapsed .cominomi-sidebar,
 .cominomi-shell.sidebar-collapsed .panel-resizer:first-of-type {
     display: none;
 }
@@ -87,9 +86,6 @@ html *::after {
 
 .cominomi-shell.sidebar-collapsed .cominomi-sidebar {
     overflow: hidden;
-    width: 0;
-    opacity: 0;
-    pointer-events: none;
 }
 
 /* ===== Sidebar ===== */
@@ -160,6 +156,61 @@ html *::after {
 .sidebar-footer-btn:hover {
     opacity: 0.8;
     background: var(--bg-hover);
+}
+
+/* ===== Sidebar Collapse Button ===== */
+.sidebar-collapse-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.5;
+    border-radius: var(--radius-sm);
+    transition: opacity var(--transition), background var(--transition);
+    flex-shrink: 0;
+}
+
+.sidebar-collapse-btn:hover {
+    opacity: 0.8;
+    background: var(--bg-hover);
+}
+
+/* ===== Mini Sidebar (Collapsed) ===== */
+.sidebar-collapsed .sidebar-brand-text,
+.sidebar-collapsed .sidebar-footer-btn span,
+.sidebar-collapsed .sidebar-tree {
+    display: none;
+}
+
+.sidebar-collapsed .sidebar-toolbar {
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-3) 0;
+    gap: var(--space-2);
+    height: auto;
+}
+
+.sidebar-collapsed .sidebar-brand {
+    justify-content: center;
+}
+
+.sidebar-collapsed .sidebar-footer {
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-2) 0;
+    gap: var(--space-1);
+}
+
+.sidebar-collapsed .sidebar-footer-btn {
+    justify-content: center;
+    padding: var(--space-1);
+    width: 36px;
+    height: 36px;
 }
 
 /* ===== Tree Sidebar ===== */
