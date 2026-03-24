@@ -397,6 +397,28 @@ public class GitService : IGitService
         return await File.ReadAllTextAsync(fullPath, ct);
     }
 
+    public async Task<string[]> ReadFileLinesAsync(string workingDir, string relativePath, int startLine, int endLine, CancellationToken ct = default)
+    {
+        var content = await ReadFileAsync(workingDir, relativePath, ct);
+        var allLines = content.Split('\n');
+        var from = Math.Max(0, startLine - 1); // 1-based to 0-based
+        var to = Math.Min(allLines.Length, endLine - 1);
+        if (from >= to) return [];
+        return allLines[from..to];
+    }
+
+    public async Task<string[]> ReadBaseFileLinesAsync(string workingDir, string baseBranch, string relativePath, int startLine, int endLine, CancellationToken ct = default)
+    {
+        var gitPath = relativePath.Replace('\\', '/');
+        var result = await RunGitAsync(workingDir, ct, "show", $"{baseBranch}:{gitPath}");
+        if (!result.Success) return [];
+        var allLines = result.Output.Split('\n');
+        var from = Math.Max(0, startLine - 1);
+        var to = Math.Min(allLines.Length, endLine - 1);
+        if (from >= to) return [];
+        return allLines[from..to];
+    }
+
     public async Task<(int Additions, int Deletions)> GetDiffStatAsync(string workingDir, string baseBranch, CancellationToken ct = default)
     {
         var result = await RunGitAsync(workingDir, ct, "diff", "--shortstat", baseBranch);
