@@ -1,4 +1,5 @@
 @inject IChatState ChatState
+@inject ILauncherService Launcher
 @implements IDisposable
 
 <div class="main-toolbar">
@@ -34,14 +35,77 @@
 
     <div style="flex: 1;"></div>
 
+    @if (ChatState.CurrentSession != null && !string.IsNullOrEmpty(GetEffectivePath()))
+    {
+        <div class="toolbar-actions">
+            <MudTooltip Text="폴더 열기" Placement="Placement.Bottom">
+                <MudIconButton Icon="@Icons.Material.Outlined.FolderOpen" Size="Size.Small"
+                               OnClick="OpenFolder"
+                               Style="width: 28px; height: 28px; opacity: 0.5;" />
+            </MudTooltip>
+
+            @if (_availableIdes.Count == 1)
+            {
+                <MudTooltip Text="@($"{_availableIdes[0].Name}에서 열기")" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Outlined.Code" Size="Size.Small"
+                                   OnClick="@(() => OpenInIde(_availableIdes[0].Command))"
+                                   Style="width: 28px; height: 28px; opacity: 0.5;" />
+                </MudTooltip>
+            }
+            else if (_availableIdes.Count > 1)
+            {
+                <MudMenu Icon="@Icons.Material.Outlined.Code" Size="Size.Small"
+                         Dense="true"
+                         AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                         Style="width: 28px; height: 28px; opacity: 0.5;"
+                         ActivationEvent="@MouseEvent.LeftClick">
+                    @foreach (var ide in _availableIdes)
+                    {
+                        <MudMenuItem OnClick="@(() => OpenInIde(ide.Command))"
+                                     Icon="@Icons.Material.Outlined.Code">
+                            @ide.Name
+                        </MudMenuItem>
+                    }
+                </MudMenu>
+            }
+        </div>
+    }
+
     <StatusBar />
 </div>
 
 @code {
+    private List<IdeInfo> _availableIdes = [];
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += HandleStateChanged;
+        _availableIdes = await Launcher.GetAvailableIdesAsync();
+    }
+
+    private string? GetEffectivePath()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null) return null;
+
+        if (!string.IsNullOrEmpty(session.Git.WorktreePath))
+            return session.Git.WorktreePath;
+
+        return ChatState.CurrentWorkspace?.RepoLocalPath;
+    }
+
+    private async Task OpenFolder()
+    {
+        var path = GetEffectivePath();
+        if (path != null)
+            await Launcher.OpenFolderAsync(path);
+    }
+
+    private async Task OpenInIde(string ideCommand)
+    {
+        var path = GetEffectivePath();
+        if (path != null)
+            await Launcher.OpenInIdeAsync(path, ideCommand);
     }
 
     private void HandleStateChanged()

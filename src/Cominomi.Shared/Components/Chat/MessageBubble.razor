@@ -197,7 +197,7 @@
 
             @if (Message.IsStreaming)
             {
-                <StreamingIndicator Phase="ChatState.Phase" ActiveToolName="ChatState.ActiveToolName"
+                <StreamingIndicator Phase="ChatState.Phase" ActiveToolName="@ChatState.ActiveToolName"
                                     StartedAt="Message.StreamingStartedAt" />
             }
         </div>
