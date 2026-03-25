@@ -219,13 +219,16 @@ public static class Program
 
         // Cleanup after window closes
         CleanUp(app.Services);
+
+        // Force exit — Photino may leave native threads alive on macOS
+        Environment.Exit(0);
     }
 
     private static void CleanUp(IServiceProvider services)
     {
         try
         {
-            (services.GetService<IClaudeService>() as IDisposable)?.Dispose();
+            services.GetService<IClaudeService>()?.Dispose();
             (services.GetService<ChatState>() as IDisposable)?.Dispose();
             (services.GetService<SessionListDataService>() as IDisposable)?.Dispose();
         }
