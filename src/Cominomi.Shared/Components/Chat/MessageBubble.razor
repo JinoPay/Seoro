@@ -94,10 +94,10 @@
                                  @onclick="@(() => ToggleThinkingBlock(idx))">
                                 <div class="thinking-header">
                                     <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
-                                             Style="width: 14px; height: 14px; opacity: 0.6;" />
-                                    <span>@GetThinkingHeaderText(thinkingText, _thinkingExpanded.Contains(idx))</span>
+                                             Style="width: 14px; height: 14px; opacity: 0.6; flex-shrink: 0;" />
+                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">@GetThinkingHeaderText(thinkingText, _thinkingExpanded.Contains(idx))</span>
                                     <MudIcon Icon="@(_thinkingExpanded.Contains(idx) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                                             Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;" />
+                                             Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px; margin-left: auto; flex-shrink: 0;" />
                                 </div>
                                 @if (_thinkingExpanded.Contains(idx))
                                 {

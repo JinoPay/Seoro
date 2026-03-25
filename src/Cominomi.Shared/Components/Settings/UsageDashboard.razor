@@ -2,209 +2,189 @@
 @inject IUsageService UsageService
 @inject IJSRuntime JS
 
-<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
-    <TitleContent>
-        <div class="typo-h6">
-            <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-2" />
-            사용량 대시보드
+<div class="usage-dashboard">
+    @* Date range filter *@
+    <div class="usage-date-filter">
+        <MudChipSet T="string" SelectedValue="_selectedRange" SelectedValueChanged="OnRangeChanged"
+                    SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                    Variant="Variant.Outlined" Color="Color.Primary">
+            <MudChip T="string" Value="@("7")">7일</MudChip>
+            <MudChip T="string" Value="@("30")">30일</MudChip>
+            <MudChip T="string" Value="@("all")">전체</MudChip>
+        </MudChipSet>
+    </div>
+
+    @if (_loading)
+    {
+        <div style="display: flex; justify-content: center; padding: 40px;">
+            <MudProgressCircular Indeterminate="true" />
         </div>
-    </TitleContent>
-    <DialogContent>
-        <div class="usage-dashboard">
-            @* Date range filter *@
-            <div class="usage-date-filter">
-                <MudChipSet T="string" SelectedValue="_selectedRange" SelectedValueChanged="OnRangeChanged"
-                            SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
-                            Variant="Variant.Outlined" Color="Color.Primary">
-                    <MudChip T="string" Value="@("7")">7일</MudChip>
-                    <MudChip T="string" Value="@("30")">30일</MudChip>
-                    <MudChip T="string" Value="@("all")">전체</MudChip>
-                </MudChipSet>
+    }
+    else if (_stats != null)
+    {
+        @* Summary cards *@
+        <div class="usage-summary-cards">
+            <div class="usage-card">
+                <div class="usage-card-label">총 비용</div>
+                <div class="usage-card-value">$@_stats.TotalCost.ToString("F4")</div>
             </div>
-
-            @if (_loading)
-            {
-                <div style="display: flex; justify-content: center; padding: 40px;">
-                    <MudProgressCircular Indeterminate="true" />
+            <div class="usage-card">
+                <div class="usage-card-label">총 세션</div>
+                <div class="usage-card-value">@_stats.TotalSessions</div>
+            </div>
+            <div class="usage-card">
+                <div class="usage-card-label">총 토큰</div>
+                <div class="usage-card-value">@FormatTokens(_stats.TotalTokens)</div>
+            </div>
+            <div class="usage-card">
+                <div class="usage-card-label">입력 / 출력</div>
+                <div class="usage-card-value" style="font-size: 0.9em;">
+                    @FormatTokens(_stats.TotalInputTokens) / @FormatTokens(_stats.TotalOutputTokens)
                 </div>
-            }
-            else if (_stats != null)
-            {
-                @* Summary cards *@
-                <div class="usage-summary-cards">
-                    <div class="usage-card">
-                        <div class="usage-card-label">총 비용</div>
-                        <div class="usage-card-value">$@_stats.TotalCost.ToString("F4")</div>
-                    </div>
-                    <div class="usage-card">
-                        <div class="usage-card-label">총 세션</div>
-                        <div class="usage-card-value">@_stats.TotalSessions</div>
-                    </div>
-                    <div class="usage-card">
-                        <div class="usage-card-label">총 토큰</div>
-                        <div class="usage-card-value">@FormatTokens(_stats.TotalTokens)</div>
-                    </div>
-                    <div class="usage-card">
-                        <div class="usage-card-label">입력 / 출력</div>
-                        <div class="usage-card-value" style="font-size: 0.9em;">
-                            @FormatTokens(_stats.TotalInputTokens) / @FormatTokens(_stats.TotalOutputTokens)
-                        </div>
-                    </div>
-                </div>
+            </div>
+        </div>
 
-                @* Token breakdown bar *@
-                @if (_stats.TotalTokens > 0)
+        @* Token breakdown bar *@
+        @if (_stats.TotalTokens > 0)
+        {
+            <div class="usage-token-bar">
+                <div class="usage-token-segment input" style="width: @(GetPercent(_stats.TotalInputTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
+                     title="입력: @FormatTokens(_stats.TotalInputTokens)"></div>
+                <div class="usage-token-segment output" style="width: @(GetPercent(_stats.TotalOutputTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
+                     title="출력: @FormatTokens(_stats.TotalOutputTokens)"></div>
+                <div class="usage-token-segment cache-write" style="width: @(GetPercent(_stats.TotalCacheCreationTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
+                     title="캐시 쓰기: @FormatTokens(_stats.TotalCacheCreationTokens)"></div>
+                <div class="usage-token-segment cache-read" style="width: @(GetPercent(_stats.TotalCacheReadTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
+                     title="캐시 읽기: @FormatTokens(_stats.TotalCacheReadTokens)"></div>
+            </div>
+            <div class="usage-token-legend">
+                <span class="legend-item"><span class="legend-dot input"></span>입력</span>
+                <span class="legend-item"><span class="legend-dot output"></span>출력</span>
+                <span class="legend-item"><span class="legend-dot cache-write"></span>캐시 쓰기</span>
+                <span class="legend-item"><span class="legend-dot cache-read"></span>캐시 읽기</span>
+            </div>
+        }
+
+        @* Tabs for detail views *@
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="usage-tabs">
+            <MudTabPanel Text="모델별">
+                @if (_stats.ByModel.Count > 0)
                 {
-                    <div class="usage-token-bar">
-                        <div class="usage-token-segment input" style="width: @(GetPercent(_stats.TotalInputTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
-                             title="입력: @FormatTokens(_stats.TotalInputTokens)"></div>
-                        <div class="usage-token-segment output" style="width: @(GetPercent(_stats.TotalOutputTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
-                             title="출력: @FormatTokens(_stats.TotalOutputTokens)"></div>
-                        <div class="usage-token-segment cache-write" style="width: @(GetPercent(_stats.TotalCacheCreationTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
-                             title="캐시 쓰기: @FormatTokens(_stats.TotalCacheCreationTokens)"></div>
-                        <div class="usage-token-segment cache-read" style="width: @(GetPercent(_stats.TotalCacheReadTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
-                             title="캐시 읽기: @FormatTokens(_stats.TotalCacheReadTokens)"></div>
-                    </div>
-                    <div class="usage-token-legend">
-                        <span class="legend-item"><span class="legend-dot input"></span>입력</span>
-                        <span class="legend-item"><span class="legend-dot output"></span>출력</span>
-                        <span class="legend-item"><span class="legend-dot cache-write"></span>캐시 쓰기</span>
-                        <span class="legend-item"><span class="legend-dot cache-read"></span>캐시 읽기</span>
-                    </div>
+                    <MudSimpleTable Dense="true" Hover="true" Striped="true" Class="usage-table">
+                        <thead>
+                            <tr>
+                                <th>모델</th>
+                                <th style="text-align: right;">비용</th>
+                                <th style="text-align: right;">입력</th>
+                                <th style="text-align: right;">출력</th>
+                                <th style="text-align: right;">세션</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in _stats.ByModel)
+                            {
+                                <tr>
+                                    <td>@m.Model</td>
+                                    <td style="text-align: right;">$@m.TotalCost.ToString("F4")</td>
+                                    <td style="text-align: right;">@FormatTokens(m.InputTokens)</td>
+                                    <td style="text-align: right;">@FormatTokens(m.OutputTokens)</td>
+                                    <td style="text-align: right;">@m.SessionCount</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
                 }
+                else
+                {
+                    <p class="typo-body2 text-secondary pa-4">데이터 없음</p>
+                }
+            </MudTabPanel>
 
-                @* Tabs for detail views *@
-                <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="usage-tabs">
-                    <MudTabPanel Text="모델별">
-                        @if (_stats.ByModel.Count > 0)
-                        {
-                            <MudSimpleTable Dense="true" Hover="true" Striped="true" Class="usage-table">
-                                <thead>
-                                    <tr>
-                                        <th>모델</th>
-                                        <th style="text-align: right;">비용</th>
-                                        <th style="text-align: right;">입력</th>
-                                        <th style="text-align: right;">출력</th>
-                                        <th style="text-align: right;">세션</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var m in _stats.ByModel)
-                                    {
-                                        <tr>
-                                            <td>@m.Model</td>
-                                            <td style="text-align: right;">$@m.TotalCost.ToString("F4")</td>
-                                            <td style="text-align: right;">@FormatTokens(m.InputTokens)</td>
-                                            <td style="text-align: right;">@FormatTokens(m.OutputTokens)</td>
-                                            <td style="text-align: right;">@m.SessionCount</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </MudSimpleTable>
-                        }
-                        else
-                        {
-                            <p class="typo-body2 text-secondary pa-4">데이터 없음</p>
-                        }
-                    </MudTabPanel>
+            <MudTabPanel Text="프로젝트별">
+                @if (_stats.ByProject.Count > 0)
+                {
+                    <MudSimpleTable Dense="true" Hover="true" Striped="true" Class="usage-table">
+                        <thead>
+                            <tr>
+                                <th>프로젝트</th>
+                                <th style="text-align: right;">비용</th>
+                                <th style="text-align: right;">토큰</th>
+                                <th style="text-align: right;">세션</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in _stats.ByProject)
+                            {
+                                <tr>
+                                    <td title="@p.ProjectPath">@p.ProjectName</td>
+                                    <td style="text-align: right;">$@p.TotalCost.ToString("F4")</td>
+                                    <td style="text-align: right;">@FormatTokens(p.TotalTokens)</td>
+                                    <td style="text-align: right;">@p.SessionCount</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+                else
+                {
+                    <p class="typo-body2 text-secondary pa-4">데이터 없음</p>
+                }
+            </MudTabPanel>
 
-                    <MudTabPanel Text="프로젝트별">
-                        @if (_stats.ByProject.Count > 0)
-                        {
-                            <MudSimpleTable Dense="true" Hover="true" Striped="true" Class="usage-table">
-                                <thead>
-                                    <tr>
-                                        <th>프로젝트</th>
-                                        <th style="text-align: right;">비용</th>
-                                        <th style="text-align: right;">토큰</th>
-                                        <th style="text-align: right;">세션</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var p in _stats.ByProject)
-                                    {
-                                        <tr>
-                                            <td title="@p.ProjectPath">@p.ProjectName</td>
-                                            <td style="text-align: right;">$@p.TotalCost.ToString("F4")</td>
-                                            <td style="text-align: right;">@FormatTokens(p.TotalTokens)</td>
-                                            <td style="text-align: right;">@p.SessionCount</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </MudSimpleTable>
+            <MudTabPanel Text="타임라인">
+                @if (_stats.ByDate.Count > 0)
+                {
+                    <div class="usage-timeline">
+                        @{
+                            var maxCost = _stats.ByDate.Max(d => d.TotalCost);
+                            if (maxCost == 0) maxCost = 1;
                         }
-                        else
+                        @foreach (var day in _stats.ByDate.TakeLast(30))
                         {
-                            <p class="typo-body2 text-secondary pa-4">데이터 없음</p>
-                        }
-                    </MudTabPanel>
-
-                    <MudTabPanel Text="타임라인">
-                        @if (_stats.ByDate.Count > 0)
-                        {
-                            <div class="usage-timeline">
-                                @{
-                                    var maxCost = _stats.ByDate.Max(d => d.TotalCost);
-                                    if (maxCost == 0) maxCost = 1;
-                                }
-                                @foreach (var day in _stats.ByDate.TakeLast(30))
-                                {
-                                    var heightPct = (double)(day.TotalCost / maxCost * 100);
-                                    <div class="timeline-bar-wrapper" title="@day.Date: $@day.TotalCost.ToString("F4")">
-                                        <div class="timeline-bar" style="height: @heightPct%"></div>
-                                        <span class="timeline-label">@day.Date[5..]</span>
-                                    </div>
-                                }
+                            var heightPct = (double)(day.TotalCost / maxCost * 100);
+                            <div class="timeline-bar-wrapper" title="@day.Date: $@day.TotalCost.ToString("F4")">
+                                <div class="timeline-bar" style="height: @heightPct%"></div>
+                                <span class="timeline-label">@day.Date[5..]</span>
                             </div>
                         }
-                        else
-                        {
-                            <p class="typo-body2 text-secondary pa-4">데이터 없음</p>
-                        }
-                    </MudTabPanel>
-                </MudTabs>
-            }
-            else
-            {
-                <p class="typo-body2 text-secondary pa-4 text-center">
-                    사용량 데이터가 없습니다.
-                </p>
-            }
+                    </div>
+                }
+                else
+                {
+                    <p class="typo-body2 text-secondary pa-4">데이터 없음</p>
+                }
+            </MudTabPanel>
+        </MudTabs>
+
+        @* Export actions *@
+        <div class="usage-export-actions">
+            <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download"
+                       Disabled="_exporting" Size="Size.Small">
+                @(_exporting ? "내보내는 중..." : "CSV 내보내기")
+            </MudButton>
+            <MudButton OnClick="ExportJson" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.DataObject"
+                       Disabled="_exporting" Size="Size.Small">
+                @(_exporting ? "내보내는 중..." : "JSON 내보내기")
+            </MudButton>
         </div>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download"
-                   Disabled="_exporting" Class="mr-2">
-            @(_exporting ? "내보내는 중..." : "CSV 내보내기")
-        </MudButton>
-        <MudButton OnClick="ExportJson" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.DataObject"
-                   Disabled="_exporting">
-            @(_exporting ? "내보내는 중..." : "JSON 내보내기")
-        </MudButton>
-        <div class="spacer"></div>
-        <MudButton OnClick="Close">닫기</MudButton>
-    </DialogActions>
-</MudDialog>
+    }
+    else
+    {
+        <p class="typo-body2 text-secondary pa-4 text-center">
+            사용량 데이터가 없습니다.
+        </p>
+    }
+</div>
 
 @code {
-    [Parameter] public bool IsOpen { get; set; }
-    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-
     private UsageStats? _stats;
     private bool _loading;
     private bool _exporting;
     private string _selectedRange = "30";
 
-    private readonly DialogOptions _dialogOptions = new()
+    protected override async Task OnInitializedAsync()
     {
-        MaxWidth = MaxWidth.Large,
-        FullWidth = true
-    };
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (IsOpen && _stats == null)
-            await LoadStats();
+        await LoadStats();
     }
 
     private async Task OnRangeChanged(string range)
@@ -239,15 +219,6 @@
     {
         if (total == 0) return "0";
         return (part * 100.0 / total).ToString("F1");
-    }
-
-    private async Task OnVisibleChanged(bool visible)
-    {
-        if (IsOpen != visible)
-        {
-            IsOpen = visible;
-            await IsOpenChanged.InvokeAsync(visible);
-        }
     }
 
     private async Task ExportCsv()
@@ -300,12 +271,5 @@
             _exporting = false;
             StateHasChanged();
         }
-    }
-
-    private async Task Close()
-    {
-        _stats = null;
-        IsOpen = false;
-        await IsOpenChanged.InvokeAsync(false);
     }
 }

@@ -188,7 +188,7 @@
                 // Original Enter / Shift+Enter handling
                 if (e.key === 'Enter' && !e.isComposing && !inputEl._isComposing) {
                     e.preventDefault();
-                    if (e.shiftKey && isTextarea) {
+                    if (e.shiftKey) {
                         var start = inputEl.selectionStart;
                         var end = inputEl.selectionEnd;
                         var newValue = inputEl.value.substring(0, start) + '\n' + inputEl.value.substring(end);

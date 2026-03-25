@@ -1,8 +1,4 @@
 <div class="sidebar-footer">
-    <button class="sidebar-footer-btn" @onclick="@OnOpenUsageDashboard" title="사용량 대시보드">
-        <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Small" Style="width: 18px; height: 18px;" />
-        <span>사용량</span>
-    </button>
     <button class="sidebar-footer-btn" @onclick="@OnOpenSettings" title="설정">
         <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Style="width: 18px; height: 18px;" />
         <span>설정</span>
@@ -10,6 +6,5 @@
 </div>
 
 @code {
-    [Parameter] public EventCallback OnOpenUsageDashboard { get; set; }
     [Parameter] public EventCallback OnOpenSettings { get; set; }
 }

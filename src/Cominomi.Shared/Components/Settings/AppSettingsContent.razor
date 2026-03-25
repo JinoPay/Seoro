@@ -8,10 +8,13 @@
 
 <div class="settings-content-area">
     <div class="settings-content-header">
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
-                   Size="Size.Small" Style="text-transform: none;">
-            저장
-        </MudButton>
+        @if (Section != "usage")
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
+                       Size="Size.Small" Style="text-transform: none;">
+                저장
+            </MudButton>
+        }
     </div>
 
     <div class="settings-content-body">
@@ -353,6 +356,10 @@
                     예: ANTHROPIC_API_KEY, CLAUDE_CODE_USE_BEDROCK, CLAUDE_CODE_MAX_OUTPUT_TOKENS
                 </small>
             </div>
+        }
+        else if (Section == "usage")
+        {
+            <UsageDashboard />
         }
     </div>
 </div>

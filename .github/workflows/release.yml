@@ -165,3 +165,12 @@ jobs:
           --outputDir releases/mac
           --merge
           --token ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: [release-windows, release-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit ${{ github.ref_name }} --repo ${{ github.repository }} --draft=false

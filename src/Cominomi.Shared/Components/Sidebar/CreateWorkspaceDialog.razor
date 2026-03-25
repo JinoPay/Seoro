@@ -3,84 +3,141 @@
 @inject IFolderPickerService FolderPickerService
 @inject ISnackbar Snackbar
 
-<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
+<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions" Class="create-ws-dialog">
     <TitleContent>
-        <div class="typo-h6">
-            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" Style="vertical-align: middle;" />
-            새 워크스페이스
+        <div class="create-ws-header">
+            <div class="create-ws-icon-badge">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size: 18px;" />
+            </div>
+            <div class="stack gap-1">
+                <span class="create-ws-title">새 워크스페이스</span>
+                <span class="create-ws-subtitle">저장소를 연결하여 AI 코딩을 시작하세요</span>
+            </div>
         </div>
     </TitleContent>
     <DialogContent>
-        <div style="min-width: 420px; position: relative;">
+        <div class="create-ws-body">
             @if (_isCreating)
             {
                 <div class="create-ws-progress-overlay">
-                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                    <div class="create-ws-progress-spinner">
+                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Medium" />
+                    </div>
                     <p class="typo-body2 text-secondary">@_progressMessage</p>
                 </div>
             }
 
-            <MudTabs @bind-ActivePanelIndex="_activeTab" Rounded="true" ApplyEffectsToContainer="true"
-                     Class="create-ws-tabs" PanelClass="pa-3">
-                <MudTabPanel Text="URL에서 클론" Icon="@Icons.Material.Filled.Cloud">
+            <div class="create-ws-segmented">
+                <button type="button" class="create-ws-segment @(_activeTab == 0 ? "active" : "")"
+                        @onclick="@(() => _activeTab = 0)">
+                    <MudIcon Icon="@Icons.Material.Filled.Cloud" Style="font-size: 16px;" />
+                    URL에서 클론
+                </button>
+                <button type="button" class="create-ws-segment @(_activeTab == 1 ? "active" : "")"
+                        @onclick="@(() => _activeTab = 1)">
+                    <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size: 16px;" />
+                    로컬 저장소
+                </button>
+            </div>
+
+            <div class="create-ws-panel">
+                @if (_activeTab == 0)
+                {
                     <div class="stack gap-3">
-                        <MudTextField @bind-Value="_repoUrl" Label="저장소 URL" Variant="Variant.Outlined"
-                                      Margin="Margin.Dense" Placeholder="https://github.com/org/repo"
-                                      Immediate="true" TextChanged="OnUrlChanged" />
-                        <MudTextField @bind-Value="_editName" Label="워크스페이스 이름" Variant="Variant.Outlined"
-                                      Margin="Margin.Dense" />
-                        <MudSelect T="string" @bind-Value="_editModel" Label="기본 모델"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense">
-                            @foreach (var model in ModelDefinitions.All)
-                            {
-                                <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
-                            }
-                        </MudSelect>
+                        <div class="create-ws-field-group">
+                            <label class="create-ws-label">저장소 URL</label>
+                            <MudTextField @bind-Value="_repoUrl" Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" Placeholder="https://github.com/org/repo"
+                                          Immediate="true" TextChanged="OnUrlChanged"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Link" />
+                        </div>
+                        <div class="create-ws-field-group">
+                            <label class="create-ws-label">워크스페이스 이름</label>
+                            <MudTextField @bind-Value="_editName" Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" />
+                        </div>
+                        <div class="create-ws-field-group">
+                            <label class="create-ws-label">기본 모델</label>
+                            <MudSelect T="string" @bind-Value="_editModel"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                                @foreach (var model in ModelDefinitions.All)
+                                {
+                                    <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </div>
                     </div>
-                </MudTabPanel>
-                <MudTabPanel Text="로컬 저장소" Icon="@Icons.Material.Filled.Folder">
+                }
+                else
+                {
                     <div class="stack gap-3">
-                        <div class="stack-row items-center gap-1">
-                            <MudTextField @bind-Value="_localPath" Label="저장소 경로" Variant="Variant.Outlined"
-                                          Margin="Margin.Dense" Placeholder="/경로/저장소" Style="flex: 1;" />
-                            <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
-                                           OnClick="BrowseLocalFolder" Title="찾아보기..." />
+                        <div class="create-ws-field-group">
+                            <label class="create-ws-label">저장소 경로</label>
+                            <div class="create-ws-path-input">
+                                <MudTextField @bind-Value="_localPath" Variant="Variant.Outlined"
+                                              Margin="Margin.Dense" Placeholder="/경로/저장소"
+                                              Style="flex: 1;" />
+                                <button type="button" class="create-ws-browse-btn"
+                                        @onclick="BrowseLocalFolder" title="찾아보기...">
+                                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Style="font-size: 18px;" />
+                                </button>
+                            </div>
                         </div>
                         @if (_localPathValidation != null)
                         {
-                            <MudAlert Severity="@(_isLocalPathGitRepo ? Severity.Success : Severity.Warning)" Dense="true">
-                                @_localPathValidation
-                            </MudAlert>
+                            <div class="create-ws-validation @(_isLocalPathGitRepo ? "success" : "warning")">
+                                <MudIcon Icon="@(_isLocalPathGitRepo ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)"
+                                         Style="font-size: 16px;" />
+                                <span>@_localPathValidation</span>
+                            </div>
                         }
-                        <MudTextField @bind-Value="_editName" Label="워크스페이스 이름" Variant="Variant.Outlined"
-                                      Margin="Margin.Dense" />
-                        <MudSelect T="string" @bind-Value="_editModel" Label="기본 모델"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense">
-                            @foreach (var model in ModelDefinitions.All)
-                            {
-                                <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
-                            }
-                        </MudSelect>
+                        <div class="create-ws-field-group">
+                            <label class="create-ws-label">워크스페이스 이름</label>
+                            <MudTextField @bind-Value="_editName" Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" />
+                        </div>
+                        <div class="create-ws-field-group">
+                            <label class="create-ws-label">기본 모델</label>
+                            <MudSelect T="string" @bind-Value="_editModel"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                                @foreach (var model in ModelDefinitions.All)
+                                {
+                                    <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </div>
                     </div>
-                </MudTabPanel>
-            </MudTabs>
+                }
+            </div>
 
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
-                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@_errorMessage</MudAlert>
+                <div class="create-ws-error">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Style="font-size: 16px;" />
+                    <span>@_errorMessage</span>
+                </div>
             }
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close" Disabled="_isCreating">취소</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled"
-                   OnClick="Create" Disabled="@(!CanCreate)">
-            @if (_isCreating)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-            }
-            만들기
-        </MudButton>
+        <div class="create-ws-actions">
+            <button type="button" class="create-ws-btn-cancel" @onclick="Close" disabled="@_isCreating">
+                취소
+            </button>
+            <button type="button" class="create-ws-btn-create" @onclick="Create" disabled="@(!CanCreate)">
+                @if (_isCreating)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                         Style="width: 16px; height: 16px;" />
+                }
+                만들기
+                @if (!_isCreating)
+                {
+                    <kbd class="create-ws-kbd">Enter</kbd>
+                }
+            </button>
+        </div>
     </DialogActions>
 </MudDialog>
 

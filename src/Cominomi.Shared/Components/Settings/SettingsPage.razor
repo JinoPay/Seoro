@@ -50,6 +50,11 @@
                 <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" />
                 고급
             </button>
+            <button class="settings-nav-item @ActiveClass("usage")"
+                    @onclick="@(() => SetSection("usage"))">
+                <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Small" />
+                사용량
+            </button>
         </div>
 
         <div class="settings-nav-divider"></div>

@@ -111,6 +111,7 @@
     private bool _isAtBottom = true;
     private DotNetObjectReference<ChatView>? _selfRef;
     private bool _isLoadingBranches;
+    private string? _branchesForSessionId;
     private LandingPage? _landingPage;
     private readonly Dictionary<string, (CancellationTokenSource Cts, Task Task)> _sessionTasks = new();
     private List<SkillChainStep>? _pendingChain;
@@ -127,7 +128,8 @@
             try
             {
                 bool needsBranches = ChatState.CurrentSession?.Status == SessionStatus.Pending
-                                     && _branchGroups.Count == 0 && !_isLoadingBranches;
+                                     && ChatState.CurrentSession?.Id != _branchesForSessionId
+                                     && !_isLoadingBranches;
 
                 var pendingMsg = ChatState.ConsumePendingMessage();
                 if (pendingMsg != null && ChatState.CurrentSession != null && !ChatState.IsStreaming)
@@ -193,7 +195,11 @@
                     _shouldAutoScroll = true;
 
                 if (needsBranches)
+                {
                     _isLoadingBranches = true;
+                    _branchGroups = [];
+                    _selectedBranch = "";
+                }
 
                 StateHasChanged();
 
@@ -271,6 +277,7 @@
             var (groups, defaultBranch) = await SessionInitializer.LoadBranchesAsync(ws.RepoLocalPath);
             _branchGroups = groups;
             _selectedBranch = defaultBranch;
+            _branchesForSessionId = ChatState.CurrentSession?.Id;
         }
         finally
         {
@@ -476,13 +483,13 @@
             await InvokeAsync(() => Snackbar.StreamingError(result.ErrorMessage));
 
         if (result.PlanReviewVisible)
-            _ = SendNotificationIfNeeded(session, "Plan ready for review", NotificationType.PlanReview);
+            _ = SendNotificationIfNeeded(session, "계획 완료", NotificationType.PlanReview);
         else if (result.AskUserQuestionInput != null)
-            _ = SendNotificationIfNeeded(session, "Response needed", NotificationType.Question);
+            _ = SendNotificationIfNeeded(session, "응답 필요", NotificationType.Question);
         else if (result.QuickResponseVisible)
-            _ = SendNotificationIfNeeded(session, "Response needed", NotificationType.Question);
+            _ = SendNotificationIfNeeded(session, "응답 필요", NotificationType.Question);
         else
-            _ = SendNotificationIfNeeded(session, "Task completed", NotificationType.Info);
+            _ = SendNotificationIfNeeded(session, "작업 완료", NotificationType.Success);
 
         await InvokeAsync(StateHasChanged);
 
@@ -532,13 +539,13 @@
     {
         try
         {
-            NotificationHistory.Record(session.CityName, body, type, session.Id);
+            NotificationHistory.Record(session.Title, body, type, session.Id);
 
             var isFocused = await JSRuntime.InvokeAsync<bool>("isWindowFocused");
             var isCurrentSession = ChatState.CurrentSession?.Id == session.Id;
 
             if (!isFocused || !isCurrentSession)
-                await NotificationService.SendAsync(session.CityName, body, type);
+                await NotificationService.SendAsync(session.Title, body, type);
         }
         catch (Exception ex)
         {

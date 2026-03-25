@@ -44,8 +44,7 @@
                             OnOpenActivity="OpenActivity"
                             OnOpenNotifications="OpenNotifications" />
             <SessionList />
-            <SidebarFooter OnOpenUsageDashboard="@(() => _usageDashboardOpen = true)"
-                           OnOpenSettings="@(() => ChatState.OpenSettings())" />
+            <SidebarFooter OnOpenSettings="@(() => ChatState.OpenSettings())" />
         </aside>
 
         @* === Sidebar ↔ Main Resizer === *@
@@ -119,13 +118,11 @@
     </div>
 
 <SetupDialog @bind-IsOpen="_setupOpen" />
-<UsageDashboard @bind-IsOpen="_usageDashboardOpen" />
 
 @code {
     private bool _sidebarOpen = true;
     private bool _isDarkMode = true;
     private bool _setupOpen;
-    private bool _usageDashboardOpen;
     private int _sidebarWidth = 260;
     private int _rightPanelWidth = 400;
     private DotNetObjectReference<MainLayout>? _panelShortcutRef;

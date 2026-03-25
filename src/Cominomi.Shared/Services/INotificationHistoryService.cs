@@ -10,6 +10,7 @@ public interface INotificationHistoryService
     void Record(string title, string body, NotificationType type, string? sessionId = null);
     void MarkAsRead(string id);
     void MarkAllAsRead();
+    void MarkSessionAsRead(string sessionId);
 
     event Action? OnChange;
 }

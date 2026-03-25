@@ -51,11 +51,7 @@ html *::after {
 
 .cominomi-shell.sidebar-collapsed {
     --sidebar-width: 48px;
-    grid-template-columns: 48px 0px 1fr;
-}
-
-.cominomi-shell.sidebar-collapsed .panel-resizer:first-of-type {
-    display: none;
+    grid-template-columns: 48px 1fr;
 }
 
 /* ===== Panel Resizer ===== */
@@ -131,6 +127,7 @@ html *::after {
 .sidebar-footer {
     display: flex;
     align-items: center;
+    justify-content: center;
     padding: var(--space-2) var(--space-4);
     border-top: 1px solid var(--border-subtle);
     flex-shrink: 0;
@@ -140,10 +137,12 @@ html *::after {
 .sidebar-footer-btn {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: var(--space-2);
-    padding: var(--space-1) var(--space-2);
+    padding: var(--space-2);
     border-radius: var(--radius-md);
     font-size: var(--text-xs);
+    width: 100%;
     opacity: 0.5;
     cursor: pointer;
     transition: opacity var(--transition), background var(--transition);
@@ -1359,7 +1358,7 @@ html *::after {
 }
 
 .input-area-float:focus-within {
-    border-color: var(--border-active);
+    border-color: var(--border-strong);
 }
 
 /* Textarea full width */
@@ -1371,12 +1370,21 @@ html *::after {
     word-wrap: break-word;
     overflow-wrap: break-word;
     white-space: pre-wrap;
+    min-height: 1.5em !important;
     max-height: 200px;
     overflow-y: auto;
+    resize: none;
 }
 
 .input-area-float .input-textarea-full textarea:focus-visible {
     box-shadow: none;
+    outline: none;
+}
+
+.input-area-float .input-textarea-full .mud-input-slot {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 .input-area-float .input-textarea-full .mud-input-control {
@@ -2690,9 +2698,28 @@ html *::after {
 }
 
 .overlay-page-header {
-    padding: var(--space-2) var(--space-4);
+    padding: var(--space-1) var(--space-3);
     border-bottom: 1px solid var(--border-default);
     background: var(--bg-sidebar);
+}
+
+.overlay-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.overlay-back-btn:hover {
+    color: var(--text-primary);
+    background: var(--accent-hover);
 }
 
 .overlay-page-content {
@@ -2725,7 +2752,9 @@ html *::after {
 .settings-back-btn {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: var(--space-2);
+    width: 100%;
     padding: var(--space-3) var(--space-4);
     border: none;
     background: transparent;
@@ -2746,6 +2775,7 @@ html *::after {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
+    align-items: stretch;
 }
 
 .settings-nav-divider {
@@ -2861,7 +2891,9 @@ html *::after {
 .settings-nav-item {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: var(--space-2);
+    width: 100%;
     padding: var(--space-2) var(--space-4);
     border: none;
     background: transparent;
@@ -2950,21 +2982,273 @@ html *::after {
 }
 
 /* ===== Create Workspace Dialog ===== */
-.create-ws-tabs .mud-tabs-header {
+
+/* Dialog container — elevated surface with ambient violet glow */
+.create-ws-dialog .mud-dialog {
+    background: var(--bg-base) !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-lg), 0 0 80px rgba(167, 139, 250, 0.06) !important;
+    overflow: hidden;
+}
+
+/* Header */
+.create-ws-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+}
+
+.create-ws-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    background: var(--accent-dim);
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.create-ws-title {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: var(--leading-tight);
+}
+
+.create-ws-subtitle {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    line-height: var(--leading-normal);
+}
+
+/* Body */
+.create-ws-body {
+    min-width: 440px;
+    position: relative;
+}
+
+/* Segmented pill toggle (Raycast-style) */
+.create-ws-segmented {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
     background: var(--bg-surface);
     border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
 }
 
-.create-ws-tabs .mud-tab {
+.create-ws-segment {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: none;
+    border-radius: calc(var(--radius-md) - 2px);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
     font-size: var(--text-sm);
-    text-transform: none;
-    min-width: 0;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
 }
 
+.create-ws-segment:hover:not(.active) {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.create-ws-segment.active {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Panel entrance animation */
+.create-ws-panel {
+    animation: create-ws-panel-enter 0.2s ease-out;
+}
+
+@keyframes create-ws-panel-enter {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Field groups with external labels */
+.create-ws-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.create-ws-label {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+    padding-left: 2px;
+}
+
+/* Path input row with browse button */
+.create-ws-path-input {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.create-ws-browse-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+    flex-shrink: 0;
+}
+
+.create-ws-browse-btn:hover {
+    background: var(--accent-dim);
+    border-color: var(--border-active);
+    color: var(--accent);
+}
+
+/* Inline validation badges */
+.create-ws-validation {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    animation: create-ws-panel-enter 0.2s ease-out;
+}
+
+.create-ws-validation.success {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+    border: 1px solid var(--color-success-border);
+}
+
+.create-ws-validation.warning {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+    border: 1px solid var(--color-warning-border);
+}
+
+/* Error bar */
+.create-ws-error {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    margin-top: var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--color-error-bg);
+    color: var(--color-error);
+    border: 1px solid var(--color-error-border);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    animation: create-ws-panel-enter 0.2s ease-out;
+}
+
+/* Action buttons */
+.create-ws-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-1) 0;
+}
+
+.create-ws-btn-cancel {
+    padding: var(--space-2) var(--space-4);
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.create-ws-btn-cancel:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.create-ws-btn-cancel:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.create-ws-btn-create {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-5);
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--accent);
+    color: var(--text-inverse);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.create-ws-btn-create:hover:not(:disabled) {
+    background: var(--accent-hover);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-0.5px);
+}
+
+.create-ws-btn-create:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.create-ws-btn-create:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Keyboard hint badge */
+.create-ws-kbd {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    font-family: var(--font-sans);
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    line-height: 1;
+    opacity: 0.7;
+}
+
+/* Progress overlay — frosted glass */
 .create-ws-progress-overlay {
     position: absolute;
     inset: 0;
-    background: var(--bg-base);
+    background: color-mix(in srgb, var(--bg-base) 85%, transparent);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2972,6 +3256,31 @@ html *::after {
     gap: var(--space-3);
     z-index: 1;
     border-radius: var(--radius-md);
+    animation: create-ws-overlay-enter 0.25s ease-out;
+}
+
+@keyframes create-ws-overlay-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.create-ws-progress-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    background: var(--accent-dim);
+}
+
+/* Focus visible for custom buttons */
+.create-ws-segment:focus-visible,
+.create-ws-browse-btn:focus-visible,
+.create-ws-btn-cancel:focus-visible,
+.create-ws-btn-create:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
 }
 
 /* ===== Sidebar View Tabs ===== */
@@ -3145,7 +3454,13 @@ html *::after {
 
 /* ===== Usage Dashboard ===== */
 .usage-dashboard {
-    min-height: 400px;
+    min-height: 200px;
+}
+
+.usage-export-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
 }
 
 .usage-date-filter {
