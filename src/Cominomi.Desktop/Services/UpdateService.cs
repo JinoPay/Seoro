@@ -1,3 +1,4 @@
+using System.Reflection;
 using Cominomi.Shared.Services;
 using Microsoft.Extensions.Logging;
 using Velopack;
@@ -16,7 +17,10 @@ public class UpdateService : IUpdateService
     public UpdateService(ILogger<UpdateService> logger)
     {
         _logger = logger;
-        var token = Environment.GetEnvironmentVariable("COMINOMI_GITHUB_TOKEN");
+        var token = Environment.GetEnvironmentVariable("COMINOMI_GITHUB_TOKEN")
+            ?? Assembly.GetExecutingAssembly()
+                .GetCustomAttributes<AssemblyMetadataAttribute>()
+                .FirstOrDefault(a => a.Key == "GithubToken")?.Value;
         _updateManager = new UpdateManager(
             new GithubSource("https://github.com/JinoPay/Cominomi", token, false));
     }
