@@ -95,6 +95,10 @@ public static class Program
         appBuilder.Services.AddOptions<AppSettings>();
         appBuilder.Services.AddSingleton<IOptionsFactory<AppSettings>, AppSettingsFactory>();
 
+        // Photino window accessor (set after Build)
+        var windowHolder = new PhotinoWindowHolder();
+        appBuilder.Services.AddSingleton(windowHolder);
+
         // App Services
         appBuilder.Services.AddSingleton<IShellService, ShellService>();
         appBuilder.Services.AddSingleton<IActiveSessionRegistry, ActiveSessionRegistry>();
@@ -151,6 +155,7 @@ public static class Program
         appBuilder.RootComponents.Add<Routes>("#app");
 
         var app = appBuilder.Build();
+        windowHolder.Window = app.MainWindow;
 
         // Window configuration
         app.MainWindow
