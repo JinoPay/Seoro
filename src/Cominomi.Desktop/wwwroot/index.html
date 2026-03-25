@@ -405,6 +405,22 @@
             return document.hasFocus();
         };
 
+        // Intercept external link clicks and open in default browser
+        document.addEventListener('click', function(e) {
+            var anchor = e.target.closest('a[href]');
+            if (!anchor) return;
+            var href = anchor.getAttribute('href');
+            if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    window.external.sendMessage('OPEN_URL:' + href);
+                } catch (ex) {
+                    console.warn('Failed to send external URL message', ex);
+                }
+            }
+        }, true);
+
         window.registerWindowFocusTracker = function(dotNetRef) {
             window._focusTrackerRef = dotNetRef;
             var notify = function(focused) {

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Cominomi.Desktop.Components;
 using Cominomi.Desktop.Services;
 using Cominomi.Shared.Models;
@@ -165,6 +166,24 @@ public static class Program
             .SetDevToolsEnabled(true)
 #endif
             .SetResizable(true);
+
+        // Open external links in the default browser
+        app.MainWindow.RegisterWebMessageReceivedHandler((_, message) =>
+        {
+            const string prefix = "OPEN_URL:";
+            if (message != null && message.StartsWith(prefix))
+            {
+                var url = message[prefix.Length..];
+                try
+                {
+                    Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Failed to open external URL: {Url}", url);
+                }
+            }
+        });
 
         // Window closing handler — confirm if streaming sessions exist
         app.MainWindow.WindowClosingHandler = (sender, _) =>
