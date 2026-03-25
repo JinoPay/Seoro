@@ -40,6 +40,11 @@
     <script src="lib/highlightjs/highlight.min.js"></script>
     <script src="lib/highlightjs/csharp.min.js"></script>
     <script>
+        // Disable browser context menu (Save As, Reload, etc.)
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
         // Global error capture — surfaces errors hidden by blazor-error-ui
         window.addEventListener('error', function(e) {
             console.error('[Cominomi] Unhandled JS error:', e.message, '\nFile:', e.filename, 'Line:', e.lineno, '\nError:', e.error);
