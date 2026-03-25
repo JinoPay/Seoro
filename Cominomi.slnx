@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Cominomi/Cominomi.csproj" />
+    <Project Path="src/Cominomi.Desktop/Cominomi.Desktop.csproj" />
     <Project Path="src/Cominomi.Shared/Cominomi.Shared.csproj" />
   </Folder>
   <Folder Name="/tests/">

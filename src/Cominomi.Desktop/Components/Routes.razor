@@ -1,6 +1,8 @@
-<Router AppAssembly="typeof(MauiProgram).Assembly"
+@using Cominomi.Desktop.Components.Pages
+
+<Router AppAssembly="typeof(Program).Assembly"
         AdditionalAssemblies="new[] { typeof(Cominomi.Shared.Services.ChatState).Assembly }"
-        NotFoundPage="typeof(Pages.NotFound)">
+        NotFoundPage="typeof(NotFound)">
     <Found Context="routeData">
         <Cominomi.Shared.Components.Layout.LoggingErrorBoundary @ref="_errorBoundary">
             <ChildContent>
