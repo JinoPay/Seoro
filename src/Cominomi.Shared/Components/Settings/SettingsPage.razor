@@ -15,6 +15,11 @@
                 <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small" />
                 일반
             </button>
+            <button class="settings-nav-item @ActiveClass("notifications")"
+                    @onclick="@(() => SetSection("notifications"))">
+                <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small" />
+                알림
+            </button>
             <button class="settings-nav-item @ActiveClass("ai")"
                     @onclick="@(() => SetSection("ai"))">
                 <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />

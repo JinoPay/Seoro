@@ -20,6 +20,7 @@ public class AppSettings
     public bool DebugMode { get; set; }
     public bool NotificationsEnabled { get; set; } = true;
     public bool NotificationSound { get; set; } = true;
+    public string NotificationSoundName { get; set; } = "default";
     public Dictionary<string, string> EnvironmentVariables { get; set; } = [];
     public string LastWorkspaceId { get; set; } = "";
     public string LastSessionId { get; set; } = "";

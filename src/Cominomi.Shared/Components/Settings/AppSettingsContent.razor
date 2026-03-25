@@ -4,6 +4,7 @@
 @inject IClaudeService ClaudeService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject INotificationService NotificationService
 
 <div class="settings-content-area">
     <div class="settings-content-header">
@@ -60,18 +61,6 @@
                     </small>
                 </div>
 
-                <div class="settings-group-title" style="margin-top: 16px;">알림</div>
-
-                <MudSwitch T="bool" @bind-Value="_settings.NotificationsEnabled" Label="데스크톱 알림"
-                           Color="Color.Primary" UncheckedColor="Color.Default" />
-                <small class="typo-caption text-secondary" style="margin-top: -8px;">
-                    작업 완료, 응답 대기, 플랜 리뷰 시 OS 알림을 발송합니다.
-                </small>
-
-                <MudSwitch T="bool" @bind-Value="_settings.NotificationSound" Label="알림 사운드"
-                           Color="Color.Primary" UncheckedColor="Color.Default"
-                           Disabled="@(!_settings.NotificationsEnabled)" />
-
                 <div class="settings-group-title" style="margin-top: 16px;">Git 워크플로우</div>
 
                 <div class="stack-row items-center gap-1">
@@ -83,6 +72,58 @@
                     <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
                                    OnClick="BrowseCloneDirectory" Title="찾아보기..." />
                 </div>
+            </div>
+        }
+        else if (Section == "notifications")
+        {
+            <div class="settings-section-title">알림</div>
+            <div class="settings-section-desc">작업 완료, 응답 대기, 플랜 리뷰 시 OS 알림을 발송합니다.</div>
+
+            <div class="stack gap-3">
+                <MudSwitch T="bool" @bind-Value="_settings.NotificationsEnabled" Label="데스크톱 알림"
+                           Color="Color.Primary" UncheckedColor="Color.Default" />
+
+                <MudSwitch T="bool" @bind-Value="_settings.NotificationSound" Label="알림 사운드"
+                           Color="Color.Primary" UncheckedColor="Color.Default"
+                           Disabled="@(!_settings.NotificationsEnabled)" />
+
+                @if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    <MudSelect T="string" @bind-Value="_settings.NotificationSoundName"
+                               Label="사운드 종류" Variant="Variant.Outlined" Margin="Margin.Dense"
+                               Disabled="@(!_settings.NotificationsEnabled || !_settings.NotificationSound)">
+                        <MudSelectItem T="string" Value="@("default")">기본 (Default)</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Glass")">Glass</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Ping")">Ping</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Pop")">Pop</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Purr")">Purr</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Tink")">Tink</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Basso")">Basso</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Blow")">Blow</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Bottle")">Bottle</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Frog")">Frog</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Funk")">Funk</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Hero")">Hero</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Morse")">Morse</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Submarine")">Submarine</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Sosumi")">Sosumi</MudSelectItem>
+                    </MudSelect>
+                }
+
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                           OnClick="SendTestNotification" StartIcon="@Icons.Material.Filled.NotificationsActive"
+                           Disabled="@(!_settings.NotificationsEnabled)"
+                           Style="text-transform: none; align-self: flex-start;">
+                    테스트 알림 보내기
+                </MudButton>
+
+                @if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" NoIcon="false" Class="mt-2">
+                        macOS에서는 알림이 "Script Editor" 앱으로 표시됩니다.
+                        알림이 보이지 않으면 시스템 설정 > 알림 > Script Editor가 허용되어 있는지 확인하세요.
+                    </MudAlert>
+                }
             </div>
         }
         else if (Section == "ai")
@@ -413,6 +454,13 @@
     private async Task ApplyUiScalePreview(double scale)
     {
         try { await JS.InvokeVoidAsync("setUiScale", scale); } catch { }
+    }
+
+    private async Task SendTestNotification()
+    {
+        await Save();
+        await NotificationService.SendAsync("Cominomi", "테스트 알림입니다!", NotificationType.Info);
+        Snackbar.Add("테스트 알림을 발송했습니다.", Severity.Success);
     }
 
     private async Task Save()

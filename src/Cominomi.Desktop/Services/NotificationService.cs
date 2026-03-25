@@ -34,15 +34,18 @@ public class NotificationService : INotificationService
         if (!_initialized)
             await InitializeAsync();
 
+        var playSound = settings.NotificationSound;
+        var soundName = settings.NotificationSoundName;
+
         try
         {
             if (OperatingSystem.IsWindows())
             {
-                SendWindowsNotification(title, body);
+                SendWindowsNotification(title, body, playSound);
             }
             else if (OperatingSystem.IsMacOS())
             {
-                SendMacNotification(title, body);
+                SendMacNotification(title, body, playSound, soundName);
             }
             else
             {
@@ -55,11 +58,15 @@ public class NotificationService : INotificationService
         }
     }
 
-    private void SendWindowsNotification(string title, string body)
+    private void SendWindowsNotification(string title, string body, bool playSound)
     {
-        // Use PowerShell to show a Windows toast notification
         var escapedTitle = title.Replace("'", "''").Replace("\"", "`\"");
         var escapedBody = body.Replace("'", "''").Replace("\"", "`\"");
+
+        var audioSnippet = playSound
+            ? ""
+            : "$audio = $xml.CreateElement('audio'); $audio.SetAttribute('silent','true'); " +
+              "$xml.DocumentElement.AppendChild($audio) | Out-Null; ";
 
         var psi = new ProcessStartInfo
         {
@@ -70,30 +77,37 @@ public class NotificationService : INotificationService
                 $"$text = $xml.GetElementsByTagName('text'); " +
                 $"$text[0].AppendChild($xml.CreateTextNode('{escapedTitle}')) | Out-Null; " +
                 $"$text[1].AppendChild($xml.CreateTextNode('{escapedBody}')) | Out-Null; " +
+                $"{audioSnippet}" +
                 $"$toast = [Windows.UI.Notifications.ToastNotification]::new($xml); " +
                 $"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Cominomi').Show($toast)\"",
             UseShellExecute = false,
             CreateNoWindow = true
         };
 
-        Process.Start(psi);
+        using var process = Process.Start(psi);
         _logger.LogDebug("Windows notification sent: {Title} - {Body}", title, body);
     }
 
-    private void SendMacNotification(string title, string body)
+    private void SendMacNotification(string title, string body, bool playSound, string soundName)
     {
         var escapedTitle = title.Replace("\\", "\\\\").Replace("\"", "\\\"");
         var escapedBody = body.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
+        var script = $"display notification \"{escapedBody}\" with title \"{escapedTitle}\"";
+        if (playSound)
+            script += $" sound name \"{soundName}\"";
+
         var psi = new ProcessStartInfo
         {
             FileName = "osascript",
-            Arguments = $"-e 'display notification \"{escapedBody}\" with title \"{escapedTitle}\"'",
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        psi.ArgumentList.Add("-e");
+        psi.ArgumentList.Add(script);
 
-        Process.Start(psi);
-        _logger.LogDebug("macOS notification sent: {Title} - {Body}", title, body);
+        using var process = Process.Start(psi);
+        _logger.LogDebug("macOS notification sent: {Title} - {Body} (sound: {Sound})", title, body,
+            playSound ? soundName : "off");
     }
 }
