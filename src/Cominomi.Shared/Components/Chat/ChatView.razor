@@ -111,6 +111,7 @@
     private bool _isAtBottom = true;
     private DotNetObjectReference<ChatView>? _selfRef;
     private bool _isLoadingBranches;
+    private string? _branchesForSessionId;
     private LandingPage? _landingPage;
     private readonly Dictionary<string, (CancellationTokenSource Cts, Task Task)> _sessionTasks = new();
     private List<SkillChainStep>? _pendingChain;
@@ -127,7 +128,8 @@
             try
             {
                 bool needsBranches = ChatState.CurrentSession?.Status == SessionStatus.Pending
-                                     && _branchGroups.Count == 0 && !_isLoadingBranches;
+                                     && ChatState.CurrentSession?.Id != _branchesForSessionId
+                                     && !_isLoadingBranches;
 
                 var pendingMsg = ChatState.ConsumePendingMessage();
                 if (pendingMsg != null && ChatState.CurrentSession != null && !ChatState.IsStreaming)
@@ -193,7 +195,11 @@
                     _shouldAutoScroll = true;
 
                 if (needsBranches)
+                {
                     _isLoadingBranches = true;
+                    _branchGroups = [];
+                    _selectedBranch = "";
+                }
 
                 StateHasChanged();
 
@@ -271,6 +277,7 @@
             var (groups, defaultBranch) = await SessionInitializer.LoadBranchesAsync(ws.RepoLocalPath);
             _branchGroups = groups;
             _selectedBranch = defaultBranch;
+            _branchesForSessionId = ChatState.CurrentSession?.Id;
         }
         finally
         {
