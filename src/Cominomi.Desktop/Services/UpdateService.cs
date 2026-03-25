@@ -5,7 +5,7 @@ using Velopack.Sources;
 
 using AppUpdateInfo = Cominomi.Shared.Services.UpdateInfo;
 
-namespace Cominomi.Services;
+namespace Cominomi.Desktop.Services;
 
 public class UpdateService : IUpdateService
 {

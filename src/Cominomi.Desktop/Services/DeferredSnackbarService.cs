@@ -1,13 +1,14 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MudBlazor;
 
-namespace Cominomi.Services;
+namespace Cominomi.Desktop.Services;
 
 /// <summary>
 /// Lazily creates SnackbarService to avoid NavigationManager.AssertInitialized()
-/// crash during MAUI Blazor Hybrid startup.
+/// crash during Blazor Hybrid startup.
 /// </summary>
 public sealed class DeferredSnackbarService : ISnackbar
 {

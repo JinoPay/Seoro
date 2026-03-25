@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Cominomi.Shared.Services;
 using Microsoft.Extensions.Logging;
 
-namespace Cominomi.Services;
+namespace Cominomi.Desktop.Services;
 
 public class LauncherService : ILauncherService
 {
@@ -34,21 +34,25 @@ public class LauncherService : ILauncherService
     {
         try
         {
-#if WINDOWS
-            Process.Start(new ProcessStartInfo
+            if (OperatingSystem.IsWindows())
             {
-                FileName = "explorer.exe",
-                Arguments = $"\"{folderPath}\"",
-                UseShellExecute = true
-            });
-#elif MACCATALYST
-            Process.Start(new ProcessStartInfo
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{folderPath}\"",
+                    UseShellExecute = true
+                });
+            }
+            else if (OperatingSystem.IsMacOS())
             {
-                FileName = "open",
-                Arguments = $"\"{folderPath}\"",
-                UseShellExecute = false
-            });
-#endif
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "open",
+                    Arguments = $"\"{folderPath}\"",
+                    UseShellExecute = false
+                });
+            }
+
             await Task.CompletedTask;
         }
         catch (Exception ex)

@@ -22,9 +22,6 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Install MAUI workload
-        run: dotnet workload install maui-windows
-
       - name: Restore tools
         run: dotnet tool restore
 
@@ -35,9 +32,8 @@ jobs:
 
       - name: Publish
         run: >
-          dotnet publish src/Cominomi/Cominomi.csproj
+          dotnet publish src/Cominomi.Desktop/Cominomi.Desktop.csproj
           -c Release
-          -f net10.0-windows10.0.19041.0
           -r win-x64
           --self-contained
           -o publish/win
@@ -57,7 +53,7 @@ jobs:
           --packId Cominomi
           --packVersion ${{ steps.version.outputs.VERSION }}
           --packDir publish/win
-          --mainExe Cominomi.exe
+          --mainExe Cominomi.Desktop.exe
           --channel win
           --outputDir releases/win
 
@@ -79,16 +75,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 26.2
-        run: sudo xcode-select -s /Applications/Xcode_26.2.app
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Install MAUI workload
-        run: dotnet workload install maui-maccatalyst
 
       - name: Restore tools
         run: dotnet tool restore
@@ -99,18 +89,44 @@ jobs:
 
       - name: Publish (arm64)
         run: >
-          dotnet publish src/Cominomi/Cominomi.csproj
+          dotnet publish src/Cominomi.Desktop/Cominomi.Desktop.csproj
           -c Release
-          -f net10.0-maccatalyst
-          -r maccatalyst-arm64
+          -r osx-arm64
           --self-contained
+          -o publish/mac
 
-      - name: Prepare app bundle for Velopack
+      - name: Create macOS .app bundle
         run: |
-          APP_PATH=$(find src/Cominomi/bin/Release/net10.0-maccatalyst -name "Cominomi.app" -maxdepth 3 | head -1)
-          echo "Found app bundle: $APP_PATH"
-          mkdir -p publish/mac
-          cp -R "$APP_PATH" publish/mac/
+          VERSION=${{ steps.version.outputs.VERSION }}
+          mkdir -p "publish/Cominomi.app/Contents/MacOS"
+          mkdir -p "publish/Cominomi.app/Contents/Resources"
+          cp -R publish/mac/* "publish/Cominomi.app/Contents/MacOS/"
+          cat > "publish/Cominomi.app/Contents/Info.plist" << PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key>
+            <string>Cominomi</string>
+            <key>CFBundleDisplayName</key>
+            <string>Cominomi</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.cominomi.app</string>
+            <key>CFBundleExecutable</key>
+            <string>Cominomi.Desktop</string>
+            <key>CFBundleVersion</key>
+            <string>${VERSION}</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${VERSION}</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+            <key>LSMinimumSystemVersion</key>
+            <string>12.0</string>
+          </dict>
+          </plist>
+          PLIST
 
       - name: Download previous release (for delta updates)
         run: >
@@ -126,8 +142,8 @@ jobs:
           dotnet vpk pack
           --packId Cominomi
           --packVersion ${{ steps.version.outputs.VERSION }}
-          --packDir publish/mac/Cominomi.app
-          --mainExe Cominomi
+          --packDir publish/Cominomi.app
+          --mainExe Cominomi.Desktop
           --channel osx
           --outputDir releases/mac
 
