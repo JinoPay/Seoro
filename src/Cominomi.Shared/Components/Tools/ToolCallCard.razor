@@ -57,11 +57,12 @@
                     @* Generic fallback *@
                     @if (!string.IsNullOrEmpty(Tool.Input))
                     {
-                        var inputLineCount = Tool.Input.Split('\n').Length;
+                        var formattedInput = ToolDisplayHelper.FormatJson(Tool.Input);
+                        var inputLineCount = formattedInput.Split('\n').Length;
                         <div class="tool-card-section">
                             <div class="tool-card-section-label">입력 @(inputLineCount > 1 ? $"({inputLineCount}줄)" : "")</div>
                             <div class="tool-card-content">
-                                <pre>@Tool.Input</pre>
+                                <pre>@formattedInput</pre>
                             </div>
                         </div>
                     }

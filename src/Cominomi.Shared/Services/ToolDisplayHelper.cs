@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Cominomi.Shared.Models;
@@ -314,6 +315,32 @@ public static class ToolDisplayHelper
         _ when name.StartsWith("mcp__", StringComparison.OrdinalIgnoreCase) => ExtractMcpToolName(name),
         _ => name
     };
+
+    private static readonly JsonSerializerOptions PrettyJsonOptions = new()
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
+    /// <summary>
+    /// Pretty-prints JSON with Unicode characters properly rendered (not \uXXXX escaped).
+    /// Falls back to the original string if parsing fails.
+    /// </summary>
+    public static string FormatJson(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return json ?? "";
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return JsonSerializer.Serialize(doc, PrettyJsonOptions);
+        }
+        catch
+        {
+            return json;
+        }
+    }
 
     private static string ExtractMcpToolName(string name)
     {
