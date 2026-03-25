@@ -112,6 +112,51 @@ public class NotificationHistoryServiceTests
     }
 
     [Fact]
+    public void MarkSessionAsRead_MarksOnlyMatchingSession()
+    {
+        var svc = new NotificationHistoryService();
+
+        svc.Record("Tokyo", "A", NotificationType.Info, "session-1");
+        svc.Record("Seoul", "B", NotificationType.Success, "session-2");
+        svc.Record("Tokyo", "C", NotificationType.Question, "session-1");
+
+        svc.MarkSessionAsRead("session-1");
+
+        Assert.Equal(1, svc.UnreadCount);
+        Assert.True(svc.Entries[0].IsRead);   // C (session-1)
+        Assert.False(svc.Entries[1].IsRead);   // B (session-2)
+        Assert.True(svc.Entries[2].IsRead);    // A (session-1)
+    }
+
+    [Fact]
+    public void MarkSessionAsRead_FiresOnChange()
+    {
+        var svc = new NotificationHistoryService();
+        svc.Record("Tokyo", "A", NotificationType.Info, "session-1");
+
+        var fired = false;
+        svc.OnChange += () => fired = true;
+
+        svc.MarkSessionAsRead("session-1");
+
+        Assert.True(fired);
+    }
+
+    [Fact]
+    public void MarkSessionAsRead_NoChangeSkipsEvent()
+    {
+        var svc = new NotificationHistoryService();
+        svc.Record("Tokyo", "A", NotificationType.Info, "session-1");
+
+        var fired = false;
+        svc.OnChange += () => fired = true;
+
+        svc.MarkSessionAsRead("session-999");
+
+        Assert.False(fired);
+    }
+
+    [Fact]
     public void OnChange_FiresOnMarkAllAsRead()
     {
         var svc = new NotificationHistoryService();

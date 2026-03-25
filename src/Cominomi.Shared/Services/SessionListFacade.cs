@@ -16,6 +16,7 @@ public class SessionListFacade : ISessionListFacade
     private readonly ISnackbar _snackbar;
     private readonly ISkillRegistry _skillRegistry;
     private readonly IClaudeService _claudeService;
+    private readonly INotificationHistoryService _notificationHistory;
 
     public SessionListFacade(
         IChatState chatState,
@@ -27,7 +28,8 @@ public class SessionListFacade : ISessionListFacade
         IDialogService dialogService,
         ISnackbar snackbar,
         ISkillRegistry skillRegistry,
-        IClaudeService claudeService)
+        IClaudeService claudeService,
+        INotificationHistoryService notificationHistory)
     {
         _chatState = chatState;
         _sessionService = sessionService;
@@ -39,6 +41,7 @@ public class SessionListFacade : ISessionListFacade
         _snackbar = snackbar;
         _skillRegistry = skillRegistry;
         _claudeService = claudeService;
+        _notificationHistory = notificationHistory;
     }
 
     public Task<(Workspace? Workspace, Session? Session, string? ProjectName)> RestoreLastSelectionAsync(
@@ -96,6 +99,7 @@ public class SessionListFacade : ISessionListFacade
         // so we always get the authoritative in-memory instance if one exists.
         var fullSess = await _sessionService.LoadSessionAsync(session.Id);
         _chatState.SetSession(fullSess ?? session);
+        _notificationHistory.MarkSessionAsRead(session.Id);
 
         await SaveLastSelectionAsync(session.WorkspaceId, session.Id);
     }

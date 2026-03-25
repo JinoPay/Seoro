@@ -67,5 +67,25 @@ public class NotificationHistoryService : INotificationHistoryService
         OnChange?.Invoke();
     }
 
+    public void MarkSessionAsRead(string sessionId)
+    {
+        bool changed;
+        lock (_lock)
+        {
+            changed = false;
+            foreach (var entry in _entries)
+            {
+                if (entry.SessionId == sessionId && !entry.IsRead)
+                {
+                    entry.IsRead = true;
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed)
+            OnChange?.Invoke();
+    }
+
     public event Action? OnChange;
 }
