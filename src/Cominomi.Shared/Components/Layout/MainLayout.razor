@@ -147,7 +147,11 @@
             else
             {
                 _ = CheckClaudeVersionAsync();
-                _ = CheckAppUpdateAsync();
+                var settings = await SettingsService.LoadAsync();
+                if (settings.AutoUpdateEnabled)
+                {
+                    _ = CheckAppUpdateAsync();
+                }
             }
         }
         catch (Exception ex)

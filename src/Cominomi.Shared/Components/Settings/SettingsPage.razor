@@ -45,10 +45,20 @@
                 <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" />
                 명령어
             </button>
+            <button class="settings-nav-item @ActiveClass("shortcuts")"
+                    @onclick="@(() => SetSection("shortcuts"))">
+                <MudIcon Icon="@Icons.Material.Filled.Keyboard" Size="Size.Small" />
+                단축키
+            </button>
             <button class="settings-nav-item @ActiveClass("advanced")"
                     @onclick="@(() => SetSection("advanced"))">
                 <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" />
                 고급
+            </button>
+            <button class="settings-nav-item @ActiveClass("updates")"
+                    @onclick="@(() => SetSection("updates"))">
+                <MudIcon Icon="@Icons.Material.Filled.SystemUpdate" Size="Size.Small" />
+                업데이트
             </button>
             <button class="settings-nav-item @ActiveClass("usage")"
                     @onclick="@(() => SetSection("usage"))">
