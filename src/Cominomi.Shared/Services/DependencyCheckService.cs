@@ -20,7 +20,11 @@ public class DependencyCheckService(
                 "https://git-scm.com/downloads",
                 "winget install Git.Git",
                 "brew install git"),
-            CheckClaudeAsync()
+            CheckClaudeAsync(),
+            CheckToolAsync("gh", "GitHub CLI",
+                "https://cli.github.com/",
+                "winget install GitHub.cli",
+                "brew install gh")
         };
 
         var results = await Task.WhenAll(tasks);
@@ -54,26 +58,27 @@ public class DependencyCheckService(
         }
 
         if (path == null)
-            return new DependencyResult("claude", description, false, null, installUrl,
+            return new DependencyResult("claude", description, false, null, null, installUrl,
                 winHint, macHint, ClaudeInstallMethods.Windows, ClaudeInstallMethods.Mac);
 
         var version = await GetVersionAsync(path);
-        return new DependencyResult("claude", description, true, version, installUrl,
+        return new DependencyResult("claude", description, true, version, path, installUrl,
             winHint, macHint, ClaudeInstallMethods.Windows, ClaudeInstallMethods.Mac);
     }
 
     private async Task<DependencyResult> CheckToolAsync(
         string command, string description,
-        string installUrl, string windowsHint, string macHint)
+        string installUrl, string windowsHint, string macHint,
+        bool isRequired = true)
     {
         var path = await FindExecutableAsync(command);
         if (path == null)
-            return new DependencyResult(command, description, false, null, installUrl,
-                windowsHint, macHint, WindowsMethods: [], MacMethods: []);
+            return new DependencyResult(command, description, false, null, null, installUrl,
+                windowsHint, macHint, WindowsMethods: [], MacMethods: [], isRequired);
 
         var version = await GetVersionAsync(path);
-        return new DependencyResult(command, description, true, version, installUrl,
-            windowsHint, macHint, WindowsMethods: [], MacMethods: []);
+        return new DependencyResult(command, description, true, version, path, installUrl,
+            windowsHint, macHint, WindowsMethods: [], MacMethods: [], isRequired);
     }
 
     private async Task<string?> FindExecutableAsync(string command)

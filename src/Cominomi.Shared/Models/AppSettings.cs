@@ -10,6 +10,7 @@ public class AppSettings
     public double UiScale { get; set; }  // 0 = auto (macOS: 1.1, Windows: 1.0)
     public string? ClaudePath { get; set; }
     public string? GitPath { get; set; }
+    public string? GhPath { get; set; }
     public string? DefaultCloneDirectory { get; set; }
     public string DefaultEffortLevel { get; set; } = CominomiConstants.DefaultEffortLevel;
     public string DefaultPermissionMode { get; set; } = CominomiConstants.DefaultPermissionMode;

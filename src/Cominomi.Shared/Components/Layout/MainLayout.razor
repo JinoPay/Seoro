@@ -140,7 +140,7 @@
             _isDarkMode = ThemeService.IsDarkMode;
 
             var deps = await DependencyCheckService.CheckAllAsync();
-            if (deps.Any(d => !d.IsInstalled))
+            if (deps.Any(d => d.IsRequired && !d.IsInstalled))
             {
                 _setupOpen = true;
             }
