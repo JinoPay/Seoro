@@ -659,17 +659,6 @@
             }
         };
 
-        window.terminalUpdateTheme = function(elementId) {
-            var t = window._terminals[elementId];
-            if (!t) return;
-            var styles = getComputedStyle(document.documentElement);
-            var bg = styles.getPropertyValue('--bg-base').trim() || '#0f172a';
-            var fg = styles.getPropertyValue('--text-primary').trim() || 'rgba(255,255,255,0.87)';
-            var cur = styles.getPropertyValue('--accent').trim() || '#a78bfa';
-            var sel = styles.getPropertyValue('--accent-dim').trim() || 'rgba(167,139,250,0.10)';
-            t.term.options.theme = { background: bg, foreground: fg, cursor: cur, selectionBackground: sel };
-        };
-
         // --- Vertical Panel Resizer (top/bottom split) ---
         window.registerVerticalResizer = function(element, dotNetRef, minSize, maxSize) {
             if (!element) return;

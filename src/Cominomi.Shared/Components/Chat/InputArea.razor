@@ -69,8 +69,6 @@
     private DotNetObjectReference<InputArea>? _dotNetRef;
     private bool _handlersRegistered;
     private bool _suppressInputUpdates;
-    private string? _prevSessionId;
-    private Session? _prevSession;
 
     // Local copies of toolbar state — updated both from parent parameters AND from
     // user clicks (optimistic update). This decouples toolbar rendering from the
@@ -99,21 +97,6 @@
 
     protected override void OnParametersSet()
     {
-        // Save/restore draft input text across session switches
-        var currentId = CurrentSession?.Id;
-        if (currentId != _prevSessionId)
-        {
-            // Save draft to the previous session
-            if (_prevSession != null)
-                _prevSession.DraftInputText = string.IsNullOrWhiteSpace(_inputText) ? null : _inputText;
-
-            // Restore draft from new session
-            _inputText = CurrentSession?.DraftInputText ?? string.Empty;
-            _prevSessionId = currentId;
-            _prevSession = CurrentSession;
-            _forceRender = true;
-        }
-
         // Sync local copies from parent parameters
         if (_prevPermissionMode != PermissionMode)
             _currentPermissionMode = PermissionMode;
@@ -185,10 +168,6 @@
         var wasEmpty = string.IsNullOrWhiteSpace(_inputText);
         _inputText = value;
         var isEmpty = string.IsNullOrWhiteSpace(_inputText);
-
-        // Persist draft to session for cross-session survival
-        if (CurrentSession != null)
-            CurrentSession.DraftInputText = isEmpty ? null : value;
 
         UpdateSlashPopupState();
 
