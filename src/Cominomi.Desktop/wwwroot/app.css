@@ -1431,6 +1431,21 @@ html *::after {
     border-color: var(--border-strong);
 }
 
+.input-focus-hint {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-3);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.6;
+}
+
+.input-area-float:focus-within .input-focus-hint {
+    opacity: 0;
+}
+
 /* Textarea full width */
 .input-area-float .input-textarea-full {
     width: 100%;

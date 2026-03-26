@@ -7,6 +7,8 @@
 
 <div class="input-area-container" id="input-area">
     <div class="input-area-float" style="position: relative;">
+        <span class="input-focus-hint">@_shortcutHint</span>
+
         <SlashCommandPopup IsOpen="_slashPopupOpen"
                            FilteredCommands="_filteredCommands"
                            SelectedIndex="_slashSelectedIndex"
@@ -90,6 +92,7 @@
     private bool _prevIsPlanReviewVisible;
     private bool _forceRender;
     private bool _isComposing;
+    private readonly string _shortcutHint = OperatingSystem.IsMacOS() ? "⌘⇧L" : "Ctrl+Shift+L";
 
     // Slash command autocomplete state
     private bool _slashPopupOpen;
