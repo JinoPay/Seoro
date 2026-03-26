@@ -4480,6 +4480,23 @@ html *::after {
     margin-left: 4px;
 }
 
+.askbar-custom-input {
+    padding: 0 14px 4px;
+}
+
+.askbar-custom-input .askbar-textfield {
+    font-size: var(--text-sm);
+}
+
+.askbar-custom-input .mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--color-info-border);
+    border-radius: 8px;
+}
+
+.askbar-custom-input .mud-input-outlined:hover .mud-input-outlined-border {
+    border-color: var(--accent);
+}
+
 .askbar-actions {
     display: flex;
     align-items: center;
