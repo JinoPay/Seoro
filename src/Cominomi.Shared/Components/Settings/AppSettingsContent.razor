@@ -259,7 +259,7 @@
             <div class="settings-group">
                 <div class="settings-group-title">Git</div>
                 <div class="integration-status">
-                    @if (_integrationsChecking)
+                    @if (_gitChecking)
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true"
                                              Style="width: 18px; height: 18px;" />
@@ -282,7 +282,7 @@
                         <span class="status-text">감지되지 않음</span>
                     }
                     <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                                   OnClick="CheckIntegrations" Title="다시 확인" />
+                                   OnClick="CheckGit" Title="다시 확인" />
                 </div>
 
                 @if (_gitFound && !string.IsNullOrEmpty(_gitVersion))
@@ -298,7 +298,7 @@
                     </div>
                 }
 
-                @if (!_integrationsChecking && !_gitFound)
+                @if (!_gitChecking && !_gitFound)
                 {
                     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined"
                               Class="mt-2" Dense="true">
@@ -325,7 +325,7 @@
             <div class="settings-group">
                 <div class="settings-group-title">GitHub CLI</div>
                 <div class="integration-status">
-                    @if (_integrationsChecking)
+                    @if (_ghChecking)
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true"
                                              Style="width: 18px; height: 18px;" />
@@ -348,7 +348,7 @@
                         <span class="status-text">감지되지 않음</span>
                     }
                     <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                                   OnClick="CheckIntegrations" Title="다시 확인" />
+                                   OnClick="CheckGh" Title="다시 확인" />
                 </div>
 
                 @if (_ghFound && !string.IsNullOrEmpty(_ghVersion))
@@ -364,7 +364,7 @@
                     </div>
                 }
 
-                @if (!_integrationsChecking && !_ghFound)
+                @if (!_ghChecking && !_ghFound)
                 {
                     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined"
                               Class="mt-2" Dense="true">
@@ -507,15 +507,16 @@
     private AppSettings _settings = new();
     private string _lastSection = "";
 
-    private bool _integrationsChecking;
     private bool _claudeCliChecking;
     private bool _claudeCliFound;
     private string? _claudeCliResolvedPath;
     private string? _claudeCliVersion;
     private bool _claudeVersionOutdated;
+    private bool _gitChecking;
     private bool _gitFound;
     private string? _gitResolvedPath;
     private string? _gitVersion;
+    private bool _ghChecking;
     private bool _ghFound;
     private string? _ghResolvedPath;
     private string? _ghVersion;
@@ -547,15 +548,15 @@
 
     private async Task CheckIntegrations()
     {
-        _integrationsChecking = true;
+        await Task.WhenAll(CheckClaudeCli(), CheckGit(), CheckGh());
+    }
+
+    private async Task CheckGit()
+    {
+        _gitChecking = true;
         StateHasChanged();
 
-        var checkDepsTask = DependencyCheckService.CheckAllAsync();
-        var checkClaudeTask = CheckClaudeCli();
-
-        var deps = await checkDepsTask;
-        await checkClaudeTask;
-
+        var deps = await DependencyCheckService.CheckAllAsync();
         var gitDep = deps.FirstOrDefault(d => d.Name == "git");
         if (gitDep != null)
         {
@@ -564,6 +565,16 @@
             _gitVersion = gitDep.Version;
         }
 
+        _gitChecking = false;
+        StateHasChanged();
+    }
+
+    private async Task CheckGh()
+    {
+        _ghChecking = true;
+        StateHasChanged();
+
+        var deps = await DependencyCheckService.CheckAllAsync();
         var ghDep = deps.FirstOrDefault(d => d.Name == "gh");
         if (ghDep != null)
         {
@@ -572,7 +583,7 @@
             _ghVersion = ghDep.Version;
         }
 
-        _integrationsChecking = false;
+        _ghChecking = false;
         StateHasChanged();
     }
 
