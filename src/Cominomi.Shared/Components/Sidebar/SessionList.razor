@@ -240,6 +240,17 @@
         }
     }
 
+    [JSInvokable]
+    public async Task OnDeleteCurrentSessionShortcut()
+    {
+        var current = ChatState.CurrentSession;
+        if (current != null)
+        {
+            await DeleteSession(current);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     private static string GetShortcutLabel(int index)
     {
         // Use platform-appropriate modifier

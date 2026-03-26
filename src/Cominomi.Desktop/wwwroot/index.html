@@ -453,6 +453,10 @@
                     var index = parseInt(e.key) - 1;
                     dotNetRef.invokeMethodAsync('OnSessionShortcut', index);
                 }
+                if (modifier && (e.key === 'd' || e.key === 'D')) {
+                    e.preventDefault();
+                    dotNetRef.invokeMethodAsync('OnDeleteCurrentSessionShortcut');
+                }
             };
             document.addEventListener('keydown', window._sessionShortcutHandler);
         };
