@@ -4690,3 +4690,20 @@ select:focus-visible {
     outline: none;
     box-shadow: var(--focus-ring);
 }
+
+/* Release Notes */
+.release-notes-panel {
+    margin-top: var(--space-2);
+}
+
+.release-note-changes {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.release-note-change {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}

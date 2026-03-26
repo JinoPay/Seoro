@@ -23,6 +23,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="../../changelog.json" LogicalName="changelog.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="icon.ico" CopyToOutputDirectory="PreserveNewest" />
     <None Update="icon.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

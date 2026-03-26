@@ -121,6 +121,7 @@ public static class Program
         appBuilder.Services.AddSingleton<IDependencyCheckService, DependencyCheckService>();
         appBuilder.Services.AddSingleton<ILauncherService, LauncherService>();
         appBuilder.Services.AddSingleton<IUpdateService, UpdateService>();
+        appBuilder.Services.AddSingleton<IReleaseNotesService, ReleaseNotesService>();
         appBuilder.Services.AddSingleton<IFolderPickerService, FolderPickerService>();
         appBuilder.Services.AddSingleton<IFilePickerService, FilePickerService>();
         appBuilder.Services.AddSingleton<IAttachmentService, AttachmentService>();

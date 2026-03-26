@@ -1,0 +1,98 @@
+[
+  {
+    "version": "1.3.2",
+    "date": "2026-03-26",
+    "changes": [
+      { "type": "feat", "description": "설정에 단축키 안내 페이지 및 업데이트 관리 페이지 추가" },
+      { "type": "feat", "description": "Git 브랜치 실시간 추적 및 사이드바 브랜치/삭제 단축키 표시" },
+      { "type": "fix", "description": "macOS 배포 시 icon.ico 파일 못 찾는 크래시 수정" }
+    ]
+  },
+  {
+    "version": "1.3.1",
+    "date": "2026-03-26",
+    "changes": [
+      { "type": "fix", "description": "CLI 미설치 시에도 항상 found=true 반환하던 감지 버그 수정" }
+    ]
+  },
+  {
+    "version": "1.3.0",
+    "date": "2026-03-26",
+    "changes": [
+      { "type": "feat", "description": "PTY 기반 터미널 패널 추가 (50/50 분할, 복사/붙여넣기 지원)" },
+      { "type": "feat", "description": "AskUserQuestion에 자유 텍스트 입력 필드 추가" }
+    ]
+  },
+  {
+    "version": "1.2.4",
+    "date": "2026-03-26",
+    "changes": [
+      { "type": "fix", "description": "Ctrl+D 세션 삭제 시 사이드바에서 세션이 제거되지 않는 버그 수정" }
+    ]
+  },
+  {
+    "version": "1.2.3",
+    "date": "2026-03-26",
+    "changes": [
+      { "type": "feat", "description": "Git 및 GitHub CLI 의존성 체크 추가 (시작 시 검사 + 설정 연동 UI)" },
+      { "type": "feat", "description": "Claude CLI 설치/업데이트 안내를 플랫폼별 다중 방법으로 개선" },
+      { "type": "fix", "description": "Git/gh 리프레시 버튼 개별 로딩 인디케이터 분리" },
+      { "type": "fix", "description": "플랜 승인 후 플랜 파일 보기 버튼이 사라지는 버그 수정" }
+    ]
+  },
+  {
+    "version": "1.2.2",
+    "date": "2026-03-26",
+    "changes": [
+      { "type": "feat", "description": "앱 아이콘 전체 세팅 (Windows/macOS)" },
+      { "type": "feat", "description": "텍스트 파일 미리보기 기능 추가 (마크다운, YAML, 코드 등)" },
+      { "type": "feat", "description": "Ctrl+D 단축키로 현재 세션 닫기 지원" },
+      { "type": "feat", "description": "사이드바 세션 상태 표시 개선 (완료 배지 추가)" }
+    ]
+  },
+  {
+    "version": "1.2.1",
+    "date": "2026-03-25",
+    "changes": [
+      { "type": "feat", "description": "UI 전반 배치 개선 및 리팩토링" }
+    ]
+  },
+  {
+    "version": "1.2.0",
+    "date": "2026-03-25",
+    "changes": [
+      { "type": "feat", "description": "GitHub 토큰 주입으로 private 레포 업데이트 지원" },
+      { "type": "fix", "description": "브라우저 기본 우클릭 메뉴 비활성화" },
+      { "type": "fix", "description": "Windows DPI 배율 변경 시 제목표시줄 크기 이상 수정" }
+    ]
+  },
+  {
+    "version": "1.1.2",
+    "date": "2026-03-25",
+    "changes": [
+      { "type": "feat", "description": "알림 설정 탭 분리 및 macOS/Windows 사운드 지원" }
+    ]
+  },
+  {
+    "version": "1.1.1",
+    "date": "2026-03-25",
+    "changes": [
+      { "type": "fix", "description": "macOS Photino 스레드 행 방지를 위한 강제 종료 처리" },
+      { "type": "fix", "description": "osascript/PowerShell 파일피커를 Photino 네이티브 다이얼로그로 전환" }
+    ]
+  },
+  {
+    "version": "1.1.0",
+    "date": "2026-03-25",
+    "changes": [
+      { "type": "feat", "description": "MAUI에서 Photino.Blazor로 프레임워크 이주" }
+    ]
+  },
+  {
+    "version": "1.0.1",
+    "date": "2026-03-24",
+    "changes": [
+      { "type": "feat", "description": "최초 릴리스 — Velopack 자동 업데이트 및 GitHub Actions CI/CD 파이프라인 구축" }
+    ]
+  }
+]
