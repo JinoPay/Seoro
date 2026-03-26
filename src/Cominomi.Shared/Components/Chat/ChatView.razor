@@ -543,12 +543,13 @@
     {
         try
         {
-            NotificationHistory.Record(session.Title, body, type, session.Id);
-
             var isFocused = await JSRuntime.InvokeAsync<bool>("isWindowFocused");
             var isCurrentSession = ChatState.CurrentSession?.Id == session.Id;
+            var isViewing = isFocused && isCurrentSession;
 
-            if (!isFocused || !isCurrentSession)
+            NotificationHistory.Record(session.Title, body, type, session.Id, isRead: isViewing);
+
+            if (!isViewing)
                 await NotificationService.SendAsync(session.Title, body, type);
         }
         catch (Exception ex)

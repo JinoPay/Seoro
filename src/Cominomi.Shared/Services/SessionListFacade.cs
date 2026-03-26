@@ -127,6 +127,7 @@ public class SessionListFacade : ISessionListFacade
         _claudeService.Cancel(session.Id);
 
         await _sessionService.DeleteSessionAsync(session.Id);
+        _notificationHistory.MarkSessionAsRead(session.Id);
 
         if (_dataService.SessionCache.TryGetValue(session.WorkspaceId, out var sessions))
             sessions.RemoveAll(s => s.Id == session.Id);
