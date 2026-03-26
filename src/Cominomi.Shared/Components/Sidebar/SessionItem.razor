@@ -1,7 +1,7 @@
 @using Cominomi.Shared.Models
 
 <div @key="Session.Id"
-     class="tree-session @(IsActive ? "active" : "") @(Session.Status == SessionStatus.Archived ? "archived" : "")"
+     class="tree-session @(IsActive ? "active" : "") @(IsStreaming ? "streaming" : "") @(Session.Status == SessionStatus.Archived ? "archived" : "")"
      @onclick="@OnClick"
      @oncontextmenu="OpenContextMenu"
      @oncontextmenu:preventDefault="true">
@@ -13,13 +13,7 @@
                        OnClickStopPropagation="true" />
     </div>
 
-    @if (IsStreaming)
-    {
-        <span class="status-badge streaming">
-            <span class="status-badge-dot"></span>
-        </span>
-    }
-    else if (IsCompleted)
+    @if (IsCompleted)
     {
         <span class="status-badge completed">완료</span>
     }
