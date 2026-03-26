@@ -56,6 +56,7 @@ jobs:
           --packVersion ${{ steps.version.outputs.VERSION }}
           --packDir publish/win
           --mainExe Cominomi.Desktop.exe
+          --icon src/Cominomi.Desktop/icon.ico
           --channel win
           --outputDir releases/win
 
@@ -105,6 +106,7 @@ jobs:
           mkdir -p "publish/Cominomi.app/Contents/MacOS"
           mkdir -p "publish/Cominomi.app/Contents/Resources"
           cp -R publish/mac/* "publish/Cominomi.app/Contents/MacOS/"
+          cp src/Cominomi.Desktop/icon.icns "publish/Cominomi.app/Contents/Resources/app.icns"
           cat > "publish/Cominomi.app/Contents/Info.plist" << PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -118,6 +120,8 @@ jobs:
             <string>com.cominomi.app</string>
             <key>CFBundleExecutable</key>
             <string>Cominomi.Desktop</string>
+            <key>CFBundleIconFile</key>
+            <string>app.icns</string>
             <key>CFBundleVersion</key>
             <string>${VERSION}</string>
             <key>CFBundleShortVersionString</key>

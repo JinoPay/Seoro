@@ -161,6 +161,7 @@ public static class Program
         // Window configuration
         app.MainWindow
             .SetTitle("Cominomi")
+            .SetIconFile("icon.ico")
             .SetSize(1400, 900)
             .SetMinSize(1400, 900)
 #if DEBUG
