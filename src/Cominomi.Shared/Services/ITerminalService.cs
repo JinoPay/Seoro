@@ -14,6 +14,9 @@ public interface ITerminalService : IAsyncDisposable
     /// <summary>Kill the shell process for the given session.</summary>
     Task StopAsync(string sessionKey);
 
+    /// <summary>Resize the PTY for the given session.</summary>
+    void Resize(string sessionKey, int cols, int rows);
+
     /// <summary>Fired when the shell produces stdout/stderr output. Args: (sessionKey, data)</summary>
     event Action<string, string>? OnOutput;
 

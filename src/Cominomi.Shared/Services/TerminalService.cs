@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using Pty.Net;
 
 namespace Cominomi.Shared.Services;
 
@@ -21,7 +21,7 @@ public class TerminalService : ITerminalService
     }
 
     public bool IsRunning(string sessionKey)
-        => _sessions.TryGetValue(sessionKey, out var s) && !s.Process.HasExited;
+        => _sessions.TryGetValue(sessionKey, out var s) && s.IsAlive;
 
     public async Task StartAsync(string sessionKey, string workingDirectory)
     {
@@ -29,65 +29,54 @@ public class TerminalService : ITerminalService
         await StopAsync(sessionKey);
 
         var shell = await _shellService.GetShellAsync();
-        _logger.LogInformation("Starting terminal for session {Key} with {Shell} in {Dir}",
+        _logger.LogInformation("Starting PTY terminal for session {Key} with {Shell} in {Dir}",
             sessionKey, shell.Type, workingDirectory);
 
-        var psi = new ProcessStartInfo
-        {
-            FileName = shell.FileName,
-            WorkingDirectory = workingDirectory,
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
-        };
-
-        // For Git Bash on Windows, start in interactive login mode
+        var args = new List<string>();
         if (shell.Type == ShellType.Bash)
         {
-            psi.ArgumentList.Add("--login");
-            psi.ArgumentList.Add("-i");
+            args.Add("--login");
+            args.Add("-i");
         }
-        else if (shell.Type == ShellType.Cmd)
+
+        var env = new Dictionary<string, string>
         {
-            // cmd.exe interactive mode (no /c)
-        }
+            ["TERM"] = "xterm-256color",
+        };
 
-        // Set TERM to enable basic color support
-        psi.Environment["TERM"] = "xterm-256color";
+        var options = new PtyOptions
+        {
+            Name = "Cominomi Terminal",
+            App = shell.FileName,
+            CommandLine = args.ToArray(),
+            Cwd = workingDirectory,
+            Cols = 120,
+            Rows = 30,
+            Environment = env,
+        };
 
-        var process = new Process { StartInfo = psi };
-        process.Start();
+        var ptyConnection = await PtyProvider.SpawnAsync(options, CancellationToken.None);
 
         var cts = new CancellationTokenSource();
-        var session = new TerminalSession(process, cts);
+        var session = new TerminalSession(ptyConnection, cts);
 
         if (!_sessions.TryAdd(sessionKey, session))
         {
-            process.Kill(true);
-            process.Dispose();
+            ptyConnection.Kill();
+            ptyConnection.Dispose();
             return;
         }
 
-        // Background tasks to read stdout and stderr in chunks
-        _ = ReadOutputAsync(sessionKey, process.StandardOutput, cts.Token);
-        _ = ReadOutputAsync(sessionKey, process.StandardError, cts.Token);
-
-        // Monitor process exit
-        _ = Task.Run(async () =>
+        ptyConnection.ProcessExited += (_, e) =>
         {
-            try
-            {
-                await process.WaitForExitAsync(cts.Token);
-                _logger.LogInformation("Terminal process exited for session {Key} with code {Code}",
-                    sessionKey, process.ExitCode);
-                OnExited?.Invoke(sessionKey, process.ExitCode);
-            }
-            catch (OperationCanceledException) { }
-        }, cts.Token);
+            _logger.LogInformation("PTY process exited for session {Key} with code {Code}",
+                sessionKey, e.ExitCode);
+            session.MarkExited();
+            OnExited?.Invoke(sessionKey, e.ExitCode);
+        };
+
+        // Background task to read PTY output
+        _ = ReadPtyOutputAsync(sessionKey, ptyConnection, cts.Token);
     }
 
     public async Task WriteAsync(string sessionKey, string data)
@@ -96,12 +85,13 @@ public class TerminalService : ITerminalService
 
         try
         {
-            await session.Process.StandardInput.WriteAsync(data);
-            await session.Process.StandardInput.FlushAsync();
+            var bytes = Encoding.UTF8.GetBytes(data);
+            await session.Pty.WriterStream.WriteAsync(bytes);
+            await session.Pty.WriterStream.FlushAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to write to terminal stdin for session {Key}", sessionKey);
+            _logger.LogDebug(ex, "Failed to write to PTY for session {Key}", sessionKey);
         }
     }
 
@@ -112,16 +102,31 @@ public class TerminalService : ITerminalService
         session.Cts.Cancel();
         try
         {
-            if (!session.Process.HasExited)
-                session.Process.Kill(true);
+            if (session.IsAlive)
+                session.Pty.Kill();
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to kill terminal process for session {Key}", sessionKey);
+            _logger.LogDebug(ex, "Failed to kill PTY process for session {Key}", sessionKey);
         }
-        session.Process.Dispose();
+        session.Pty.Dispose();
         session.Cts.Dispose();
         return Task.CompletedTask;
+    }
+
+    /// <summary>Resize the PTY for the given session.</summary>
+    public void Resize(string sessionKey, int cols, int rows)
+    {
+        if (!_sessions.TryGetValue(sessionKey, out var session) || !session.IsAlive) return;
+
+        try
+        {
+            session.Pty.Resize(cols, rows);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to resize PTY for session {Key}", sessionKey);
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -131,26 +136,51 @@ public class TerminalService : ITerminalService
             await StopAsync(key);
     }
 
-    private async Task ReadOutputAsync(string sessionKey, StreamReader reader, CancellationToken ct)
+    private async Task ReadPtyOutputAsync(string sessionKey, IPtyConnection pty, CancellationToken ct)
     {
-        var buffer = new char[4096];
+        var buffer = new byte[4096];
+        var isFirstChunk = true;
         try
         {
             while (!ct.IsCancellationRequested)
             {
-                var bytesRead = await reader.ReadAsync(buffer.AsMemory(), ct);
-                if (bytesRead == 0) break; // EOF
+                var bytesRead = await pty.ReaderStream.ReadAsync(buffer, ct);
+                if (bytesRead == 0) break;
 
-                var text = new string(buffer, 0, bytesRead);
+                var text = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+
+                // Strip leading blank lines from the first output (Git Bash PS1 starts with \n)
+                if (isFirstChunk)
+                {
+                    text = text.TrimStart('\r', '\n');
+                    isFirstChunk = false;
+                    if (text.Length == 0) continue;
+                }
+
                 OnOutput?.Invoke(sessionKey, text);
             }
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Terminal output read error for session {Key}", sessionKey);
+            _logger.LogDebug(ex, "PTY output read error for session {Key}", sessionKey);
         }
     }
 
-    private sealed record TerminalSession(Process Process, CancellationTokenSource Cts);
+    private sealed class TerminalSession
+    {
+        public IPtyConnection Pty { get; }
+        public CancellationTokenSource Cts { get; }
+        private bool _exited;
+
+        public bool IsAlive => !_exited;
+
+        public TerminalSession(IPtyConnection pty, CancellationTokenSource cts)
+        {
+            Pty = pty;
+            Cts = cts;
+        }
+
+        public void MarkExited() => _exited = true;
+    }
 }

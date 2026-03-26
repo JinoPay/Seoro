@@ -5,7 +5,7 @@
 
 <div class="embedded-diff-panel">
     @* === Top Section: Explorer / Changes === *@
-    <div class="right-panel-top" style="height: @(_topPanelHeight)px;">
+    <div class="right-panel-top" style="height: @(_topPanelStyle);">
         <div class="embedded-diff-toolbar">
             <div class="embedded-diff-tabs">
                 <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Explorer ? "active" : "")"
@@ -35,7 +35,7 @@
     </div>
 
     @* === Vertical Resizer === *@
-    <VerticalPanelResizer CurrentSize="_topPanelHeight" MinSize="120" MaxSize="800"
+    <VerticalPanelResizer CurrentSize="_topPanelHeight ?? 0" MinSize="120" MaxSize="800"
                           OnResize="HandleVerticalResize" />
 
     @* === Bottom Section: Terminal === *@
@@ -48,7 +48,8 @@
     private DiffPanelTab _activeTab = DiffPanelTab.Explorer;
     private string? _lastSessionId;
     private bool _hasAutoSwitched;
-    private int _topPanelHeight = 300;
+    private int? _topPanelHeight;
+    private string _topPanelStyle = "calc(50% - 3px)";
     private TerminalPanel? _terminalPanel;
 
     protected override void OnInitialized()
@@ -75,6 +76,7 @@
     private async Task HandleVerticalResize(int newHeight)
     {
         _topPanelHeight = newHeight;
+        _topPanelStyle = $"{newHeight}px";
 
         // Re-fit xterm.js after resize
         if (_terminalPanel != null)

@@ -56,6 +56,13 @@
             await TerminalService.WriteAsync(_currentSessionKey, data);
     }
 
+    [JSInvokable]
+    public void OnTerminalResize(int cols, int rows)
+    {
+        if (_currentSessionKey != null)
+            TerminalService.Resize(_currentSessionKey, cols, rows);
+    }
+
     /// <summary>Called when the parent panel is resized — re-fit xterm to container.</summary>
     public async Task FitAsync()
     {

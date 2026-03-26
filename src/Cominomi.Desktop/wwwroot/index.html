@@ -611,7 +611,6 @@
                 fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace",
                 lineHeight: 1.2,
                 scrollback: 5000,
-                convertEol: true,
                 theme: {
                     background: bg,
                     foreground: fg,
@@ -627,8 +626,32 @@
             // Delay fit slightly to ensure container has layout
             requestAnimationFrame(function() { fitAddon.fit(); });
 
+            // Ctrl+C copies when text is selected, otherwise sends SIGINT
+            // Ctrl+V pastes from clipboard
+            term.attachCustomKeyEventHandler(function(ev) {
+                if (ev.type !== 'keydown') return true;
+                var isMac = navigator.platform.indexOf('Mac') >= 0;
+                var mod = isMac ? ev.metaKey : ev.ctrlKey;
+                if (mod && ev.key === 'c' && term.hasSelection()) {
+                    navigator.clipboard.writeText(term.getSelection());
+                    return false;
+                }
+                if (mod && ev.key === 'v') {
+                    navigator.clipboard.readText().then(function(text) {
+                        if (text) dotNetRef.invokeMethodAsync('OnTerminalInput', text);
+                    });
+                    return false;
+                }
+                return true;
+            });
+
             term.onData(function(data) {
                 dotNetRef.invokeMethodAsync('OnTerminalInput', data);
+            });
+
+            // Notify C# when xterm resizes so PTY dimensions stay in sync
+            term.onResize(function(size) {
+                dotNetRef.invokeMethodAsync('OnTerminalResize', size.cols, size.rows);
             });
 
             window._terminals[elementId] = { term: term, fitAddon: fitAddon, dotNetRef: dotNetRef };
