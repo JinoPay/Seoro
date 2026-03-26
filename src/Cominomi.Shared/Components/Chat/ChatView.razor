@@ -378,10 +378,7 @@
                 break;
 
             case PlanReviewAction.Reject:
-                await HandleSend(new ChatInputMessage
-                {
-                    Text = "플랜을 거절합니다. 다른 접근 방식을 제안해주세요."
-                });
+                HandleCancel();
                 break;
         }
     }
