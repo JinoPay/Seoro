@@ -1,6 +1,8 @@
+@using System.Text
 @using Cominomi.Shared.Models
 @using Cominomi.Shared.Services
 @inject LightboxService Lightbox
+@inject FilePreviewService FilePreview
 
 @if (Attachments.Count > 0)
 {
@@ -8,9 +10,10 @@
         @foreach (var attachment in Attachments)
         {
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                     Icon="@(attachment.IsImage ? Icons.Material.Filled.Image : Icons.Material.Filled.InsertDriveFile)"
+                     Icon="@GetIcon(attachment)"
                      OnClose="@(() => OnRemove.InvokeAsync(attachment))"
-                     Style="font-size: 0.75rem;">
+                     OnClick="@(() => PreviewAttachment(attachment))"
+                     Style="font-size: 0.75rem; cursor: pointer;">
                 @if (attachment.IsImage && attachment.PreviewDataUrl != null)
                 {
                     <img src="@attachment.PreviewDataUrl" alt="@attachment.FileName"
@@ -27,6 +30,44 @@
 @code {
     [Parameter] public IReadOnlyList<PendingAttachment> Attachments { get; set; } = [];
     [Parameter] public EventCallback<PendingAttachment> OnRemove { get; set; }
+
+    private static string GetIcon(PendingAttachment attachment)
+    {
+        if (attachment.IsImage) return Icons.Material.Filled.Image;
+        var ext = Path.GetExtension(attachment.FileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".md" or ".mdx" => Icons.Material.Filled.Description,
+            ".json" or ".yaml" or ".yml" or ".xml" or ".toml" or ".ini" or ".cfg"
+                => Icons.Material.Filled.DataObject,
+            ".cs" or ".js" or ".ts" or ".py" or ".rs" or ".go" or ".java" or ".html"
+                or ".css" or ".sql" or ".sh" or ".bash" or ".ps1"
+                => Icons.Material.Filled.Code,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+
+    private void PreviewAttachment(PendingAttachment attachment)
+    {
+        if (attachment.IsImage)
+        {
+            if (attachment.PreviewDataUrl != null)
+                Lightbox.Open(attachment.PreviewDataUrl, attachment.FileName);
+            return;
+        }
+
+        if (attachment.Data.Length == 0) return;
+
+        try
+        {
+            var content = Encoding.UTF8.GetString(attachment.Data);
+            FilePreview.Open(attachment.FileName, content);
+        }
+        catch
+        {
+            // Binary file — cannot preview as text
+        }
+    }
 
     private static string TruncateFileName(string name)
     {
