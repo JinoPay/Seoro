@@ -1,33 +1,46 @@
 @using Cominomi.Shared.Models
 @inject IChatState ChatState
-@implements IDisposable
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <div class="embedded-diff-panel">
-    <div class="embedded-diff-toolbar">
-        <div class="embedded-diff-tabs">
-            <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Explorer ? "active" : "")"
-                  @onclick="@(() => _activeTab = DiffPanelTab.Explorer)">
-                Explorer
-            </span>
-            <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Changes ? "active" : "")"
-                  @onclick="@(() => _activeTab = DiffPanelTab.Changes)">
-                Changes
-            </span>
+    @* === Top Section: Explorer / Changes === *@
+    <div class="right-panel-top" style="height: @(_topPanelHeight)px;">
+        <div class="embedded-diff-toolbar">
+            <div class="embedded-diff-tabs">
+                <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Explorer ? "active" : "")"
+                      @onclick="@(() => _activeTab = DiffPanelTab.Explorer)">
+                    Explorer
+                </span>
+                <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Changes ? "active" : "")"
+                      @onclick="@(() => _activeTab = DiffPanelTab.Changes)">
+                    Changes
+                </span>
+            </div>
+        </div>
+
+        <div class="embedded-diff-content">
+            <div style="@(_activeTab == DiffPanelTab.Explorer
+                ? "flex:1;min-height:0;display:flex;flex-direction:column"
+                : "display:none;height:0;overflow:hidden")">
+                <SidebarExplorer />
+            </div>
+
+            <div style="@(_activeTab == DiffPanelTab.Changes
+                ? "flex:1;min-height:0;display:flex;flex-direction:column"
+                : "display:none;height:0;overflow:hidden")">
+                <SidebarChanges OnChangesDetected="HandleChangesDetected" />
+            </div>
         </div>
     </div>
 
-    <div class="embedded-diff-content">
-        <div style="@(_activeTab == DiffPanelTab.Explorer
-            ? "flex:1;min-height:0;display:flex;flex-direction:column"
-            : "display:none;height:0;overflow:hidden")">
-            <SidebarExplorer />
-        </div>
+    @* === Vertical Resizer === *@
+    <VerticalPanelResizer CurrentSize="_topPanelHeight" MinSize="120" MaxSize="800"
+                          OnResize="HandleVerticalResize" />
 
-        <div style="@(_activeTab == DiffPanelTab.Changes
-            ? "flex:1;min-height:0;display:flex;flex-direction:column"
-            : "display:none;height:0;overflow:hidden")">
-            <SidebarChanges OnChangesDetected="HandleChangesDetected" />
-        </div>
+    @* === Bottom Section: Terminal === *@
+    <div class="right-panel-bottom">
+        <TerminalPanel @ref="_terminalPanel" />
     </div>
 </div>
 
@@ -35,6 +48,8 @@
     private DiffPanelTab _activeTab = DiffPanelTab.Explorer;
     private string? _lastSessionId;
     private bool _hasAutoSwitched;
+    private int _topPanelHeight = 300;
+    private TerminalPanel? _terminalPanel;
 
     protected override void OnInitialized()
     {
@@ -57,9 +72,21 @@
         });
     }
 
-    public void Dispose()
+    private async Task HandleVerticalResize(int newHeight)
+    {
+        _topPanelHeight = newHeight;
+
+        // Re-fit xterm.js after resize
+        if (_terminalPanel != null)
+            await _terminalPanel.FitAsync();
+    }
+
+    public async ValueTask DisposeAsync()
     {
         ChatState.OnChange -= HandleStateChanged;
+
+        if (_terminalPanel != null)
+            await _terminalPanel.DisposeAsync();
     }
 
     private void HandleChangesDetected()

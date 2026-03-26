@@ -142,6 +142,7 @@ public static class Program
         appBuilder.Services.AddSingleton<IStreamEventHandler, ErrorHandler>();
         appBuilder.Services.AddSingleton<IStreamEventProcessor, StreamEventProcessor>();
         appBuilder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
+        appBuilder.Services.AddSingleton<ITerminalService, TerminalService>();
         appBuilder.Services.AddSingleton<ISystemPromptBuilder, SystemPromptBuilder>();
         appBuilder.Services.AddSingleton<ISessionInitializer, SessionInitializer>();
         appBuilder.Services.AddSingleton<IChatMessageOrchestrator, ChatMessageOrchestrator>();
@@ -253,6 +254,9 @@ public static class Program
             services.GetService<IClaudeService>()?.Dispose();
             (services.GetService<ChatState>() as IDisposable)?.Dispose();
             (services.GetService<SessionListDataService>() as IDisposable)?.Dispose();
+
+            if (services.GetService<ITerminalService>() is IAsyncDisposable termDisposable)
+                termDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {
