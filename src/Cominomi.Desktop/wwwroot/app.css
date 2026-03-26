@@ -544,9 +544,8 @@ html *::after {
     line-height: 1.4;
 }
 
-.status-badge.ready { color: var(--accent); background: var(--accent-dim); opacity: 0.7; }
+.status-badge.completed { color: var(--accent); background: var(--accent-dim); }
 .status-badge.error { color: var(--color-error); background: var(--color-error-bg); }
-.status-badge.pending { color: var(--text-secondary); background: var(--bg-hover); opacity: 0.6; }
 .status-badge.archived { color: var(--text-muted); background: var(--bg-hover); }
 
 .status-badge.streaming {
@@ -568,18 +567,6 @@ html *::after {
 @keyframes pulse-dot {
     0%, 100% { opacity: 0.6; box-shadow: 0 0 2px var(--color-success-border); }
     50% { opacity: 1; box-shadow: 0 0 6px var(--color-success); }
-}
-
-/* Streaming session highlight */
-.tree-session.is-streaming {
-    background: var(--color-success-bg);
-    border-left: 2px solid var(--color-success-border);
-    padding-left: calc(42px - 2px);
-}
-
-.tree-session.is-streaming.active {
-    border-left-color: var(--color-success);
-    background: var(--color-success-bg);
 }
 
 /* ===== Main Panel ===== */

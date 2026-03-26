@@ -45,6 +45,19 @@ public class StreamingStateManager
     public Session? GetActiveSession(string sessionId)
         => _activeSessionRegistry!.Get(sessionId);
 
+    public bool IsSessionCompleted(string? sessionId)
+        => sessionId != null && _streamingStates.TryGetValue(sessionId, out var s) && s.HasCompleted;
+
+    public void ClearCompleted(string? sessionId)
+    {
+        if (sessionId == null) return;
+        if (_streamingStates.TryGetValue(sessionId, out var state) && state.HasCompleted)
+        {
+            state.HasCompleted = false;
+            _notifyChanged();
+        }
+    }
+
     public void SetStreaming(bool streaming, string? sessionId)
     {
         if (sessionId == null) return;
@@ -55,6 +68,11 @@ public class StreamingStateManager
         {
             state.Phase = StreamingPhase.None;
             state.ActiveToolName = null;
+            state.HasCompleted = true;
+        }
+        else
+        {
+            state.HasCompleted = false;
         }
         _notifyChanged();
     }

@@ -74,10 +74,12 @@
 
                     case SidebarRowKind.Session:
                         var isStreaming = ChatState.IsSessionStreaming(row.Session!.Id);
+                        var isCompleted = ChatState.IsSessionCompleted(row.Session!.Id);
                         var hasDiffStats = DataService.DiffStatsCache.TryGetValue(row.Session!.Id, out var stats);
                         <SessionItem Session="row.Session!"
                                      IsActive="@(ChatState.CurrentSession?.Id == row.Session!.Id)"
                                      IsStreaming="isStreaming"
+                                     IsCompleted="isCompleted"
                                      StreamingStatusText="@(isStreaming ? GetStreamingStatusText(row.Session!) : null)"
                                      DiffAdditions="@(hasDiffStats ? stats.Additions : 0)"
                                      DiffDeletions="@(hasDiffStats ? stats.Deletions : 0)"
@@ -357,6 +359,7 @@
     private string? _lastSessionId;
     private bool _lastHasStreaming;
     private int _lastStreamingHash;
+    private int _lastCompletedHash;
 
     private void OnStateChanged()
     {
@@ -374,7 +377,16 @@
                     ^ (ChatState.GetSessionToolName(sid)?.GetHashCode() ?? 0);
             }
 
-            if (currentId == _lastSessionId && hasStreaming == _lastHasStreaming && streamingHash == _lastStreamingHash)
+            // Compute a hash of completed sessions
+            var completedHash = 0;
+            foreach (var row in _flatRows)
+            {
+                if (row.Session != null && ChatState.IsSessionCompleted(row.Session.Id))
+                    completedHash ^= row.Session.Id.GetHashCode();
+            }
+
+            if (currentId == _lastSessionId && hasStreaming == _lastHasStreaming
+                && streamingHash == _lastStreamingHash && completedHash == _lastCompletedHash)
                 return;
 
             // If a session stopped streaming, refresh its diff stats
@@ -389,6 +401,7 @@
             _lastSessionId = currentId;
             _lastHasStreaming = hasStreaming;
             _lastStreamingHash = streamingHash;
+            _lastCompletedHash = completedHash;
             StateHasChanged();
         });
     }

@@ -32,6 +32,8 @@ public interface IChatState : IDisposable
     Session? GetActiveSession(string sessionId);
     void SetStreaming(bool streaming, string? sessionId = null);
     void SetPhase(StreamingPhase phase, string? toolName = null, string? sessionId = null);
+    bool IsSessionCompleted(string sessionId);
+    void ClearSessionCompleted(string sessionId);
 
     // Message delegation
     void AddUserMessage(string text);
