@@ -186,8 +186,20 @@
                         _planContent = null;
                         _planFilePath = null;
                         _planSessionId = currentId;
-                        _lastPlanFilePath = null;
-                        _lastPlanContent = null;
+
+                        // Restore viewer button if this session previously had a plan file
+                        if (!string.IsNullOrEmpty(ChatState.CurrentSession?.PlanFilePath)
+                            && !string.IsNullOrEmpty(ChatState.CurrentSession?.Git.WorktreePath))
+                        {
+                            _ = RestorePlanContentAsync(
+                                ChatState.CurrentSession.Git.WorktreePath,
+                                ChatState.CurrentSession.PlanFilePath);
+                        }
+                        else
+                        {
+                            _lastPlanFilePath = null;
+                            _lastPlanContent = null;
+                        }
                     }
                 }
 
@@ -359,11 +371,7 @@
                 if (ChatState.CurrentSession != null)
                 {
                     ChatState.CurrentSession.PlanCompleted = false;
-                    ChatState.CurrentSession.PlanFilePath = null;
                 }
-                _planFilePath = null;
-                _planContent = null;
-                _planSessionId = null;
                 break;
 
             case PlanReviewAction.Advice:
@@ -393,7 +401,6 @@
         _askUserBarVisible = false;
         _askUserQuestionInput = null;
         _planReviewVisible = false;
-        _planSessionId = null;
         // Clear persisted AskUserQuestion state
         if (ChatState.CurrentSession != null)
             ChatState.CurrentSession.PendingAskUserQuestionInput = null;
