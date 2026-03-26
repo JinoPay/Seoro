@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
@@ -39,23 +38,6 @@ public class DependencyCheckService(
         const string macHint = "curl -fsSL https://claude.ai/install.sh | bash";
 
         var path = await FindExecutableAsync("claude");
-
-        if (path == null && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            string[] candidates =
-            [
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".npm", "bin", "claude"),
-                "/usr/local/bin/claude",
-                "/opt/homebrew/bin/claude"
-            ];
-
-            foreach (var candidate in candidates)
-                if (File.Exists(candidate))
-                {
-                    path = candidate;
-                    break;
-                }
-        }
 
         if (path == null)
             return new DependencyResult("claude", description, false, null, null, installUrl,

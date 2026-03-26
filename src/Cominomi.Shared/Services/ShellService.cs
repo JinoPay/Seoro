@@ -104,6 +104,29 @@ public class ShellService : IShellService
             _logger.LogDebug(ex, "WhichAsync failed for: {Name}", executableName);
         }
 
+        // Fallback for macOS: GUI apps launched from Launchpad/Finder inherit a minimal
+        // PATH that excludes Homebrew directories. Check well-known paths directly.
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            string[] wellKnownPaths =
+            [
+                $"/opt/homebrew/bin/{executableName}",  // Apple Silicon Homebrew
+                $"/usr/local/bin/{executableName}",     // Intel Homebrew
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    ".npm", "bin", executableName)
+            ];
+
+            foreach (var candidate in wellKnownPaths)
+            {
+                if (File.Exists(candidate))
+                {
+                    _logger.LogDebug("WhichAsync: found {Name} via well-known path fallback: {Path}",
+                        executableName, candidate);
+                    return candidate;
+                }
+            }
+        }
+
         return null;
     }
 
