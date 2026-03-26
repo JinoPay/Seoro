@@ -169,4 +169,28 @@ public class NotificationHistoryServiceTests
 
         Assert.True(fired);
     }
+
+    [Fact]
+    public void Record_WithIsReadTrue_DoesNotIncrementUnreadCount()
+    {
+        var svc = new NotificationHistoryService();
+
+        svc.Record("Tokyo", "Task completed", NotificationType.Success, "session-1", isRead: true);
+
+        Assert.Single(svc.Entries);
+        Assert.True(svc.Entries[0].IsRead);
+        Assert.Equal(0, svc.UnreadCount);
+    }
+
+    [Fact]
+    public void Record_WithIsReadFalse_IncrementsUnreadCount()
+    {
+        var svc = new NotificationHistoryService();
+
+        svc.Record("Tokyo", "Task completed", NotificationType.Success, "session-1", isRead: false);
+
+        Assert.Single(svc.Entries);
+        Assert.False(svc.Entries[0].IsRead);
+        Assert.Equal(1, svc.UnreadCount);
+    }
 }

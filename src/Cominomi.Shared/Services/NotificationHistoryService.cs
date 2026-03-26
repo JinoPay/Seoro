@@ -26,7 +26,7 @@ public class NotificationHistoryService : INotificationHistoryService
         }
     }
 
-    public void Record(string title, string body, NotificationType type, string? sessionId = null)
+    public void Record(string title, string body, NotificationType type, string? sessionId = null, bool isRead = false)
     {
         lock (_lock)
         {
@@ -35,7 +35,8 @@ public class NotificationHistoryService : INotificationHistoryService
                 Title = title,
                 Body = body,
                 Type = type,
-                SessionId = sessionId
+                SessionId = sessionId,
+                IsRead = isRead
             });
 
             if (_entries.Count > MaxEntries)

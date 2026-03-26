@@ -1,6 +1,7 @@
 @inject INotificationHistoryService History
 @inject IChatState ChatState
 @inject ISessionService SessionService
+@inject ISnackbar Snackbar
 @implements IDisposable
 
 <div class="overlay-page">
@@ -101,6 +102,10 @@
             {
                 ChatState.CloseNotifications();
                 ChatState.SetSession(session);
+            }
+            else
+            {
+                Snackbar.Add("삭제된 세션입니다.", Severity.Normal);
             }
         }
     }
