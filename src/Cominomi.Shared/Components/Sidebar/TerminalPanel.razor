@@ -1,0 +1,180 @@
+@using Cominomi.Shared.Models
+@inject ITerminalService TerminalService
+@inject IChatState ChatState
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="terminal-panel">
+    <div class="terminal-panel-toolbar">
+        <span class="embedded-diff-tab active">Terminal</span>
+        <div style="flex:1"></div>
+        @if (_isRunning)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                           OnClick="RestartTerminal" Title="Restart" Class="terminal-btn" />
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                           OnClick="StopTerminal" Title="Kill" Class="terminal-btn" />
+        }
+        else
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small"
+                           OnClick="StartTerminal" Title="Start" Class="terminal-btn" />
+        }
+    </div>
+    <div id="@_elementId" class="terminal-container"></div>
+</div>
+
+@code {
+    private readonly string _elementId = $"term-{Guid.NewGuid():N}";
+    private DotNetObjectReference<TerminalPanel>? _dotNetRef;
+    private string? _currentSessionKey;
+    private bool _isRunning;
+    private bool _initialized;
+
+    protected override void OnInitialized()
+    {
+        TerminalService.OnOutput += HandleOutput;
+        TerminalService.OnExited += HandleExited;
+        ChatState.OnChange += HandleStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("initTerminal", _elementId, _dotNetRef);
+            _initialized = true;
+            await TryStartForCurrentSession();
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnTerminalInput(string data)
+    {
+        if (_currentSessionKey != null)
+            await TerminalService.WriteAsync(_currentSessionKey, data);
+    }
+
+    /// <summary>Called when the parent panel is resized — re-fit xterm to container.</summary>
+    public async Task FitAsync()
+    {
+        if (_initialized)
+        {
+            try { await JS.InvokeVoidAsync("terminalFit", _elementId); }
+            catch { /* may be disposed */ }
+        }
+    }
+
+    private void HandleOutput(string sessionKey, string data)
+    {
+        if (sessionKey != _currentSessionKey) return;
+        _ = InvokeAsync(async () =>
+        {
+            try { await JS.InvokeVoidAsync("terminalWrite", _elementId, data); }
+            catch { /* component may be disposed */ }
+        });
+    }
+
+    private void HandleExited(string sessionKey, int exitCode)
+    {
+        if (sessionKey != _currentSessionKey) return;
+        _ = InvokeAsync(() =>
+        {
+            _isRunning = false;
+            StateHasChanged();
+        });
+    }
+
+    private void HandleStateChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await TryStartForCurrentSession();
+            StateHasChanged();
+        });
+    }
+
+    private async Task TryStartForCurrentSession()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || session.Status == SessionStatus.Pending) return;
+
+        var key = session.Id;
+        if (key == _currentSessionKey && TerminalService.IsRunning(key))
+        {
+            _isRunning = true;
+            return;
+        }
+
+        // Session changed — switch terminal
+        _currentSessionKey = key;
+
+        if (TerminalService.IsRunning(key))
+        {
+            _isRunning = true;
+            return;
+        }
+
+        // Clear xterm display for the new session
+        if (_initialized)
+        {
+            try { await JS.InvokeVoidAsync("terminalClear", _elementId); }
+            catch { }
+        }
+
+        var workDir = !string.IsNullOrEmpty(session.Git.WorktreePath)
+            ? session.Git.WorktreePath
+            : Environment.CurrentDirectory;
+
+        await TerminalService.StartAsync(key, workDir);
+        _isRunning = TerminalService.IsRunning(key);
+    }
+
+    private async Task StartTerminal()
+    {
+        if (_currentSessionKey == null) return;
+
+        if (_initialized)
+        {
+            try { await JS.InvokeVoidAsync("terminalClear", _elementId); }
+            catch { }
+        }
+
+        var session = ChatState.CurrentSession;
+        var workDir = session != null && !string.IsNullOrEmpty(session.Git.WorktreePath)
+            ? session.Git.WorktreePath
+            : Environment.CurrentDirectory;
+
+        await TerminalService.StartAsync(_currentSessionKey, workDir);
+        _isRunning = TerminalService.IsRunning(_currentSessionKey);
+    }
+
+    private async Task RestartTerminal()
+    {
+        if (_currentSessionKey == null) return;
+        await TerminalService.StopAsync(_currentSessionKey);
+        await StartTerminal();
+    }
+
+    private async Task StopTerminal()
+    {
+        if (_currentSessionKey == null) return;
+        await TerminalService.StopAsync(_currentSessionKey);
+        _isRunning = false;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        TerminalService.OnOutput -= HandleOutput;
+        TerminalService.OnExited -= HandleExited;
+        ChatState.OnChange -= HandleStateChanged;
+
+        if (_initialized)
+        {
+            try { await JS.InvokeVoidAsync("disposeTerminal", _elementId); }
+            catch { }
+        }
+        _dotNetRef?.Dispose();
+    }
+}

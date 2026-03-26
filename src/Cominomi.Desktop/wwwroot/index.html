@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="tokens.css" />
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="lib/highlightjs/github-dark.min.css" />
+    <link rel="stylesheet" href="lib/xterm/xterm.css" />
     <link rel="stylesheet" href="Cominomi.Desktop.styles.css" />
     <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -40,6 +41,8 @@
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="lib/highlightjs/highlight.min.js"></script>
     <script src="lib/highlightjs/csharp.min.js"></script>
+    <script src="lib/xterm/xterm.js"></script>
+    <script src="lib/xterm/addon-fit.js"></script>
     <script>
         // Disable browser context menu (Save As, Reload, etc.)
         document.addEventListener('contextmenu', function(e) {
@@ -585,6 +588,120 @@
                 document.removeEventListener('keydown', window._panelShortcutHandler);
                 window._panelShortcutHandler = null;
             }
+        };
+
+        // --- Integrated Terminal (xterm.js) ---
+        window._terminals = {};
+
+        window.initTerminal = function(elementId, dotNetRef) {
+            var container = document.getElementById(elementId);
+            if (!container) return;
+
+            // Read CSS custom properties for theme
+            var styles = getComputedStyle(document.documentElement);
+            var bg = styles.getPropertyValue('--bg-base').trim() || '#0f172a';
+            var fg = styles.getPropertyValue('--text-primary').trim() || 'rgba(255,255,255,0.87)';
+            var cursor = styles.getPropertyValue('--accent').trim() || '#a78bfa';
+            var selBg = styles.getPropertyValue('--accent-dim').trim() || 'rgba(167,139,250,0.10)';
+
+            var term = new Terminal({
+                cursorBlink: true,
+                cursorStyle: 'bar',
+                fontSize: 13,
+                fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace",
+                lineHeight: 1.2,
+                scrollback: 5000,
+                convertEol: true,
+                theme: {
+                    background: bg,
+                    foreground: fg,
+                    cursor: cursor,
+                    selectionBackground: selBg
+                }
+            });
+
+            var fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+            term.open(container);
+
+            // Delay fit slightly to ensure container has layout
+            requestAnimationFrame(function() { fitAddon.fit(); });
+
+            term.onData(function(data) {
+                dotNetRef.invokeMethodAsync('OnTerminalInput', data);
+            });
+
+            window._terminals[elementId] = { term: term, fitAddon: fitAddon, dotNetRef: dotNetRef };
+        };
+
+        window.terminalWrite = function(elementId, data) {
+            var t = window._terminals[elementId];
+            if (t) t.term.write(data);
+        };
+
+        window.terminalFit = function(elementId) {
+            var t = window._terminals[elementId];
+            if (t) {
+                try { t.fitAddon.fit(); } catch(_) {}
+            }
+        };
+
+        window.terminalClear = function(elementId) {
+            var t = window._terminals[elementId];
+            if (t) { t.term.clear(); t.term.reset(); }
+        };
+
+        window.disposeTerminal = function(elementId) {
+            var t = window._terminals[elementId];
+            if (t) {
+                t.term.dispose();
+                delete window._terminals[elementId];
+            }
+        };
+
+        // --- Vertical Panel Resizer (top/bottom split) ---
+        window.registerVerticalResizer = function(element, dotNetRef, minSize, maxSize) {
+            if (!element) return;
+            element._vResizerData = { dotNetRef: dotNetRef, minSize: minSize, maxSize: maxSize };
+
+            element._onMouseDown = function(e) {
+                e.preventDefault();
+                var data = element._vResizerData;
+                var startY = e.clientY;
+
+                // Get current height of the panel above the resizer
+                var topPanel = element.previousElementSibling;
+                if (!topPanel) return;
+                var startHeight = topPanel.getBoundingClientRect().height;
+
+                var onMouseMove = function(e2) {
+                    var dy = e2.clientY - startY;
+                    var newSize = Math.round(Math.max(data.minSize, Math.min(data.maxSize, startHeight + dy)));
+                    topPanel.style.height = newSize + 'px';
+                    data.dotNetRef.invokeMethodAsync('OnDragResize', newSize);
+                };
+
+                var onMouseUp = function() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    data.dotNetRef.invokeMethodAsync('OnDragEnd');
+                };
+
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            };
+
+            element.addEventListener('mousedown', element._onMouseDown);
+        };
+
+        window.unregisterVerticalResizer = function(element) {
+            if (!element || !element._onMouseDown) return;
+            element.removeEventListener('mousedown', element._onMouseDown);
+            element._vResizerData = null;
         };
     </script>
 

@@ -1,0 +1,69 @@
+@inject IJSRuntime JS
+
+<div class="vertical-resizer @(_dragging ? "dragging" : "")"
+     @ref="_element"
+     role="separator"
+     aria-orientation="horizontal"
+     aria-valuenow="@CurrentSize"
+     tabindex="0"
+     @onkeydown="HandleKeyDown" />
+
+@code {
+    [Parameter] public int CurrentSize { get; set; }
+    [Parameter] public int MinSize { get; set; } = 120;
+    [Parameter] public int MaxSize { get; set; } = 600;
+    [Parameter] public EventCallback<int> OnResize { get; set; }
+
+    private ElementReference _element;
+    private bool _dragging;
+    private DotNetObjectReference<VerticalPanelResizer>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("registerVerticalResizer", _element, _dotNetRef, MinSize, MaxSize);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnDragResize(int newSize)
+    {
+        _dragging = true;
+        await OnResize.InvokeAsync(newSize);
+    }
+
+    [JSInvokable]
+    public void OnDragEnd()
+    {
+        _dragging = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        var delta = e.ShiftKey ? 50 : 10;
+        var newSize = CurrentSize;
+
+        if (e.Key == "ArrowUp")
+            newSize = CurrentSize - delta;
+        else if (e.Key == "ArrowDown")
+            newSize = CurrentSize + delta;
+        else
+            return;
+
+        newSize = Math.Clamp(newSize, MinSize, MaxSize);
+        await OnResize.InvokeAsync(newSize);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("unregisterVerticalResizer", _element);
+        }
+        catch { /* Component may already be disposed */ }
+        _dotNetRef?.Dispose();
+    }
+}
