@@ -129,7 +129,7 @@ public class SessionListFacade : ISessionListFacade
         await _sessionService.DeleteSessionAsync(session.Id);
 
         if (_dataService.SessionCache.TryGetValue(session.WorkspaceId, out var sessions))
-            sessions.Remove(session);
+            sessions.RemoveAll(s => s.Id == session.Id);
 
         if (_chatState.CurrentSession?.Id == session.Id)
             _chatState.SetSession(null!);
