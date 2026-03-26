@@ -1,5 +1,7 @@
 namespace Cominomi.Shared.Services;
 
+public record InstallMethod(string Label, string InstallCommand, string UpdateCommand);
+
 public record DependencyResult(
     string Name,
     string Description,
@@ -7,7 +9,9 @@ public record DependencyResult(
     string? Version,
     string InstallUrl,
     string WindowsInstallHint,
-    string MacInstallHint);
+    string MacInstallHint,
+    IReadOnlyList<InstallMethod> WindowsMethods,
+    IReadOnlyList<InstallMethod> MacMethods);
 
 public interface IDependencyCheckService
 {

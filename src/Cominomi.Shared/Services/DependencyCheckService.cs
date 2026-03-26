@@ -31,7 +31,8 @@ public class DependencyCheckService(
     {
         const string description = "Claude CLI";
         const string installUrl = "https://docs.anthropic.com/en/docs/claude-code/overview";
-        const string installHint = "npm install -g @anthropic-ai/claude-code";
+        const string winHint = "irm https://claude.ai/install.ps1 | iex";
+        const string macHint = "curl -fsSL https://claude.ai/install.sh | bash";
 
         var path = await FindExecutableAsync("claude");
 
@@ -53,10 +54,12 @@ public class DependencyCheckService(
         }
 
         if (path == null)
-            return new DependencyResult("claude", description, false, null, installUrl, installHint, installHint);
+            return new DependencyResult("claude", description, false, null, installUrl,
+                winHint, macHint, ClaudeInstallMethods.Windows, ClaudeInstallMethods.Mac);
 
         var version = await GetVersionAsync(path);
-        return new DependencyResult("claude", description, true, version, installUrl, installHint, installHint);
+        return new DependencyResult("claude", description, true, version, installUrl,
+            winHint, macHint, ClaudeInstallMethods.Windows, ClaudeInstallMethods.Mac);
     }
 
     private async Task<DependencyResult> CheckToolAsync(
@@ -65,10 +68,12 @@ public class DependencyCheckService(
     {
         var path = await FindExecutableAsync(command);
         if (path == null)
-            return new DependencyResult(command, description, false, null, installUrl, windowsHint, macHint);
+            return new DependencyResult(command, description, false, null, installUrl,
+                windowsHint, macHint, WindowsMethods: [], MacMethods: []);
 
         var version = await GetVersionAsync(path);
-        return new DependencyResult(command, description, true, version, installUrl, windowsHint, macHint);
+        return new DependencyResult(command, description, true, version, installUrl,
+            windowsHint, macHint, WindowsMethods: [], MacMethods: []);
     }
 
     private async Task<string?> FindExecutableAsync(string command)
