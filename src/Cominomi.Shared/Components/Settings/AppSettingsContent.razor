@@ -233,15 +233,15 @@
                                       Class="mt-2" Dense="true">
                                 <div class="stack gap-1">
                                     <span class="typo-body2">업데이트 방법:</span>
-                                    @if (_isMac)
+                                    @foreach (var method in (_isMac ? ClaudeInstallMethods.Mac : ClaudeInstallMethods.Windows))
                                     {
-                                        <code>npm update -g @@anthropic-ai/claude-code</code>
-                                        <span class="typo-caption text-secondary">또는</span>
-                                        <code>brew upgrade claude-code</code>
-                                    }
-                                    else
-                                    {
-                                        <code>npm update -g @@anthropic-ai/claude-code</code>
+                                        <div class="stack-row items-center gap-2">
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                     Style="min-width: 80px; justify-content: center;">
+                                                @method.Label
+                                            </MudChip>
+                                            <code style="flex: 1;">@method.UpdateCommand</code>
+                                        </div>
                                     }
                                 </div>
                             </MudAlert>

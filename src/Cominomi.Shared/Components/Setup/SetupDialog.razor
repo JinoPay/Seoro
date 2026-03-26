@@ -49,16 +49,26 @@
                             <MudDivider Class="my-2" />
                             <div class="stack gap-1">
                                 <small class="typo-caption text-secondary">설치 방법:</small>
-                                @if (_isMac)
+                                @{
+                                    var methods = _isMac ? dep.MacMethods : dep.WindowsMethods;
+                                }
+                                @if (methods.Count > 0)
                                 {
-                                    <p class="typo-body2">
-                                        <code>@dep.MacInstallHint</code>
-                                    </p>
+                                    @foreach (var method in methods)
+                                    {
+                                        <div class="stack-row items-center gap-2">
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                     Style="min-width: 80px; justify-content: center;">
+                                                @method.Label
+                                            </MudChip>
+                                            <code style="flex: 1;">@method.InstallCommand</code>
+                                        </div>
+                                    }
                                 }
                                 else
                                 {
                                     <p class="typo-body2">
-                                        <code>@dep.WindowsInstallHint</code>
+                                        <code>@(_isMac ? dep.MacInstallHint : dep.WindowsInstallHint)</code>
                                     </p>
                                 }
                                 <MudLink Href="@dep.InstallUrl" Target="_blank" Typo="Typo.caption">
