@@ -138,7 +138,9 @@
             <div class="settings-section-desc">내장 터미널의 기본 셸을 설정합니다.</div>
 
             <div class="stack gap-3">
-                <MudSelect T="string" @bind-Value="_settings.TerminalShell" Label="기본 셸"
+                <MudSelect T="string" Value="_settings.TerminalShell"
+                           ValueChanged="@((string v) => HandleTerminalShellChanged(v))"
+                           Label="기본 셸"
                            Variant="Variant.Outlined" Margin="Margin.Dense">
                     <MudSelectItem T="string" Value="@((string?)null)">자동 감지 (@_detectedShellLabel)</MudSelectItem>
                     @foreach (var shell in _availableShells)
@@ -717,6 +719,12 @@
         var detected = await ShellSvc.GetShellAsync();
         _detectedShellLabel = ShellService.GetShellDisplayName(detected);
         StateHasChanged();
+    }
+
+    private async Task HandleTerminalShellChanged(string value)
+    {
+        _settings.TerminalShell = value;
+        await Save();
     }
 
     private async Task CheckIntegrations()
