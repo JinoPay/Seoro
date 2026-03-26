@@ -38,6 +38,7 @@
 
         <ModelSelector Model="Model" ResolvedModel="ResolvedModel"
                        OnModelChanged="OnModelChanged"
+                       OnMenuClosed="@(() => OnModelMenuClosed.InvokeAsync())"
                        Disabled="Disabled" IsStreaming="IsStreaming" />
 
         @if (IsStreaming)
@@ -85,6 +86,7 @@
     [Parameter] public EventCallback OnSend { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback OnPickFiles { get; set; }
+    [Parameter] public EventCallback OnModelMenuClosed { get; set; }
     [Parameter] public string? PlanFilePath { get; set; }
     [Parameter] public string? PlanContent { get; set; }
 

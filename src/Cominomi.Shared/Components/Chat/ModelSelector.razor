@@ -49,6 +49,7 @@
     [Parameter] public string Model { get; set; } = string.Empty;
     [Parameter] public string? ResolvedModel { get; set; }
     [Parameter] public EventCallback<string> OnModelChanged { get; set; }
+    [Parameter] public EventCallback OnMenuClosed { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public bool IsStreaming { get; set; }
 
@@ -102,10 +103,11 @@
         _modelMenuOpen = !_modelMenuOpen;
     }
 
-    private void CloseModelMenu()
+    private async Task CloseModelMenu()
     {
         _modelMenuOpen = false;
         _customModelInput = false;
+        await OnMenuClosed.InvokeAsync();
     }
 
     private async Task HandleCustomModelKeyDown(KeyboardEventArgs e)
@@ -127,5 +129,6 @@
         _modelMenuOpen = false;
         Model = modelId;
         await OnModelChanged.InvokeAsync(modelId);
+        await OnMenuClosed.InvokeAsync();
     }
 }

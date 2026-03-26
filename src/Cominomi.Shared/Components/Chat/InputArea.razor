@@ -42,6 +42,7 @@
                       OnSend="Send"
                       OnCancel="@(() => OnCancel.InvokeAsync())"
                       OnPickFiles="PickFiles"
+                      OnModelMenuClosed="RefocusTextarea"
                       PlanFilePath="@PlanFilePath"
                       PlanContent="@PlanContent" />
     </div>
@@ -128,12 +129,19 @@
         }
     }
 
+    private async Task RefocusTextarea()
+    {
+        try { await JSRuntime.InvokeVoidAsync("focusInputArea", "input-area"); }
+        catch (JSDisconnectedException) { }
+    }
+
     private async Task HandlePermissionModeChangedLocal(string mode)
     {
         _currentPermissionMode = mode;
         _forceRender = true;
         StateHasChanged();
         await PermissionModeChanged.InvokeAsync(mode);
+        await RefocusTextarea();
     }
 
     private async Task HandleEffortLevelChangedLocal(string level)
@@ -142,6 +150,7 @@
         _forceRender = true;
         StateHasChanged();
         await EffortLevelChanged.InvokeAsync(level);
+        await RefocusTextarea();
     }
 
     private async Task HandleModelChangedLocal(string model)
@@ -150,6 +159,7 @@
         _forceRender = true;
         StateHasChanged();
         await OnModelChanged.InvokeAsync(model);
+        await RefocusTextarea();
     }
 
     protected override bool ShouldRender()
@@ -234,17 +244,23 @@
     private async Task PickFiles()
     {
         var files = await FilePickerService.PickFilesAsync();
-        if (files == null || files.Count == 0) return;
+        if (files == null || files.Count == 0)
+        {
+            await RefocusTextarea();
+            return;
+        }
 
         _pendingAttachments.AddRange(files);
         _forceRender = true;
         StateHasChanged();
+        await RefocusTextarea();
     }
 
-    private void RemoveAttachment(PendingAttachment attachment)
+    private async Task RemoveAttachment(PendingAttachment attachment)
     {
         _pendingAttachments.Remove(attachment);
         _forceRender = true;
+        await RefocusTextarea();
     }
 
     private string GetPlaceholder()

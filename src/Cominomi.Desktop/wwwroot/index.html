@@ -381,6 +381,13 @@
             }
         };
 
+        window.focusInputArea = function(elementId) {
+            var container = document.getElementById(elementId);
+            if (!container) return;
+            var inputEl = window._findInputEl(container);
+            if (inputEl) inputEl.focus();
+        };
+
         // --- Slash popup helpers ---
         window.setSlashPopupState = function(elementId, isOpen) {
             var container = document.getElementById(elementId);
