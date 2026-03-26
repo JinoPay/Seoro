@@ -106,6 +106,7 @@ public static class Program
         appBuilder.Services.AddSingleton<IChatEventBus, ChatEventBus>();
         appBuilder.Services.AddSingleton<IChatState, ChatState>();
         appBuilder.Services.AddSingleton<LightboxService>();
+        appBuilder.Services.AddSingleton<FilePreviewService>();
         appBuilder.Services.AddSingleton<IGitService, GitService>();
         appBuilder.Services.AddSingleton<IClaudeService, ClaudeService>();
         appBuilder.Services.AddSingleton<IContextService, ContextService>();

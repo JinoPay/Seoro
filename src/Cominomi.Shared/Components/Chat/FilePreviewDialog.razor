@@ -1,0 +1,204 @@
+@using Markdig
+@using Cominomi.Shared.Services
+@inject FilePreviewService Preview
+@inject IJSRuntime JS
+@implements IDisposable
+
+@if (Preview.IsOpen)
+{
+    <div class="file-preview-overlay" @onclick="Close" @onkeydown="HandleKeyDown" tabindex="0">
+        <button class="file-preview-close" @onclick="Close" @onclick:stopPropagation="true">
+            <MudIcon Icon="@Icons.Material.Filled.Close" Style="color: inherit; width: 20px; height: 20px;" />
+        </button>
+
+        <div class="file-preview-panel" @onclick:stopPropagation="true">
+            <div class="file-preview-header">
+                <MudIcon Icon="@GetFileIcon()" Size="Size.Small"
+                         Style="width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0;" />
+                <span class="file-preview-filename">@Preview.FileName</span>
+            </div>
+            <div class="file-preview-body">
+                @if (_viewMode == ViewMode.Markdown)
+                {
+                    <div class="filecontent-markdown markdown-body">
+                        @((MarkupString)_renderedHtml)
+                    </div>
+                }
+                else if (_viewMode == ViewMode.Code)
+                {
+                    <div id="@_elementId" class="filecontent-code-container">
+                        <div class="filecontent-gutter" aria-hidden="true">
+                            @for (int i = 1; i <= _lineCount; i++)
+                            {
+                                <div class="filecontent-gutter-line">@i</div>
+                            }
+                        </div>
+                        <pre class="filecontent-pre"><code class="@_langClass">@Preview.Content</code></pre>
+                    </div>
+                }
+                else
+                {
+                    <div class="filecontent-body">
+                        @{
+                            var lines = Preview.Content.Split('\n');
+                        }
+                        @for (int i = 0; i < lines.Length; i++)
+                        {
+                            var lineNum = i + 1;
+                            var line = lines[i];
+                            <div class="filecontent-line">
+                                <span class="filecontent-linenum">@lineNum</span>
+                                <span class="filecontent-text">@line</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private enum ViewMode { Code, Markdown, PlainText }
+
+    private ViewMode _viewMode;
+    private string _langClass = "";
+    private string _elementId = "";
+    private string _renderedHtml = "";
+    private int _lineCount;
+    private bool _needsHighlight;
+    private string? _lastFileName;
+
+    private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
+    protected override void OnInitialized()
+    {
+        Preview.OnChange += OnPreviewChanged;
+    }
+
+    private void OnPreviewChanged()
+    {
+        if (Preview.IsOpen)
+        {
+            _lastFileName = null; // force re-process
+            ProcessContent();
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Preview.IsOpen)
+            ProcessContent();
+    }
+
+    private void ProcessContent()
+    {
+        if (_lastFileName == Preview.FileName) return;
+        _lastFileName = Preview.FileName;
+
+        _viewMode = GetViewMode(Preview.FileName);
+        _langClass = GetLanguageClass(Preview.FileName);
+        _elementId = $"fp-hljs-{Preview.FileName.GetHashCode():x8}";
+        _lineCount = string.IsNullOrEmpty(Preview.Content) ? 0 : Preview.Content.Split('\n').Length;
+
+        if (_viewMode == ViewMode.Markdown && !string.IsNullOrEmpty(Preview.Content))
+            _renderedHtml = Markdown.ToHtml(Preview.Content, _pipeline);
+
+        _needsHighlight = _viewMode == ViewMode.Code && !string.IsNullOrEmpty(Preview.Content);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_needsHighlight)
+        {
+            _needsHighlight = false;
+            try { await JS.InvokeVoidAsync("highlightCodeBlock", _elementId); }
+            catch { }
+        }
+    }
+
+    private void Close() => Preview.Close();
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            Preview.Close();
+    }
+
+    private string GetFileIcon()
+    {
+        var ext = Path.GetExtension(Preview.FileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".md" or ".mdx" => Icons.Material.Filled.Description,
+            ".json" or ".yaml" or ".yml" or ".xml" or ".toml" or ".ini" or ".cfg"
+                => Icons.Material.Filled.DataObject,
+            _ => Icons.Material.Filled.Code
+        };
+    }
+
+    private static ViewMode GetViewMode(string fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".md" or ".mdx" => ViewMode.Markdown,
+            ".cs" or ".js" or ".jsx" or ".ts" or ".tsx" or ".py" or ".rs" or ".go"
+                or ".java" or ".html" or ".razor" or ".css" or ".scss" or ".json"
+                or ".yaml" or ".yml" or ".xml" or ".csproj" or ".sln" or ".rb"
+                or ".swift" or ".kt" or ".dart" or ".php" or ".sql" or ".sh"
+                or ".bash" or ".zsh" or ".ps1" or ".dockerfile" or ".toml"
+                or ".ini" or ".cfg" or ".vue" or ".svelte" or ".c" or ".cpp"
+                or ".h" or ".hpp" or ".m" or ".mm" or ".r" or ".lua" or ".pl"
+                or ".makefile" or ".gradle" or ".graphql" or ".proto"
+                => ViewMode.Code,
+            _ => ViewMode.PlainText
+        };
+    }
+
+    private static string GetLanguageClass(string fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".cs" => "language-csharp",
+            ".js" or ".jsx" => "language-javascript",
+            ".ts" or ".tsx" => "language-typescript",
+            ".py" => "language-python",
+            ".rs" => "language-rust",
+            ".go" => "language-go",
+            ".java" => "language-java",
+            ".html" or ".razor" => "language-xml",
+            ".css" or ".scss" => "language-css",
+            ".json" => "language-json",
+            ".yaml" or ".yml" => "language-yaml",
+            ".xml" or ".csproj" or ".sln" => "language-xml",
+            ".sh" or ".bash" or ".zsh" => "language-bash",
+            ".sql" => "language-sql",
+            ".rb" => "language-ruby",
+            ".swift" => "language-swift",
+            ".kt" => "language-kotlin",
+            ".dart" => "language-dart",
+            ".php" => "language-php",
+            ".dockerfile" => "language-dockerfile",
+            ".toml" or ".ini" or ".cfg" => "language-ini",
+            ".c" or ".cpp" or ".h" or ".hpp" => "language-cpp",
+            ".m" or ".mm" => "language-objectivec",
+            ".r" => "language-r",
+            ".lua" => "language-lua",
+            ".pl" => "language-perl",
+            ".makefile" => "language-makefile",
+            ".graphql" => "language-graphql",
+            ".proto" => "language-protobuf",
+            _ => ""
+        };
+    }
+
+    public void Dispose()
+    {
+        Preview.OnChange -= OnPreviewChanged;
+    }
+}

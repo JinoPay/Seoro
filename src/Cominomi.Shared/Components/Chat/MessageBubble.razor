@@ -4,6 +4,8 @@
 @using Cominomi.Shared.Components.Tools
 @inject IChatState ChatState
 @inject LightboxService Lightbox
+@inject FilePreviewService FilePreview
+@inject IJSRuntime JS
 
 @if (Message.Role == MessageRole.System)
 {
@@ -48,7 +50,7 @@
 
             @if (Message.Attachments.Count > 0)
             {
-                <div class="stack-row gap-1 flex-wrap" style="margin-bottom: 8px;">
+                <div class="stack-column gap-1" style="margin-bottom: 8px;">
                     @foreach (var attachment in Message.Attachments)
                     {
                         @if (attachment.IsImage)
@@ -60,6 +62,77 @@
                                      style="max-width: 300px; max-height: 200px; border-radius: 8px; object-fit: contain;" />
                                 <div style="font-size: 0.7rem; opacity: 0.4; margin-top: 2px;">@attachment.OriginalFileName</div>
                             </div>
+                        }
+                        else if (IsPreviewableFile(attachment) && attachment.SizeBytes <= 100_000)
+                        {
+                            var content = GetFileContent(attachment);
+                            @if (content != null)
+                            {
+                                var isExpanded = _expandedFiles.Contains(attachment.Id);
+                                <div class="file-attachment-card">
+                                    <div class="file-attachment-card-header" @onclick="@(() => ToggleFileExpand(attachment.Id))">
+                                        <MudIcon Icon="@GetAttachmentIcon(attachment)" Size="Size.Small"
+                                                 Style="width: 14px; height: 14px; opacity: 0.6; flex-shrink: 0;" />
+                                        <span class="file-attachment-card-name">@attachment.OriginalFileName</span>
+                                        <span class="file-attachment-card-size">@FormatFileSize(attachment.SizeBytes)</span>
+                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small"
+                                                       Style="width: 22px; height: 22px; padding: 0;"
+                                                       OnClick="@(() => OpenFilePreviewDialog(attachment, content))"
+                                                       Title="전체 보기" />
+                                        <MudIcon Icon="@(isExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                                 Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px; flex-shrink: 0;" />
+                                    </div>
+                                    @if (isExpanded)
+                                    {
+                                        var viewMode = GetFileViewMode(attachment.OriginalFileName);
+                                        <div class="file-attachment-card-body" id="@GetFileBlockId(attachment)">
+                                            @if (viewMode == FileViewMode.Markdown)
+                                            {
+                                                <div class="filecontent-markdown markdown-body">
+                                                    @((MarkupString)Markdown.ToHtml(content, _previewPipeline))
+                                                </div>
+                                            }
+                                            else if (viewMode == FileViewMode.Code)
+                                            {
+                                                <div class="filecontent-code-container">
+                                                    <pre class="filecontent-pre"><code class="@GetFileLanguageClass(attachment.OriginalFileName)">@content</code></pre>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="filecontent-body">
+                                                    @{
+                                                        var lines = content.Split('\n');
+                                                        var displayLines = lines.Length > 50 ? lines.Take(50).ToArray() : lines;
+                                                    }
+                                                    @for (int i = 0; i < displayLines.Length; i++)
+                                                    {
+                                                        <div class="filecontent-line">
+                                                            <span class="filecontent-linenum">@(i + 1)</span>
+                                                            <span class="filecontent-text">@displayLines[i]</span>
+                                                        </div>
+                                                    }
+                                                    @if (lines.Length > 50)
+                                                    {
+                                                        <div style="padding: 4px 12px; opacity: 0.4; font-size: 0.7rem;">
+                                                            ... @(lines.Length - 50)줄 더
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Icon="@Icons.Material.Filled.InsertDriveFile"
+                                         Size="Size.Small" Variant="Variant.Outlined"
+                                         OnClick="@(() => OpenFileInTab(attachment))"
+                                         Style="font-size: 0.75rem; cursor: pointer;">
+                                    @attachment.OriginalFileName @($"({FormatFileSize(attachment.SizeBytes)})")
+                                </MudChip>
+                            }
                         }
                         else
                         {
@@ -211,12 +284,36 @@
         .DisableHtml()
         .Build();
 
+    private static readonly MarkdownPipeline _previewPipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
+    private enum FileViewMode { Code, Markdown, PlainText }
+
     private readonly Dictionary<string, string> _imageCache = new();
+    private readonly Dictionary<string, string?> _fileContentCache = new();
+    private readonly HashSet<string> _expandedFiles = [];
     private readonly HashSet<int> _thinkingExpanded = [];
     private int _lastThinkingGroupCount;
+    private bool _needsFileHighlight;
+
+    private bool _fileExpandInitialized;
 
     protected override void OnParametersSet()
     {
+        // Auto-expand previewable file attachments on first render
+        if (!_fileExpandInitialized && Message.Attachments.Count > 0)
+        {
+            _fileExpandInitialized = true;
+            foreach (var att in Message.Attachments)
+            {
+                if (!att.IsImage && IsPreviewableFile(att) && att.SizeBytes <= 100_000)
+                    _expandedFiles.Add(att.Id);
+            }
+            if (_expandedFiles.Count > 0)
+                _needsFileHighlight = true;
+        }
+
         if (!Message.IsStreaming) return;
 
         var groups = ContentGrouper.Group(Message.Parts, true);
@@ -310,6 +407,153 @@
         var dataUrl = $"data:{attachment.ContentType};base64,{Convert.ToBase64String(bytes)}";
         _imageCache[attachment.Id] = dataUrl;
         return dataUrl;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_needsFileHighlight)
+        {
+            _needsFileHighlight = false;
+            foreach (var attachment in Message.Attachments)
+            {
+                if (!attachment.IsImage && IsPreviewableFile(attachment)
+                    && _expandedFiles.Contains(attachment.Id)
+                    && GetFileViewMode(attachment.OriginalFileName) == FileViewMode.Code)
+                {
+                    try { await JS.InvokeVoidAsync("highlightCodeBlock", GetFileBlockId(attachment)); }
+                    catch { }
+                }
+            }
+        }
+    }
+
+    private static bool IsPreviewableFile(FileAttachment attachment)
+    {
+        var ext = Path.GetExtension(attachment.OriginalFileName).ToLowerInvariant();
+        return ext is ".md" or ".mdx" or ".txt" or ".log" or ".csv"
+            or ".json" or ".yaml" or ".yml" or ".xml" or ".toml" or ".ini" or ".cfg"
+            or ".cs" or ".js" or ".jsx" or ".ts" or ".tsx" or ".py" or ".rs" or ".go"
+            or ".java" or ".html" or ".razor" or ".css" or ".scss" or ".sql"
+            or ".sh" or ".bash" or ".zsh" or ".ps1" or ".dockerfile"
+            or ".rb" or ".swift" or ".kt" or ".dart" or ".php"
+            or ".c" or ".cpp" or ".h" or ".hpp" or ".vue" or ".svelte"
+            or ".lua" or ".pl" or ".r" or ".graphql" or ".proto"
+            or ".csproj" or ".sln" or ".makefile" or ".gradle";
+    }
+
+    private string? GetFileContent(FileAttachment attachment)
+    {
+        if (_fileContentCache.TryGetValue(attachment.Id, out var cached))
+            return cached;
+
+        var worktreePath = ChatState.CurrentSession?.Git.WorktreePath;
+        if (string.IsNullOrEmpty(worktreePath))
+            return null;
+
+        var filePath = Path.Combine(worktreePath, ".cominomi-attachments", attachment.StoredFileName);
+        if (!File.Exists(filePath))
+            return null;
+
+        try
+        {
+            var content = File.ReadAllText(filePath);
+            _fileContentCache[attachment.Id] = content;
+            return content;
+        }
+        catch
+        {
+            _fileContentCache[attachment.Id] = null;
+            return null;
+        }
+    }
+
+    private void ToggleFileExpand(string attachmentId)
+    {
+        if (!_expandedFiles.Remove(attachmentId))
+        {
+            _expandedFiles.Add(attachmentId);
+            _needsFileHighlight = true;
+        }
+    }
+
+    private void OpenFilePreviewDialog(FileAttachment attachment, string content)
+    {
+        FilePreview.Open(attachment.OriginalFileName, content);
+    }
+
+    private static string GetFileBlockId(FileAttachment attachment)
+        => $"fa-hljs-{attachment.Id[..8]}";
+
+    private static string GetAttachmentIcon(FileAttachment attachment)
+    {
+        var ext = Path.GetExtension(attachment.OriginalFileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".md" or ".mdx" => Icons.Material.Filled.Description,
+            ".json" or ".yaml" or ".yml" or ".xml" or ".toml" or ".ini" or ".cfg"
+                => Icons.Material.Filled.DataObject,
+            ".cs" or ".js" or ".ts" or ".py" or ".rs" or ".go" or ".java" or ".html"
+                or ".css" or ".sql" or ".sh" or ".bash" or ".ps1"
+                => Icons.Material.Filled.Code,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+
+    private static FileViewMode GetFileViewMode(string fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".md" or ".mdx" => FileViewMode.Markdown,
+            ".cs" or ".js" or ".jsx" or ".ts" or ".tsx" or ".py" or ".rs" or ".go"
+                or ".java" or ".html" or ".razor" or ".css" or ".scss" or ".json"
+                or ".yaml" or ".yml" or ".xml" or ".csproj" or ".sln" or ".rb"
+                or ".swift" or ".kt" or ".dart" or ".php" or ".sql" or ".sh"
+                or ".bash" or ".zsh" or ".ps1" or ".dockerfile" or ".toml"
+                or ".ini" or ".cfg" or ".vue" or ".svelte" or ".c" or ".cpp"
+                or ".h" or ".hpp" or ".m" or ".mm" or ".r" or ".lua" or ".pl"
+                or ".makefile" or ".gradle" or ".graphql" or ".proto"
+                => FileViewMode.Code,
+            _ => FileViewMode.PlainText
+        };
+    }
+
+    private static string GetFileLanguageClass(string fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".cs" => "language-csharp",
+            ".js" or ".jsx" => "language-javascript",
+            ".ts" or ".tsx" => "language-typescript",
+            ".py" => "language-python",
+            ".rs" => "language-rust",
+            ".go" => "language-go",
+            ".java" => "language-java",
+            ".html" or ".razor" => "language-xml",
+            ".css" or ".scss" => "language-css",
+            ".json" => "language-json",
+            ".yaml" or ".yml" => "language-yaml",
+            ".xml" or ".csproj" or ".sln" => "language-xml",
+            ".sh" or ".bash" or ".zsh" => "language-bash",
+            ".sql" => "language-sql",
+            ".rb" => "language-ruby",
+            ".swift" => "language-swift",
+            ".kt" => "language-kotlin",
+            ".dart" => "language-dart",
+            ".php" => "language-php",
+            ".dockerfile" => "language-dockerfile",
+            ".toml" or ".ini" or ".cfg" => "language-ini",
+            ".c" or ".cpp" or ".h" or ".hpp" => "language-cpp",
+            ".m" or ".mm" => "language-objectivec",
+            ".r" => "language-r",
+            ".lua" => "language-lua",
+            ".pl" => "language-perl",
+            ".makefile" => "language-makefile",
+            ".graphql" => "language-graphql",
+            ".proto" => "language-protobuf",
+            _ => ""
+        };
     }
 
     private static string FormatFileSize(long sizeBytes)
