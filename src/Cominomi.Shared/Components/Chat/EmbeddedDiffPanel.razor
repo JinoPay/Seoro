@@ -5,7 +5,7 @@
 
 <div class="embedded-diff-panel">
     @* === Top Section: Explorer / Changes === *@
-    <div class="right-panel-top" style="height: @(_topPanelHeight)px;">
+    <div class="right-panel-top" style="@(_topPanelHeight > 0 ? $"height: {_topPanelHeight}px" : "flex: 1")">
         <div class="embedded-diff-toolbar">
             <div class="embedded-diff-tabs">
                 <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Explorer ? "active" : "")"
@@ -48,7 +48,7 @@
     private DiffPanelTab _activeTab = DiffPanelTab.Explorer;
     private string? _lastSessionId;
     private bool _hasAutoSwitched;
-    private int _topPanelHeight = 300;
+    private int _topPanelHeight; // 0 = use flex:1 (50/50 split until user drags)
     private TerminalPanel? _terminalPanel;
 
     protected override void OnInitialized()

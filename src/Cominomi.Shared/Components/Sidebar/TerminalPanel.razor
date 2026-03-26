@@ -1,6 +1,7 @@
 @using Cominomi.Shared.Models
 @inject ITerminalService TerminalService
 @inject IChatState ChatState
+@inject IThemeService ThemeService
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -21,11 +22,19 @@
                            OnClick="StartTerminal" Title="Start" Class="terminal-btn" />
         }
     </div>
-    <div id="@_elementId" class="terminal-container"></div>
+
+    @* Each session gets its own xterm container, shown/hidden via CSS *@
+    <div class="terminal-instances">
+        @foreach (var kv in _instances)
+        {
+            <div id="@kv.Value" class="terminal-container"
+                 style="@(kv.Key == _currentSessionKey ? "" : "display:none")"></div>
+        }
+    </div>
 </div>
 
 @code {
-    private readonly string _elementId = $"term-{Guid.NewGuid():N}";
+    private readonly Dictionary<string, string> _instances = new(); // sessionKey → elementId
     private DotNetObjectReference<TerminalPanel>? _dotNetRef;
     private string? _currentSessionKey;
     private bool _isRunning;
@@ -36,6 +45,7 @@
         TerminalService.OnOutput += HandleOutput;
         TerminalService.OnExited += HandleExited;
         ChatState.OnChange += HandleStateChanged;
+        ThemeService.OnThemeChanged += HandleThemeChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -43,10 +53,12 @@
         if (firstRender)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("initTerminal", _elementId, _dotNetRef);
             _initialized = true;
             await TryStartForCurrentSession();
         }
+
+        // Initialize any newly added terminal containers
+        await InitPendingTerminals();
     }
 
     [JSInvokable]
@@ -56,23 +68,38 @@
             await TerminalService.WriteAsync(_currentSessionKey, data);
     }
 
-    /// <summary>Called when the parent panel is resized — re-fit xterm to container.</summary>
+    /// <summary>Called when the parent panel is resized — re-fit all visible xterm instances.</summary>
     public async Task FitAsync()
     {
-        if (_initialized)
+        if (!_initialized || _currentSessionKey == null) return;
+        if (_instances.TryGetValue(_currentSessionKey, out var elId))
         {
-            try { await JS.InvokeVoidAsync("terminalFit", _elementId); }
-            catch { /* may be disposed */ }
+            try { await JS.InvokeVoidAsync("terminalFit", elId); }
+            catch { }
         }
+    }
+
+    private void HandleThemeChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            // Update theme for all xterm instances so switching back shows correct colors
+            foreach (var elId in _instances.Values)
+            {
+                try { await JS.InvokeVoidAsync("terminalUpdateTheme", elId); }
+                catch { }
+            }
+        });
     }
 
     private void HandleOutput(string sessionKey, string data)
     {
-        if (sessionKey != _currentSessionKey) return;
+        // Buffer output to the correct terminal, even if not currently visible
+        if (!_instances.TryGetValue(sessionKey, out var elId)) return;
         _ = InvokeAsync(async () =>
         {
-            try { await JS.InvokeVoidAsync("terminalWrite", _elementId, data); }
-            catch { /* component may be disposed */ }
+            try { await JS.InvokeVoidAsync("terminalWrite", elId, data); }
+            catch { }
         });
     }
 
@@ -101,26 +128,31 @@
         if (session == null || session.Status == SessionStatus.Pending) return;
 
         var key = session.Id;
-        if (key == _currentSessionKey && TerminalService.IsRunning(key))
-        {
-            _isRunning = true;
-            return;
-        }
-
-        // Session changed — switch terminal
+        var sessionChanged = key != _currentSessionKey;
         _currentSessionKey = key;
+
+        // Ensure this session has an xterm container
+        if (!_instances.ContainsKey(key))
+        {
+            _instances[key] = $"term-{Guid.NewGuid():N}";
+            StateHasChanged(); // Trigger render to create the DOM element
+            // The actual xterm init will happen in OnAfterRenderAsync → InitPendingTerminals
+        }
 
         if (TerminalService.IsRunning(key))
         {
             _isRunning = true;
+            // Fit the terminal after switching
+            if (sessionChanged && _initialized && _instances.TryGetValue(key, out var elId))
+            {
+                try
+                {
+                    await Task.Yield(); // Let Blazor update DOM visibility
+                    await JS.InvokeVoidAsync("terminalFit", elId);
+                }
+                catch { }
+            }
             return;
-        }
-
-        // Clear xterm display for the new session
-        if (_initialized)
-        {
-            try { await JS.InvokeVoidAsync("terminalClear", _elementId); }
-            catch { }
         }
 
         var workDir = !string.IsNullOrEmpty(session.Git.WorktreePath)
@@ -131,13 +163,34 @@
         _isRunning = TerminalService.IsRunning(key);
     }
 
+    /// <summary>Initialize xterm.js for any containers that don't have a terminal yet.</summary>
+    private async Task InitPendingTerminals()
+    {
+        if (!_initialized || _dotNetRef == null) return;
+
+        foreach (var (sessionKey, elId) in _instances)
+        {
+            // Check if already initialized by checking JS side
+            try
+            {
+                var exists = await JS.InvokeAsync<bool>("eval", $"!!window._terminals['{elId}']");
+                if (!exists)
+                {
+                    await JS.InvokeVoidAsync("initTerminal", elId, _dotNetRef);
+                }
+            }
+            catch { }
+        }
+    }
+
     private async Task StartTerminal()
     {
         if (_currentSessionKey == null) return;
 
-        if (_initialized)
+        // Clear existing terminal display
+        if (_instances.TryGetValue(_currentSessionKey, out var elId))
         {
-            try { await JS.InvokeVoidAsync("terminalClear", _elementId); }
+            try { await JS.InvokeVoidAsync("terminalClear", elId); }
             catch { }
         }
 
@@ -169,10 +222,11 @@
         TerminalService.OnOutput -= HandleOutput;
         TerminalService.OnExited -= HandleExited;
         ChatState.OnChange -= HandleStateChanged;
+        ThemeService.OnThemeChanged -= HandleThemeChanged;
 
-        if (_initialized)
+        foreach (var elId in _instances.Values)
         {
-            try { await JS.InvokeVoidAsync("disposeTerminal", _elementId); }
+            try { await JS.InvokeVoidAsync("disposeTerminal", elId); }
             catch { }
         }
         _dotNetRef?.Dispose();

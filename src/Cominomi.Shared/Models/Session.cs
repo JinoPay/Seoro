@@ -81,6 +81,12 @@ public class Session
     /// Cleared when the user responds.
     /// </summary>
     public string? PendingAskUserQuestionInput { get; set; }
+
+    /// <summary>
+    /// Draft input text the user was composing. Survives session switches.
+    /// </summary>
+    [JsonIgnore]
+    public string? DraftInputText { get; set; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
