@@ -7,11 +7,13 @@ public record DependencyResult(
     string Description,
     bool IsInstalled,
     string? Version,
+    string? ResolvedPath,
     string InstallUrl,
     string WindowsInstallHint,
     string MacInstallHint,
     IReadOnlyList<InstallMethod> WindowsMethods,
-    IReadOnlyList<InstallMethod> MacMethods);
+    IReadOnlyList<InstallMethod> MacMethods,
+    bool IsRequired = true);
 
 public interface IDependencyCheckService
 {

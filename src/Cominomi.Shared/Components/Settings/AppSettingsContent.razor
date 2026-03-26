@@ -5,6 +5,7 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 @inject INotificationService NotificationService
+@inject IDependencyCheckService DependencyCheckService
 
 <div class="settings-content-area">
     <div class="settings-content-header">
@@ -254,6 +255,138 @@
                               Placeholder="자동 감지" Class="mt-3"
                               HelperText="비워두면 자동으로 감지합니다" />
             </div>
+
+            <div class="settings-group">
+                <div class="settings-group-title">Git</div>
+                <div class="integration-status">
+                    @if (_integrationsChecking)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                             Style="width: 18px; height: 18px;" />
+                        <span class="status-text">감지 중...</span>
+                    }
+                    else if (_gitFound)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                 Class="status-ok" />
+                        <span class="status-text">감지됨</span>
+                        @if (!string.IsNullOrEmpty(_gitResolvedPath))
+                        {
+                            <span class="status-path">@_gitResolvedPath</span>
+                        }
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
+                                 Class="status-warn" />
+                        <span class="status-text">감지되지 않음</span>
+                    }
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                                   OnClick="CheckIntegrations" Title="다시 확인" />
+                </div>
+
+                @if (_gitFound && !string.IsNullOrEmpty(_gitVersion))
+                {
+                    <div class="stack gap-1 mt-2">
+                        <div class="stack-row items-center gap-2">
+                            <span class="typo-body2">버전:</span>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                                     Variant="Variant.Text">
+                                @_gitVersion
+                            </MudChip>
+                        </div>
+                    </div>
+                }
+
+                @if (!_integrationsChecking && !_gitFound)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined"
+                              Class="mt-2" Dense="true">
+                        <div class="stack gap-1">
+                            <span class="typo-body2">설치 방법:</span>
+                            @if (_isMac)
+                            {
+                                <code>brew install git</code>
+                            }
+                            else
+                            {
+                                <code>winget install Git.Git</code>
+                            }
+                        </div>
+                    </MudAlert>
+                }
+
+                <MudTextField @bind-Value="_settings.GitPath" Label="Git 경로"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="자동 감지" Class="mt-3"
+                              HelperText="비워두면 자동으로 감지합니다" />
+            </div>
+
+            <div class="settings-group">
+                <div class="settings-group-title">GitHub CLI</div>
+                <div class="integration-status">
+                    @if (_integrationsChecking)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                             Style="width: 18px; height: 18px;" />
+                        <span class="status-text">감지 중...</span>
+                    }
+                    else if (_ghFound)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                 Class="status-ok" />
+                        <span class="status-text">감지됨</span>
+                        @if (!string.IsNullOrEmpty(_ghResolvedPath))
+                        {
+                            <span class="status-path">@_ghResolvedPath</span>
+                        }
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
+                                 Class="status-warn" />
+                        <span class="status-text">감지되지 않음</span>
+                    }
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                                   OnClick="CheckIntegrations" Title="다시 확인" />
+                </div>
+
+                @if (_ghFound && !string.IsNullOrEmpty(_ghVersion))
+                {
+                    <div class="stack gap-1 mt-2">
+                        <div class="stack-row items-center gap-2">
+                            <span class="typo-body2">버전:</span>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                                     Variant="Variant.Text">
+                                @_ghVersion
+                            </MudChip>
+                        </div>
+                    </div>
+                }
+
+                @if (!_integrationsChecking && !_ghFound)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined"
+                              Class="mt-2" Dense="true">
+                        <div class="stack gap-1">
+                            <span class="typo-body2">설치 방법:</span>
+                            @if (_isMac)
+                            {
+                                <code>brew install gh</code>
+                            }
+                            else
+                            {
+                                <code>winget install GitHub.cli</code>
+                            }
+                        </div>
+                    </MudAlert>
+                }
+
+                <MudTextField @bind-Value="_settings.GhPath" Label="GitHub CLI 경로"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="자동 감지" Class="mt-3"
+                              HelperText="비워두면 자동으로 감지합니다" />
+            </div>
         }
         else if (Section == "mcp")
         {
@@ -374,11 +507,18 @@
     private AppSettings _settings = new();
     private string _lastSection = "";
 
+    private bool _integrationsChecking;
     private bool _claudeCliChecking;
     private bool _claudeCliFound;
     private string? _claudeCliResolvedPath;
     private string? _claudeCliVersion;
     private bool _claudeVersionOutdated;
+    private bool _gitFound;
+    private string? _gitResolvedPath;
+    private string? _gitVersion;
+    private bool _ghFound;
+    private string? _ghResolvedPath;
+    private string? _ghVersion;
     private bool _isMac = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
     private string _newEnvKey = "";
     private string _newEnvValue = "";
@@ -407,7 +547,33 @@
 
     private async Task CheckIntegrations()
     {
-        await CheckClaudeCli();
+        _integrationsChecking = true;
+        StateHasChanged();
+
+        var checkDepsTask = DependencyCheckService.CheckAllAsync();
+        var checkClaudeTask = CheckClaudeCli();
+
+        var deps = await checkDepsTask;
+        await checkClaudeTask;
+
+        var gitDep = deps.FirstOrDefault(d => d.Name == "git");
+        if (gitDep != null)
+        {
+            _gitFound = gitDep.IsInstalled;
+            _gitResolvedPath = gitDep.ResolvedPath;
+            _gitVersion = gitDep.Version;
+        }
+
+        var ghDep = deps.FirstOrDefault(d => d.Name == "gh");
+        if (ghDep != null)
+        {
+            _ghFound = ghDep.IsInstalled;
+            _ghResolvedPath = ghDep.ResolvedPath;
+            _ghVersion = ghDep.Version;
+        }
+
+        _integrationsChecking = false;
+        StateHasChanged();
     }
 
     private async Task CheckClaudeCli()
