@@ -7,6 +7,7 @@ public class SessionStreamingState
     public bool IsStreaming { get; set; }
     public StreamingPhase Phase { get; set; }
     public string? ActiveToolName { get; set; }
+    public bool HasCompleted { get; set; }
 }
 
 public class ChatState : IChatState
@@ -74,8 +75,18 @@ public class ChatState : IChatState
     public void UnregisterActiveSession(string sessionId) => Streaming.UnregisterActiveSession(sessionId);
     public Session? GetActiveSession(string sessionId) => Streaming.GetActiveSession(sessionId);
 
+    public bool IsSessionCompleted(string sessionId) => Streaming.IsSessionCompleted(sessionId);
+    public void ClearSessionCompleted(string sessionId) => Streaming.ClearCompleted(sessionId);
+
     public void SetStreaming(bool streaming, string? sessionId = null)
-        => Streaming.SetStreaming(streaming, sessionId ?? CurrentSession?.Id);
+    {
+        var resolvedId = sessionId ?? CurrentSession?.Id;
+        Streaming.SetStreaming(streaming, resolvedId);
+
+        // 현재 보고 있는 세션이면 completed 표시 불필요
+        if (!streaming && resolvedId != null && resolvedId == CurrentSession?.Id)
+            Streaming.ClearCompleted(resolvedId);
+    }
 
     public void SetPhase(StreamingPhase phase, string? toolName = null, string? sessionId = null)
         => Streaming.SetPhase(phase, toolName, sessionId ?? CurrentSession?.Id);
@@ -194,6 +205,9 @@ public class ChatState : IChatState
         var old = CurrentSession;
         CurrentSession = session;
         Tabs.Reset(session?.Title);
+
+        if (session != null)
+            Streaming.ClearCompleted(session.Id);
 
         _eventBus.Publish(new SessionChangedEvent(old, session));
         NotifyStateChanged();
