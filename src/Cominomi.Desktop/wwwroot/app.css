@@ -4058,60 +4058,22 @@ html *::after {
 }
 
 /* ===== Slash Commands Editor ===== */
-.slash-commands-layout {
-    min-height: 400px;
+.slash-command-table {
+    font-size: var(--text-sm);
 }
 
-.slash-command-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    margin-bottom: var(--space-1);
-    transition: background var(--transition);
-}
-
-.slash-command-item:hover {
-    background: var(--bg-hover);
-}
-
-.slash-command-item.builtin {
+.slash-command-table .builtin-row {
     opacity: 0.7;
 }
 
-.slash-command-info {
+.slash-command-tools-panel {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-    flex: 1;
-}
-
-.slash-command-name {
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
-    font-weight: 600;
-}
-
-.slash-command-desc {
-    font-size: var(--text-xs);
-    opacity: 0.5;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.slash-command-actions {
-    display: flex;
-    align-items: center;
+    flex-wrap: wrap;
     gap: var(--space-1);
-    flex-shrink: 0;
-}
-
-.slash-command-form {
     padding: var(--space-2);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--bg-input);
 }
 
 /* ===== Activity View ===== */
