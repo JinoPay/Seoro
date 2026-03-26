@@ -29,7 +29,6 @@ html *::after {
 .panel-resizer *,
 .streaming-indicator,
 .streaming-indicator *,
-.pulse-dot,
 .tool-card.running,
 .tool-card.running *,
 @keyframes * {
@@ -401,6 +400,15 @@ html *::after {
     padding-left: calc(42px - 2px);
 }
 
+.tree-session.streaming {
+    border-left: 2px solid var(--color-success);
+    padding-left: calc(42px - 2px);
+}
+
+.tree-session.active.streaming {
+    border-left-color: var(--color-success);
+}
+
 .tree-session.archived {
     opacity: 0.35;
 }
@@ -561,26 +569,6 @@ html *::after {
 .status-badge.error { color: var(--color-error); background: var(--color-error-bg); }
 .status-badge.archived { color: var(--text-muted); background: var(--bg-hover); }
 
-.status-badge.streaming {
-    background: var(--color-success-bg);
-    color: var(--color-success);
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 6px;
-}
-
-.status-badge-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--color-success);
-    animation: pulse-dot 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-    0%, 100% { opacity: 0.6; box-shadow: 0 0 2px var(--color-success-border); }
-    50% { opacity: 1; box-shadow: 0 0 6px var(--color-success); }
-}
 
 /* ===== Main Panel ===== */
 .cominomi-main {
