@@ -31,8 +31,17 @@ public class GamificationService : IGamificationService
 
         try
         {
-            // Gather replay sessions for daily activity breakdown
-            var replaySessions = await _replayService.ListSessionsAsync();
+            // Gather ALL replay sessions for daily activity breakdown
+            var replaySessions = new List<SessionReplaySummary>();
+            int offset = 0;
+            const int batchSize = 50;
+            SessionListResult batch;
+            do
+            {
+                batch = await _replayService.ListSessionsAsync(limit: batchSize, offset: offset);
+                replaySessions.AddRange(batch.Sessions);
+                offset += batchSize;
+            } while (batch.HasMore);
 
             // Build daily activity from replay sessions
             var dailyMap = new Dictionary<string, DailyActivityEntry>();

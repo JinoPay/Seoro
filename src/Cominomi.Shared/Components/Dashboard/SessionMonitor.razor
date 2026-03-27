@@ -54,11 +54,8 @@
         _loading = true;
         try
         {
-            var all = await ReplayService.ListSessionsAsync();
-            _sessions = all
-                .OrderByDescending(s => s.FirstTimestamp)
-                .Take(5)
-                .ToList();
+            var result = await ReplayService.ListSessionsAsync(limit: 5, offset: 0);
+            _sessions = result.Sessions;
         }
         catch
         {

@@ -131,7 +131,6 @@ public static class Program
         appBuilder.Services.AddSingleton<IMcpService, McpService>();
         appBuilder.Services.AddSingleton<INotificationService, NotificationService>();
         appBuilder.Services.AddSingleton<INotificationHistoryService, NotificationHistoryService>();
-        appBuilder.Services.AddSingleton<IActivityService, ActivityService>();
         appBuilder.Services.AddSingleton<IStreamEventHandler, SystemInitHandler>();
         appBuilder.Services.AddSingleton<IStreamEventHandler, ContentBlockStartHandler>();
         appBuilder.Services.AddSingleton<IStreamEventHandler, ContentBlockDeltaHandler>();
