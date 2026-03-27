@@ -590,6 +590,10 @@
                     e.preventDefault();
                     window.focusInputArea('input-area');
                 }
+                if (e.shiftKey && (e.key === 't' || e.key === 'T')) {
+                    e.preventDefault();
+                    dotNetRef.invokeMethodAsync('OnToggleThemeShortcut');
+                }
             };
             document.addEventListener('keydown', window._panelShortcutHandler);
         };

@@ -189,6 +189,12 @@
         InvokeAsync(StateHasChanged);
     }
 
+    [JSInvokable]
+    public async Task OnToggleThemeShortcut()
+    {
+        await ThemeService.ToggleDarkModeAsync();
+    }
+
     private void HandleThemeChanged()
     {
         _ = InvokeAsync(() =>
