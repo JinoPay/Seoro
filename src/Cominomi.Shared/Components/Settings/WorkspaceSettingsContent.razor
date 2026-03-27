@@ -37,7 +37,10 @@
                                   Variant="Variant.Outlined" Margin="Margin.Dense" />
 
                     <MudSelect T="string" @bind-Value="_workspace.DefaultModel" Label="기본 모델"
-                               Variant="Variant.Outlined" Margin="Margin.Dense">
+                               Variant="Variant.Outlined" Margin="Margin.Dense"
+                               HelperText="이 워크스페이스의 세션에 사용할 모델입니다. 비워두면 앱 기본값을 따릅니다."
+                               Clearable="true">
+                        <MudSelectItem T="string" Value="@("")">앱 기본값 사용</MudSelectItem>
                         @foreach (var model in ModelDefinitions.All)
                         {
                             <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>

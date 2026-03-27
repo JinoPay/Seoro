@@ -91,6 +91,8 @@ public partial class WorkspaceService : IWorkspaceService
     public async Task SaveWorkspaceAsync(Workspace workspace)
     {
         SettingsValidator.SanitizeWorkspace(workspace);
+        workspace.MigratePreferences();
+        workspace.SchemaVersion = 2;
         workspace.UpdatedAt = DateTime.UtcNow;
         var path = Path.Combine(_workspacesDir, $"{workspace.Id}.json");
         var json = MigratingJsonWriter.Write(workspace, JsonDefaults.Options);

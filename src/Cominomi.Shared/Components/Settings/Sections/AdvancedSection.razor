@@ -1,0 +1,73 @@
+<div class="settings-section-title">고급</div>
+<div class="settings-section-desc">Claude CLI 고급 설정 및 환경변수를 관리합니다.</div>
+
+<div class="stack gap-3">
+    <MudSwitch T="bool" @bind-Value="Settings.DebugMode" Label="디버그 모드"
+               Color="Color.Warning" UncheckedColor="Color.Default" />
+    <small class="typo-caption text-secondary" style="margin-top: -8px;">
+        활성화하면 Claude CLI에 --debug 플래그를 전달합니다.
+    </small>
+</div>
+
+<div class="settings-group-title" style="margin-top: 16px;">프로세스 환경변수</div>
+<small class="typo-caption text-secondary" style="margin-top: -4px;">
+    Cominomi에서 Claude CLI를 실행할 때 프로세스에 주입하는 환경변수입니다.
+</small>
+
+<div class="stack gap-2">
+    @foreach (var key in Settings.EnvironmentVariables.Keys.ToList())
+    {
+        <div class="stack-row gap-1 items-center">
+            <MudTextField T="string" Value="@key" ReadOnly="true"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Style="flex: 0.4;" />
+            <MudTextField T="string" Value="@Settings.EnvironmentVariables[key]"
+                          ValueChanged="@(v => Settings.EnvironmentVariables[key] = v)"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Style="flex: 0.6;"
+                          InputType="@(key.Contains("KEY", StringComparison.OrdinalIgnoreCase) ? InputType.Password : InputType.Text)" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                           Color="Color.Error"
+                           OnClick="@(() => RemoveEnvVar(key))" />
+        </div>
+    }
+
+    <div class="stack-row gap-1 items-center">
+        <MudTextField @bind-Value="_newEnvKey" Placeholder="변수명"
+                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Style="flex: 0.4;" />
+        <MudTextField @bind-Value="_newEnvValue" Placeholder="값"
+                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Style="flex: 0.6;" />
+        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                       Color="Color.Primary"
+                       OnClick="AddEnvVar"
+                       Disabled="@(string.IsNullOrWhiteSpace(_newEnvKey))" />
+    </div>
+
+    <small class="typo-caption text-secondary">
+        예: ANTHROPIC_API_KEY, CLAUDE_CODE_USE_BEDROCK, CLAUDE_CODE_MAX_OUTPUT_TOKENS
+    </small>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AppSettings Settings { get; set; } = null!;
+
+    private string _newEnvKey = "";
+    private string _newEnvValue = "";
+
+    private void AddEnvVar()
+    {
+        if (!string.IsNullOrWhiteSpace(_newEnvKey))
+        {
+            Settings.EnvironmentVariables[_newEnvKey.Trim()] = _newEnvValue;
+            _newEnvKey = "";
+            _newEnvValue = "";
+        }
+    }
+
+    private void RemoveEnvVar(string key)
+    {
+        Settings.EnvironmentVariables.Remove(key);
+    }
+}
