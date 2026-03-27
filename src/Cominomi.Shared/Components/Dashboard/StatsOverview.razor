@@ -1,0 +1,67 @@
+@using Cominomi.Shared.Models
+
+<div class="stats-overview-grid">
+    <div class="stats-overview-card">
+        <div class="stats-overview-label">세션</div>
+        <div class="stats-overview-value color-primary">@FormatNumber(TotalSessions)</div>
+    </div>
+    <div class="stats-overview-card">
+        <div class="stats-overview-label">메시지</div>
+        <div class="stats-overview-value color-success">@FormatNumber(TotalMessages)</div>
+    </div>
+    <div class="stats-overview-card">
+        <div class="stats-overview-label">도구 호출</div>
+        <div class="stats-overview-value color-warning">@FormatNumber(TotalToolCalls)</div>
+    </div>
+    <div class="stats-overview-card">
+        <div class="stats-overview-label">활동일</div>
+        <div class="stats-overview-value color-info">@FormatNumber(DaysActive)</div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int TotalSessions { get; set; }
+    [Parameter] public int TotalMessages { get; set; }
+    [Parameter] public int TotalToolCalls { get; set; }
+    [Parameter] public int DaysActive { get; set; }
+
+    private static string FormatNumber(int n) => n switch
+    {
+        >= 1_000_000 => $"{n / 1_000_000.0:F1}M",
+        >= 1_000 => $"{n / 1_000.0:F1}K",
+        _ => n.ToString("N0")
+    };
+}
+
+<style>
+    .stats-overview-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .stats-overview-card {
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 10px;
+        padding: 16px;
+    }
+
+    .stats-overview-label {
+        font-size: 0.7rem;
+        color: var(--mud-palette-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .stats-overview-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-top: 4px;
+    }
+
+    .stats-overview-value.color-primary { color: var(--mud-palette-primary); }
+    .stats-overview-value.color-success { color: var(--mud-palette-success); }
+    .stats-overview-value.color-warning { color: var(--mud-palette-warning); }
+    .stats-overview-value.color-info { color: var(--mud-palette-info); }
+</style>

@@ -1,0 +1,249 @@
+@using Cominomi.Shared.Models
+
+<div class="heatmap-card">
+    <div class="heatmap-title">활동</div>
+    <div class="heatmap-container">
+        @* Day labels *@
+        <div class="heatmap-day-labels">
+            @foreach (var (label, idx) in DayLabels)
+            {
+                <div class="heatmap-day-label">@(idx % 2 == 1 ? label : "")</div>
+            }
+        </div>
+        @* Grid *@
+        <div class="heatmap-weeks">
+            @foreach (var week in _weeks)
+            {
+                <div class="heatmap-week">
+                    @foreach (var day in week)
+                    {
+                        @if (day.Empty)
+                        {
+                            <div class="heatmap-cell empty"></div>
+                        }
+                        else
+                        {
+                            <MudTooltip Placement="Placement.Top" Arrow="true" RootClass="heatmap-cell-wrapper">
+                                <ChildContent>
+                                    <div class="heatmap-cell @GetColorClass(day.Count)"></div>
+                                </ChildContent>
+                                <TooltipContent>
+                                    <div style="font-size: 0.75rem;">
+                                        <div style="font-weight: 500;">@FormatDate(day.Date)</div>
+                                        <div>@FormatNumber(day.Count) 메시지 · @day.Sessions 세션 · @FormatNumber(day.Tools) 도구</div>
+                                    </div>
+                                </TooltipContent>
+                            </MudTooltip>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    @* Legend *@
+    <div class="heatmap-legend">
+        <span>적음</span>
+        <div class="heatmap-legend-blocks">
+            <div class="heatmap-legend-block level-0"></div>
+            <div class="heatmap-legend-block level-1"></div>
+            <div class="heatmap-legend-block level-2"></div>
+            <div class="heatmap-legend-block level-3"></div>
+            <div class="heatmap-legend-block level-4"></div>
+        </div>
+        <span>많음</span>
+        <span class="heatmap-legend-count">@(TrackedDays)일 추적됨</span>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<DailyActivityEntry> DailyActivity { get; set; } = [];
+
+    private List<DayCell[]> _weeks = [];
+    private int TrackedDays => DailyActivity.Count(d => d.MessageCount > 0);
+
+    private static readonly (string label, int idx)[] DayLabels =
+        [("일", 0), ("월", 1), ("화", 2), ("수", 3), ("목", 4), ("금", 5), ("토", 6)];
+
+    protected override void OnParametersSet()
+    {
+        BuildWeeks();
+    }
+
+    private void BuildWeeks()
+    {
+        var activityMap = DailyActivity.ToDictionary(d => d.Date);
+        var today = DateTime.Today;
+
+        // Start from 52 weeks ago, aligned to Sunday
+        var start = today.AddDays(-52 * 7 - (int)today.DayOfWeek);
+        var totalDays = (today - start).Days + 1;
+
+        var weeks = new List<DayCell[]>();
+        var currentWeek = new List<DayCell>();
+
+        for (int i = 0; i < totalDays; i++)
+        {
+            var d = start.AddDays(i);
+            var dow = (int)d.DayOfWeek;
+            var dateStr = d.ToString("yyyy-MM-dd");
+
+            if (dow == 0 && currentWeek.Count > 0)
+            {
+                while (currentWeek.Count < 7)
+                    currentWeek.Add(new DayCell { Empty = true });
+                weeks.Add(currentWeek.ToArray());
+                currentWeek = [];
+            }
+
+            activityMap.TryGetValue(dateStr, out var activity);
+            currentWeek.Add(new DayCell
+            {
+                Date = dateStr,
+                Count = activity?.MessageCount ?? 0,
+                Sessions = activity?.SessionCount ?? 0,
+                Tools = activity?.ToolCallCount ?? 0,
+                Empty = false
+            });
+        }
+
+        // Pad & add final week
+        while (currentWeek.Count < 7)
+            currentWeek.Add(new DayCell { Empty = true });
+        if (currentWeek.Count > 0)
+            weeks.Add(currentWeek.ToArray());
+
+        _weeks = weeks;
+    }
+
+    private static string GetColorClass(int count) => count switch
+    {
+        0 => "level-0",
+        < 100 => "level-1",
+        < 500 => "level-2",
+        < 1000 => "level-3",
+        < 3000 => "level-4",
+        _ => "level-5"
+    };
+
+    private static string FormatDate(string dateStr)
+    {
+        if (DateTime.TryParse(dateStr, out var dt))
+            return dt.ToString("yyyy년 M월 d일 dddd");
+        return dateStr;
+    }
+
+    private static string FormatNumber(int n) => n.ToString("N0");
+
+    private record DayCell
+    {
+        public string Date { get; init; } = "";
+        public int Count { get; init; }
+        public int Sessions { get; init; }
+        public int Tools { get; init; }
+        public bool Empty { get; init; }
+    }
+}
+
+<style>
+    .heatmap-card {
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .heatmap-title {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 12px;
+    }
+
+    .heatmap-container {
+        display: flex;
+        gap: 0;
+    }
+
+    .heatmap-day-labels {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-right: 6px;
+        flex-shrink: 0;
+        width: 22px;
+    }
+
+    .heatmap-day-label {
+        height: 14px;
+        font-size: 0.6rem;
+        color: var(--mud-palette-text-secondary);
+        line-height: 14px;
+    }
+
+    .heatmap-weeks {
+        display: flex;
+        gap: 2px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .heatmap-week {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: 1;
+    }
+
+    .heatmap-cell-wrapper {
+        display: contents;
+    }
+
+    .heatmap-cell {
+        height: 14px;
+        border-radius: 2px;
+        cursor: pointer;
+    }
+
+    .heatmap-cell.empty {
+        background: var(--mud-palette-action-default-hover);
+        cursor: default;
+        opacity: 0.4;
+    }
+
+    .heatmap-cell.level-0 { background: var(--mud-palette-action-default-hover); }
+    .heatmap-cell.level-1 { background: #0e4429; }
+    .heatmap-cell.level-2 { background: #006d32; }
+    .heatmap-cell.level-3 { background: #26a641; }
+    .heatmap-cell.level-4 { background: #39d353; }
+    .heatmap-cell.level-5 { background: #7aed7a; }
+
+    .heatmap-legend {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        font-size: 0.7rem;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .heatmap-legend-blocks {
+        display: flex;
+        gap: 3px;
+    }
+
+    .heatmap-legend-block {
+        width: 11px;
+        height: 11px;
+        border-radius: 2px;
+    }
+
+    .heatmap-legend-block.level-0 { background: var(--mud-palette-action-default-hover); }
+    .heatmap-legend-block.level-1 { background: #0e4429; }
+    .heatmap-legend-block.level-2 { background: #006d32; }
+    .heatmap-legend-block.level-3 { background: #26a641; }
+    .heatmap-legend-block.level-4 { background: #39d353; }
+
+    .heatmap-legend-count {
+        margin-left: auto;
+    }
+</style>

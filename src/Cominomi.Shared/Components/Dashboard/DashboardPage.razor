@@ -1,5 +1,6 @@
 @using Cominomi.Shared.Models
 @inject IGamificationService GamificationService
+@inject IChatState ChatState
 
 <div class="settings-content-area wide">
     <div class="settings-content-header">
@@ -29,77 +30,41 @@
             </div>
 
             @* Stats Overview *@
-            <div class="dashboard-stats-row">
-                <div class="dashboard-stat-card">
-                    <div class="dashboard-stat-value">@_stats.TotalSessions</div>
-                    <div class="dashboard-stat-label">세션</div>
-                </div>
-                <div class="dashboard-stat-card">
-                    <div class="dashboard-stat-value">@_stats.TotalMessages</div>
-                    <div class="dashboard-stat-label">메시지</div>
-                </div>
-                <div class="dashboard-stat-card">
-                    <div class="dashboard-stat-value">@_stats.DaysActive</div>
-                    <div class="dashboard-stat-label">활동일</div>
-                </div>
-                <div class="dashboard-stat-card">
-                    <div class="dashboard-stat-value">
-                        <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Color="Color.Warning" Size="Size.Small" />
-                        @_stats.Streak.CurrentStreak
-                    </div>
-                    <div class="dashboard-stat-label">연속일</div>
-                </div>
-            </div>
+            <StatsOverview TotalSessions="@_stats.TotalSessions"
+                           TotalMessages="@_stats.TotalMessages"
+                           TotalToolCalls="@_stats.TotalToolCalls"
+                           DaysActive="@_stats.DaysActive" />
 
-            @* Config Completeness + Streak *@
-            <div class="d-flex gap-3 mb-4">
-                <MudPaper Class="pa-4 flex-1" Outlined="true" Style="border-radius: 12px;">
-                    <div class="typo-subtitle2 mb-2">설정 완성도</div>
-                    <div class="d-flex align-center gap-3">
-                        <MudProgressCircular Value="@(_stats.ConfigCompleteness * 100)"
-                                             Color="Color.Primary" Size="Size.Large"
-                                             StrokeWidth="6" />
-                        <span class="typo-h6">@((_stats.ConfigCompleteness * 100).ToString("F0"))%</span>
-                    </div>
-                </MudPaper>
-                <MudPaper Class="pa-4 flex-1" Outlined="true" Style="border-radius: 12px;">
-                    <div class="typo-subtitle2 mb-2">연속 기록</div>
-                    <div class="d-flex gap-4">
-                        <div>
-                            <div class="typo-h5" style="color: var(--mud-palette-warning);">@_stats.Streak.CurrentStreak</div>
-                            <div class="typo-caption text-secondary">현재</div>
-                        </div>
-                        <div>
-                            <div class="typo-h5">@_stats.Streak.LongestStreak</div>
-                            <div class="typo-caption text-secondary">최장</div>
+            @* Middle Row: Streak + Config + Cost *@
+            <div class="dashboard-middle-row">
+                <StreakCard Current="@_stats.Streak.CurrentStreak"
+                           Longest="@_stats.Streak.LongestStreak"
+                           LastActiveDate="@_stats.Streak.LastActiveDate" />
+
+                @* Config Completeness *@
+                <div class="dashboard-config-card">
+                    <div class="dashboard-config-title">설정 완성도</div>
+                    <div class="d-flex align-center justify-center">
+                        <div style="position: relative;">
+                            <MudProgressCircular Value="@(_stats.ConfigCompleteness * 100)"
+                                                 Color="Color.Primary" Size="Size.Large"
+                                                 StrokeWidth="6" />
+                            <span class="dashboard-config-pct">@((_stats.ConfigCompleteness * 100).ToString("F0"))%</span>
                         </div>
                     </div>
-                </MudPaper>
+                </div>
+
+                <CostOverviewCard Cost="@_stats.Cost"
+                                  OnNavigateToUsage="@(() => ChatState.SetSettingsSection("usage"))" />
             </div>
 
             @* Activity Heatmap *@
-            <MudPaper Class="pa-4 mb-4" Outlined="true" Style="border-radius: 12px;">
-                <div class="typo-subtitle2 mb-3">활동 히트맵 (최근 90일)</div>
-                <div class="heatmap-grid">
-                    @foreach (var day in GetHeatmapDays())
-                    {
-                        <div class="heatmap-cell @GetHeatmapClass(day)" title="@day.ToString("yyyy-MM-dd")"></div>
-                    }
-                </div>
-            </MudPaper>
+            <ActivityHeatmap DailyActivity="@_stats.DailyActivity" />
 
-            @* Achievements *@
-            <div class="typo-subtitle2 mb-2">업적 (@UnlockedCount / @_stats.Achievements.Count)</div>
-            <div class="dashboard-achievements">
-                @foreach (var a in _stats.Achievements)
-                {
-                    <MudPaper Class="@AchievementClass(a)" Outlined="true">
-                        <MudIcon Icon="@GetAchievementIcon(a)" Size="Size.Medium"
-                                 Color="@(a.Unlocked ? Color.Warning : Color.Default)" />
-                        <div class="typo-caption" style="font-weight: 600;">@a.Name</div>
-                        <div class="typo-caption text-secondary" style="font-size: 0.65rem;">@a.Description</div>
-                    </MudPaper>
-                }
+            @* Bottom Row: Session Monitor + Achievements *@
+            <div class="dashboard-bottom-row">
+                <SessionMonitor />
+                <AchievementGrid Achievements="@_stats.Achievements" />
             </div>
         }
     </div>
@@ -114,47 +79,6 @@
         _stats = await GamificationService.GetDashboardStatsAsync();
         _loading = false;
     }
-
-    private int UnlockedCount => _stats.Achievements.Count(a => a.Unlocked);
-
-    private static string AchievementClass(Achievement a)
-        => a.Unlocked ? "dashboard-achievement unlocked" : "dashboard-achievement locked";
-
-    private List<DateOnly> GetHeatmapDays()
-    {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        return Enumerable.Range(0, 90).Select(i => today.AddDays(-89 + i)).ToList();
-    }
-
-    private string GetHeatmapClass(DateOnly day)
-    {
-        var key = day.ToString("yyyy-MM-dd");
-        if (!_stats.DailyActivity.TryGetValue(key, out var count)) return "level-0";
-        if (count is >= 0 and <= 4) return "level-1";
-        if (count is >= 5 and <= 19) return "level-2";
-        if (count is >= 20 and <= 49) return "level-3";
-        return "level-4";
-    }
-
-    private static string GetAchievementIcon(Achievement a) => a.Icon switch
-    {
-        "tune" => Icons.Material.Filled.Tune,
-        "bolt" => Icons.Material.Filled.Bolt,
-        "hub" => Icons.Material.Filled.Hub,
-        "security" => Icons.Material.Filled.Security,
-        "terminal" => Icons.Material.Filled.Terminal,
-        "chat" => Icons.Material.Filled.Chat,
-        "forum" => Icons.Material.Filled.Forum,
-        "whatshot" => Icons.Material.Filled.Whatshot,
-        "layers" => Icons.Material.Filled.Layers,
-        "local_fire_department" => Icons.Material.Filled.LocalFireDepartment,
-        "military_tech" => Icons.Material.Filled.MilitaryTech,
-        "shield" => Icons.Material.Filled.Shield,
-        "emoji_events" => Icons.Material.Filled.EmojiEvents,
-        "favorite" => Icons.Material.Filled.Favorite,
-        "star" => Icons.Material.Filled.Star,
-        _ => Icons.Material.Filled.EmojiEvents
-    };
 }
 
 <style>
@@ -166,69 +90,39 @@
         margin-bottom: 16px;
     }
 
-    .dashboard-stats-row {
+    .dashboard-middle-row {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
         margin-bottom: 16px;
     }
 
-    .dashboard-stat-card {
-        text-align: center;
-        padding: 16px;
+    .dashboard-config-card {
         border: 1px solid var(--mud-palette-lines-default);
-        border-radius: 10px;
+        border-radius: 12px;
+        padding: 16px;
     }
 
-    .dashboard-stat-value {
-        font-size: 1.5rem;
-        font-weight: 700;
+    .dashboard-config-title {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 12px;
+    }
+
+    .dashboard-config-pct {
+        position: absolute;
+        inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        font-size: 1.1rem;
+        font-weight: 700;
     }
 
-    .dashboard-stat-label {
-        font-size: 0.75rem;
-        color: var(--mud-palette-text-secondary);
-        margin-top: 4px;
-    }
-
-    .heatmap-grid {
+    .dashboard-bottom-row {
         display: grid;
-        grid-template-columns: repeat(13, 1fr);
-        gap: 3px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
     }
-
-    .heatmap-cell {
-        aspect-ratio: 1;
-        border-radius: 2px;
-        min-width: 10px;
-    }
-
-    .heatmap-cell.level-0 { background: var(--mud-palette-action-default-hover); }
-    .heatmap-cell.level-1 { background: #0e4429; }
-    .heatmap-cell.level-2 { background: #006d32; }
-    .heatmap-cell.level-3 { background: #26a641; }
-    .heatmap-cell.level-4 { background: #39d353; }
-
-    .dashboard-achievements {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-        gap: 10px;
-    }
-
-    .dashboard-achievement {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        padding: 12px 8px;
-        border-radius: 10px;
-        gap: 4px;
-    }
-
-    .dashboard-achievement.locked { opacity: 0.35; }
-    .dashboard-achievement.unlocked { border-color: var(--mud-palette-warning) !important; }
 </style>

@@ -26,10 +26,8 @@ public class SessionReplayService : ISessionReplayService
 
         foreach (var projectDir in Directory.GetDirectories(ClaudeProjectsDir))
         {
-            var sessionsDir = Path.Combine(projectDir, "sessions");
-            if (!Directory.Exists(sessionsDir)) continue;
-
-            foreach (var file in Directory.GetFiles(sessionsDir, "*.jsonl"))
+            // Session JSONL files are directly in the project directory
+            foreach (var file in Directory.GetFiles(projectDir, "*.jsonl"))
             {
                 try
                 {
@@ -103,7 +101,19 @@ public class SessionReplayService : ISessionReplayService
                     firstMessage ??= node["message"]?["content"]?.GetValue<string>()
                                      ?? node["content"]?.ToString();
                 }
-                else if (type is "assistant") messages++;
+                else if (type is "assistant")
+                {
+                    messages++;
+                    // Count tool_use blocks inside assistant message content
+                    if (node["message"]?["content"] is JsonArray contentArr)
+                    {
+                        foreach (var block in contentArr)
+                        {
+                            if (block?["type"]?.GetValue<string>() == "tool_use")
+                                tools++;
+                        }
+                    }
+                }
                 else if (type is "tool_use") tools++;
             }
             catch { /* skip malformed lines */ }

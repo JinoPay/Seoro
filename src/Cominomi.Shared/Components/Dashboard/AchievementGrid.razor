@@ -1,0 +1,132 @@
+@using Cominomi.Shared.Models
+
+<div class="achievement-card">
+    <div class="achievement-title">
+        업적 <span class="achievement-count">(@UnlockedCount/@Achievements.Count)</span>
+    </div>
+    <div class="achievement-grid">
+        @foreach (var a in Achievements)
+        {
+            <div class="achievement-item @(a.Unlocked ? "unlocked" : "locked")">
+                <div class="achievement-icon-box @(a.Unlocked ? "unlocked" : "")">
+                    <MudIcon Icon="@GetIcon(a.Icon)" Size="Size.Small" />
+                </div>
+                <div class="achievement-text">
+                    <div class="achievement-name">@a.Name</div>
+                    <div class="achievement-desc">@a.Description</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<Achievement> Achievements { get; set; } = [];
+
+    private int UnlockedCount => Achievements.Count(a => a.Unlocked);
+
+    private static string GetIcon(string icon) => icon switch
+    {
+        "tune" => Icons.Material.Filled.Tune,
+        "bolt" => Icons.Material.Filled.Bolt,
+        "hub" => Icons.Material.Filled.Hub,
+        "device_hub" => Icons.Material.Filled.DeviceHub,
+        "security" => Icons.Material.Filled.Security,
+        "terminal" => Icons.Material.Filled.Terminal,
+        "chat" => Icons.Material.Filled.Chat,
+        "forum" => Icons.Material.Filled.Forum,
+        "whatshot" => Icons.Material.Filled.Whatshot,
+        "rocket_launch" => Icons.Material.Filled.RocketLaunch,
+        "layers" => Icons.Material.Filled.Layers,
+        "build" => Icons.Material.Filled.Build,
+        "local_fire_department" => Icons.Material.Filled.LocalFireDepartment,
+        "military_tech" => Icons.Material.Filled.MilitaryTech,
+        "shield" => Icons.Material.Filled.Shield,
+        "emoji_events" => Icons.Material.Filled.EmojiEvents,
+        "favorite" => Icons.Material.Filled.Favorite,
+        "star" => Icons.Material.Filled.Star,
+        "settings" => Icons.Material.Filled.Settings,
+        _ => Icons.Material.Filled.EmojiEvents
+    };
+}
+
+<style>
+    .achievement-card {
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .achievement-title {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 12px;
+    }
+
+    .achievement-count {
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .achievement-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .achievement-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .achievement-item.unlocked {
+        background: rgba(var(--mud-palette-primary-rgb, 98, 0, 234), 0.08);
+        border-color: rgba(var(--mud-palette-primary-rgb, 98, 0, 234), 0.3);
+    }
+
+    .achievement-item.locked {
+        background: var(--mud-palette-action-default-hover);
+        opacity: 0.4;
+    }
+
+    .achievement-icon-box {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: var(--mud-palette-action-default-hover);
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .achievement-icon-box.unlocked {
+        background: rgba(var(--mud-palette-primary-rgb, 98, 0, 234), 0.15);
+        color: var(--mud-palette-primary);
+    }
+
+    .achievement-text {
+        min-width: 0;
+    }
+
+    .achievement-name {
+        font-size: 0.7rem;
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .achievement-desc {
+        font-size: 0.6rem;
+        color: var(--mud-palette-text-secondary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>

@@ -1,0 +1,181 @@
+@using Cominomi.Shared.Models
+@inject ISessionReplayService ReplayService
+@implements IDisposable
+
+<div class="session-monitor-card">
+    <div class="session-monitor-header">
+        <div class="session-monitor-title">
+            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" />
+            최근 세션
+        </div>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                       Class="@(_loading ? "session-monitor-spin" : "")"
+                       OnClick="LoadRecent" />
+    </div>
+    <div class="session-monitor-list">
+        @foreach (var session in _sessions)
+        {
+            <div class="session-monitor-item">
+                <div class="session-monitor-item-top">
+                    <span class="session-monitor-project">@GetProjectName(session.ProjectPath)</span>
+                    <span class="session-monitor-time">@FormatTime(session.FirstTimestamp)</span>
+                </div>
+                @if (!string.IsNullOrEmpty(session.FirstMessage))
+                {
+                    <div class="session-monitor-message">"@Truncate(session.FirstMessage, 60)"</div>
+                }
+                <div class="session-monitor-meta">
+                    <span><MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" Style="font-size: 0.6rem;" /> @session.MessageCount</span>
+                    <span><MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Style="font-size: 0.6rem;" /> @session.ToolCallCount</span>
+                    <span><MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" Style="font-size: 0.6rem;" /> ~$@((session.EntryCount * 0.01m).ToString("F2"))</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<SessionReplaySummary> _sessions = [];
+    private bool _loading;
+    private Timer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRecent();
+        _timer = new Timer(async _ =>
+        {
+            await LoadRecent();
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
+    }
+
+    private async Task LoadRecent()
+    {
+        _loading = true;
+        try
+        {
+            var all = await ReplayService.ListSessionsAsync();
+            _sessions = all
+                .OrderByDescending(s => s.FirstTimestamp)
+                .Take(5)
+                .ToList();
+        }
+        catch
+        {
+            // silent
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string GetProjectName(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return "unknown";
+        return path.Split('/', '\\')[^1];
+    }
+
+    private static string FormatTime(DateTime? ts)
+    {
+        if (ts is null) return "";
+        var diff = DateTime.UtcNow - ts.Value;
+        if (diff.TotalMinutes < 1) return "방금";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}분 전";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}시간 전";
+        return $"{(int)diff.TotalDays}일 전";
+    }
+
+    private static string Truncate(string s, int max)
+        => s.Length <= max ? s : s[..max] + "…";
+
+    public void Dispose() => _timer?.Dispose();
+}
+
+<style>
+    .session-monitor-card {
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .session-monitor-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .session-monitor-title {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .session-monitor-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .session-monitor-item {
+        padding: 8px 12px;
+        background: var(--mud-palette-action-default-hover);
+        border-radius: 8px;
+    }
+
+    .session-monitor-item-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .session-monitor-project {
+        font-size: 0.7rem;
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .session-monitor-time {
+        font-size: 0.6rem;
+        color: var(--mud-palette-text-secondary);
+        flex-shrink: 0;
+    }
+
+    .session-monitor-message {
+        font-size: 0.6rem;
+        color: var(--mud-palette-text-secondary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin-top: 2px;
+    }
+
+    .session-monitor-meta {
+        display: flex;
+        gap: 12px;
+        margin-top: 4px;
+        font-size: 0.6rem;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .session-monitor-meta span {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+
+    @@keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .session-monitor-spin {
+        animation: spin 1s linear infinite;
+    }
+</style>
