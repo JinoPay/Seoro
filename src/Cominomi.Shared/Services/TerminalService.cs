@@ -109,7 +109,14 @@ public class TerminalService : ITerminalService
         {
             _logger.LogDebug(ex, "Failed to kill PTY process for session {Key}", sessionKey);
         }
-        session.Pty.Dispose();
+        try
+        {
+            session.Pty.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to dispose PTY for session {Key}", sessionKey);
+        }
         session.Cts.Dispose();
         return Task.CompletedTask;
     }
