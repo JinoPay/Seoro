@@ -9,7 +9,6 @@
             앱으로 돌아가기
         </button>
 
-        @* 항상 표시: 대시보드, 사용량 *@
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("dashboard")"
                     @onclick="@(() => SetSection("dashboard"))">
@@ -23,142 +22,102 @@
             </button>
         </div>
 
-        @* 앱 설정 그룹 *@
-        <button class="settings-nav-group-header" @onclick="@(() => _appGroupOpen = !_appGroupOpen)">
-            <MudIcon Icon="@(_appGroupOpen ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
-                     Size="Size.Small" />
-            <span>앱 설정</span>
-        </button>
-        @if (_appGroupOpen)
-        {
-            <div class="settings-nav-section">
-                <button class="settings-nav-item @ActiveClass("general")"
-                        @onclick="@(() => SetSection("general"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small" />
-                    일반
-                </button>
-                <button class="settings-nav-item @ActiveClass("ai")"
-                        @onclick="@(() => SetSection("ai"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
-                    AI 모델
-                </button>
-                <button class="settings-nav-item @ActiveClass("notifications")"
-                        @onclick="@(() => SetSection("notifications"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small" />
-                    알림
-                </button>
-                <button class="settings-nav-item @ActiveClass("terminal")"
-                        @onclick="@(() => SetSection("terminal"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" />
-                    터미널
-                </button>
-                <button class="settings-nav-item @ActiveClass("shortcuts")"
-                        @onclick="@(() => SetSection("shortcuts"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Keyboard" Size="Size.Small" />
-                    단축키
-                </button>
-            </div>
-        }
+        <div class="settings-nav-label">앱 설정</div>
+        <div class="settings-nav-section">
+            <button class="settings-nav-item @ActiveClass("general")"
+                    @onclick="@(() => SetSection("general"))">
+                <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small" />
+                일반
+            </button>
+            <button class="settings-nav-item @ActiveClass("ai")"
+                    @onclick="@(() => SetSection("ai"))">
+                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                AI 모델
+            </button>
+            <button class="settings-nav-item @ActiveClass("notifications")"
+                    @onclick="@(() => SetSection("notifications"))">
+                <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small" />
+                알림
+            </button>
+            <button class="settings-nav-item @ActiveClass("terminal")"
+                    @onclick="@(() => SetSection("terminal"))">
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" />
+                터미널
+            </button>
+            <button class="settings-nav-item @ActiveClass("shortcuts")"
+                    @onclick="@(() => SetSection("shortcuts"))">
+                <MudIcon Icon="@Icons.Material.Filled.Keyboard" Size="Size.Small" />
+                단축키
+            </button>
+        </div>
 
-        @* 연동 & 확장 그룹 *@
-        <button class="settings-nav-group-header" @onclick="@(() => _aiGroupOpen = !_aiGroupOpen)">
-            <MudIcon Icon="@(_aiGroupOpen ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
-                     Size="Size.Small" />
-            <span>연동 & 확장</span>
-        </button>
-        @if (_aiGroupOpen)
-        {
-            <div class="settings-nav-section">
-                <button class="settings-nav-item @ActiveClass("integrations")"
-                        @onclick="@(() => SetSection("integrations"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small" />
-                    연동
-                </button>
-                <button class="settings-nav-item @ActiveClass("extensions")"
-                        @onclick="@(() => SetSection("extensions"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small" />
-                    확장
-                </button>
-            </div>
-        }
+        <div class="settings-nav-label">연동 & 확장</div>
+        <div class="settings-nav-section">
+            <button class="settings-nav-item @ActiveClass("integrations")"
+                    @onclick="@(() => SetSection("integrations"))">
+                <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small" />
+                연동
+            </button>
+            <button class="settings-nav-item @ActiveClass("extensions")"
+                    @onclick="@(() => SetSection("extensions"))">
+                <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small" />
+                확장
+            </button>
+        </div>
 
         <div class="settings-nav-divider"></div>
 
-        @* Claude CLI 그룹 *@
-        <button class="settings-nav-group-header" @onclick="@(() => _cliGroupOpen = !_cliGroupOpen)">
-            <MudIcon Icon="@(_cliGroupOpen ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
-                     Size="Size.Small" />
-            <span>Claude CLI</span>
-        </button>
-        @if (_cliGroupOpen)
-        {
-            <div class="settings-nav-section">
-                <button class="settings-nav-item @ActiveClass("claude-settings")"
-                        @onclick="@(() => SetSection("claude-settings"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small" />
-                    Claude 설정
-                </button>
-                <button class="settings-nav-item @ActiveClass("hooks")"
-                        @onclick="@(() => SetSection("hooks"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" />
-                    훅
-                </button>
-                <button class="settings-nav-item @ActiveClass("rules")"
-                        @onclick="@(() => SetSection("rules"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" />
-                    룰
-                </button>
-                <button class="settings-nav-item @ActiveClass("instructions")"
-                        @onclick="@(() => SetSection("instructions"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
-                    인스트럭션
-                </button>
-            </div>
-        }
+        <div class="settings-nav-label">Claude CLI</div>
+        <div class="settings-nav-section">
+            <button class="settings-nav-item @ActiveClass("claude-settings")"
+                    @onclick="@(() => SetSection("claude-settings"))">
+                <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small" />
+                Claude 설정
+            </button>
+            <button class="settings-nav-item @ActiveClass("hooks")"
+                    @onclick="@(() => SetSection("hooks"))">
+                <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" />
+                훅
+            </button>
+            <button class="settings-nav-item @ActiveClass("rules")"
+                    @onclick="@(() => SetSection("rules"))">
+                <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" />
+                룰
+            </button>
+            <button class="settings-nav-item @ActiveClass("instructions")"
+                    @onclick="@(() => SetSection("instructions"))">
+                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
+                인스트럭션
+            </button>
+        </div>
 
-        @* 도구 그룹 *@
-        <button class="settings-nav-group-header" @onclick="@(() => _toolsGroupOpen = !_toolsGroupOpen)">
-            <MudIcon Icon="@(_toolsGroupOpen ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
-                     Size="Size.Small" />
-            <span>도구</span>
-        </button>
-        @if (_toolsGroupOpen)
-        {
-            <div class="settings-nav-section">
-                <button class="settings-nav-item @ActiveClass("session-replay")"
-                        @onclick="@(() => SetSection("session-replay"))">
-                    <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" />
-                    세션 히스토리
-                </button>
-                <button class="settings-nav-item @ActiveClass("memory")"
-                        @onclick="@(() => SetSection("memory"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" />
-                    메모리
-                </button>
-            </div>
-        }
+        <div class="settings-nav-label">도구</div>
+        <div class="settings-nav-section">
+            <button class="settings-nav-item @ActiveClass("session-replay")"
+                    @onclick="@(() => SetSection("session-replay"))">
+                <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" />
+                세션 히스토리
+            </button>
+            <button class="settings-nav-item @ActiveClass("memory")"
+                    @onclick="@(() => SetSection("memory"))">
+                <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" />
+                메모리
+            </button>
+        </div>
 
-        @* 시스템 그룹 *@
-        <button class="settings-nav-group-header" @onclick="@(() => _systemGroupOpen = !_systemGroupOpen)">
-            <MudIcon Icon="@(_systemGroupOpen ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
-                     Size="Size.Small" />
-            <span>시스템</span>
-        </button>
-        @if (_systemGroupOpen)
-        {
-            <div class="settings-nav-section">
-                <button class="settings-nav-item @ActiveClass("advanced")"
-                        @onclick="@(() => SetSection("advanced"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" />
-                    고급
-                </button>
-                <button class="settings-nav-item @ActiveClass("updates")"
-                        @onclick="@(() => SetSection("updates"))">
-                    <MudIcon Icon="@Icons.Material.Filled.SystemUpdate" Size="Size.Small" />
-                    업데이트
-                </button>
-            </div>
-        }
+        <div class="settings-nav-label">시스템</div>
+        <div class="settings-nav-section">
+            <button class="settings-nav-item @ActiveClass("advanced")"
+                    @onclick="@(() => SetSection("advanced"))">
+                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" />
+                고급
+            </button>
+            <button class="settings-nav-item @ActiveClass("updates")"
+                    @onclick="@(() => SetSection("updates"))">
+                <MudIcon Icon="@Icons.Material.Filled.SystemUpdate" Size="Size.Small" />
+                업데이트
+            </button>
+        </div>
 
         <div class="settings-nav-divider"></div>
         <div class="settings-nav-label">Workspaces</div>
@@ -229,39 +188,16 @@
 @code {
     private List<Workspace> _workspaces = [];
 
-    private bool _appGroupOpen = true;
-    private bool _aiGroupOpen = true;
-    private bool _cliGroupOpen = true;
-    private bool _toolsGroupOpen = true;
-    private bool _systemGroupOpen = true;
-
-    private static readonly HashSet<string> AppSections = ["general", "ai", "notifications", "terminal", "shortcuts"];
-    private static readonly HashSet<string> AiSections = ["integrations", "extensions"];
-    private static readonly HashSet<string> CliSections = ["claude-settings", "hooks", "rules", "instructions"];
-    private static readonly HashSet<string> ToolsSections = ["session-replay", "memory"];
-    private static readonly HashSet<string> SystemSections = ["advanced", "updates"];
-
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += HandleStateChanged;
         _workspaces = await WorkspaceService.GetWorkspacesAsync();
-        EnsureGroupOpen(ChatState.SettingsSection);
     }
 
     private void SetSection(string section)
     {
         ChatState.SetSettingsWorkspace(null);
         ChatState.SetSettingsSection(section);
-        EnsureGroupOpen(section);
-    }
-
-    private void EnsureGroupOpen(string section)
-    {
-        if (AppSections.Contains(section)) _appGroupOpen = true;
-        else if (AiSections.Contains(section)) _aiGroupOpen = true;
-        else if (CliSections.Contains(section)) _cliGroupOpen = true;
-        else if (ToolsSections.Contains(section)) _toolsGroupOpen = true;
-        else if (SystemSections.Contains(section)) _systemGroupOpen = true;
     }
 
     private void SelectWorkspace(string workspaceId)
