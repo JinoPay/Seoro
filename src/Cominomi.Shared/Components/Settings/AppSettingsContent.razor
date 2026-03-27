@@ -16,31 +16,31 @@
         @switch (Section)
         {
             case "general":
-                <Sections.GeneralSection Settings="_settings" />
+                <GeneralSection Settings="_settings" />
                 break;
             case "notifications":
-                <Sections.NotificationsSection Settings="_settings" OnSave="Save" />
+                <NotificationsSection Settings="_settings" OnSave="Save" />
                 break;
             case "terminal":
-                <Sections.TerminalSection Settings="_settings" OnSave="Save" />
+                <TerminalSection Settings="_settings" OnSave="Save" />
                 break;
             case "shortcuts":
-                <Sections.ShortcutsSection />
+                <ShortcutsSection />
                 break;
             case "ai":
-                <Sections.AiModelSection Settings="_settings" />
+                <AiModelSection Settings="_settings" />
                 break;
             case "integrations":
-                <Sections.IntegrationsSection Settings="_settings" />
+                <IntegrationsSection Settings="_settings" />
                 break;
             case "extensions":
-                <Sections.ExtensionsSection />
+                <ExtensionsSection />
                 break;
             case "advanced":
-                <Sections.AdvancedSection Settings="_settings" />
+                <AdvancedSection Settings="_settings" />
                 break;
             case "updates":
-                <Sections.UpdatesSection Settings="_settings" />
+                <UpdatesSection Settings="_settings" />
                 break;
         }
     </div>
