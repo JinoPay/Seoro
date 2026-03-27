@@ -10,6 +10,11 @@
         </button>
 
         <div class="settings-nav-section">
+            <button class="settings-nav-item @ActiveClass("dashboard")"
+                    @onclick="@(() => SetSection("dashboard"))">
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small" />
+                대시보드
+            </button>
             <button class="settings-nav-item @ActiveClass("general")"
                     @onclick="@(() => SetSection("general"))">
                 <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small" />
@@ -73,6 +78,42 @@
         </div>
 
         <div class="settings-nav-divider"></div>
+        <div class="settings-nav-label">Claude CLI</div>
+
+        <div class="settings-nav-section">
+            <button class="settings-nav-item @ActiveClass("claude-settings")"
+                    @onclick="@(() => SetSection("claude-settings"))">
+                <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small" />
+                Claude 설정
+            </button>
+            <button class="settings-nav-item @ActiveClass("hooks")"
+                    @onclick="@(() => SetSection("hooks"))">
+                <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" />
+                훅
+            </button>
+            <button class="settings-nav-item @ActiveClass("rules")"
+                    @onclick="@(() => SetSection("rules"))">
+                <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" />
+                룰
+            </button>
+            <button class="settings-nav-item @ActiveClass("instructions")"
+                    @onclick="@(() => SetSection("instructions"))">
+                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
+                인스트럭션
+            </button>
+            <button class="settings-nav-item @ActiveClass("session-replay")"
+                    @onclick="@(() => SetSection("session-replay"))">
+                <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" />
+                세션 히스토리
+            </button>
+            <button class="settings-nav-item @ActiveClass("memory")"
+                    @onclick="@(() => SetSection("memory"))">
+                <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" />
+                메모리
+            </button>
+        </div>
+
+        <div class="settings-nav-divider"></div>
         <div class="settings-nav-label">Workspaces</div>
 
         @foreach (var ws in _workspaces)
@@ -87,14 +128,42 @@
     </div>
 
     <div class="settings-page-content">
-        @if (ChatState.SettingsWorkspaceId == null)
-        {
-            <AppSettingsContent Section="@ChatState.SettingsSection" />
-        }
-        else
+        @if (ChatState.SettingsWorkspaceId != null)
         {
             <WorkspaceSettingsContent WorkspaceId="@ChatState.SettingsWorkspaceId"
                                       OnWorkspaceDeleted="HandleWorkspaceDeleted" />
+        }
+        else if (ChatState.SettingsSection == "dashboard")
+        {
+            <DashboardPage />
+        }
+        else if (ChatState.SettingsSection == "claude-settings")
+        {
+            <ClaudeSettingsSection />
+        }
+        else if (ChatState.SettingsSection == "hooks")
+        {
+            <HooksPage />
+        }
+        else if (ChatState.SettingsSection == "rules")
+        {
+            <RulesPage />
+        }
+        else if (ChatState.SettingsSection == "instructions")
+        {
+            <InstructionsPage />
+        }
+        else if (ChatState.SettingsSection == "session-replay")
+        {
+            <SessionReplayPage />
+        }
+        else if (ChatState.SettingsSection == "memory")
+        {
+            <MemoryBrowserPage />
+        }
+        else
+        {
+            <AppSettingsContent Section="@ChatState.SettingsSection" />
         }
     </div>
 </div>

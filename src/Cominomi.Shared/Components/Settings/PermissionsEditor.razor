@@ -1,0 +1,149 @@
+@using Cominomi.Shared.Models
+
+<div class="stack gap-4">
+    @* Allow rules *@
+    <div>
+        <div class="d-flex align-center gap-2 mb-2">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+            <span class="typo-subtitle2" style="color: var(--mud-palette-success);">Allow</span>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@(Permissions?.Allow?.Count ?? 0)</MudChip>
+        </div>
+        <div class="d-flex flex-wrap gap-1 mb-2">
+            @if (Permissions?.Allow != null)
+            {
+                @foreach (var rule in Permissions.Allow)
+                {
+                    <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Small"
+                             OnClose="@(() => RemoveRule("allow", rule))">
+                        @rule
+                    </MudChip>
+                }
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <MudTextField T="string" @bind-Value="_allowInput" Placeholder="Bash(npm run *)"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1;"
+                          OnKeyUp="@(e => { if (e.Key == "Enter") AddRule("allow"); })"
+                          HelperText="도구 패턴 입력 후 Enter 또는 추가 버튼" />
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Success"
+                           OnClick="@(() => AddRule("allow"))" Size="Size.Small" />
+        </div>
+    </div>
+
+    @* Ask rules *@
+    <div>
+        <div class="d-flex align-center gap-2 mb-2">
+            <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Color="Color.Warning" Size="Size.Small" />
+            <span class="typo-subtitle2" style="color: var(--mud-palette-warning);">Ask</span>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@(Permissions?.Ask?.Count ?? 0)</MudChip>
+        </div>
+        <div class="d-flex flex-wrap gap-1 mb-2">
+            @if (Permissions?.Ask != null)
+            {
+                @foreach (var rule in Permissions.Ask)
+                {
+                    <MudChip T="string" Color="Color.Warning" Variant="Variant.Outlined" Size="Size.Small"
+                             OnClose="@(() => RemoveRule("ask", rule))">
+                        @rule
+                    </MudChip>
+                }
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <MudTextField T="string" @bind-Value="_askInput" Placeholder="Edit(/src/**/*.config)"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1;"
+                          OnKeyUp="@(e => { if (e.Key == "Enter") AddRule("ask"); })"
+                          HelperText="확인이 필요한 도구 패턴" />
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Warning"
+                           OnClick="@(() => AddRule("ask"))" Size="Size.Small" />
+        </div>
+    </div>
+
+    @* Deny rules *@
+    <div>
+        <div class="d-flex align-center gap-2 mb-2">
+            <MudIcon Icon="@Icons.Material.Filled.Block" Color="Color.Error" Size="Size.Small" />
+            <span class="typo-subtitle2" style="color: var(--mud-palette-error);">Deny</span>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@(Permissions?.Deny?.Count ?? 0)</MudChip>
+        </div>
+        <div class="d-flex flex-wrap gap-1 mb-2">
+            @if (Permissions?.Deny != null)
+            {
+                @foreach (var rule in Permissions.Deny)
+                {
+                    <MudChip T="string" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Small"
+                             OnClose="@(() => RemoveRule("deny", rule))">
+                        @rule
+                    </MudChip>
+                }
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <MudTextField T="string" @bind-Value="_denyInput" Placeholder="WebFetch(domain:*)"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1;"
+                          OnKeyUp="@(e => { if (e.Key == "Enter") AddRule("deny"); })"
+                          HelperText="차단할 도구 패턴" />
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Error"
+                           OnClick="@(() => AddRule("deny"))" Size="Size.Small" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public PermissionRules? Permissions { get; set; }
+    [Parameter] public EventCallback<PermissionRules> PermissionsChanged { get; set; }
+
+    private string _allowInput = "";
+    private string _askInput = "";
+    private string _denyInput = "";
+
+    private async Task AddRule(string action)
+    {
+        var input = action switch
+        {
+            "allow" => _allowInput,
+            "ask" => _askInput,
+            "deny" => _denyInput,
+            _ => ""
+        };
+
+        if (string.IsNullOrWhiteSpace(input)) return;
+
+        Permissions ??= new PermissionRules();
+
+        switch (action)
+        {
+            case "allow":
+                Permissions.Allow ??= [];
+                if (!Permissions.Allow.Contains(input)) Permissions.Allow.Add(input);
+                _allowInput = "";
+                break;
+            case "ask":
+                Permissions.Ask ??= [];
+                if (!Permissions.Ask.Contains(input)) Permissions.Ask.Add(input);
+                _askInput = "";
+                break;
+            case "deny":
+                Permissions.Deny ??= [];
+                if (!Permissions.Deny.Contains(input)) Permissions.Deny.Add(input);
+                _denyInput = "";
+                break;
+        }
+
+        await PermissionsChanged.InvokeAsync(Permissions);
+    }
+
+    private async Task RemoveRule(string action, string rule)
+    {
+        if (Permissions == null) return;
+
+        switch (action)
+        {
+            case "allow": Permissions.Allow?.Remove(rule); break;
+            case "ask": Permissions.Ask?.Remove(rule); break;
+            case "deny": Permissions.Deny?.Remove(rule); break;
+        }
+
+        await PermissionsChanged.InvokeAsync(Permissions);
+    }
+}

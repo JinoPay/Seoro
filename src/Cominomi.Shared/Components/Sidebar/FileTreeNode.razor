@@ -67,6 +67,7 @@
             FileChangeType.Added => Icons.Material.Filled.NoteAdd,
             FileChangeType.Deleted => Icons.Material.Filled.Delete,
             FileChangeType.Renamed => Icons.Material.Filled.DriveFileRenameOutline,
+            FileChangeType.Untracked => Icons.Material.Filled.AddCircleOutline,
             _ => Icons.Material.Filled.EditNote
         };
     }
@@ -79,6 +80,7 @@
             FileChangeType.Added => "color: var(--color-success);",
             FileChangeType.Deleted => "color: var(--color-error);",
             FileChangeType.Renamed => "color: var(--color-warning);",
+            FileChangeType.Untracked => "color: var(--mud-palette-text-secondary);",
             _ => "color: var(--color-info);"
         };
     }

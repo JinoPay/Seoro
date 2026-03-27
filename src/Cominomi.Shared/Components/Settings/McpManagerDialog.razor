@@ -27,44 +27,47 @@
                 }
                 else
                 {
-                    <MudSimpleTable Dense="true" Hover="true" Class="mcp-table">
-                        <thead>
-                            <tr>
-                                <th>이름</th>
-                                <th>전송 방식</th>
-                                <th>범위</th>
-                                <th style="width: 110px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var server in _servers)
-                            {
-                                <tr>
-                                    <td>
-                                        <MudIcon Icon="@(server.Status.Running ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.RadioButtonUnchecked)"
-                                                 Color="@(server.Status.Running ? Color.Success : Color.Default)"
-                                                 Size="Size.Small" Style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;" />
-                                        @server.Name
-                                    </td>
-                                    <td>@server.Transport</td>
-                                    <td>
+                    <div class="mcp-server-list">
+                        @foreach (var server in _servers)
+                        {
+                            <div class="mcp-server-card">
+                                <div class="mcp-server-card-header">
+                                    <MudIcon Icon="@(server.Status.Running ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.RadioButtonUnchecked)"
+                                             Color="@(server.Status.Running ? Color.Success : Color.Default)"
+                                             Size="Size.Small" Style="width: 16px; height: 16px;" />
+                                    <MudIcon Icon="@GetTransportIcon(server)" Size="Size.Small"
+                                             Style="width: 16px; height: 16px; opacity: 0.6;" />
+                                    <span class="typo-subtitle2">@server.Name</span>
+                                    <div style="margin-left: auto; display: flex; gap: 2px; align-items: center;">
                                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                                 Color="@(server.Scope == "project" ? Color.Info : server.Scope == "local" ? Color.Warning : Color.Default)">
-                                            @server.Scope
+                                                 Color="@(IsCloudServer(server) ? Color.Info : Color.Default)">
+                                            @(IsCloudServer(server) ? "클라우드" : "로컬")
                                         </MudChip>
-                                    </td>
-                                    <td>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                 Color="@GetScopeColor(server.Scope)">
+                                            @GetScopeLabel(server.Scope)
+                                        </MudChip>
                                         <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
                                                        Color="Color.Primary"
                                                        OnClick="@(() => StartEdit(server))" />
                                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                                        Color="Color.Error"
                                                        OnClick="@(() => RemoveServer(server))" />
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </MudSimpleTable>
+                                    </div>
+                                </div>
+                                <div class="mcp-server-card-detail typo-caption text-secondary">
+                                    @if (server.Transport == "stdio")
+                                    {
+                                        <span>@server.Command @(server.Args.Count > 0 ? string.Join(" ", server.Args) : "")</span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(server.Url))
+                                    {
+                                        <span>@server.Url</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
                 }
                 <div style="padding: 8px;">
                     <MudButton StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Small"
@@ -416,4 +419,58 @@
         IsOpen = false;
         await IsOpenChanged.InvokeAsync(false);
     }
+
+    private static bool IsCloudServer(McpServer server) =>
+        server.Transport == "sse" ||
+        (!string.IsNullOrEmpty(server.Url) && !server.Url.Contains("localhost") && !server.Url.Contains("127.0.0.1"));
+
+    private static string GetTransportIcon(McpServer server) =>
+        server.Transport == "sse" || IsCloudServer(server)
+            ? Icons.Material.Filled.Cloud
+            : Icons.Material.Filled.Terminal;
+
+    private static Color GetScopeColor(string scope) => scope switch
+    {
+        "project" => Color.Info,
+        "local" => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static string GetScopeLabel(string scope) => scope switch
+    {
+        "project" => "프로젝트",
+        "local" => "로컬",
+        _ => "전역"
+    };
 }
+
+<style>
+    .mcp-server-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px;
+    }
+
+    .mcp-server-card {
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+
+    .mcp-server-card-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .mcp-server-card-detail {
+        margin-top: 4px;
+        padding-left: 38px;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>

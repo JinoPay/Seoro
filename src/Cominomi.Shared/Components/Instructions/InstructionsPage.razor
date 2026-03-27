@@ -1,0 +1,183 @@
+@using Cominomi.Shared.Models
+@inject IInstructionsService InstructionsService
+@inject ISnackbar Snackbar
+
+<div class="settings-content-area">
+    <div class="settings-content-header">
+        <div class="d-flex align-center gap-2">
+            <MudChipSet T="string" SelectedValue="@_scopeStr" SelectedValueChanged="OnScopeChanged"
+                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                        Variant="Variant.Outlined" Color="Color.Primary">
+                <MudChip T="string" Value="@("Global")" Icon="@Icons.Material.Filled.Public">
+                    글로벌
+                </MudChip>
+                <MudChip T="string" Value="@("Project")" Icon="@Icons.Material.Filled.Folder"
+                         Disabled="@(string.IsNullOrEmpty(_projectPath))">
+                    프로젝트
+                </MudChip>
+                <MudChip T="string" Value="@("Local")" Icon="@Icons.Material.Filled.InsertDriveFile"
+                         Disabled="@(string.IsNullOrEmpty(_projectPath))">
+                    루트 CLAUDE.md
+                </MudChip>
+            </MudChipSet>
+
+            @if (_scope != ClaudeSettingsScope.Global)
+            {
+                <div style="width: 200px;">
+                    <ProjectScopePicker @bind-SelectedPath="_projectPath" Label="" />
+                </div>
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <MudToggleIconButton @bind-Toggled="_showPreview"
+                                 Icon="@Icons.Material.Filled.Visibility"
+                                 ToggledIcon="@Icons.Material.Filled.Edit"
+                                 Size="Size.Small" Color="Color.Primary"
+                                 title="@(_showPreview ? "에디터로 전환" : "프리뷰로 전환")" />
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
+                       Size="Size.Small" Style="text-transform: none;" Disabled="_saving">
+                저장
+            </MudButton>
+        </div>
+    </div>
+
+    <div class="settings-content-body">
+        <div class="instructions-header mb-3">
+            <div class="typo-caption text-secondary" style="font-family: monospace;">
+                @_instruction.FilePath
+            </div>
+            @if (!_instruction.Exists)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                    파일 없음 — 저장 시 생성됩니다
+                </MudChip>
+            }
+        </div>
+
+        @if (_showPreview)
+        {
+            <div class="instructions-preview">
+                @((MarkupString)RenderMarkdownToHtml(_instruction.Content))
+            </div>
+        }
+        else
+        {
+            <MudTextField T="string" @bind-Value="_instruction.Content"
+                          Variant="Variant.Outlined" Lines="25"
+                          Placeholder="# CLAUDE.md&#10;&#10;이 파일은 Claude Code에 프로젝트 관련 지침을 제공합니다."
+                          Style="font-family: monospace; font-size: 0.8125rem;" />
+        }
+
+        @if (_instruction.ImportRefs.Count > 0)
+        {
+            <div class="mt-3">
+                <div class="typo-caption text-secondary mb-1">참조된 파일:</div>
+                <div class="d-flex flex-wrap gap-1">
+                    @foreach (var importRef in _instruction.ImportRefs)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info"
+                                 Icon="@Icons.Material.Filled.InsertDriveFile">
+                            @importRef
+                        </MudChip>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private InstructionFile _instruction = new()
+    {
+        Scope = ClaudeSettingsScope.Global,
+        FilePath = ""
+    };
+    private ClaudeSettingsScope _scope = ClaudeSettingsScope.Global;
+    private string _scopeStr = "Global";
+    private string? _projectPath;
+    private bool _showPreview;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task OnScopeChanged(string value)
+    {
+        _scopeStr = value;
+        _scope = Enum.Parse<ClaudeSettingsScope>(value);
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        _instruction = await InstructionsService.ReadAsync(_scope,
+            _scope == ClaudeSettingsScope.Global ? null : _projectPath);
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        try
+        {
+            await InstructionsService.SaveAsync(_scope, _instruction.Content,
+                _scope == ClaudeSettingsScope.Global ? null : _projectPath);
+            _instruction.Exists = true;
+            Snackbar.Add("CLAUDE.md가 저장되었습니다.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string RenderMarkdownToHtml(string markdown)
+    {
+        if (string.IsNullOrWhiteSpace(markdown)) return "<p class='text-secondary'>내용이 없습니다.</p>";
+        // Basic markdown rendering (headings, lists, code, bold, italic)
+        var html = markdown
+            .Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+
+        // Headings
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^### (.+)$",
+            "<h3>$1</h3>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^## (.+)$",
+            "<h2>$1</h2>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^# (.+)$",
+            "<h1>$1</h1>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        // Bold and italic
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
+        // Inline code
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"`(.+?)`",
+            "<code style='background: var(--mud-palette-background); padding: 2px 4px; border-radius: 3px;'>$1</code>");
+        // List items
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^- (.+)$",
+            "<li>$1</li>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        // Paragraphs
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\n\n", "</p><p>");
+        html = $"<div class='instructions-md-content'><p>{html}</p></div>";
+
+        return html;
+    }
+}
+
+<style>
+    .instructions-preview {
+        background: var(--mud-palette-background);
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 8px;
+        padding: 20px;
+        min-height: 400px;
+        overflow-y: auto;
+        max-height: 60vh;
+    }
+
+    .instructions-md-content h1 { font-size: 1.5rem; font-weight: 700; margin: 16px 0 8px; }
+    .instructions-md-content h2 { font-size: 1.25rem; font-weight: 600; margin: 14px 0 6px; }
+    .instructions-md-content h3 { font-size: 1.1rem; font-weight: 600; margin: 12px 0 4px; }
+    .instructions-md-content li { margin-left: 20px; list-style: disc; }
+    .instructions-md-content p { margin: 8px 0; }
+</style>

@@ -151,6 +151,11 @@ public static class Program
         appBuilder.Services.AddSingleton<SessionListDataService>();
         appBuilder.Services.AddScoped<ISessionListFacade, SessionListFacade>();
         appBuilder.Services.AddSingleton<IThemeService, ThemeService>();
+        appBuilder.Services.AddSingleton<IClaudeSettingsService, ClaudeSettingsService>();
+        appBuilder.Services.AddSingleton<IRulesService, RulesService>();
+        appBuilder.Services.AddSingleton<IInstructionsService, InstructionsService>();
+        appBuilder.Services.AddSingleton<IGamificationService, GamificationService>();
+        appBuilder.Services.AddSingleton<ISessionReplayService, SessionReplayService>();
 
         // Load external model definitions
         var modelsJsonPath = Path.Combine(AppPaths.Settings, "models.json");

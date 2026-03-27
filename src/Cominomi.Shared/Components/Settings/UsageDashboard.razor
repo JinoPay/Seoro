@@ -65,6 +65,23 @@
             </div>
         }
 
+        @* Cache efficiency *@
+        @if (TotalCacheTokens > 0)
+        {
+            <div class="usage-summary-cards" style="margin-top: 8px;">
+                <div class="usage-card">
+                    <div class="usage-card-label">캐시 효율</div>
+                    <div class="usage-card-value" style="color: var(--mud-palette-success);">@CacheEfficiencyRate.ToString("F1")%</div>
+                </div>
+                <div class="usage-card">
+                    <div class="usage-card-label">메시지당 비용</div>
+                    <div class="usage-card-value">
+                        $@CostPerSession.ToString("F4")
+                    </div>
+                </div>
+            </div>
+        }
+
         @* Tabs for detail views *@
         <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="usage-tabs">
             <MudTabPanel Text="모델별">
@@ -214,6 +231,19 @@
             _ => tokens.ToString()
         };
     }
+
+    private long TotalCacheTokens => (_stats?.TotalCacheCreationTokens ?? 0) + (_stats?.TotalCacheReadTokens ?? 0);
+
+    private double CacheEfficiencyRate
+    {
+        get
+        {
+            var total = TotalCacheTokens;
+            return total > 0 ? (double)(_stats?.TotalCacheReadTokens ?? 0) / total * 100 : 0;
+        }
+    }
+
+    private decimal CostPerSession => _stats is { TotalSessions: > 0 } ? _stats.TotalCost / _stats.TotalSessions : 0;
 
     private static string GetPercent(long part, long total)
     {

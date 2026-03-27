@@ -1,0 +1,51 @@
+@inject IWorkspaceService WorkspaceService
+
+<MudSelect T="string" @bind-Value="SelectedPath" Label="@Label" Variant="Variant.Outlined"
+           Margin="Margin.Dense" Dense="true" Clearable="true" Placeholder="프로젝트 선택..."
+           AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+    @foreach (var ws in _workspaces)
+    {
+        <MudSelectItem T="string" Value="@GetProjectPath(ws)">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" />
+                <span>@GetProjectName(ws)</span>
+            </div>
+        </MudSelectItem>
+    }
+</MudSelect>
+
+@code {
+    [Parameter] public string? SelectedPath { get; set; }
+    [Parameter] public EventCallback<string?> SelectedPathChanged { get; set; }
+    [Parameter] public string Label { get; set; } = "프로젝트";
+
+    private List<Workspace> _workspaces = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _workspaces = await WorkspaceService.GetWorkspacesAsync();
+    }
+
+    private async Task OnValueChanged(string? value)
+    {
+        SelectedPath = value;
+        await SelectedPathChanged.InvokeAsync(value);
+    }
+
+    private static string? GetProjectPath(Workspace ws)
+        => ws.RepoLocalPath;
+
+    private static string GetProjectName(Workspace ws)
+    {
+        if (!string.IsNullOrEmpty(ws.RepoUrl))
+        {
+            var url = ws.RepoUrl.TrimEnd('/');
+            if (url.EndsWith(".git")) url = url[..^4];
+            var idx = url.LastIndexOf('/');
+            if (idx >= 0) return url[(idx + 1)..];
+        }
+        if (!string.IsNullOrEmpty(ws.RepoLocalPath))
+            return Path.GetFileName(ws.RepoLocalPath.TrimEnd(Path.DirectorySeparatorChar, '/'));
+        return ws.Name;
+    }
+}

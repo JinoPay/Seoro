@@ -536,7 +536,7 @@ public class GitService : IGitService
                 summary.Files.Add(new FileDiff
                 {
                     FilePath = relPath,
-                    ChangeType = FileChangeType.Added,
+                    ChangeType = FileChangeType.Untracked,
                     UnifiedDiff = diffBuilder.ToString(),
                     Additions = addCount,
                     Deletions = 0
@@ -643,6 +643,30 @@ public class GitService : IGitService
         _defaultBranchCache.TryRemove(key, out _);
         _branchListCache.TryRemove(key, out _);
         _branchGroupCache.TryRemove(key, out _);
+    }
+
+    public async Task<GitResult> StageAllAsync(string workingDir, CancellationToken ct = default)
+    {
+        return await RunGitAsync(workingDir, ct, "add", "-A");
+    }
+
+    public async Task<GitResult> CommitAsync(string workingDir, string message, CancellationToken ct = default)
+    {
+        return await RunGitAsync(workingDir, ct, "commit", "-m", message);
+    }
+
+    public async Task<(int Ahead, int Behind)> GetAheadBehindAsync(string workingDir, CancellationToken ct = default)
+    {
+        var result = await RunGitAsync(workingDir, ct, "rev-list", "--count", "--left-right", "@{upstream}...HEAD");
+        if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
+            return (0, 0);
+
+        var parts = result.Output.Trim().Split('\t');
+        if (parts.Length != 2) return (0, 0);
+
+        int.TryParse(parts[0], out var behind);
+        int.TryParse(parts[1], out var ahead);
+        return (ahead, behind);
     }
 
     /// <summary>

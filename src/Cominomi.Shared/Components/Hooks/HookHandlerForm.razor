@@ -1,0 +1,129 @@
+@using Cominomi.Shared.Models
+
+<div class="stack gap-3 pt-3">
+    <MudSelect T="ClaudeHookHandlerType" Value="Hook.Type" ValueChanged="OnTypeChanged"
+               Label="핸들러 타입" Variant="Variant.Outlined" Margin="Margin.Dense">
+        <MudSelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Command">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" />
+                Command — 셸 명령어 실행
+            </div>
+        </MudSelectItem>
+        <MudSelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Http">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Http" Size="Size.Small" />
+                HTTP — 웹훅 POST 요청
+            </div>
+        </MudSelectItem>
+        <MudSelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Prompt">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                Prompt — AI 검증/필터
+            </div>
+        </MudSelectItem>
+        <MudSelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Agent">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" />
+                Agent — 서브에이전트 트리거
+            </div>
+        </MudSelectItem>
+    </MudSelect>
+
+    @switch (Hook.Type)
+    {
+        case ClaudeHookHandlerType.Command:
+            <MudTextField T="string" @bind-Value="Hook.Command" Label="명령어"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Placeholder="echo 'hello'" Lines="2"
+                          TextChanged="@(_ => NotifyChanged())" />
+            break;
+
+        case ClaudeHookHandlerType.Http:
+            <MudTextField T="string" @bind-Value="Hook.Url" Label="URL"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Placeholder="https://example.com/webhook"
+                          TextChanged="@(_ => NotifyChanged())" />
+            <div class="typo-caption text-secondary">헤더 (key: value, 줄당 하나):</div>
+            <MudTextField T="string" Value="@SerializeHeaders()" ValueChanged="@(v => ParseHeaders(v))"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2"
+                          Placeholder="Authorization: Bearer xxx&#10;Content-Type: application/json" />
+            break;
+
+        case ClaudeHookHandlerType.Prompt:
+            <MudTextField T="string" @bind-Value="Hook.Prompt" Label="프롬프트"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Placeholder="Check if this action is safe and appropriate" Lines="3"
+                          TextChanged="@(_ => NotifyChanged())" />
+            <MudTextField T="string" @bind-Value="Hook.Model" Label="모델 (선택)"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Placeholder="claude-haiku-4-5-20251001"
+                          TextChanged="@(_ => NotifyChanged())" />
+            break;
+
+        case ClaudeHookHandlerType.Agent:
+            <MudTextField T="string" @bind-Value="Hook.Prompt" Label="에이전트 프롬프트"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Placeholder="Analyze and summarize the results" Lines="3"
+                          TextChanged="@(_ => NotifyChanged())" />
+            <MudTextField T="string" @bind-Value="Hook.Model" Label="모델"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Placeholder="claude-sonnet-4-20250514"
+                          TextChanged="@(_ => NotifyChanged())" />
+            break;
+    }
+
+    @* Common fields *@
+    <div class="d-flex gap-2">
+        <MudNumericField T="int?" @bind-Value="Hook.Timeout" Label="타임아웃 (초)"
+                         Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="300"
+                         Style="flex: 1;" />
+        <MudTextField T="string" @bind-Value="Hook.StatusMessage" Label="상태 메시지"
+                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Placeholder="Running hook..." Style="flex: 1;"
+                      TextChanged="@(_ => NotifyChanged())" />
+    </div>
+
+    <MudSwitch T="bool?" @bind-Value="Hook.Async" Label="비동기 실행" Color="Color.Primary"
+               UncheckedColor="Color.Default" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ClaudeHookHandler Hook { get; set; } = default!;
+    [Parameter] public EventCallback<ClaudeHookHandler> HookChanged { get; set; }
+
+    private async Task OnTypeChanged(ClaudeHookHandlerType type)
+    {
+        Hook.Type = type;
+        await NotifyChanged();
+    }
+
+    private async Task NotifyChanged()
+    {
+        await HookChanged.InvokeAsync(Hook);
+    }
+
+    private string SerializeHeaders()
+    {
+        if (Hook.Headers == null || Hook.Headers.Count == 0) return "";
+        return string.Join("\n", Hook.Headers.Select(h => $"{h.Key}: {h.Value}"));
+    }
+
+    private async Task ParseHeaders(string? text)
+    {
+        Hook.Headers = new();
+        if (string.IsNullOrWhiteSpace(text)) { await NotifyChanged(); return; }
+
+        foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var colonIdx = line.IndexOf(':');
+            if (colonIdx > 0)
+            {
+                var key = line[..colonIdx].Trim();
+                var value = line[(colonIdx + 1)..].Trim();
+                if (!string.IsNullOrEmpty(key))
+                    Hook.Headers[key] = value;
+            }
+        }
+        await NotifyChanged();
+    }
+}

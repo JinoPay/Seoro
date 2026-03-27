@@ -1,0 +1,230 @@
+@using Cominomi.Shared.Models
+@inject ISessionReplayService ReplayService
+
+<div class="settings-content-area">
+    <div class="settings-content-header">
+        <span class="typo-h6">세션 히스토리</span>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@_sessions.Count 세션</MudChip>
+    </div>
+    <div class="settings-content-body">
+        <div class="replay-layout">
+            @* Left: Session list *@
+            <div class="replay-sidebar">
+                <MudTextField T="string" @bind-Value="_search" Placeholder="검색..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                              Class="mb-2" />
+
+                @if (_loading)
+                {
+                    <div style="display: flex; justify-content: center; padding: 20px;">
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                    </div>
+                }
+                else
+                {
+                    @foreach (var s in FilteredSessions)
+                    {
+                        <div class="@($"replay-item {(_selected?.Id == s.Id ? "active" : "")}")"
+                             @onclick="@(() => SelectSession(s))">
+                            <div class="typo-caption text-secondary">
+                                @s.FirstTimestamp?.ToString("MM/dd HH:mm")
+                                @if (s.ProjectPath != null)
+                                {
+                                    <span> &middot; @s.ProjectPath</span>
+                                }
+                            </div>
+                            <div class="typo-body2" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @(s.FirstMessage ?? "(no messages)")
+                            </div>
+                            <div class="d-flex gap-2 mt-1">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@s.MessageCount msgs</MudChip>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@s.ToolCallCount tools</MudChip>
+                            </div>
+                        </div>
+                    }
+
+                    @if (_sessions.Count == 0)
+                    {
+                        <div class="typo-caption text-secondary text-center pa-4">
+                            Claude CLI 세션 히스토리가 없습니다
+                        </div>
+                    }
+                }
+            </div>
+
+            @* Right: Event timeline *@
+            <div class="replay-timeline">
+                @if (_events.Count > 0)
+                {
+                    @foreach (var evt in _events)
+                    {
+                        <div class="@($"replay-event {evt.Type}")">
+                            <div class="d-flex align-center gap-2 mb-1">
+                                <MudIcon Icon="@GetEventIcon(evt.Type)" Size="Size.Small"
+                                         Color="@GetEventColor(evt.Type)" />
+                                <span class="typo-caption" style="font-weight: 600;">@GetEventLabel(evt.Type)</span>
+                                @if (evt.ToolName != null)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@evt.ToolName</MudChip>
+                                }
+                                @if (evt.Timestamp != null)
+                                {
+                                    <span class="typo-caption text-secondary">@evt.Timestamp.Value.ToString("HH:mm:ss")</span>
+                                }
+                            </div>
+                            <div class="typo-body2" style="white-space: pre-wrap; word-break: break-word;">@evt.Content</div>
+                        </div>
+                    }
+
+                    @if (_hasMore)
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="LoadMore"
+                                   FullWidth="true" Style="text-transform: none;">
+                            더 보기...
+                        </MudButton>
+                    }
+                }
+                else if (_selected != null)
+                {
+                    <div class="typo-caption text-secondary text-center pa-8">이벤트 로딩 중...</div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column align-center justify-center" style="height: 300px; opacity: 0.5;">
+                        <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" />
+                        <div class="typo-body2 mt-2">왼쪽에서 세션을 선택하세요</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<SessionReplaySummary> _sessions = [];
+    private SessionReplaySummary? _selected;
+    private List<SessionReplayEvent> _events = [];
+    private string _search = "";
+    private bool _loading = true;
+    private bool _hasMore;
+    private int _page;
+    private const int PageSize = 50;
+
+    private List<SessionReplaySummary> FilteredSessions => string.IsNullOrWhiteSpace(_search)
+        ? _sessions
+        : _sessions.Where(s =>
+            (s.FirstMessage?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (s.ProjectPath?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _sessions = await ReplayService.ListSessionsAsync();
+        _loading = false;
+    }
+
+    private async Task SelectSession(SessionReplaySummary session)
+    {
+        _selected = session;
+        _page = 0;
+        _events = await ReplayService.LoadEventsAsync(session.FilePath, 0, PageSize);
+        _hasMore = _events.Count == PageSize;
+    }
+
+    private async Task LoadMore()
+    {
+        if (_selected == null) return;
+        _page++;
+        var more = await ReplayService.LoadEventsAsync(_selected.FilePath, _page * PageSize, PageSize);
+        _events.AddRange(more);
+        _hasMore = more.Count == PageSize;
+    }
+
+    private static string GetEventIcon(string type) => type switch
+    {
+        "human" or "user" => Icons.Material.Filled.Person,
+        "assistant" => Icons.Material.Filled.SmartToy,
+        "tool_use" => Icons.Material.Filled.Build,
+        "tool_result" => Icons.Material.Filled.Output,
+        _ => Icons.Material.Filled.Code
+    };
+
+    private static Color GetEventColor(string type) => type switch
+    {
+        "human" or "user" => Color.Primary,
+        "assistant" => Color.Secondary,
+        "tool_use" => Color.Warning,
+        "tool_result" => Color.Success,
+        _ => Color.Default
+    };
+
+    private static string GetEventLabel(string type) => type switch
+    {
+        "human" or "user" => "User",
+        "assistant" => "Assistant",
+        "tool_use" => "Tool Use",
+        "tool_result" => "Tool Result",
+        _ => type
+    };
+}
+
+<style>
+    .replay-layout {
+        display: flex;
+        gap: 0;
+        min-height: 500px;
+    }
+
+    .replay-sidebar {
+        width: 320px;
+        min-width: 320px;
+        border-right: 1px solid var(--mud-palette-lines-default);
+        padding: 12px;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .replay-item {
+        padding: 10px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-bottom: 4px;
+    }
+
+    .replay-item:hover { background: var(--mud-palette-action-default-hover); }
+    .replay-item.active {
+        background: var(--mud-palette-primary-hover);
+        border-left: 2px solid var(--mud-palette-primary);
+    }
+
+    .replay-timeline {
+        flex: 1;
+        padding: 16px 20px;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .replay-event {
+        padding: 10px 14px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        border: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .replay-event.user, .replay-event.human {
+        border-left: 3px solid var(--mud-palette-primary);
+    }
+
+    .replay-event.assistant {
+        border-left: 3px solid var(--mud-palette-secondary);
+    }
+
+    .replay-event.tool_use {
+        border-left: 3px solid var(--mud-palette-warning);
+    }
+
+    .replay-event.tool_result {
+        border-left: 3px solid var(--mud-palette-success);
+        font-size: 0.8rem;
+    }
+</style>
