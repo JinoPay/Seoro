@@ -58,6 +58,12 @@ tests/
 4. `dotnet run --project src/Cominomi.Desktop` - Run the app
 5. Release: tag `vX.Y.Z` and push to trigger CI/CD
 
+## Release Checklist
+버전 태그(`vX.Y.Z`)를 push하기 전에 반드시 아래 항목을 확인:
+1. `changelog.json`에 해당 버전의 변경 내역 추가
+2. `README.md` 등 문서에 버전 관련 내용이 있다면 최신화
+3. CI가 태그에서 버전을 추출하여 어셈블리에 자동 반영 (`-p:Version`)
+
 ## Anti-Patterns
 - Do not modify `CominomiConstants.cs` limits without understanding token budget implications
 - Do not bypass the `StreamEventProcessor` pipeline - add new handlers instead

@@ -36,6 +36,7 @@ jobs:
           -c Release
           -r win-x64
           --self-contained
+          -p:Version=${{ steps.version.outputs.VERSION }}
           -o publish/win
         env:
           COMINOMI_GITHUB_TOKEN: ${{ secrets.COMINOMI_GITHUB_TOKEN }}
@@ -96,6 +97,7 @@ jobs:
           -c Release
           -r osx-arm64
           --self-contained
+          -p:Version=${{ steps.version.outputs.VERSION }}
           -o publish/mac
         env:
           COMINOMI_GITHUB_TOKEN: ${{ secrets.COMINOMI_GITHUB_TOKEN }}
