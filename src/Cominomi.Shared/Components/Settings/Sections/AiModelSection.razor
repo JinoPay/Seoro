@@ -1,0 +1,44 @@
+<div class="settings-section-title">AI 모델</div>
+<div class="settings-section-desc">AI 모델 및 동작 방식을 설정합니다.</div>
+
+<div class="stack gap-3">
+    <MudSelect T="string" @bind-Value="Settings.DefaultModel" Label="기본 모델"
+               Variant="Variant.Outlined" Margin="Margin.Dense"
+               HelperText="전역 기본값입니다. 워크스페이스별로 다른 모델을 지정할 수 있습니다.">
+        @foreach (var model in ModelDefinitions.All)
+        {
+            <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudSelect T="string" @bind-Value="Settings.DefaultEffortLevel" Label="기본 Effort 레벨"
+               Variant="Variant.Outlined" Margin="Margin.Dense"
+               HelperText="Cominomi에서 Claude CLI 실행 시 적용됩니다. auto: 모델 기본값, max: 확장 사고 모드 (Opus만 지원)">
+        <MudSelectItem T="string" Value="@("auto")">Auto</MudSelectItem>
+        <MudSelectItem T="string" Value="@("low")">Low</MudSelectItem>
+        <MudSelectItem T="string" Value="@("medium")">Medium</MudSelectItem>
+        <MudSelectItem T="string" Value="@("high")">High</MudSelectItem>
+        <MudSelectItem T="string" Value="@("max")">Max (Thinking)</MudSelectItem>
+    </MudSelect>
+
+    <MudSelect T="string" @bind-Value="Settings.DefaultPermissionMode" Label="기본 권한 모드"
+               Variant="Variant.Outlined" Margin="Margin.Dense"
+               HelperText="Cominomi에서 Claude CLI 실행 시 적용되는 권한 모드입니다.">
+        <MudSelectItem T="string" Value="@("bypassAll")">일반 모드 (Bypass All)</MudSelectItem>
+        <MudSelectItem T="string" Value="@("plan")">플랜 모드</MudSelectItem>
+    </MudSelect>
+
+    <MudTextField @bind-Value="Settings.FallbackModel" Label="Fallback 모델"
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Placeholder="sonnet"
+                  HelperText="기본 모델 과부하 시 대체 모델 (비워두면 미사용)" />
+
+    <MudTextField @bind-Value="Settings.McpConfigPath" Label="MCP 설정 파일 경로"
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Placeholder="./mcp.json"
+                  HelperText="MCP 서버 설정 JSON 파일 경로 (비워두면 미사용)" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AppSettings Settings { get; set; } = null!;
+}

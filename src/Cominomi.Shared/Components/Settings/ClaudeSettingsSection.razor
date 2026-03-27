@@ -67,11 +67,12 @@
                 <MudTextField T="string" @bind-Value="_settings.Model" Label="모델"
                               Variant="Variant.Outlined" Margin="Margin.Dense"
                               Placeholder="claude-sonnet-4-20250514"
-                              HelperText="Claude CLI에서 사용할 기본 모델 ID" />
+                              HelperText="Claude CLI의 settings.json에 저장됩니다. Cominomi 외부에서 CLI 실행 시 사용됩니다." />
 
                 @* Effort Level *@
                 <MudSelect T="EffortLevel?" @bind-Value="_settings.EffortLevel" Label="Effort 레벨"
-                           Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                           HelperText="Claude CLI의 settings.json에 저장됩니다. Cominomi의 앱 설정 > AI 모델에서 지정한 값이 우선합니다.">
                     <MudSelectItem T="EffortLevel?" Value="@(EffortLevel.Low)">Low</MudSelectItem>
                     <MudSelectItem T="EffortLevel?" Value="@(EffortLevel.Medium)">Medium</MudSelectItem>
                     <MudSelectItem T="EffortLevel?" Value="@(EffortLevel.High)">High</MudSelectItem>
@@ -79,7 +80,8 @@
 
                 @* Default Mode *@
                 <MudSelect T="ClaudeDefaultMode?" @bind-Value="_settings.DefaultMode" Label="기본 모드"
-                           Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                           HelperText="Claude CLI의 settings.json에 저장됩니다. Cominomi 외부에서 CLI 실행 시 사용됩니다.">
                     <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.Default)">Default</MudSelectItem>
                     <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.Plan)">Plan</MudSelectItem>
                     <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.AcceptEdits)">Accept Edits</MudSelectItem>
@@ -106,6 +108,9 @@
                     <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" Class="mr-1" />
                     환경변수
                 </div>
+                <small class="typo-caption text-secondary" style="margin-top: -4px;">
+                    Claude CLI의 settings.json에 저장됩니다. CLI가 직접 실행될 때도 적용됩니다.
+                </small>
                 <EnvVarsEditor @bind-EnvVars="_settings.Env" />
             </div>
         }
