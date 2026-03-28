@@ -19,6 +19,11 @@
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                                   Immediate="true" Style="flex: 1;" />
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.AutoAwesome"
+                               OnClick="OpenTemplates" Size="Size.Small">
+                        템플릿
+                    </MudButton>
                     <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.Add"
                                OnClick="CreateNew" Size="Size.Small">
@@ -40,58 +45,22 @@
                 }
                 else
                 {
-                    <MudSimpleTable Dense="true" Hover="true" Class="slash-command-table">
-                        <thead>
-                            <tr>
-                                <th>명령어</th>
-                                <th>설명</th>
-                                <th>범위</th>
-                                <th>유형</th>
-                                <th style="width: 110px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var cmd in FilteredCommands)
-                            {
-                                <tr class="@(cmd.IsBuiltIn ? "builtin-row" : "")">
-                                    <td>
-                                        <span style="font-family: var(--font-mono); font-weight: 600;">
-                                            /@cmd.Name
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="typo-body2 text-secondary">@cmd.Description</span>
-                                    </td>
-                                    <td>
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                                 Color="@GetScopeColor(cmd.Scope)">
-                                            @GetScopeLabel(cmd.Scope)
-                                        </MudChip>
-                                    </td>
-                                    <td>
+                    <div class="skill-card-list">
+                        @foreach (var cmd in FilteredCommands)
+                        {
+                            <div class="@($"skill-card {(cmd.IsBuiltIn ? "builtin" : "custom")}")">
+                                <div class="skill-card-header">
+                                    <span style="font-family: var(--font-mono); font-weight: 600;">/@cmd.Name</span>
+                                    <div style="margin-left: auto; display: flex; gap: 2px; align-items: center;">
                                         @if (cmd.IsBuiltIn)
                                         {
                                             <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
                                                      Color="Color.Default">내장</MudChip>
                                         }
-                                        @if (cmd.AcceptsArguments)
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
-                                                     Color="Color.Info">$ARGS</MudChip>
-                                        }
-                                        @if (cmd.AllowedTools.Count > 0)
-                                        {
-                                            <MudTooltip Text="@string.Join(", ", cmd.AllowedTools)">
-                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
-                                                         Color="Color.Warning">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small"
-                                                             Style="width: 14px; height: 14px; margin-right: 2px;" />
-                                                    @cmd.AllowedTools.Count
-                                                </MudChip>
-                                            </MudTooltip>
-                                        }
-                                    </td>
-                                    <td>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                 Color="@GetScopeColor(cmd.Scope)">
+                                            @GetScopeLabel(cmd.Scope)
+                                        </MudChip>
                                         @if (!cmd.IsBuiltIn)
                                         {
                                             <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
@@ -105,14 +74,32 @@
                                         {
                                             <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
                                                            Color="Color.Default"
-                                                           OnClick="@(() => ViewCommand(cmd))"
-                                                           title="내용 보기" />
+                                                           OnClick="@(() => ViewCommand(cmd))" />
                                         }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </MudSimpleTable>
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(cmd.Description))
+                                {
+                                    <div class="typo-body2 text-secondary" style="margin-top: 2px;">@cmd.Description</div>
+                                }
+                                @if (cmd.AcceptsArguments || cmd.AllowedTools.Count > 0)
+                                {
+                                    <div class="skill-card-badges">
+                                        @if (cmd.AcceptsArguments)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                                     Color="Color.Info">$ARGS</MudChip>
+                                        }
+                                        @foreach (var tool in cmd.AllowedTools)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                                     Color="Color.Warning">@tool</MudChip>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
                 }
 
                 <div style="padding: 8px;">
@@ -367,6 +354,28 @@
         }
     }
 
+    private void OpenTemplates()
+    {
+        _showTemplates = true;
+        StateHasChanged();
+    }
+
+    private void OnTemplateSelected(TemplateDefinition template)
+    {
+        _showTemplates = false;
+        ResetEditForm();
+        _editName = template.Name.ToLowerInvariant().Replace(' ', '-');
+        _editDescription = template.Description;
+        _editContent = template.Content;
+        _editScope = "user";
+        _isNewCommand = true;
+        _editingCommand = new SkillDefinition { IsBuiltIn = false, Scope = "user" };
+        _activeTabIndex = 1;
+        StateHasChanged();
+    }
+
+    private bool _showTemplates;
+
     private async Task Close()
     {
         ResetEditForm();
@@ -375,3 +384,40 @@
         await IsOpenChanged.InvokeAsync(false);
     }
 }
+
+<TemplateGalleryDialog IsOpen="_showTemplates"
+                       IsOpenChanged="@(v => { _showTemplates = v; StateHasChanged(); })"
+                       DefaultCategory="TemplateCategory.Skill"
+                       OnTemplateSelected="OnTemplateSelected" />
+
+<style>
+    .skill-card-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px;
+    }
+
+    .skill-card {
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+
+    .skill-card.builtin {
+        opacity: 0.75;
+    }
+
+    .skill-card-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .skill-card-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        margin-top: 4px;
+    }
+</style>

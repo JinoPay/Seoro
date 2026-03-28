@@ -143,7 +143,6 @@ public class ChatState : IChatState
 
     public void OpenSettings(string section = "general", string? workspaceId = null)
     {
-        ShowActivity = false;
         ShowNotifications = false;
         Settings.OpenSettings(section, workspaceId);
     }
@@ -151,29 +150,13 @@ public class ChatState : IChatState
     public void CloseSettings()
         => Settings.CloseSettings();
 
-    // --- Overlay state (Activity / Notifications) ---
+    // --- Overlay state (Notifications) ---
 
-    public bool ShowActivity { get; private set; }
     public bool ShowNotifications { get; private set; }
-
-    public void OpenActivity()
-    {
-        Settings.CloseSettings();
-        ShowNotifications = false;
-        ShowActivity = true;
-        NotifyStateChanged();
-    }
-
-    public void CloseActivity()
-    {
-        ShowActivity = false;
-        NotifyStateChanged();
-    }
 
     public void OpenNotifications()
     {
         Settings.CloseSettings();
-        ShowActivity = false;
         ShowNotifications = true;
         NotifyStateChanged();
     }

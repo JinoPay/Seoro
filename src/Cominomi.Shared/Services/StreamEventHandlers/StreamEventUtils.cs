@@ -81,36 +81,4 @@ internal static class StreamEventUtils
         };
     }
 
-    internal static async Task RecordUsageAsync(
-        Session session, UsageInfo usage, decimal? costOverride,
-        IUsageService usageService, ILogger logger)
-    {
-        try
-        {
-            var model = session.ResolvedModel ?? session.Model ?? "unknown";
-            var entry = new UsageEntry
-            {
-                Timestamp = DateTime.UtcNow,
-                Model = model,
-                InputTokens = usage.InputTokens,
-                OutputTokens = usage.OutputTokens,
-                CacheCreationTokens = usage.CacheCreationInputTokens ?? 0,
-                CacheReadTokens = usage.CacheReadInputTokens ?? 0,
-                SessionId = session.Id,
-                ProjectPath = session.Git.WorktreePath
-            };
-            entry.CostUsd = costOverride ?? usageService.CalculateCost(
-                model, entry.InputTokens, entry.OutputTokens,
-                entry.CacheCreationTokens, entry.CacheReadTokens);
-
-            logger.LogInformation("Recording usage: Model={Model}, In={In}, Out={Out}, Cost=${Cost:F6}",
-                model, entry.InputTokens, entry.OutputTokens, entry.CostUsd);
-
-            await usageService.RecordUsageAsync(entry);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to record usage for session {SessionId}", session.Id);
-        }
-    }
 }

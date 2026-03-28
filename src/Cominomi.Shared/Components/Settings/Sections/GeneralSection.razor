@@ -1,0 +1,84 @@
+@inject IFolderPickerService FolderPickerService
+@inject IJSRuntime JS
+
+<div class="settings-section-title">일반</div>
+<div class="settings-section-desc">앱의 기본 동작을 설정합니다.</div>
+
+<div class="stack gap-3">
+    <MudSelect T="string" @bind-Value="Settings.Theme" Label="테마"
+               Variant="Variant.Outlined" Margin="Margin.Dense">
+        <MudSelectItem T="string" Value="@("dark")">다크</MudSelectItem>
+        <MudSelectItem T="string" Value="@("light")">라이트</MudSelectItem>
+        <MudSelectItem T="string" Value="@("system")">시스템</MudSelectItem>
+    </MudSelect>
+
+    <div class="settings-group-title" style="margin-top: 16px;">화면 배율</div>
+
+    <div class="stack gap-1">
+        <div class="stack-row items-center gap-2">
+            <MudSlider T="double"
+                       Value="@(Settings.UiScale == 0 ? _autoDefault : Settings.UiScale)"
+                       ValueChanged="@(v => { Settings.UiScale = v; _ = ApplyUiScalePreview(v); })"
+                       Min="0.8" Max="1.5" Step="0.05"
+                       Color="Color.Primary"
+                       Style="flex: 1;" />
+            <span class="typo-body2" style="min-width: 48px; text-align: right;">
+                @((Settings.UiScale == 0 ? _autoDefault : Settings.UiScale).ToString("P0"))
+            </span>
+        </div>
+
+        <div class="stack-row gap-1 items-center">
+            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+                       OnClick="@(() => { Settings.UiScale = 0; _ = ApplyUiScalePreview(_autoDefault); })"
+                       Style="text-transform: none;">
+                자동 (플랫폼 기본값)
+            </MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+                       OnClick="@(() => { Settings.UiScale = 1.0; _ = ApplyUiScalePreview(1.0); })"
+                       Style="text-transform: none;">
+                100%
+            </MudButton>
+        </div>
+
+        <small class="typo-caption text-secondary">
+            macOS 기본값: 110%, Windows 기본값: 100%. 슬라이더 조작 시 바로 미리보기됩니다.
+        </small>
+    </div>
+
+    <div class="settings-group-title" style="margin-top: 16px;">Git 워크플로우</div>
+
+    <div class="stack-row items-center gap-1">
+        <MudTextField @bind-Value="Settings.DefaultCloneDirectory" Label="클론 디렉토리"
+                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Placeholder="~/Cominomi"
+                      HelperText="저장소가 클론되는 위치입니다. 비워두면 기본값을 사용합니다."
+                      Style="flex: 1;" />
+        <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
+                       OnClick="BrowseCloneDirectory" title="찾아보기..." />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AppSettings Settings { get; set; } = null!;
+
+    private double _autoDefault = 1.0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _autoDefault = await JS.InvokeAsync<double>("getDefaultUiScale"); } catch { }
+    }
+
+    private async Task ApplyUiScalePreview(double scale)
+    {
+        try { await JS.InvokeVoidAsync("setUiScale", scale); } catch { }
+    }
+
+    private async Task BrowseCloneDirectory()
+    {
+        var path = await FolderPickerService.PickFolderAsync();
+        if (!string.IsNullOrEmpty(path))
+        {
+            Settings.DefaultCloneDirectory = path;
+        }
+    }
+}

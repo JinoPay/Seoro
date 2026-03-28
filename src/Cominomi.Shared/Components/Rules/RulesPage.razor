@@ -1,0 +1,236 @@
+@using Cominomi.Shared.Models
+@inject IRulesService RulesService
+@inject ISnackbar Snackbar
+
+<div class="settings-content-area">
+    <div class="settings-content-header">
+        <div class="d-flex align-center gap-2">
+            <MudChipSet T="string" SelectedValue="@_scopeStr" SelectedValueChanged="OnScopeChanged"
+                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                        Variant="Variant.Outlined" Color="Color.Primary">
+                <MudChip T="string" Value="@("Global")" Icon="@Icons.Material.Filled.Public">글로벌</MudChip>
+                <MudChip T="string" Value="@("Project")" Icon="@Icons.Material.Filled.Folder"
+                         Disabled="@(string.IsNullOrEmpty(_projectPath))">프로젝트</MudChip>
+            </MudChipSet>
+            @if (_scope != ClaudeSettingsScope.Global)
+            {
+                <div style="width: 200px;">
+                    <ProjectScopePicker @bind-SelectedPath="_projectPath" Label="" />
+                </div>
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.AutoAwesome" OnClick="@(() => _showTemplates = true)"
+                       Style="text-transform: none;">
+                템플릿
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="CreateNewRule"
+                       Style="text-transform: none;">
+                새 룰
+            </MudButton>
+        </div>
+    </div>
+
+    <div class="settings-content-body">
+        <div class="rules-layout">
+            @* Left: Rule list *@
+            <div class="rules-sidebar">
+                <MudTextField T="string" @bind-Value="_search" Placeholder="룰 검색..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                              Class="mb-2" />
+
+                @foreach (var rule in FilteredRules)
+                {
+                    <div class="rules-item @(_selectedRule?.FilePath == rule.FilePath ? "active" : "")"
+                         @onclick="@(() => SelectRule(rule))">
+                        <div class="typo-subtitle2">@rule.FileName</div>
+                        @if (rule.PathFilters.Count > 0)
+                        {
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                @foreach (var path in rule.PathFilters.Take(3))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                             Color="Color.Info">@path</MudChip>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (_rules.Count == 0)
+                {
+                    <div class="typo-caption text-secondary text-center pa-4">
+                        룰 파일이 없습니다
+                    </div>
+                }
+            </div>
+
+            @* Right: Editor *@
+            <div class="rules-editor">
+                @if (_selectedRule != null)
+                {
+                    <div class="d-flex justify-space-between align-center mb-3">
+                        <MudTextField T="string" @bind-Value="_selectedRule.FileName" Label="파일명"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 300px;" />
+                        <div class="d-flex gap-2">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                           OnClick="DeleteSelected" Size="Size.Small" />
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                       OnClick="SaveSelected" Style="text-transform: none;">저장</MudButton>
+                        </div>
+                    </div>
+
+                    <MudTextField T="string" @bind-Value="_selectedRule.Content" Label="룰 내용 (Markdown)"
+                                  Variant="Variant.Outlined" Lines="20"
+                                  Placeholder="# Rule Title&#10;&#10;- Rule 1&#10;- Rule 2" />
+                }
+                else
+                {
+                    <div class="d-flex flex-column align-center justify-center" style="height: 300px; opacity: 0.5;">
+                        <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Large" />
+                        <div class="typo-body2 mt-2">왼쪽에서 룰을 선택하거나 새 룰을 만드세요</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<TemplateGalleryDialog @bind-IsOpen="_showTemplates" DefaultCategory="TemplateCategory.Rule"
+                       OnTemplateSelected="ApplyTemplate" />
+
+@code {
+    private List<RuleFile> _rules = [];
+    private RuleFile? _selectedRule;
+    private ClaudeSettingsScope _scope = ClaudeSettingsScope.Global;
+    private string _scopeStr = "Global";
+    private string? _projectPath;
+    private string _search = "";
+    private bool _showTemplates;
+
+    private List<RuleFile> FilteredRules => string.IsNullOrWhiteSpace(_search)
+        ? _rules
+        : _rules.Where(r => r.FileName.Contains(_search, StringComparison.OrdinalIgnoreCase)
+            || r.Content.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync() => await LoadRules();
+
+    private async Task OnScopeChanged(string value)
+    {
+        _scopeStr = value;
+        _scope = Enum.Parse<ClaudeSettingsScope>(value);
+        await LoadRules();
+    }
+
+    private async Task LoadRules()
+    {
+        _rules = await RulesService.ListAsync(_scope,
+            _scope == ClaudeSettingsScope.Global ? null : _projectPath);
+        _selectedRule = _rules.FirstOrDefault();
+    }
+
+    private void SelectRule(RuleFile rule) => _selectedRule = rule;
+
+    private void CreateNewRule()
+    {
+        var dir = RulesService.GetRulesDirectory(_scope,
+            _scope == ClaudeSettingsScope.Global ? null : _projectPath);
+        var newRule = new RuleFile
+        {
+            FileName = "new-rule.md",
+            FilePath = Path.Combine(dir, "new-rule.md"),
+            Scope = _scope,
+            Content = "# New Rule\n\n- Rule 1\n- Rule 2"
+        };
+        _rules.Add(newRule);
+        _selectedRule = newRule;
+    }
+
+    private async Task SaveSelected()
+    {
+        if (_selectedRule == null) return;
+        try
+        {
+            // Update file path if filename changed
+            var dir = Path.GetDirectoryName(_selectedRule.FilePath)!;
+            _selectedRule.FilePath = Path.Combine(dir, _selectedRule.FileName);
+            await RulesService.SaveAsync(_selectedRule);
+            Snackbar.Add("룰이 저장되었습니다.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteSelected()
+    {
+        if (_selectedRule == null) return;
+        await RulesService.DeleteAsync(_selectedRule.FilePath);
+        _rules.Remove(_selectedRule);
+        _selectedRule = _rules.FirstOrDefault();
+        Snackbar.Add("룰이 삭제되었습니다.", Severity.Success);
+    }
+
+    private async Task ApplyTemplate(TemplateDefinition template)
+    {
+        if (template.Category != TemplateCategory.Rule) return;
+        var dir = RulesService.GetRulesDirectory(_scope,
+            _scope == ClaudeSettingsScope.Global ? null : _projectPath);
+        var fileName = template.Name.ToLower().Replace(' ', '-') + ".md";
+        var content = template.Content ?? "";
+        if (template.Paths is { Count: > 0 })
+            content = $"globs: {string.Join(", ", template.Paths)}\n\n{content}";
+
+        var rule = new RuleFile
+        {
+            FileName = fileName, FilePath = Path.Combine(dir, fileName),
+            Scope = _scope, Content = content, PathFilters = template.Paths ?? []
+        };
+        await RulesService.SaveAsync(rule);
+        await LoadRules();
+        _selectedRule = _rules.FirstOrDefault(r => r.FileName == fileName);
+        Snackbar.Add($"템플릿 '{template.Name}' 적용됨", Severity.Success);
+    }
+}
+
+<style>
+    .rules-layout {
+        display: flex;
+        gap: 0;
+        min-height: 500px;
+    }
+
+    .rules-sidebar {
+        width: 260px;
+        min-width: 260px;
+        border-right: 1px solid var(--mud-palette-lines-default);
+        padding: 12px;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .rules-item {
+        padding: 10px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-bottom: 4px;
+        transition: background 0.1s;
+    }
+
+    .rules-item:hover { background: var(--mud-palette-action-default-hover); }
+    .rules-item.active {
+        background: var(--mud-palette-primary-hover);
+        border-left: 2px solid var(--mud-palette-primary);
+    }
+
+    .rules-editor {
+        flex: 1;
+        padding: 16px 20px;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+</style>

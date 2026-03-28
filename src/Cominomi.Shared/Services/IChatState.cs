@@ -58,11 +58,8 @@ public interface IChatState : IDisposable
     void SetSettingsSection(string section);
     void SetSettingsWorkspace(string? workspaceId);
 
-    // Overlay state (Activity / Notifications)
-    bool ShowActivity { get; }
+    // Overlay state (Notifications)
     bool ShowNotifications { get; }
-    void OpenActivity();
-    void CloseActivity();
     void OpenNotifications();
     void CloseNotifications();
 

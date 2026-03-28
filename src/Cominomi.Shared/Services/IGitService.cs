@@ -34,4 +34,7 @@ public interface IGitService
     Task<DiffSummary> GetDiffSummaryAsync(string workingDir, string baseBranch, CancellationToken ct = default);
     Task<string[]> ReadFileLinesAsync(string workingDir, string relativePath, int startLine, int endLine, CancellationToken ct = default);
     Task<string[]> ReadBaseFileLinesAsync(string workingDir, string baseBranch, string relativePath, int startLine, int endLine, CancellationToken ct = default);
+    Task<GitResult> StageAllAsync(string workingDir, CancellationToken ct = default);
+    Task<GitResult> CommitAsync(string workingDir, string message, CancellationToken ct = default);
+    Task<(int Ahead, int Behind)> GetAheadBehindAsync(string workingDir, CancellationToken ct = default);
 }

@@ -1,0 +1,142 @@
+@using Cominomi.Shared.Models
+
+<div class="cost-card">
+    <div class="cost-card-title">
+        <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" />
+        비용 개요
+    </div>
+    @if (Cost is not null)
+    {
+        <div class="cost-card-rows">
+            <div class="cost-card-row">
+                <div class="cost-card-row-header">
+                    <span class="cost-card-label">오늘</span>
+                    <span class="cost-card-amount @(Cost.DailyExceeded ? "exceeded" : "")">$@Cost.Today.ToString("F2")</span>
+                </div>
+                @if (Cost.DailyLimit.HasValue)
+                {
+                    <div class="cost-card-bar">
+                        <div class="cost-card-bar-fill @(Cost.DailyExceeded ? "exceeded" : "")"
+                             style="width: @(Math.Min((double)(Cost.Today / Cost.DailyLimit.Value) * 100, 100))%"></div>
+                    </div>
+                }
+            </div>
+            <div class="cost-card-row">
+                <div class="cost-card-row-header">
+                    <span class="cost-card-label">이번 달</span>
+                    <span class="cost-card-amount">$@Cost.ThisMonth.ToString("F2")</span>
+                </div>
+                @if (Cost.MonthlyLimit.HasValue)
+                {
+                    <div class="cost-card-bar">
+                        <div class="cost-card-bar-fill @(Cost.MonthlyExceeded ? "exceeded" : "")"
+                             style="width: @(Math.Min((double)(Cost.ThisMonth / Cost.MonthlyLimit.Value) * 100, 100))%"></div>
+                    </div>
+                }
+            </div>
+            <div class="cost-card-row-header">
+                <span class="cost-card-label">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Style="font-size: 0.7rem;" />
+                    추정
+                </span>
+                <span class="cost-card-projection">$@Cost.MonthlyProjection.ToString("F2")/월</span>
+            </div>
+            <button class="cost-card-link" @onclick="GoToAnalytics">전체 분석 보기 →</button>
+        </div>
+    }
+    else
+    {
+        <span class="cost-card-label">로딩 중...</span>
+    }
+</div>
+
+@code {
+    [Parameter] public CostSummary? Cost { get; set; }
+    [Parameter] public EventCallback OnNavigateToUsage { get; set; }
+
+    private async Task GoToAnalytics() => await OnNavigateToUsage.InvokeAsync();
+}
+
+<style>
+    .cost-card {
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .cost-card-title {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .cost-card-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .cost-card-row-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.7rem;
+        margin-bottom: 2px;
+    }
+
+    .cost-card-label {
+        color: var(--mud-palette-text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .cost-card-amount {
+        font-weight: 500;
+    }
+
+    .cost-card-amount.exceeded {
+        color: var(--mud-palette-error);
+    }
+
+    .cost-card-projection {
+        color: var(--mud-palette-text-secondary);
+        font-size: 0.7rem;
+    }
+
+    .cost-card-bar {
+        height: 6px;
+        background: var(--mud-palette-action-default-hover);
+        border-radius: 99px;
+        overflow: hidden;
+    }
+
+    .cost-card-bar-fill {
+        height: 100%;
+        background: var(--mud-palette-primary);
+        border-radius: 99px;
+    }
+
+    .cost-card-bar-fill.exceeded {
+        background: var(--mud-palette-error);
+    }
+
+    .cost-card-link {
+        width: 100%;
+        font-size: 0.7rem;
+        color: var(--mud-palette-primary);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 0;
+        transition: color 0.15s;
+    }
+
+    .cost-card-link:hover {
+        color: var(--mud-palette-primary-darken);
+    }
+</style>

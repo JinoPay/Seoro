@@ -1,0 +1,141 @@
+@using Cominomi.Shared.Models
+@inject IGamificationService GamificationService
+@inject IChatState ChatState
+
+<div class="settings-content-area wide">
+    <div class="settings-content-header">
+        <span class="typo-h6">대시보드</span>
+    </div>
+    <div class="settings-content-body">
+        @if (_loading)
+        {
+            <div style="display: flex; justify-content: center; padding: 40px;">
+                <MudProgressCircular Indeterminate="true" />
+            </div>
+        }
+        else
+        {
+            @* Level Banner *@
+            <div class="dashboard-level-banner">
+                <div class="d-flex justify-space-between align-center mb-1">
+                    <div>
+                        <span class="typo-h5" style="font-weight: 700;">Lv.@_stats.Level.Level</span>
+                        <span class="typo-subtitle1 ml-2">@_stats.Level.Name</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="typo-caption">@_stats.Level.Xp.ToString("N0") / @_stats.Level.XpForNext.ToString("N0") XP</span>
+                        @if (_stats.Level.Level < UserLevel.Names.Length)
+                        {
+                            <div class="typo-caption" style="opacity: 0.7;">
+                                다음: @UserLevel.Names[_stats.Level.Level]
+                            </div>
+                        }
+                    </div>
+                </div>
+                <MudProgressLinear Value="@(_stats.Level.Progress * 100)" Color="Color.Primary"
+                                   Rounded="true" Size="Size.Medium"
+                                   Style="height: 8px;" />
+                <div class="d-flex gap-4 mt-2" style="font-size: 0.7rem; opacity: 0.8;">
+                    <span>@_stats.TotalProjects 프로젝트</span>
+                    <span>@_stats.Achievements.Count(a => a.Unlocked)/@_stats.Achievements.Count 업적</span>
+                    <span>@(_stats.Streak.CurrentStreak)일 연속</span>
+                </div>
+            </div>
+
+            @* Stats Overview *@
+            <StatsOverview TotalSessions="@_stats.TotalSessions"
+                           TotalMessages="@_stats.TotalMessages"
+                           TotalToolCalls="@_stats.TotalToolCalls"
+                           DaysActive="@_stats.DaysActive" />
+
+            @* Middle Row: Streak + Config + Cost *@
+            <div class="dashboard-middle-row">
+                <StreakCard Current="@_stats.Streak.CurrentStreak"
+                           Longest="@_stats.Streak.LongestStreak"
+                           LastActiveDate="@_stats.Streak.LastActiveDate" />
+
+                @* Config Completeness *@
+                <div class="dashboard-config-card">
+                    <div class="dashboard-config-title">설정 완성도</div>
+                    <div class="d-flex align-center justify-center">
+                        <div style="position: relative;">
+                            <MudProgressCircular Value="@(_stats.ConfigCompleteness * 100)"
+                                                 Color="Color.Primary" Size="Size.Large"
+                                                 StrokeWidth="6" />
+                            <span class="dashboard-config-pct">@((_stats.ConfigCompleteness * 100).ToString("F0"))%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <CostOverviewCard Cost="@_stats.Cost"
+                                  OnNavigateToUsage="@(() => ChatState.SetSettingsSection("usage"))" />
+            </div>
+
+            @* Activity Heatmap *@
+            <ActivityHeatmap DailyActivity="@_stats.DailyActivity" />
+
+            @* Bottom Row: Session Monitor + Achievements *@
+            <div class="dashboard-bottom-row">
+                <SessionMonitor />
+                <AchievementGrid Achievements="@_stats.Achievements" />
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private DashboardStats _stats = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _stats = await GamificationService.GetDashboardStatsAsync();
+        _loading = false;
+    }
+}
+
+<style>
+    .dashboard-level-banner {
+        background: linear-gradient(135deg, var(--mud-palette-primary-darken) 0%, var(--mud-palette-primary) 100%);
+        border-radius: 12px;
+        padding: 20px;
+        color: white;
+        margin-bottom: 16px;
+    }
+
+    .dashboard-middle-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .dashboard-config-card {
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .dashboard-config-title {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 12px;
+    }
+
+    .dashboard-config-pct {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    .dashboard-bottom-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+</style>

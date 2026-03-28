@@ -9,18 +9,15 @@ public class StreamEventProcessor : IStreamEventProcessor
 {
     private readonly Dictionary<string, IStreamEventHandler> _handlers;
     private readonly IChatState _chatState;
-    private readonly IUsageService _usageService;
     private readonly ILogger<StreamEventProcessor> _logger;
 
     public StreamEventProcessor(
         IEnumerable<IStreamEventHandler> handlers,
         IChatState chatState,
-        IUsageService usageService,
         ILogger<StreamEventProcessor> logger)
     {
         _handlers = handlers.ToDictionary(h => h.EventType);
         _chatState = chatState;
-        _usageService = usageService;
         _logger = logger;
     }
 
@@ -34,21 +31,12 @@ public class StreamEventProcessor : IStreamEventProcessor
 
     public async Task FinalizeAsync(StreamProcessingContext ctx)
     {
-        // Final fallback: if no event recorded usage, use accumulated values
+        // Final fallback: accumulate session-level token counts
         if (!ctx.UsageRecorded && (ctx.AccInputTokens > 0 || ctx.AccOutputTokens > 0))
         {
-            var fallbackUsage = new UsageInfo
-            {
-                InputTokens = ctx.AccInputTokens,
-                OutputTokens = ctx.AccOutputTokens,
-                CacheCreationInputTokens = ctx.AccCacheCreation,
-                CacheReadInputTokens = ctx.AccCacheRead,
-            };
-            ctx.Session.TotalInputTokens += fallbackUsage.InputTokens;
-            ctx.Session.TotalOutputTokens += fallbackUsage.OutputTokens;
-            await StreamEventUtils.RecordUsageAsync(ctx.Session, fallbackUsage, null, _usageService, _logger);
-            _logger.LogWarning("Usage recorded from post-loop fallback. In={In}, Out={Out}",
-                ctx.AccInputTokens, ctx.AccOutputTokens);
+            ctx.Session.TotalInputTokens += ctx.AccInputTokens;
+            ctx.Session.TotalOutputTokens += ctx.AccOutputTokens;
+            ctx.UsageRecorded = true;
         }
 
         // Detect plan completion

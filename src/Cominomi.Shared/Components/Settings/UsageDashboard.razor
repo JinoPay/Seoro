@@ -1,17 +1,25 @@
 @using Cominomi.Shared.Models
-@inject IUsageService UsageService
+@inject IStatsCacheService StatsCacheService
+@inject IGamificationService GamificationService
+@inject IChatState ChatState
 @inject IJSRuntime JS
 
 <div class="usage-dashboard">
-    @* Date range filter *@
-    <div class="usage-date-filter">
-        <MudChipSet T="string" SelectedValue="_selectedRange" SelectedValueChanged="OnRangeChanged"
-                    SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
-                    Variant="Variant.Outlined" Color="Color.Primary">
-            <MudChip T="string" Value="@("7")">7일</MudChip>
-            <MudChip T="string" Value="@("30")">30일</MudChip>
-            <MudChip T="string" Value="@("all")">전체</MudChip>
-        </MudChipSet>
+    @* 1. Date range filter + navigation *@
+    <div class="usage-top-bar">
+        <div class="usage-date-filter">
+            <MudChipSet T="string" SelectedValue="_selectedRange" SelectedValueChanged="OnRangeChanged"
+                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                        Variant="Variant.Outlined" Color="Color.Primary">
+                <MudChip T="string" Value="@("7")">7일</MudChip>
+                <MudChip T="string" Value="@("30")">30일</MudChip>
+                <MudChip T="string" Value="@("all")">전체</MudChip>
+            </MudChipSet>
+        </div>
+        <button class="analytics-nav-link" @onclick="@(() => ChatState.SetSettingsSection("session-replay"))">
+            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" />
+            세션 히스토리 →
+        </button>
     </div>
 
     @if (_loading)
@@ -22,141 +30,349 @@
     }
     else if (_stats != null)
     {
-        @* Summary cards *@
-        <div class="usage-summary-cards">
-            <div class="usage-card">
-                <div class="usage-card-label">총 비용</div>
-                <div class="usage-card-value">$@_stats.TotalCost.ToString("F4")</div>
+        @* 1.5. Global Activity Overview (from ALL sessions on computer) *@
+        <div class="analytics-activity-overview">
+            <div class="analytics-activity-header">
+                <div class="analytics-section-title" style="margin-bottom: 0;">
+                    <MudIcon Icon="@Icons.Material.Filled.Insights" Size="Size.Small" />
+                    전체 활동 요약
+                </div>
+                <span class="analytics-activity-badge">컴퓨터 내 모든 세션</span>
             </div>
-            <div class="usage-card">
-                <div class="usage-card-label">총 세션</div>
-                <div class="usage-card-value">@_stats.TotalSessions</div>
+            <div class="analytics-activity-stats">
+                <div class="analytics-activity-stat">
+                    <MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Small" Style="font-size: 0.85rem;" />
+                    <span class="analytics-activity-num">@FormatNumber(_dashStats.TotalSessions)</span>
+                    <span class="analytics-activity-label">세션</span>
+                </div>
+                <div class="analytics-activity-stat">
+                    <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" Style="font-size: 0.85rem;" />
+                    <span class="analytics-activity-num">@FormatNumber(_dashStats.TotalMessages)</span>
+                    <span class="analytics-activity-label">메시지</span>
+                </div>
+                <div class="analytics-activity-stat">
+                    <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Style="font-size: 0.85rem;" />
+                    <span class="analytics-activity-num">@FormatNumber(_dashStats.TotalToolCalls)</span>
+                    <span class="analytics-activity-label">도구 호출</span>
+                </div>
+                <div class="analytics-activity-stat">
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Style="font-size: 0.85rem;" />
+                    <span class="analytics-activity-num">@_dashStats.DaysActive</span>
+                    <span class="analytics-activity-label">활동일</span>
+                </div>
             </div>
-            <div class="usage-card">
-                <div class="usage-card-label">총 토큰</div>
-                <div class="usage-card-value">@FormatTokens(_stats.TotalTokens)</div>
+            @if (_dashStats.Cost is { } cost)
+            {
+                <div class="analytics-activity-cost">
+                    <span>오늘 $@cost.Today.ToString("F2")</span>
+                    <span class="analytics-activity-sep">·</span>
+                    <span>이번달 $@cost.ThisMonth.ToString("F2")</span>
+                    <span class="analytics-activity-sep">·</span>
+                    <span>추정 $@cost.MonthlyProjection.ToString("F2")/월</span>
+                </div>
+            }
+        </div>
+
+        @* 2. Token/Cost Detail Stats (4-card grid) *@
+        <div class="analytics-top-stats">
+            <div class="analytics-stat-card">
+                <div class="analytics-stat-icon" style="color: var(--mud-palette-success);">
+                    <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" />
+                </div>
+                <div class="analytics-stat-content">
+                    <div class="analytics-stat-label">총 비용</div>
+                    <div class="analytics-stat-value" style="color: var(--mud-palette-success);">
+                        $@_stats.TotalCost.ToString("F2")
+                    </div>
+                    <div class="analytics-stat-subtitle">$@CostPerMessage.ToString("F4")/메시지 · @_dashStats.TotalSessions 세션</div>
+                </div>
             </div>
-            <div class="usage-card">
-                <div class="usage-card-label">입력 / 출력</div>
-                <div class="usage-card-value" style="font-size: 0.9em;">
-                    @FormatTokens(_stats.TotalInputTokens) / @FormatTokens(_stats.TotalOutputTokens)
+
+            <div class="analytics-stat-card">
+                <div class="analytics-stat-icon" style="color: var(--mud-palette-info);">
+                    <MudIcon Icon="@Icons.Material.Filled.Token" Size="Size.Small" />
+                </div>
+                <div class="analytics-stat-content">
+                    <div class="analytics-stat-label">총 토큰</div>
+                    <div class="analytics-stat-value" style="color: var(--mud-palette-info);">
+                        @FormatTokens(_stats.TotalTokens)
+                    </div>
+                    <div class="analytics-stat-subtitle">평균 @FormatTokens(AvgDailyTokens)/일</div>
+                </div>
+            </div>
+
+            <div class="analytics-stat-card">
+                <div class="analytics-stat-icon" style="color: var(--mud-palette-warning);">
+                    <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" />
+                </div>
+                <div class="analytics-stat-content">
+                    <div class="analytics-stat-label">최장 세션</div>
+                    <div class="analytics-stat-value" style="color: var(--mud-palette-warning);">
+                        @FormatDuration(_dashStats.LongestSessionMs > 0 ? _dashStats.LongestSessionMs : _stats.LongestSession?.DurationMs ?? 0)
+                    </div>
+                    <div class="analytics-stat-subtitle">전체 세션 중 최장</div>
+                </div>
+            </div>
+
+            <div class="analytics-stat-card">
+                <div class="analytics-stat-icon" style="color: var(--mud-palette-primary);">
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" />
+                </div>
+                <div class="analytics-stat-content">
+                    <div class="analytics-stat-label">활성 시작</div>
+                    <div class="analytics-stat-value" style="color: var(--mud-palette-primary);">
+                        @FormatActiveSince(_stats.FirstSessionDate)
+                    </div>
+                    <div class="analytics-stat-subtitle">@FormatDaysAgo(_stats.FirstSessionDate)</div>
                 </div>
             </div>
         </div>
 
-        @* Token breakdown bar *@
-        @if (_stats.TotalTokens > 0)
+        @* 3. Model Usage *@
+        @if (_stats.ByModel.Count > 0)
         {
-            <div class="usage-token-bar">
-                <div class="usage-token-segment input" style="width: @(GetPercent(_stats.TotalInputTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
-                     title="입력: @FormatTokens(_stats.TotalInputTokens)"></div>
-                <div class="usage-token-segment output" style="width: @(GetPercent(_stats.TotalOutputTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
-                     title="출력: @FormatTokens(_stats.TotalOutputTokens)"></div>
-                <div class="usage-token-segment cache-write" style="width: @(GetPercent(_stats.TotalCacheCreationTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
-                     title="캐시 쓰기: @FormatTokens(_stats.TotalCacheCreationTokens)"></div>
-                <div class="usage-token-segment cache-read" style="width: @(GetPercent(_stats.TotalCacheReadTokens, _stats.TotalTokens + _stats.TotalCacheCreationTokens + _stats.TotalCacheReadTokens))%"
-                     title="캐시 읽기: @FormatTokens(_stats.TotalCacheReadTokens)"></div>
-            </div>
-            <div class="usage-token-legend">
-                <span class="legend-item"><span class="legend-dot input"></span>입력</span>
-                <span class="legend-item"><span class="legend-dot output"></span>출력</span>
-                <span class="legend-item"><span class="legend-dot cache-write"></span>캐시 쓰기</span>
-                <span class="legend-item"><span class="legend-dot cache-read"></span>캐시 읽기</span>
+            <div class="analytics-section-card">
+                <div class="analytics-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" />
+                    모델별 사용량
+                </div>
+                @foreach (var model in _stats.ByModel)
+                {
+                    var color = GetModelColor(model.Model);
+                    var pricing = ModelDefinitions.GetPricing(model.Model);
+                    <div class="analytics-model-row">
+                        <div class="analytics-model-header">
+                            <div class="analytics-model-name">
+                                <span class="analytics-model-dot" style="background: @color;"></span>
+                                @model.Model
+                            </div>
+                            <div class="analytics-model-meta">
+                                <span class="analytics-model-pct">@model.Percentage.ToString("F1")%</span>
+                                <span class="analytics-model-cost">$@model.TotalCost.ToString("F4")</span>
+                            </div>
+                        </div>
+                        <div class="analytics-model-bars">
+                            @{ var modelTotal = Math.Max(model.InputTokens + model.OutputTokens + model.CacheCreationTokens + model.CacheReadTokens, 1); }
+                            <div class="analytics-bar-item">
+                                <div class="analytics-bar-label">
+                                    <span>입력</span>
+                                    <span>@FormatTokens(model.InputTokens)</span>
+                                </div>
+                                <div class="analytics-bar-track">
+                                    <div class="analytics-bar-fill" style="width: @GetPercent(model.InputTokens, modelTotal)%; background: var(--mud-palette-info);"></div>
+                                </div>
+                            </div>
+                            <div class="analytics-bar-item">
+                                <div class="analytics-bar-label">
+                                    <span>출력</span>
+                                    <span>@FormatTokens(model.OutputTokens)</span>
+                                </div>
+                                <div class="analytics-bar-track">
+                                    <div class="analytics-bar-fill" style="width: @GetPercent(model.OutputTokens, modelTotal)%; background: var(--mud-palette-success);"></div>
+                                </div>
+                            </div>
+                            <div class="analytics-bar-item">
+                                <div class="analytics-bar-label">
+                                    <span>캐시 읽기</span>
+                                    <span>@FormatTokens(model.CacheReadTokens)</span>
+                                </div>
+                                <div class="analytics-bar-track">
+                                    <div class="analytics-bar-fill" style="width: @GetPercent(model.CacheReadTokens, modelTotal)%; background: var(--mud-palette-warning);"></div>
+                                </div>
+                            </div>
+                            <div class="analytics-bar-item">
+                                <div class="analytics-bar-label">
+                                    <span>캐시 쓰기</span>
+                                    <span>@FormatTokens(model.CacheCreationTokens)</span>
+                                </div>
+                                <div class="analytics-bar-track">
+                                    <div class="analytics-bar-fill" style="width: @GetPercent(model.CacheCreationTokens, modelTotal)%; background: var(--mud-palette-primary);"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
         }
 
-        @* Tabs for detail views *@
-        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="usage-tabs">
-            <MudTabPanel Text="모델별">
-                @if (_stats.ByModel.Count > 0)
+        @* 4. Charts (2-column grid) *@
+        <div class="analytics-charts-grid">
+            @* Daily Activity (session-replay based — covers ALL sessions) *@
+            <div class="analytics-section-card">
+                <div class="analytics-section-header">
+                    <div class="analytics-section-title">
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" />
+                        일별 활동 (@(_selectedRange == "all" ? "전체" : $"{_selectedRange}일"))
+                    </div>
+                    <span class="analytics-section-meta">평균 @AvgDailyMessages 메시지/일</span>
+                </div>
+                @{
+                    var rangeDays = _selectedRange == "all"
+                        ? (_dashStats.DailyActivity.Count > 0
+                            ? Math.Max((int)(DateTime.Today - DateTime.Parse(_dashStats.DailyActivity.First().Date)).TotalDays + 1, 30)
+                            : 30)
+                        : int.Parse(_selectedRange);
+                    var activityData = PadDailyActivity(GetFilteredDailyActivity(), rangeDays);
+                    var maxDailyMessages = activityData.Count > 0 ? activityData.Max(d => d.MessageCount) : 1;
+                    if (maxDailyMessages == 0) { maxDailyMessages = 1; }
+                }
+                @if (activityData.Count > 0)
                 {
-                    <MudSimpleTable Dense="true" Hover="true" Striped="true" Class="usage-table">
-                        <thead>
-                            <tr>
-                                <th>모델</th>
-                                <th style="text-align: right;">비용</th>
-                                <th style="text-align: right;">입력</th>
-                                <th style="text-align: right;">출력</th>
-                                <th style="text-align: right;">세션</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var m in _stats.ByModel)
+                    <div class="analytics-chart-container">
+                        <div class="analytics-chart-bars">
+                            @foreach (var day in activityData)
                             {
-                                <tr>
-                                    <td>@m.Model</td>
-                                    <td style="text-align: right;">$@m.TotalCost.ToString("F4")</td>
-                                    <td style="text-align: right;">@FormatTokens(m.InputTokens)</td>
-                                    <td style="text-align: right;">@FormatTokens(m.OutputTokens)</td>
-                                    <td style="text-align: right;">@m.SessionCount</td>
-                                </tr>
+                                var heightPct = day.MessageCount > 0 ? Math.Max((double)day.MessageCount / maxDailyMessages * 100, 2) : 2;
+                                <div class="analytics-chart-bar-wrapper" title="@FormatChartDate(day.Date): @day.MessageCount 메시지 · @day.SessionCount 세션">
+                                    <div class="analytics-chart-bar @(day.MessageCount == 0 ? "inactive" : "")" style="height: @heightPct.ToString("F1")%;"></div>
+                                </div>
                             }
-                        </tbody>
-                    </MudSimpleTable>
-                }
-                else
-                {
-                    <p class="typo-body2 text-secondary pa-4">데이터 없음</p>
-                }
-            </MudTabPanel>
-
-            <MudTabPanel Text="프로젝트별">
-                @if (_stats.ByProject.Count > 0)
-                {
-                    <MudSimpleTable Dense="true" Hover="true" Striped="true" Class="usage-table">
-                        <thead>
-                            <tr>
-                                <th>프로젝트</th>
-                                <th style="text-align: right;">비용</th>
-                                <th style="text-align: right;">토큰</th>
-                                <th style="text-align: right;">세션</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var p in _stats.ByProject)
-                            {
-                                <tr>
-                                    <td title="@p.ProjectPath">@p.ProjectName</td>
-                                    <td style="text-align: right;">$@p.TotalCost.ToString("F4")</td>
-                                    <td style="text-align: right;">@FormatTokens(p.TotalTokens)</td>
-                                    <td style="text-align: right;">@p.SessionCount</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </MudSimpleTable>
-                }
-                else
-                {
-                    <p class="typo-body2 text-secondary pa-4">데이터 없음</p>
-                }
-            </MudTabPanel>
-
-            <MudTabPanel Text="타임라인">
-                @if (_stats.ByDate.Count > 0)
-                {
-                    <div class="usage-timeline">
-                        @{
-                            var maxCost = _stats.ByDate.Max(d => d.TotalCost);
-                            if (maxCost == 0) maxCost = 1;
-                        }
-                        @foreach (var day in _stats.ByDate.TakeLast(30))
-                        {
-                            var heightPct = (double)(day.TotalCost / maxCost * 100);
-                            <div class="timeline-bar-wrapper" title="@day.Date: $@day.TotalCost.ToString("F4")">
-                                <div class="timeline-bar" style="height: @heightPct%"></div>
-                                <span class="timeline-label">@day.Date[5..]</span>
-                            </div>
-                        }
+                        </div>
+                        <div class="analytics-chart-x-labels">
+                            <span>@activityData.First().Date[5..]</span>
+                            <span>@activityData.Last().Date[5..]</span>
+                        </div>
                     </div>
                 }
                 else
                 {
-                    <p class="typo-body2 text-secondary pa-4">데이터 없음</p>
+                    <p class="analytics-no-data">데이터 없음</p>
                 }
-            </MudTabPanel>
-        </MudTabs>
+            </div>
 
-        @* Export actions *@
+            @* Hourly Activity (session-replay based — covers ALL sessions) *@
+            <div class="analytics-section-card">
+                @{
+                    var hourCounts = _dashStats.HourCounts;
+                    var peakHourIdx = hourCounts.Any(h => h > 0)
+                        ? Array.IndexOf(hourCounts, hourCounts.Max())
+                        : -1;
+                }
+                <div class="analytics-section-header">
+                    <div class="analytics-section-title">
+                        <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small" />
+                        시간대별 활동
+                    </div>
+                    @if (peakHourIdx >= 0)
+                    {
+                        <span class="analytics-section-meta">피크: @($"{peakHourIdx:D2}:00") (@hourCounts[peakHourIdx]건)</span>
+                    }
+                </div>
+                @if (hourCounts.Any(h => h > 0))
+                {
+                    var maxHour = hourCounts.Max();
+                    if (maxHour == 0) { maxHour = 1; }
+                    <div class="analytics-chart-container">
+                        <div class="analytics-chart-bars">
+                            @for (int h = 0; h < 24; h++)
+                            {
+                                var hourCount = hourCounts[h];
+                                var heightPct = hourCount > 0 ? Math.Max((double)hourCount / maxHour * 100, 2) : 2;
+                                var isPeak = h == peakHourIdx;
+                                <div class="analytics-chart-bar-wrapper" title="@($"{h:D2}:00 — {hourCount}세션")">
+                                    <div class="analytics-chart-bar @(isPeak ? "peak" : "") @(hourCount == 0 ? "inactive" : "")" style="height: @heightPct.ToString("F1")%;"></div>
+                                </div>
+                            }
+                        </div>
+                        <div class="analytics-chart-x-labels">
+                            <span>0:00</span>
+                            <span>6:00</span>
+                            <span>12:00</span>
+                            <span>18:00</span>
+                            <span>23:00</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <p class="analytics-no-data">데이터 없음</p>
+                }
+            </div>
+        </div>
+
+        @* 5. Cache Efficiency *@
+        @if (TotalCacheTokens > 0)
+        {
+            <div class="analytics-section-card">
+                <div class="analytics-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" />
+                    캐시 효율
+                </div>
+                <div class="analytics-cache-stats">
+                    <div class="analytics-cache-stat">
+                        <div class="analytics-cache-stat-label">캐시 히트율</div>
+                        <div class="analytics-cache-stat-value" style="color: var(--mud-palette-success);">
+                            @CacheEfficiencyRate.ToString("F1")%
+                        </div>
+                        <div class="analytics-cache-stat-sub">캐시에서 @FormatTokens(_stats?.TotalCacheReadTokens ?? 0) 토큰</div>
+                    </div>
+                    <div class="analytics-cache-stat">
+                        <div class="analytics-cache-stat-label">총 캐시 볼륨</div>
+                        <div class="analytics-cache-stat-value" style="color: var(--mud-palette-info);">
+                            @FormatTokens(TotalCacheTokens)
+                        </div>
+                        <div class="analytics-cache-stat-sub">읽기 @FormatTokens(_stats?.TotalCacheReadTokens ?? 0) · 쓰기 @FormatTokens(_stats?.TotalCacheCreationTokens ?? 0)</div>
+                    </div>
+                    <div class="analytics-cache-stat">
+                        <div class="analytics-cache-stat-label">예상 절감액</div>
+                        <div class="analytics-cache-stat-value" style="color: var(--mud-palette-success);">
+                            $@EstimatedCacheSavings.ToString("F2")
+                        </div>
+                        <div class="analytics-cache-stat-sub">정가 입력 토큰 대비</div>
+                    </div>
+                </div>
+
+                @* Segmented bar *@
+                @{
+                    var allTokens = _stats.TotalInputTokens + _stats.TotalCacheReadTokens + _stats.TotalCacheCreationTokens;
+                    if (allTokens == 0) { allTokens = 1; }
+                }
+                <div class="analytics-segmented-bar">
+                    <div class="analytics-segment input" style="width: @GetPercent(_stats.TotalInputTokens, allTokens)%" title="입력: @FormatTokens(_stats.TotalInputTokens)"></div>
+                    <div class="analytics-segment cache-read" style="width: @GetPercent(_stats.TotalCacheReadTokens, allTokens)%" title="캐시 읽기: @FormatTokens(_stats.TotalCacheReadTokens)"></div>
+                    <div class="analytics-segment cache-write" style="width: @GetPercent(_stats.TotalCacheCreationTokens, allTokens)%" title="캐시 쓰기: @FormatTokens(_stats.TotalCacheCreationTokens)"></div>
+                </div>
+                <div class="analytics-segment-legend">
+                    <span class="legend-item"><span class="legend-dot input"></span>입력 (@GetPercent(_stats.TotalInputTokens, allTokens)%)</span>
+                    <span class="legend-item"><span class="legend-dot cache-read"></span>캐시 읽기 (@GetPercent(_stats.TotalCacheReadTokens, allTokens)%)</span>
+                    <span class="legend-item"><span class="legend-dot cache-write"></span>캐시 쓰기 (@GetPercent(_stats.TotalCacheCreationTokens, allTokens)%)</span>
+                </div>
+            </div>
+        }
+
+        @* 6. Project breakdown *@
+        @if (_stats.ByProject.Count > 0)
+        {
+            <div class="analytics-section-card">
+                <div class="analytics-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Small" />
+                    프로젝트별 사용량
+                </div>
+                <MudSimpleTable Dense="true" Hover="true" Striped="true" Class="usage-table">
+                    <thead>
+                        <tr>
+                            <th>프로젝트</th>
+                            <th style="text-align: right;">비용</th>
+                            <th style="text-align: right;">토큰</th>
+                            <th style="text-align: right;">세션</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in _stats.ByProject)
+                        {
+                            <tr>
+                                <td title="@p.ProjectPath">@p.ProjectName</td>
+                                <td style="text-align: right;">$@p.TotalCost.ToString("F4")</td>
+                                <td style="text-align: right;">@FormatTokens(p.TotalTokens)</td>
+                                <td style="text-align: right;">@p.SessionCount</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </div>
+        }
+
+        @* 7. Export actions *@
         <div class="usage-export-actions">
             <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download"
                        Disabled="_exporting" Size="Size.Small">
@@ -170,7 +386,7 @@
     }
     else
     {
-        <p class="typo-body2 text-secondary pa-4 text-center">
+        <p class="analytics-no-data" style="padding: 40px; text-align: center;">
             사용량 데이터가 없습니다.
         </p>
     }
@@ -178,12 +394,28 @@
 
 @code {
     private UsageStats? _stats;
+    private DashboardStats _dashStats = new();
     private bool _loading;
     private bool _exporting;
     private string _selectedRange = "30";
 
+    // Model colors for visual distinction
+    private static readonly string[] _modelColors =
+    [
+        "var(--mud-palette-primary)",
+        "var(--mud-palette-success)",
+        "var(--mud-palette-warning)",
+        "var(--mud-palette-info)",
+        "#e879f9",   // fuchsia-400
+        "#fb923c",   // orange-400
+        "#22d3ee",   // cyan-400
+        "#a78bfa",   // violet-400
+    ];
+
     protected override async Task OnInitializedAsync()
     {
+        // Scan ALL sessions on computer (same source as dashboard)
+        _dashStats = await GamificationService.GetDashboardStatsAsync();
         await LoadStats();
     }
 
@@ -199,10 +431,22 @@
         StateHasChanged();
 
         int? days = _selectedRange == "all" ? null : int.Parse(_selectedRange);
-        _stats = await UsageService.GetStatsAsync(days);
+        _stats = await StatsCacheService.GetMergedStatsAsync(days);
 
         _loading = false;
         StateHasChanged();
+    }
+
+    // ── Formatting helpers ──
+
+    private static string FormatNumber(int n)
+    {
+        return n switch
+        {
+            >= 1_000_000 => $"{n / 1_000_000.0:F1}M",
+            >= 1_000 => $"{n / 1_000.0:F1}K",
+            _ => n.ToString("N0")
+        };
     }
 
     private static string FormatTokens(long tokens)
@@ -215,11 +459,127 @@
         };
     }
 
+    private static string FormatDuration(long ms)
+    {
+        if (ms <= 0) return "—";
+        var ts = TimeSpan.FromMilliseconds(ms);
+        if (ts.TotalHours >= 1)
+            return $"{(int)ts.TotalHours}h {ts.Minutes}m";
+        return $"{ts.Minutes}m";
+    }
+
+    private static string FormatActiveSince(DateTime? date)
+    {
+        if (date == null) return "—";
+        return date.Value.ToString("yyyy/MM");
+    }
+
+    private static string FormatDaysAgo(DateTime? date)
+    {
+        if (date == null) return "";
+        var days = (int)(DateTime.UtcNow - date.Value).TotalDays;
+        return $"{days}일 전";
+    }
+
+    private static string FormatChartDate(string date)
+    {
+        if (DateTime.TryParse(date, out var dt))
+            return dt.ToString("MMM d");
+        return date.Length > 5 ? date[5..] : date;
+    }
+
     private static string GetPercent(long part, long total)
     {
         if (total == 0) return "0";
         return (part * 100.0 / total).ToString("F1");
     }
+
+    private string GetModelColor(string model)
+    {
+        if (_stats == null) return _modelColors[0];
+        var idx = _stats.ByModel.FindIndex(m => m.Model == model);
+        return _modelColors[idx >= 0 ? idx % _modelColors.Length : 0];
+    }
+
+    // ── Computed properties ──
+
+    private long TotalCacheTokens =>
+        (_stats?.TotalCacheCreationTokens ?? 0) + (_stats?.TotalCacheReadTokens ?? 0);
+
+    private double CacheEfficiencyRate
+    {
+        get
+        {
+            var total = TotalCacheTokens;
+            return total > 0 ? (double)(_stats?.TotalCacheReadTokens ?? 0) / total * 100 : 0;
+        }
+    }
+
+    private decimal CostPerMessage =>
+        _dashStats.TotalMessages > 0 ? _stats!.TotalCost / _dashStats.TotalMessages : 0;
+
+    private long AvgDailyTokens
+    {
+        get
+        {
+            if (_stats?.DailyTokenTrend is not { Count: > 0 } trend) return 0;
+            return trend.Sum(d => d.TotalTokens) / trend.Count;
+        }
+    }
+
+    private decimal EstimatedCacheSavings
+    {
+        get
+        {
+            if (_stats == null) return 0;
+            decimal savings = 0;
+            foreach (var model in _stats.ByModel)
+            {
+                var pricing = ModelDefinitions.GetPricing(model.Model);
+                if (pricing == null) continue;
+                var fullInputPrice = pricing.Input;
+                var cacheReadPrice = pricing.CacheRead;
+                savings += (decimal)model.CacheReadTokens / 1_000_000m * (fullInputPrice - cacheReadPrice);
+            }
+            return savings;
+        }
+    }
+
+    private List<DailyActivityEntry> GetFilteredDailyActivity()
+    {
+        var days = _selectedRange == "all" ? (int?)null : int.Parse(_selectedRange);
+        if (!days.HasValue) return _dashStats.DailyActivity;
+        var cutoff = DateTime.Today.AddDays(-(days.Value - 1)).ToString("yyyy-MM-dd");
+        return _dashStats.DailyActivity
+            .Where(d => string.Compare(d.Date, cutoff, StringComparison.Ordinal) >= 0)
+            .ToList();
+    }
+
+    private static List<DailyActivityEntry> PadDailyActivity(List<DailyActivityEntry> raw, int days)
+    {
+        var lookup = raw.ToDictionary(d => d.Date, d => d);
+        var result = new List<DailyActivityEntry>(days);
+        var endDate = DateTime.Today;
+        var startDate = endDate.AddDays(-(days - 1));
+        for (var d = startDate; d <= endDate; d = d.AddDays(1))
+        {
+            var key = d.ToString("yyyy-MM-dd");
+            result.Add(lookup.TryGetValue(key, out var e) ? e : new DailyActivityEntry { Date = key });
+        }
+        return result;
+    }
+
+    private int AvgDailyMessages
+    {
+        get
+        {
+            var activity = GetFilteredDailyActivity();
+            if (activity.Count == 0) return 0;
+            return activity.Sum(d => d.MessageCount) / activity.Count;
+        }
+    }
+
+    // ── Export ──
 
     private async Task ExportCsv()
     {
@@ -228,18 +588,19 @@
 
         try
         {
-            int? days = _selectedRange == "all" ? null : int.Parse(_selectedRange);
-            var csv = await UsageService.ExportCsvAsync(days);
+            if (_stats == null) return;
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Model,InputTokens,OutputTokens,CacheCreation,CacheRead,TotalTokens,Cost");
+            foreach (var m in _stats.ByModel)
+                sb.AppendLine($"{m.Model},{m.InputTokens},{m.OutputTokens},{m.CacheCreationTokens},{m.CacheReadTokens},{m.TotalTokens},{m.TotalCost:F6}");
+
             var fileName = $"usage-export-{DateTime.Now:yyyyMMdd-HHmmss}.csv";
-            var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+            var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
             var base64 = Convert.ToBase64String(bytes);
             await JS.InvokeVoidAsync("eval",
                 $"var a=document.createElement('a');a.href='data:text/csv;base64,{base64}';a.download='{fileName}';document.body.appendChild(a);a.click();a.remove();");
         }
-        catch
-        {
-            // Download failure is visible to the user
-        }
+        catch { }
         finally
         {
             _exporting = false;
@@ -254,18 +615,15 @@
 
         try
         {
-            int? days = _selectedRange == "all" ? null : int.Parse(_selectedRange);
-            var json = await UsageService.ExportJsonAsync(days);
+            if (_stats == null) return;
+            var json = System.Text.Json.JsonSerializer.Serialize(_stats, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             var fileName = $"usage-export-{DateTime.Now:yyyyMMdd-HHmmss}.json";
             var bytes = System.Text.Encoding.UTF8.GetBytes(json);
             var base64 = Convert.ToBase64String(bytes);
             await JS.InvokeVoidAsync("eval",
                 $"var a=document.createElement('a');a.href='data:application/json;base64,{base64}';a.download='{fileName}';document.body.appendChild(a);a.click();a.remove();");
         }
-        catch
-        {
-            // Download failure is visible to the user
-        }
+        catch { }
         finally
         {
             _exporting = false;
@@ -273,3 +631,470 @@
         }
     }
 }
+
+<style>
+    /* ===== Analytics Dashboard — glyphic-main style ===== */
+
+    .usage-top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+
+    .analytics-nav-link {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        color: var(--mud-palette-primary);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 6px;
+        transition: background 0.15s, color 0.15s;
+    }
+
+    .analytics-nav-link:hover {
+        background: var(--mud-palette-action-default-hover);
+        color: var(--mud-palette-primary-darken);
+    }
+
+    /* ── Activity Overview ── */
+
+    .analytics-activity-overview {
+        background: var(--mud-palette-surface);
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin-bottom: 16px;
+    }
+
+    .analytics-activity-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .analytics-activity-badge {
+        font-size: 10px;
+        color: var(--mud-palette-text-secondary);
+        background: var(--mud-palette-action-default-hover);
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+
+    .analytics-activity-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .analytics-activity-stat {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: var(--mud-palette-action-default-hover);
+        border-radius: 8px;
+    }
+
+    .analytics-activity-num {
+        font-size: 1.1em;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .analytics-activity-label {
+        font-size: 11px;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .analytics-activity-cost {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .analytics-activity-sep {
+        opacity: 0.5;
+    }
+
+    .analytics-top-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .analytics-stat-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        background: var(--mud-palette-surface);
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 10px;
+        padding: 16px;
+    }
+
+    .analytics-stat-icon {
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: var(--mud-palette-action-default-hover);
+    }
+
+    .analytics-stat-content {
+        min-width: 0;
+    }
+
+    .analytics-stat-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 2px;
+    }
+
+    .analytics-stat-value {
+        font-size: 1.35em;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.2;
+    }
+
+    .analytics-stat-subtitle {
+        font-size: 11px;
+        color: var(--mud-palette-text-secondary);
+        margin-top: 2px;
+    }
+
+    /* ── Section card ── */
+
+    .analytics-section-card {
+        background: var(--mud-palette-surface);
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 16px;
+    }
+
+    .analytics-section-title {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .analytics-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .analytics-section-header .analytics-section-title {
+        margin-bottom: 0;
+    }
+
+    .analytics-section-meta {
+        font-size: 11px;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    /* ── Model Usage ── */
+
+    .analytics-model-row {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .analytics-model-row:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .analytics-model-row:first-child {
+        padding-top: 0;
+    }
+
+    .analytics-model-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .analytics-model-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .analytics-model-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .analytics-model-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .analytics-model-pct {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .analytics-model-cost {
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .analytics-model-bars {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+    }
+
+    .analytics-bar-item {
+        min-width: 0;
+    }
+
+    .analytics-bar-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 4px;
+    }
+
+    .analytics-bar-track {
+        height: 6px;
+        background: var(--mud-palette-action-default-hover);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .analytics-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        min-width: 2px;
+        transition: width 0.3s ease;
+    }
+
+    /* ── Charts grid ── */
+
+    .analytics-charts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .analytics-chart-container {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .analytics-chart-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 144px;
+    }
+
+    .analytics-chart-bar-wrapper {
+        flex: 1;
+        min-width: 3px;
+        height: 100%;
+        display: flex;
+        align-items: flex-end;
+        cursor: pointer;
+    }
+
+    .analytics-chart-bar {
+        width: 100%;
+        background: rgba(192, 132, 252, 0.4);
+        border-radius: 2px 2px 0 0;
+        min-height: 2px;
+        transition: background 0.15s ease;
+    }
+
+    .analytics-chart-bar:hover {
+        background: rgba(192, 132, 252, 1);
+    }
+
+    /* Hourly activity uses blue */
+    .analytics-charts-grid > .analytics-section-card:last-child .analytics-chart-bar {
+        background: rgba(88, 166, 255, 0.4);
+    }
+
+    .analytics-charts-grid > .analytics-section-card:last-child .analytics-chart-bar:hover {
+        background: rgba(88, 166, 255, 1);
+    }
+
+    .analytics-chart-bar.peak {
+        background: rgba(88, 166, 255, 1);
+    }
+
+    .analytics-chart-bar.inactive {
+        background: var(--mud-palette-action-default-hover);
+    }
+
+    .analytics-chart-bar.inactive:hover {
+        background: var(--mud-palette-action-default-hover);
+    }
+
+    .analytics-chart-x-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10px;
+        color: var(--mud-palette-text-secondary);
+        margin-top: 6px;
+        padding: 0 2px;
+    }
+
+    /* ── Cache Efficiency ── */
+
+    .analytics-cache-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .analytics-cache-stat {
+        text-align: center;
+        padding: 12px;
+        background: var(--mud-palette-action-default-hover);
+        border-radius: 8px;
+    }
+
+    .analytics-cache-stat-label {
+        font-size: 11px;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 4px;
+    }
+
+    .analytics-cache-stat-value {
+        font-size: 1.3em;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .analytics-cache-stat-sub {
+        font-size: 10px;
+        color: var(--mud-palette-text-secondary);
+        margin-top: 4px;
+    }
+
+    .analytics-segmented-bar {
+        display: flex;
+        height: 16px;
+        border-radius: 9999px;
+        overflow: hidden;
+        background: var(--mud-palette-action-default-hover);
+        margin-bottom: 8px;
+    }
+
+    .analytics-segment {
+        height: 100%;
+        min-width: 2px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .analytics-segment:hover {
+        filter: brightness(1.1);
+    }
+
+    .analytics-segment.input {
+        background: #58a6ff;
+    }
+
+    .analytics-segment.cache-read {
+        background: #3fb950;
+    }
+
+    .analytics-segment.cache-write {
+        background: #c084fc;
+    }
+
+    .analytics-segment-legend {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        font-size: 11px;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    /* ── Shared legend ── */
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .legend-dot.input {
+        background: #58a6ff;
+    }
+
+    .legend-dot.cache-read {
+        background: #3fb950;
+    }
+
+    .legend-dot.cache-write {
+        background: #c084fc;
+    }
+
+    /* ── Tooltip ── */
+
+    .analytics-tooltip {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.75rem;
+    }
+
+    .analytics-tooltip-label {
+        font-weight: 500;
+    }
+
+    /* ── No data placeholder ── */
+
+    .analytics-no-data {
+        font-size: 13px;
+        color: var(--mud-palette-text-secondary);
+        padding: 16px;
+        text-align: center;
+    }
+</style>
