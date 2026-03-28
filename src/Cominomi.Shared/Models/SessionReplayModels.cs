@@ -14,6 +14,10 @@ public class SessionReplaySummary
     public string? FirstMessage { get; set; }
     public double ModifiedAtUnix { get; set; }
     public bool IsLive { get; set; }
+
+    public TimeSpan? Duration => FirstTimestamp != null && LastTimestamp != null
+        ? LastTimestamp.Value - FirstTimestamp.Value
+        : null;
 }
 
 public class SessionListResult

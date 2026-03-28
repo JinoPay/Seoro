@@ -1,18 +1,47 @@
 @using Cominomi.Shared.Models
 
 <div class="achievement-card">
-    <div class="achievement-title">
-        업적 <span class="achievement-count">(@UnlockedCount/@Achievements.Count)</span>
+    <div class="achievement-header">
+        <span class="achievement-title">
+            업적 <span class="achievement-count">(@UnlockedCount/@Achievements.Count)</span>
+        </span>
+        <div class="achievement-filter-row">
+            <MudChipSet T="string" SelectedValue="_selectedCategory" SelectedValueChanged="v => _selectedCategory = v"
+                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                        Variant="Variant.Text" Color="Color.Primary">
+                <MudChip T="string" Value="@("all")" Style="font-size:0.7rem;">전체</MudChip>
+                @foreach (var cat in _categories)
+                {
+                    <MudChip T="string" Value="@cat.Key" Style="font-size:0.7rem;">@cat.Value</MudChip>
+                }
+            </MudChipSet>
+        </div>
     </div>
+
+    @* Rarity legend *@
+    <div class="rarity-legend">
+        <span class="rarity-badge rarity-common">일반</span>
+        <span class="rarity-badge rarity-rare">희귀</span>
+        <span class="rarity-badge rarity-epic">영웅</span>
+        <span class="rarity-badge rarity-legendary">전설</span>
+    </div>
+
     <div class="achievement-grid">
-        @foreach (var a in Achievements)
+        @foreach (var a in FilteredAchievements)
         {
-            <div class="achievement-item @(a.Unlocked ? "unlocked" : "locked")">
-                <div class="achievement-icon-box @(a.Unlocked ? "unlocked" : "")">
+            <div class="achievement-item @(a.Unlocked ? "unlocked" : "locked") rarity-border-@a.Rarity.ToString().ToLower()"
+                 title="@a.Description">
+                <div class="achievement-icon-box @(a.Unlocked ? $"unlocked rarity-bg-{a.Rarity.ToString().ToLower()}" : "")">
                     <MudIcon Icon="@GetIcon(a.Icon)" Size="Size.Small" />
                 </div>
                 <div class="achievement-text">
-                    <div class="achievement-name">@a.Name</div>
+                    <div class="achievement-name-row">
+                        <span class="achievement-name">@a.Name</span>
+                        @if (a.Rarity != AchievementRarity.Common)
+                        {
+                            <span class="rarity-dot rarity-@a.Rarity.ToString().ToLower()"></span>
+                        }
+                    </div>
                     <div class="achievement-desc">@a.Description</div>
                 </div>
             </div>
@@ -23,7 +52,24 @@
 @code {
     [Parameter] public List<Achievement> Achievements { get; set; } = [];
 
+    private string _selectedCategory = "all";
+
     private int UnlockedCount => Achievements.Count(a => a.Unlocked);
+
+    private static readonly Dictionary<string, string> _categories = new()
+    {
+        ["Config"] = "설정",
+        ["Usage"] = "사용량",
+        ["Streak"] = "연속",
+        ["Mastery"] = "숙련",
+        ["Explorer"] = "탐험",
+        ["Efficiency"] = "효율",
+        ["Time"] = "시간",
+    };
+
+    private List<Achievement> FilteredAchievements => _selectedCategory == "all"
+        ? Achievements
+        : Achievements.Where(a => a.Category.ToString() == _selectedCategory).ToList();
 
     private static string GetIcon(string icon) => icon switch
     {
@@ -31,21 +77,42 @@
         "bolt" => Icons.Material.Filled.Bolt,
         "hub" => Icons.Material.Filled.Hub,
         "device_hub" => Icons.Material.Filled.DeviceHub,
+        "cloud" => Icons.Material.Filled.Cloud,
         "security" => Icons.Material.Filled.Security,
         "terminal" => Icons.Material.Filled.Terminal,
+        "verified" => Icons.Material.Filled.Verified,
+        "waving_hand" => Icons.Material.Filled.WavingHand,
         "chat" => Icons.Material.Filled.Chat,
         "forum" => Icons.Material.Filled.Forum,
         "whatshot" => Icons.Material.Filled.Whatshot,
         "rocket_launch" => Icons.Material.Filled.RocketLaunch,
+        "collections" => Icons.Material.Filled.Collections,
         "layers" => Icons.Material.Filled.Layers,
+        "workspace_premium" => Icons.Material.Filled.WorkspacePremium,
+        "handyman" => Icons.Material.Filled.Handyman,
         "build" => Icons.Material.Filled.Build,
         "local_fire_department" => Icons.Material.Filled.LocalFireDepartment,
         "military_tech" => Icons.Material.Filled.MilitaryTech,
         "shield" => Icons.Material.Filled.Shield,
         "emoji_events" => Icons.Material.Filled.EmojiEvents,
+        "diamond" => Icons.Material.Filled.Diamond,
+        "crown" => Icons.Material.Filled.WorkspacePremium,
+        "auto_awesome" => Icons.Material.Filled.AutoAwesome,
         "favorite" => Icons.Material.Filled.Favorite,
         "star" => Icons.Material.Filled.Star,
+        "cake" => Icons.Material.Filled.Cake,
         "settings" => Icons.Material.Filled.Settings,
+        "explore" => Icons.Material.Filled.Explore,
+        "account_tree" => Icons.Material.Filled.AccountTree,
+        "public" => Icons.Material.Filled.Public,
+        "travel_explore" => Icons.Material.Filled.TravelExplore,
+        "speed" => Icons.Material.Filled.Speed,
+        "savings" => Icons.Material.Filled.Savings,
+        "dark_mode" => Icons.Material.Filled.DarkMode,
+        "wb_sunny" => Icons.Material.Filled.WbSunny,
+        "timer" => Icons.Material.Filled.Timer,
+        "hourglass_top" => Icons.Material.Filled.HourglassTop,
+        "nightlight" => Icons.Material.Filled.Nightlight,
         _ => Icons.Material.Filled.EmojiEvents
     };
 }
@@ -57,35 +124,83 @@
         padding: 16px;
     }
 
+    .achievement-header {
+        margin-bottom: 8px;
+    }
+
     .achievement-title {
         font-size: 0.85rem;
         font-weight: 500;
         color: var(--mud-palette-text-secondary);
-        margin-bottom: 12px;
     }
 
     .achievement-count {
         color: var(--mud-palette-text-secondary);
     }
 
+    .achievement-filter-row {
+        margin-top: 4px;
+    }
+
+    .rarity-legend {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+        padding: 0 2px;
+    }
+
+    .rarity-badge {
+        font-size: 0.6rem;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+
+    .rarity-badge.rarity-common { background: var(--mud-palette-action-default-hover); color: var(--mud-palette-text-secondary); }
+    .rarity-badge.rarity-rare { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    .rarity-badge.rarity-epic { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+    .rarity-badge.rarity-legendary { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+
     .achievement-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 8px;
+        max-height: 400px;
+        overflow-y: auto;
     }
 
     .achievement-item {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         padding: 10px;
         border-radius: 10px;
         border: 1px solid var(--mud-palette-lines-default);
+        transition: transform 0.1s, box-shadow 0.15s;
+    }
+
+    .achievement-item.unlocked:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
     .achievement-item.unlocked {
-        background: rgba(var(--mud-palette-primary-rgb, 98, 0, 234), 0.08);
-        border-color: rgba(var(--mud-palette-primary-rgb, 98, 0, 234), 0.3);
+        background: rgba(var(--mud-palette-primary-rgb, 98, 0, 234), 0.06);
+    }
+
+    .achievement-item.unlocked.rarity-border-rare {
+        border-color: rgba(59, 130, 246, 0.4);
+        background: rgba(59, 130, 246, 0.06);
+    }
+
+    .achievement-item.unlocked.rarity-border-epic {
+        border-color: rgba(168, 85, 247, 0.4);
+        background: rgba(168, 85, 247, 0.06);
+    }
+
+    .achievement-item.unlocked.rarity-border-legendary {
+        border-color: rgba(245, 158, 11, 0.5);
+        background: rgba(245, 158, 11, 0.06);
     }
 
     .achievement-item.locked {
@@ -94,8 +209,8 @@
     }
 
     .achievement-icon-box {
-        width: 32px;
-        height: 32px;
+        width: 34px;
+        height: 34px;
         border-radius: 8px;
         display: flex;
         align-items: center;
@@ -110,17 +225,49 @@
         color: var(--mud-palette-primary);
     }
 
+    .achievement-icon-box.rarity-bg-rare {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+    }
+
+    .achievement-icon-box.rarity-bg-epic {
+        background: rgba(168, 85, 247, 0.15);
+        color: #a855f7;
+    }
+
+    .achievement-icon-box.rarity-bg-legendary {
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
+    }
+
     .achievement-text {
         min-width: 0;
     }
 
+    .achievement-name-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
     .achievement-name {
         font-size: 0.7rem;
-        font-weight: 500;
+        font-weight: 600;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
+
+    .rarity-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .rarity-dot.rarity-rare { background: #3b82f6; }
+    .rarity-dot.rarity-epic { background: #a855f7; }
+    .rarity-dot.rarity-legendary { background: #f59e0b; }
 
     .achievement-desc {
         font-size: 0.6rem;

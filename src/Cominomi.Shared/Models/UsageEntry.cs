@@ -67,6 +67,11 @@ public class UsageStats
     public long TotalCacheCreationTokens { get; set; }
     public long TotalCacheReadTokens { get; set; }
     public int TotalSessions { get; set; }
+    public int TotalMessages { get; set; }
+    public int[] HourCounts { get; set; } = new int[24];
+    public List<DailyTokenTrend> DailyTokenTrend { get; set; } = [];
+    public LongestSessionInfo? LongestSession { get; set; }
+    public DateTime? FirstSessionDate { get; set; }
     public List<ModelUsage> ByModel { get; set; } = [];
     public List<DailyUsage> ByDate { get; set; } = [];
     public List<ProjectUsage> ByProject { get; set; } = [];
@@ -82,6 +87,22 @@ public class ModelUsage
     public long CacheCreationTokens { get; set; }
     public long CacheReadTokens { get; set; }
     public int SessionCount { get; set; }
+    public double Percentage { get; set; }
+}
+
+public class DailyTokenTrend
+{
+    public string Date { get; set; } = string.Empty;
+    public long TotalTokens { get; set; }
+    public Dictionary<string, long> TokensByModel { get; set; } = new();
+}
+
+public class LongestSessionInfo
+{
+    public string SessionId { get; set; } = string.Empty;
+    public long DurationMs { get; set; }
+    public int MessageCount { get; set; }
+    public DateTime Timestamp { get; set; }
 }
 
 public class DailyUsage

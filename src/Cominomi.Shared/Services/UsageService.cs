@@ -309,6 +309,8 @@ public class UsageService : IUsageService
         var modelMap = new Dictionary<string, ModelUsage>();
         var dateMap = new Dictionary<string, DailyUsage>();
         var projectMap = new Dictionary<string, ProjectUsage>();
+        var dailyTokenMap = new Dictionary<string, DailyTokenTrend>();
+        var sessionTimestamps = new Dictionary<string, (DateTime First, DateTime Last, int Count)>();
 
         foreach (var e in entries)
         {
@@ -317,7 +319,27 @@ public class UsageService : IUsageService
             stats.TotalOutputTokens += e.OutputTokens;
             stats.TotalCacheCreationTokens += e.CacheCreationTokens;
             stats.TotalCacheReadTokens += e.CacheReadTokens;
+            stats.TotalMessages++;
             sessionIds.Add(e.SessionId);
+
+            // Hourly distribution
+            stats.HourCounts[e.Timestamp.Hour]++;
+
+            // First session date
+            if (stats.FirstSessionDate == null || e.Timestamp < stats.FirstSessionDate)
+                stats.FirstSessionDate = e.Timestamp;
+
+            // Track session timestamps for longest session
+            if (!sessionTimestamps.TryGetValue(e.SessionId, out var st))
+            {
+                sessionTimestamps[e.SessionId] = (e.Timestamp, e.Timestamp, 1);
+            }
+            else
+            {
+                var first = e.Timestamp < st.First ? e.Timestamp : st.First;
+                var last = e.Timestamp > st.Last ? e.Timestamp : st.Last;
+                sessionTimestamps[e.SessionId] = (first, last, st.Count + 1);
+            }
 
             // By model
             if (!modelMap.TryGetValue(e.Model, out var mu))
@@ -344,6 +366,19 @@ public class UsageService : IUsageService
             if (!du.ModelsUsed.Contains(e.Model))
                 du.ModelsUsed.Add(e.Model);
 
+            // Daily token trend (with per-model breakdown)
+            if (!dailyTokenMap.TryGetValue(dateKey, out var dtt))
+            {
+                dtt = new DailyTokenTrend { Date = dateKey };
+                dailyTokenMap[dateKey] = dtt;
+            }
+            var dayTokens = e.InputTokens + e.OutputTokens;
+            dtt.TotalTokens += dayTokens;
+            if (!dtt.TokensByModel.TryGetValue(e.Model, out var existingModelTokens))
+                dtt.TokensByModel[e.Model] = dayTokens;
+            else
+                dtt.TokensByModel[e.Model] = existingModelTokens + dayTokens;
+
             // By project
             if (!string.IsNullOrEmpty(e.ProjectPath))
             {
@@ -366,6 +401,22 @@ public class UsageService : IUsageService
         stats.TotalTokens = stats.TotalInputTokens + stats.TotalOutputTokens;
         stats.TotalSessions = sessionIds.Count;
 
+        // Longest session
+        foreach (var (sid, (first, last, count)) in sessionTimestamps)
+        {
+            var durationMs = (long)(last - first).TotalMilliseconds;
+            if (stats.LongestSession == null || durationMs > stats.LongestSession.DurationMs)
+            {
+                stats.LongestSession = new LongestSessionInfo
+                {
+                    SessionId = sid,
+                    DurationMs = durationMs,
+                    MessageCount = count,
+                    Timestamp = first
+                };
+            }
+        }
+
         // Count sessions per model/project
         var sessionModels = entries.GroupBy(e => e.SessionId).ToDictionary(g => g.Key, g => g.Select(e => e.Model).Distinct().ToList());
         foreach (var (_, models) in sessionModels)
@@ -379,9 +430,15 @@ public class UsageService : IUsageService
                 if (!string.IsNullOrEmpty(p) && projectMap.TryGetValue(p, out var pp))
                     pp.SessionCount++;
 
+        // Model percentages
+        var grandTotalTokens = modelMap.Values.Sum(m => m.TotalTokens);
+        foreach (var m in modelMap.Values)
+            m.Percentage = grandTotalTokens > 0 ? (double)m.TotalTokens / grandTotalTokens * 100 : 0;
+
         stats.ByModel = modelMap.Values.OrderByDescending(m => m.TotalCost).ToList();
         stats.ByDate = dateMap.Values.OrderBy(d => d.Date).ToList();
         stats.ByProject = projectMap.Values.OrderByDescending(p => p.TotalCost).ToList();
+        stats.DailyTokenTrend = dailyTokenMap.Values.OrderBy(d => d.Date).ToList();
 
         return stats;
     }
