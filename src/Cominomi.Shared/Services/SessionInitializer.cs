@@ -6,16 +6,13 @@ namespace Cominomi.Shared.Services;
 public class SessionInitializer : ISessionInitializer
 {
     private readonly IGitService _gitService;
-    private readonly IClaudeService _claudeService;
     private readonly ILogger<SessionInitializer> _logger;
 
     public SessionInitializer(
         IGitService gitService,
-        IClaudeService claudeService,
         ILogger<SessionInitializer> logger)
     {
         _gitService = gitService;
-        _claudeService = claudeService;
         _logger = logger;
     }
 
@@ -34,33 +31,5 @@ public class SessionInitializer : ISessionInitializer
             ?? "";
 
         return (groups, defaultBranch);
-    }
-
-    public async Task<(string? Title, string? NewBranchName)> SummarizeAndRenameBranchAsync(
-        Session session, string userText)
-    {
-        try
-        {
-            var summary = await _claudeService.SummarizeAsync(userText, session.Git.WorktreePath);
-            if (string.IsNullOrEmpty(summary))
-                return (null, null);
-
-            string? newBranchName = null;
-            if (!session.Git.IsLocalDir)
-            {
-                var candidate = SessionService.GenerateBranchName(summary);
-                var renameResult = await _gitService.RenameBranchAsync(
-                    session.Git.WorktreePath, session.Git.BranchName, candidate);
-                if (renameResult.Success)
-                    newBranchName = candidate;
-            }
-
-            return (summary, newBranchName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Haiku summarization failed, will use fallback title");
-            return (null, null);
-        }
     }
 }

@@ -11,7 +11,6 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
     private readonly IAttachmentService _attachmentService;
     private readonly IStreamEventProcessor _streamProcessor;
     private readonly ISystemPromptBuilder _systemPromptBuilder;
-    private readonly ISessionInitializer _sessionInitializer;
     private readonly IHooksEngine _hooksEngine;
     private readonly IActiveSessionRegistry _activeSessionRegistry;
     private readonly IGitBranchWatcherService _branchWatcher;
@@ -24,7 +23,6 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         IAttachmentService attachmentService,
         IStreamEventProcessor streamProcessor,
         ISystemPromptBuilder systemPromptBuilder,
-        ISessionInitializer sessionInitializer,
         IHooksEngine hooksEngine,
         IActiveSessionRegistry activeSessionRegistry,
         IGitBranchWatcherService branchWatcher,
@@ -36,7 +34,6 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         _attachmentService = attachmentService;
         _streamProcessor = streamProcessor;
         _systemPromptBuilder = systemPromptBuilder;
-        _sessionInitializer = sessionInitializer;
         _hooksEngine = hooksEngine;
         _activeSessionRegistry = activeSessionRegistry;
         _branchWatcher = branchWatcher;
@@ -112,32 +109,9 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         _activeSessionRegistry.Register(session);
 
         // --- Streaming setup ---
-        var isFirstMessage = session.Messages.Count(m => m.Role == MessageRole.User) == 0;
-
         _chatState.SetStreaming(true, session.Id);
         _chatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
         var assistantMsg = _chatState.StartAssistantMessage(session);
-
-        // --- First message: title + branch rename ---
-        if (isFirstMessage && session.Status == SessionStatus.Ready && !string.IsNullOrWhiteSpace(input.Text))
-        {
-            _chatState.SetPhase(StreamingPhase.Preparing, sessionId: session.Id);
-            var (title, newBranch) = await _sessionInitializer.SummarizeAndRenameBranchAsync(session, input.Text);
-            if (!string.IsNullOrEmpty(title))
-            {
-                session.Title = title;
-                if (newBranch != null)
-                    session.Git.BranchName = newBranch;
-
-                _chatState.Tabs.UpdateChatTabTitle(title);
-
-                var branchInfo = session.Git.IsLocalDir ? "" : $" · 브랜치: {session.Git.BranchName}";
-                _chatState.AddSystemMessage(session, $"제목이 \"{title}\"(으)로 설정됨{branchInfo}");
-
-                await _sessionService.SaveSessionAsync(session);
-            }
-            _chatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
-        }
 
         // --- Stream + finalize ---
         var conversationId = session.ConversationId;

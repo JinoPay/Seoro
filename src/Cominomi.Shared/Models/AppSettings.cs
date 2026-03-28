@@ -27,14 +27,9 @@ public class AppSettings
     public string LastWorkspaceId { get; set; } = "";
     public string LastSessionId { get; set; } = "";
 
-    // Summarization
-    public string SummarizationModel { get; set; } = "haiku";
-    public string SummarizationPrompt { get; set; } = "Generate a short, natural title for this chat (3-7 words). Use the same language as the user's message. Use Title Case (capitalize each word). Output only the title text, nothing else.";
-
     // Timeouts (seconds)
     public int DefaultProcessTimeoutSeconds { get; set; } = 30;
     public int HookTimeoutSeconds { get; set; } = 5;
-    public int SummarizationTimeoutSeconds { get; set; } = 15;
     public int VersionCheckTimeoutSeconds { get; set; } = 5;
 
     // Terminal

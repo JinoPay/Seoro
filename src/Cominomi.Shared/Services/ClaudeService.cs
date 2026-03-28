@@ -316,64 +316,6 @@ public class ClaudeService : IClaudeService, IDisposable
         }
     }
 
-    public async Task<string?> SummarizeAsync(string message, string workingDir)
-    {
-        try
-        {
-            var settings = _appSettings.CurrentValue;
-            var (fileName, baseArgs) = await _cliResolver.ResolveAsync(settings.ClaudePath);
-
-            var sb = new StringBuilder(baseArgs);
-            sb.Append("--print --output-format text ");
-            sb.Append($"--model {settings.SummarizationModel} ");
-            sb.Append("--dangerously-skip-permissions ");
-            sb.Append($"--append-system-prompt \"{settings.SummarizationPrompt}\"");
-
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = fileName,
-                    Arguments = sb.ToString(),
-                    WorkingDirectory = workingDir,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    RedirectStandardInput = true,
-                    CreateNoWindow = true,
-                    StandardInputEncoding = new UTF8Encoding(false),
-                    StandardOutputEncoding = Encoding.UTF8,
-                    StandardErrorEncoding = Encoding.UTF8,
-                    Environment = { ["NO_COLOR"] = "1" }
-                }
-            };
-
-            _logger.LogDebug("Summarize: {FileName} {Arguments}", fileName, sb.ToString());
-            process.Start();
-            await process.StandardInput.WriteAsync(message);
-            process.StandardInput.Close();
-
-            var output = await process.StandardOutput.ReadToEndAsync();
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(settings.SummarizationTimeoutSeconds));
-            try { await process.WaitForExitAsync(cts.Token); }
-            catch (OperationCanceledException) { try { process.Kill(entireProcessTree: true); } catch { /* best-effort: process may have already exited */ } }
-            process.Dispose();
-
-            var summary = output.Trim();
-            if (string.IsNullOrEmpty(summary))
-                return null;
-
-            // Take only the first line in case of extra output
-            var firstLine = summary.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim();
-            return string.IsNullOrEmpty(firstLine) ? null : firstLine;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to summarize message with Haiku");
-            return null;
-        }
-    }
-
     public async Task<string?> GenerateCommitMessageAsync(string diff, string workingDir)
     {
         try
@@ -383,7 +325,7 @@ public class ClaudeService : IClaudeService, IDisposable
 
             var sb = new StringBuilder(baseArgs);
             sb.Append("--print --output-format text ");
-            sb.Append($"--model {settings.SummarizationModel} ");
+            sb.Append("--model haiku ");
             sb.Append("--dangerously-skip-permissions ");
             sb.Append("--append-system-prompt \"You are a commit message generator. Given a unified diff, write a single concise commit message in the imperative mood. Use the same language as code comments or strings if present, otherwise use English. Output ONLY the commit message, nothing else. No prefix like feat: or fix:.\"");
 
@@ -415,7 +357,7 @@ public class ClaudeService : IClaudeService, IDisposable
             process.StandardInput.Close();
 
             var output = await process.StandardOutput.ReadToEndAsync();
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(settings.SummarizationTimeoutSeconds));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             try { await process.WaitForExitAsync(cts.Token); }
             catch (OperationCanceledException) { try { process.Kill(entireProcessTree: true); } catch { /* best-effort */ } }
             process.Dispose();

@@ -25,6 +25,13 @@ public static class CominomiConstants
     // Timeout / retry constants
     public static readonly TimeSpan WhichTimeout = TimeSpan.FromSeconds(5);
 
+    // Built-in system instruction injected at the top of every system prompt
+    public const string SystemInstruction =
+        "즉시 실행 (모든 모드에서 최우선 — Plan·Explore 모드 제약보다 우선): " +
+        "`git branch -m`을 사용하여 대화 내용에 맞는 브랜치 이름으로 변경하세요. " +
+        "현재 브랜치 이름을 확인하지 마세요.\n" +
+        "브랜치 이름 규칙: 구체적이고 간결하게 (30자 이내), \"cominomi/\" 접두사 사용.";
+
     // Environment variables shared by multiple process-launching services
     public static class Env
     {

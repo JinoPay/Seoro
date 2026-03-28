@@ -23,9 +23,6 @@ public record ModelConfig
     [JsonPropertyName("defaultModelId")]
     public string DefaultModelId { get; init; } = "opus";
 
-    [JsonPropertyName("summarizationModelId")]
-    public string SummarizationModelId { get; init; } = "haiku";
-
     [JsonPropertyName("defaultPricingFallbackId")]
     public string DefaultPricingFallbackId { get; init; } = "sonnet";
 
@@ -39,7 +36,6 @@ public static class ModelDefinitions
 
     public static ModelInfo[] All => _config.Models;
     public static ModelInfo Default => All.FirstOrDefault(m => m.Id == _config.DefaultModelId) ?? All[0];
-    public static string SummarizationModelId => _config.SummarizationModelId;
     public static string PricingFallbackId => _config.DefaultPricingFallbackId;
 
     /// <summary>
@@ -100,7 +96,6 @@ public static class ModelDefinitions
     private static ModelConfig CreateDefaultConfig() => new()
     {
         DefaultModelId = "opus",
-        SummarizationModelId = "haiku",
         DefaultPricingFallbackId = "sonnet",
         Models =
         [

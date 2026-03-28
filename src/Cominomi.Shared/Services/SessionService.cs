@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
+
 using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services.Migration;
@@ -618,31 +618,6 @@ public partial class SessionService : ISessionService
         _logger.LogInformation("Session {SessionId} deleted", sessionId);
     }
 
-    public static string GenerateBranchName(string message)
-    {
-        var slug = message.ToLowerInvariant().Trim();
-        // Replace whitespace with hyphens
-        slug = WhitespaceRegex().Replace(slug, "-");
-        // Remove non-alphanumeric except hyphens (ASCII only survives)
-        var asciiSlug = NonSlugRegex().Replace(slug, "");
-        // Collapse multiple hyphens
-        asciiSlug = MultiHyphenRegex().Replace(asciiSlug, "-");
-        asciiSlug = asciiSlug.Trim('-');
-
-        // If non-ASCII input produced an empty slug, generate a stable hash-based slug
-        if (string.IsNullOrEmpty(asciiSlug))
-        {
-            var hash = Math.Abs(message.GetHashCode()).ToString("x8");
-            asciiSlug = hash;
-        }
-
-        // Truncate
-        if (asciiSlug.Length > 40)
-            asciiSlug = asciiSlug[..40].TrimEnd('-');
-
-        return $"{CominomiConstants.BranchPrefix}{asciiSlug}";
-    }
-
     /// <summary>
     /// Checks if a JSON string is missing the current $schemaVersion — meaning it needs migration/upgrade.
     /// </summary>
@@ -679,12 +654,4 @@ public partial class SessionService : ISessionService
         return string.IsNullOrWhiteSpace(sanitized) ? "unnamed" : sanitized;
     }
 
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex WhitespaceRegex();
-
-    [GeneratedRegex(@"[^a-z0-9\-]")]
-    private static partial Regex NonSlugRegex();
-
-    [GeneratedRegex(@"-{2,}")]
-    private static partial Regex MultiHyphenRegex();
 }

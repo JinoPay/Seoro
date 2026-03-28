@@ -23,6 +23,8 @@ public class SystemPromptBuilder : ISystemPromptBuilder
     {
         var parts = new List<string>();
 
+        parts.Add(CominomiConstants.SystemInstruction);
+
         var wsPrompt = workspace?.SystemPrompt;
         if (!string.IsNullOrWhiteSpace(wsPrompt))
             parts.Add(wsPrompt);

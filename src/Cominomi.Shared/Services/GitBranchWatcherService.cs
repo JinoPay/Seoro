@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -10,7 +12,7 @@ public interface IGitBranchWatcherService : IDisposable
     Task RefreshBranchAsync(Session session);
 }
 
-public class GitBranchWatcherService : IGitBranchWatcherService
+public partial class GitBranchWatcherService : IGitBranchWatcherService
 {
     private readonly IChatState _chatState;
     private readonly IGitService _gitService;
@@ -106,6 +108,7 @@ public class GitBranchWatcherService : IGitBranchWatcherService
             if (!string.IsNullOrEmpty(branch) && branch != session.Git.BranchName)
             {
                 session.Git.BranchName = branch;
+                ApplyDerivedTitle(session, branch);
                 _chatState.NotifyStateChanged();
                 _logger.LogDebug("Branch refreshed to {Branch} for session {SessionId}", branch, session.Id);
             }
@@ -147,6 +150,7 @@ public class GitBranchWatcherService : IGitBranchWatcherService
             if (!string.IsNullOrEmpty(branch) && branch != session.Git.BranchName)
             {
                 session.Git.BranchName = branch;
+                ApplyDerivedTitle(session, branch);
                 _chatState.NotifyStateChanged();
                 _logger.LogDebug("Branch changed to {Branch} for session {SessionId}", branch, session.Id);
             }
@@ -160,6 +164,38 @@ public class GitBranchWatcherService : IGitBranchWatcherService
             _logger.LogWarning(ex, "Failed to read HEAD file at {HeadPath}", headPath);
         }
     }
+
+    private void ApplyDerivedTitle(Session session, string branch)
+    {
+        var title = DeriveTitleFromBranch(branch);
+        if (title != null)
+        {
+            session.Title = title;
+            _chatState.Tabs.UpdateChatTabTitle(title);
+        }
+    }
+
+    internal static string? DeriveTitleFromBranch(string branch)
+    {
+        var suffix = branch.StartsWith(CominomiConstants.BranchPrefix)
+            ? branch[CominomiConstants.BranchPrefix.Length..]
+            : branch;
+
+        if (string.IsNullOrEmpty(suffix) || TimestampBranchRegex().IsMatch(suffix))
+            return null;
+
+        var title = suffix.Replace('-', ' ').Trim();
+        if (string.IsNullOrEmpty(title))
+            return null;
+
+        if (title.All(c => c <= 127))
+            title = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(title);
+
+        return title;
+    }
+
+    [GeneratedRegex(@"^\d{8}-\d{6}$")]
+    private static partial Regex TimestampBranchRegex();
 
     private static string? ResolveGitDir(string worktreePath)
     {

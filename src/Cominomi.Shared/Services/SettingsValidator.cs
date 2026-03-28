@@ -35,8 +35,6 @@ public static class SettingsValidator
             issues.Add($"DefaultProcessTimeoutSeconds must be positive, got {settings.DefaultProcessTimeoutSeconds}");
         if (settings.HookTimeoutSeconds <= 0)
             issues.Add($"HookTimeoutSeconds must be positive, got {settings.HookTimeoutSeconds}");
-        if (settings.SummarizationTimeoutSeconds <= 0)
-            issues.Add($"SummarizationTimeoutSeconds must be positive, got {settings.SummarizationTimeoutSeconds}");
         if (settings.VersionCheckTimeoutSeconds <= 0)
             issues.Add($"VersionCheckTimeoutSeconds must be positive, got {settings.VersionCheckTimeoutSeconds}");
         // Optional numeric constraints
@@ -80,7 +78,6 @@ public static class SettingsValidator
         // Clamp timeouts to minimum 1 second
         settings.DefaultProcessTimeoutSeconds = Math.Max(1, settings.DefaultProcessTimeoutSeconds);
         settings.HookTimeoutSeconds = Math.Max(1, settings.HookTimeoutSeconds);
-        settings.SummarizationTimeoutSeconds = Math.Max(1, settings.SummarizationTimeoutSeconds);
         settings.VersionCheckTimeoutSeconds = Math.Max(1, settings.VersionCheckTimeoutSeconds);
         // Clamp UI scale
         if (settings.UiScale != 0)
