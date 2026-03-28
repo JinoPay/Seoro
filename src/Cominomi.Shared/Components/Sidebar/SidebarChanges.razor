@@ -1,6 +1,7 @@
 @using Cominomi.Shared.Models
 @inject IChatState ChatState
 @inject IGitService GitService
+@inject IClaudeService ClaudeService
 @inject ISnackbar Snackbar
 @implements IDisposable
 
@@ -74,26 +75,24 @@
             }
         </div>
 
-        @* Conventional commit section *@
         <div class="sidebar-commit-section">
-            <div class="sidebar-commit-type-row">
-                <MudSelect T="ConventionalCommitType?" @bind-Value="_commitType" Dense="true"
-                           Variant="Variant.Outlined" Margin="Margin.Dense"
-                           Placeholder="타입" Style="min-width: 100px; max-width: 120px;">
-                    @foreach (var ct in ConventionalCommitTypes.All)
-                    {
-                        <MudSelectItem T="ConventionalCommitType?" Value="@ct.Type">@ct.Prefix</MudSelectItem>
-                    }
-                </MudSelect>
-                <MudTextField T="string" @bind-Value="_commitScope" Placeholder="scope"
-                              Variant="Variant.Outlined" Margin="Margin.Dense"
-                              Style="max-width: 90px;" />
+            <div class="commit-input-wrap">
+                <MudTextField T="string" @bind-Value="_commitMessage" Placeholder="커밋 메시지..."
+                              Variant="Variant.Text" Lines="2" Class="commit-message-field"
+                              Style="font-size: 0.8rem;" />
+                <MudTooltip Text="AI로 커밋 메시지 생성" Placement="Placement.Top">
+                    <MudIconButton Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small"
+                                   Class="commit-ai-btn" Disabled="@(_generating || _diff == null)"
+                                   OnClick="GenerateCommitMessage" />
+                </MudTooltip>
             </div>
-            <MudTextField T="string" @bind-Value="_commitMessage" Placeholder="커밋 메시지..."
-                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+            @if (_generating)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Secondary" Class="commit-progress" />
+            }
             <MudButton OnClick="CommitChanges" Variant="Variant.Filled" Color="Color.Primary"
                        Size="Size.Small" FullWidth="true" Disabled="@(!CanCommit)"
-                       StartIcon="@Icons.Material.Filled.Check">
+                       Class="commit-btn">
                 @(_committing ? "커밋 중..." : "커밋")
             </MudButton>
         </div>
@@ -115,10 +114,9 @@
     private (int Ahead, int Behind)? _aheadBehind;
 
     // Commit fields
-    private ConventionalCommitType? _commitType;
-    private string _commitScope = "";
     private string _commitMessage = "";
     private bool _committing;
+    private bool _generating;
 
     private bool CanCommit => !_committing && !string.IsNullOrWhiteSpace(_commitMessage) && _diff?.Files.Count > 0;
 
@@ -280,6 +278,51 @@
         }
     }
 
+    private async Task GenerateCommitMessage()
+    {
+        if (_generating || _diff == null || _diff.Files.Count == 0)
+            return;
+
+        var session = ChatState.CurrentSession;
+        if (session == null || string.IsNullOrEmpty(session.Git.WorktreePath))
+            return;
+
+        _generating = true;
+        StateHasChanged();
+
+        try
+        {
+            var diffText = string.Join("\n", _diff.Files
+                .Where(f => !string.IsNullOrEmpty(f.UnifiedDiff))
+                .Select(f => f.UnifiedDiff));
+
+            if (string.IsNullOrWhiteSpace(diffText))
+            {
+                Snackbar.Add("diff 내용이 없습니다", Severity.Warning);
+                return;
+            }
+
+            var message = await ClaudeService.GenerateCommitMessageAsync(diffText, session.Git.WorktreePath);
+            if (!string.IsNullOrEmpty(message))
+            {
+                _commitMessage = message;
+            }
+            else
+            {
+                Snackbar.Add("메시지 생성 실패", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"생성 오류: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _generating = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task CommitChanges()
     {
         var session = ChatState.CurrentSession;
@@ -291,10 +334,6 @@
 
         try
         {
-            var fullMessage = _commitType.HasValue
-                ? ConventionalCommitTypes.FormatMessage(_commitType.Value, _commitScope, _commitMessage)
-                : _commitMessage;
-
             var stageResult = await GitService.StageAllAsync(session.Git.WorktreePath);
             if (!stageResult.Success)
             {
@@ -302,12 +341,11 @@
                 return;
             }
 
-            var commitResult = await GitService.CommitAsync(session.Git.WorktreePath, fullMessage);
+            var commitResult = await GitService.CommitAsync(session.Git.WorktreePath, _commitMessage);
             if (commitResult.Success)
             {
                 Snackbar.Add("커밋 완료", Severity.Success);
                 _commitMessage = "";
-                _commitScope = "";
                 await LoadDiffAsync();
             }
             else
@@ -457,15 +495,72 @@
     .ahead-behind-badge .behind { color: var(--color-warning); }
 
     .sidebar-commit-section {
-        padding: 8px;
+        padding: 8px 8px 10px;
         border-top: 1px solid var(--mud-palette-lines-default);
         display: flex;
         flex-direction: column;
         gap: 6px;
     }
 
-    .sidebar-commit-type-row {
+    .commit-input-wrap {
+        position: relative;
         display: flex;
-        gap: 4px;
+        align-items: flex-start;
+        background: var(--mud-palette-surface);
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 6px;
+        padding: 4px 4px 4px 8px;
+        transition: border-color 0.15s;
+    }
+    .commit-input-wrap:focus-within {
+        border-color: var(--mud-palette-primary);
+    }
+
+    .commit-input-wrap ::deep .mud-input-slot,
+    .commit-input-wrap ::deep .mud-input-root {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .commit-input-wrap ::deep .mud-input-underline::before,
+    .commit-input-wrap ::deep .mud-input-underline::after {
+        display: none !important;
+    }
+    .commit-input-wrap ::deep textarea {
+        font-size: 0.78rem !important;
+        line-height: 1.35 !important;
+        padding: 2px 0 !important;
+    }
+
+    .commit-message-field {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .commit-ai-btn {
+        flex-shrink: 0;
+        width: 28px !important;
+        height: 28px !important;
+        margin-top: 1px;
+        color: var(--mud-palette-primary) !important;
+        opacity: 0.7;
+        transition: opacity 0.15s;
+    }
+    .commit-ai-btn:hover {
+        opacity: 1;
+        background: var(--mud-palette-action-default-hover) !important;
+    }
+
+    .commit-progress {
+        height: 2px !important;
+        border-radius: 1px;
+    }
+
+    .commit-btn {
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.02em;
+        border-radius: 6px !important;
+        height: 30px !important;
+        text-transform: none !important;
     }
 </style>

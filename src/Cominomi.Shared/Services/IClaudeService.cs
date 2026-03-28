@@ -36,4 +36,9 @@ public interface IClaudeService : IDisposable
     /// Summarize a user message into a short title using Haiku.
     /// </summary>
     Task<string?> SummarizeAsync(string message, string workingDir);
+
+    /// <summary>
+    /// Generate a commit message from a unified diff using Haiku.
+    /// </summary>
+    Task<string?> GenerateCommitMessageAsync(string diff, string workingDir);
 }
