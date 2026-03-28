@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Cominomi.Shared.Models;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum FileChangeType { Added, Modified, Deleted, Renamed }
+public enum FileChangeType { Added, Modified, Deleted, Renamed, Untracked }
 
 public class FileDiff
 {

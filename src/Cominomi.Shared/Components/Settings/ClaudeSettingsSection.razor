@@ -1,0 +1,179 @@
+@using Cominomi.Shared.Models
+@inject IClaudeSettingsService ClaudeSettingsService
+@inject ISnackbar Snackbar
+
+<div class="settings-content-area">
+    <div class="settings-content-header">
+        <div class="d-flex align-center gap-2">
+            <MudChipSet T="string" SelectedValue="@_scopeStr" SelectedValueChanged="OnScopeChanged"
+                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                        Variant="Variant.Outlined" Color="Color.Primary">
+                <MudChip T="string" Value="@("Global")" Icon="@Icons.Material.Filled.Public">
+                    글로벌
+                </MudChip>
+                <MudChip T="string" Value="@("Project")" Icon="@Icons.Material.Filled.Folder"
+                         Disabled="@(string.IsNullOrEmpty(_projectPath))">
+                    프로젝트
+                </MudChip>
+                <MudChip T="string" Value="@("Local")" Icon="@Icons.Material.Filled.Lock"
+                         Disabled="@(string.IsNullOrEmpty(_projectPath))">
+                    로컬
+                </MudChip>
+            </MudChipSet>
+
+            @if (_scope != ClaudeSettingsScope.Global)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                         Color="@(_scope == ClaudeSettingsScope.Project ? Color.Info : Color.Warning)">
+                    @(_scope == ClaudeSettingsScope.Project ? "git tracked" : "gitignored")
+                </MudChip>
+            }
+        </div>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
+                   Size="Size.Small" Style="text-transform: none;" Disabled="_saving">
+            @(_saving ? "저장 중..." : "저장")
+        </MudButton>
+    </div>
+
+    <div class="settings-content-body">
+        @if (_loading)
+        {
+            <div style="display: flex; justify-content: center; padding: 40px;">
+                <MudProgressCircular Indeterminate="true" />
+            </div>
+        }
+        else
+        {
+            @* Project picker (for project/local scope) *@
+            @if (_scope != ClaudeSettingsScope.Global)
+            {
+                <div class="mb-4">
+                    <ProjectScopePicker @bind-SelectedPath="_projectPath" Label="프로젝트 경로" />
+                </div>
+            }
+
+            <div class="settings-section-title">Claude CLI 설정</div>
+            <div class="settings-section-desc">
+                @(_scope switch {
+                    ClaudeSettingsScope.Global => "~/.claude/settings.json — 모든 프로젝트에 적용되는 전역 설정입니다.",
+                    ClaudeSettingsScope.Project => ".claude/settings.json — 이 프로젝트에만 적용되며 git으로 추적됩니다.",
+                    ClaudeSettingsScope.Local => ".claude/settings.local.json — 이 프로젝트에만 적용되며 gitignore됩니다.",
+                    _ => ""
+                })
+            </div>
+
+            <div class="stack gap-4">
+                @* Model *@
+                <MudTextField T="string" @bind-Value="_settings.Model" Label="모델"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="claude-sonnet-4-20250514"
+                              HelperText="Claude CLI의 settings.json에 저장됩니다. Cominomi 외부에서 CLI 실행 시 사용됩니다." />
+
+                @* Effort Level *@
+                <MudSelect T="EffortLevel?" @bind-Value="_settings.EffortLevel" Label="Effort 레벨"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                           HelperText="Claude CLI의 settings.json에 저장됩니다. Cominomi의 앱 설정 > AI 모델에서 지정한 값이 우선합니다.">
+                    <MudSelectItem T="EffortLevel?" Value="@(EffortLevel.Low)">Low</MudSelectItem>
+                    <MudSelectItem T="EffortLevel?" Value="@(EffortLevel.Medium)">Medium</MudSelectItem>
+                    <MudSelectItem T="EffortLevel?" Value="@(EffortLevel.High)">High</MudSelectItem>
+                </MudSelect>
+
+                @* Default Mode *@
+                <MudSelect T="ClaudeDefaultMode?" @bind-Value="_settings.DefaultMode" Label="기본 모드"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                           HelperText="Claude CLI의 settings.json에 저장됩니다. Cominomi 외부에서 CLI 실행 시 사용됩니다.">
+                    <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.Default)">Default</MudSelectItem>
+                    <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.Plan)">Plan</MudSelectItem>
+                    <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.AcceptEdits)">Accept Edits</MudSelectItem>
+                    <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.DontAsk)">Don't Ask</MudSelectItem>
+                    <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.BypassPermissions)">Bypass Permissions</MudSelectItem>
+                </MudSelect>
+
+                @* Toggles *@
+                <MudSwitch T="bool?" @bind-Value="_settings.AlwaysThinkingEnabled"
+                           Label="Extended Thinking 항상 활성화" Color="Color.Primary" />
+
+                <MudSwitch T="bool?" @bind-Value="_settings.AutoMemoryEnabled"
+                           Label="Auto Memory 활성화" Color="Color.Primary" />
+
+                @* Permissions *@
+                <div class="settings-group-title" style="margin-top: 8px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" Class="mr-1" />
+                    권한 규칙
+                </div>
+                <PermissionsEditor @bind-Permissions="_settings.Permissions" />
+
+                @* Environment Variables *@
+                <div class="settings-group-title" style="margin-top: 8px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" Class="mr-1" />
+                    환경변수
+                </div>
+                <small class="typo-caption text-secondary" style="margin-top: -4px;">
+                    Claude CLI의 settings.json에 저장됩니다. CLI가 직접 실행될 때도 적용됩니다.
+                </small>
+                <EnvVarsEditor @bind-EnvVars="_settings.Env" />
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? ProjectPath { get; set; }
+
+    private ClaudeSettings _settings = new();
+    private ClaudeSettingsScope _scope = ClaudeSettingsScope.Global;
+    private string _scopeStr = "Global";
+    private string? _projectPath;
+    private bool _loading;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _projectPath = ProjectPath;
+        await LoadSettings();
+    }
+
+    private async Task OnScopeChanged(string value)
+    {
+        _scopeStr = value;
+        _scope = Enum.Parse<ClaudeSettingsScope>(value);
+        await LoadSettings();
+    }
+
+    private async Task LoadSettings()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            _settings = await ClaudeSettingsService.ReadAsync(_scope,
+                _scope == ClaudeSettingsScope.Global ? null : _projectPath);
+        }
+        catch
+        {
+            _settings = new ClaudeSettings();
+        }
+
+        _loading = false;
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        try
+        {
+            await ClaudeSettingsService.WriteAsync(_scope, _settings,
+                _scope == ClaudeSettingsScope.Global ? null : _projectPath);
+            Snackbar.Add("Claude 설정이 저장되었습니다.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

@@ -1,0 +1,280 @@
+@using Cominomi.Shared.Models
+@inject IClaudeSettingsService ClaudeSettingsService
+@inject ISnackbar Snackbar
+
+<div class="settings-content-area wide">
+    <div class="settings-content-header">
+        <div class="d-flex align-center gap-2">
+            <MudChipSet T="string" SelectedValue="@_scopeStr" SelectedValueChanged="OnScopeChanged"
+                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                        Variant="Variant.Outlined" Color="Color.Primary">
+                <MudChip T="string" Value="@("Global")" Icon="@Icons.Material.Filled.Public">글로벌</MudChip>
+                <MudChip T="string" Value="@("Project")" Icon="@Icons.Material.Filled.Folder"
+                         Disabled="@(string.IsNullOrEmpty(_projectPath))">프로젝트</MudChip>
+            </MudChipSet>
+            @if (_scope == ClaudeSettingsScope.Project)
+            {
+                <div style="width: 200px;">
+                    <ProjectScopePicker @bind-SelectedPath="_projectPath" Label="" />
+                </div>
+            }
+        </div>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
+                   Size="Size.Small" Style="text-transform: none;" Disabled="_saving">
+            저장
+        </MudButton>
+    </div>
+
+    <div class="settings-content-body">
+        <div class="hooks-layout">
+            @* Left: Event sidebar *@
+            <div class="hooks-event-sidebar">
+                <div class="typo-subtitle2 mb-2" style="padding: 0 8px;">이벤트</div>
+                @foreach (var evt in ClaudeHookEvents.All)
+                {
+                    var count = GetHookCount(evt);
+                    <button class="hooks-event-item @(_selectedEvent == evt ? "active" : "")"
+                            @onclick="@(() => SelectEvent(evt))">
+                        <span class="hooks-event-name">@evt</span>
+                        @if (count > 0)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                     Color="Color.Primary" Class="hooks-event-count">
+                                @count
+                            </MudChip>
+                        }
+                    </button>
+                }
+            </div>
+
+            @* Right: Hook config editor *@
+            <div class="hooks-config-panel">
+                @if (_selectedEvent != null)
+                {
+                    <div class="d-flex justify-space-between align-center mb-3">
+                        <div>
+                            <div class="typo-subtitle1">@_selectedEvent</div>
+                            <div class="typo-caption text-secondary">
+                                @(ClaudeHookEvents.Descriptions.TryGetValue(_selectedEvent, out var desc) ? desc : "")
+                            </div>
+                        </div>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="AddHookToEvent" Style="text-transform: none;">
+                            훅 추가
+                        </MudButton>
+                    </div>
+
+                    @if (GetEventConfigs().Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Normal" Class="mb-3">
+                            이 이벤트에 등록된 훅이 없습니다. "훅 추가" 버튼으로 새 훅을 만드세요.
+                        </MudAlert>
+                    }
+
+                    @foreach (var (config, configIdx) in GetEventConfigs().Select((c, i) => (c, i)))
+                    {
+                        @if (!string.IsNullOrEmpty(config.Matcher) || GetEventConfigs().Count > 1)
+                        {
+                            <div class="d-flex align-center gap-2 mb-2">
+                                <MudTextField T="string" @bind-Value="config.Matcher" Label="매처 패턴"
+                                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                                              Placeholder="Bash, Edit, * 등" Style="max-width: 200px;" />
+                            </div>
+                        }
+
+                        @foreach (var (handler, handlerIdx) in config.Hooks.Select((h, i) => (h, i)))
+                        {
+                            var ci = configIdx;
+                            var hi = handlerIdx;
+                            <div class="mb-3">
+                                <HookCard Hook="handler" Matcher="@config.Matcher"
+                                          OnChanged="@(h => UpdateHandler(ci, hi, h))"
+                                          OnDelete="@(() => DeleteHandler(ci, hi))" />
+                            </div>
+                        }
+                    }
+                }
+                else
+                {
+                    <div class="d-flex flex-column align-center justify-center" style="height: 200px; opacity: 0.5;">
+                        <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Large" />
+                        <div class="typo-body2 mt-2">왼쪽에서 이벤트를 선택하세요</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ClaudeSettings _settings = new();
+    private ClaudeSettingsScope _scope = ClaudeSettingsScope.Global;
+    private string _scopeStr = "Global";
+    private string? _projectPath;
+    private string? _selectedEvent;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedEvent = ClaudeHookEvents.PreToolUse;
+        await LoadSettings();
+    }
+
+    private async Task OnScopeChanged(string value)
+    {
+        _scopeStr = value;
+        _scope = Enum.Parse<ClaudeSettingsScope>(value);
+        await LoadSettings();
+    }
+
+    private async Task LoadSettings()
+    {
+        try
+        {
+            _settings = await ClaudeSettingsService.ReadAsync(_scope,
+                _scope == ClaudeSettingsScope.Global ? null : _projectPath);
+        }
+        catch
+        {
+            _settings = new ClaudeSettings();
+        }
+    }
+
+    private void SelectEvent(string evt) => _selectedEvent = evt;
+
+    private int GetHookCount(string evt)
+    {
+        if (_settings.Hooks == null || !_settings.Hooks.TryGetValue(evt, out var configs))
+            return 0;
+        return configs.Sum(c => c.Hooks.Count);
+    }
+
+    private List<ClaudeHookEventConfig> GetEventConfigs()
+    {
+        if (_selectedEvent == null) return [];
+        _settings.Hooks ??= new();
+        if (!_settings.Hooks.TryGetValue(_selectedEvent, out var configs))
+            return [];
+        return configs;
+    }
+
+    private void AddHookToEvent()
+    {
+        if (_selectedEvent == null) return;
+        _settings.Hooks ??= new();
+        if (!_settings.Hooks.ContainsKey(_selectedEvent))
+            _settings.Hooks[_selectedEvent] = [];
+
+        // Add a new config with one empty command handler
+        _settings.Hooks[_selectedEvent].Add(new ClaudeHookEventConfig
+        {
+            Hooks = [new ClaudeHookHandler { Type = ClaudeHookHandlerType.Command }]
+        });
+    }
+
+    private void UpdateHandler(int configIdx, int handlerIdx, ClaudeHookHandler handler)
+    {
+        var configs = GetEventConfigs();
+        if (configIdx < configs.Count && handlerIdx < configs[configIdx].Hooks.Count)
+            configs[configIdx].Hooks[handlerIdx] = handler;
+    }
+
+    private void DeleteHandler(int configIdx, int handlerIdx)
+    {
+        if (_selectedEvent == null) return;
+        var configs = GetEventConfigs();
+        if (configIdx >= configs.Count) return;
+
+        var config = configs[configIdx];
+        if (handlerIdx < config.Hooks.Count)
+            config.Hooks.RemoveAt(handlerIdx);
+
+        // Remove config entry if empty
+        if (config.Hooks.Count == 0)
+            configs.RemoveAt(configIdx);
+
+        // Remove event key if no configs left
+        if (configs.Count == 0)
+            _settings.Hooks?.Remove(_selectedEvent);
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        try
+        {
+            await ClaudeSettingsService.WriteAsync(_scope, _settings,
+                _scope == ClaudeSettingsScope.Global ? null : _projectPath);
+            Snackbar.Add("훅 설정이 저장되었습니다.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}
+
+<style>
+    .hooks-layout {
+        display: flex;
+        gap: 0;
+        min-height: 500px;
+    }
+
+    .hooks-event-sidebar {
+        width: 220px;
+        min-width: 220px;
+        border-right: 1px solid var(--mud-palette-lines-default);
+        padding: 12px 0;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .hooks-event-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 6px 12px;
+        font-size: 0.8125rem;
+        text-align: left;
+        background: none;
+        border: none;
+        cursor: pointer;
+        transition: background 0.1s;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .hooks-event-item:hover {
+        background: var(--mud-palette-action-default-hover);
+    }
+
+    .hooks-event-item.active {
+        background: var(--mud-palette-primary-hover);
+        color: var(--mud-palette-primary);
+        font-weight: 600;
+        border-left: 2px solid var(--mud-palette-primary);
+    }
+
+    .hooks-event-name {
+        font-family: monospace;
+        font-size: 0.75rem;
+    }
+
+    .hooks-event-count {
+        height: 20px !important;
+        min-width: 20px;
+    }
+
+    .hooks-config-panel {
+        flex: 1;
+        padding: 16px 20px;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+</style>

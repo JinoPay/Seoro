@@ -1,0 +1,336 @@
+@inject IMemoryService MemoryService
+@inject IWorkspaceService WorkspaceService
+@inject ISnackbar Snackbar
+
+<div class="settings-content-area wide">
+    <div class="settings-content-header">
+        <span class="typo-h6">메모리 브라우저</span>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@_entries.Count 항목</MudChip>
+    </div>
+    <div class="settings-content-body">
+        <div class="memory-layout">
+            @* Left: Filters + List *@
+            <div class="memory-sidebar">
+                <MudTextField T="string" @bind-Value="_search" Placeholder="검색..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                              Class="mb-2" />
+
+                <MudSelect T="string" @bind-Value="_selectedWorkspace" Label="워크스페이스"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="mb-2">
+                    <MudSelectItem T="string" Value="@("")">전체</MudSelectItem>
+                    @foreach (var ws in _workspaces)
+                    {
+                        <MudSelectItem T="string" Value="@ws.Id">@ws.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudChipSet T="MemoryType?" SelectedValue="_selectedType" SelectedValueChanged="OnTypeChanged"
+                            SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                            Variant="Variant.Outlined" Class="mb-2" Style="flex-wrap: wrap;">
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)null)" Color="Color.Default">전체</MudChip>
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.User)" Color="Color.Primary">사용자</MudChip>
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Feedback)" Color="Color.Warning">피드백</MudChip>
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Project)" Color="Color.Info">프로젝트</MudChip>
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Reference)" Color="Color.Secondary">참조</MudChip>
+                </MudChipSet>
+
+                @if (_loading)
+                {
+                    <div style="display: flex; justify-content: center; padding: 20px;">
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                    </div>
+                }
+                else
+                {
+                    @foreach (var entry in FilteredEntries)
+                    {
+                        <div class="@MemoryItemClass(entry)" @onclick="@(() => SelectEntry(entry))">
+                            <div class="d-flex align-center gap-2">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                         Color="@GetTypeColor(entry.Type)"
+                                         Style="min-width: 50px; text-align: center;">
+                                    @GetTypeLabel(entry.Type)
+                                </MudChip>
+                                <span class="typo-subtitle2" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    @entry.Name
+                                </span>
+                            </div>
+                            <div class="typo-caption text-secondary" style="margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @entry.Description
+                            </div>
+                            <div class="typo-caption text-secondary" style="margin-top: 2px; opacity: 0.5;">
+                                @entry.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                            </div>
+                        </div>
+                    }
+
+                    @if (!FilteredEntries.Any())
+                    {
+                        <div class="typo-caption text-secondary text-center pa-4">
+                            메모리 항목이 없습니다
+                        </div>
+                    }
+                }
+            </div>
+
+            @* Right: Detail/Editor *@
+            <div class="memory-detail">
+                @if (_selected != null)
+                {
+                    <div class="memory-detail-header">
+                        <span class="typo-h6">@_selected.Name</span>
+                        <div style="margin-left: auto; display: flex; gap: 4px;">
+                            <MudIconButton Icon="@(_editing ? Icons.Material.Filled.Close : Icons.Material.Filled.Edit)"
+                                           Size="Size.Small" OnClick="ToggleEdit" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                           Color="Color.Error" OnClick="DeleteSelected" />
+                        </div>
+                    </div>
+
+                    @if (_editing)
+                    {
+                        <div class="stack gap-3 pa-3">
+                            <MudTextField @bind-Value="_editName" Label="이름" Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" />
+                            <MudTextField @bind-Value="_editDescription" Label="설명" Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" />
+                            <MudSelect T="MemoryType" @bind-Value="_editType" Label="타입"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                                <MudSelectItem T="MemoryType" Value="MemoryType.User">사용자</MudSelectItem>
+                                <MudSelectItem T="MemoryType" Value="MemoryType.Feedback">피드백</MudSelectItem>
+                                <MudSelectItem T="MemoryType" Value="MemoryType.Project">프로젝트</MudSelectItem>
+                                <MudSelectItem T="MemoryType" Value="MemoryType.Reference">참조</MudSelectItem>
+                            </MudSelect>
+                            <MudTextField @bind-Value="_editContent" Label="내용" Variant="Variant.Outlined"
+                                          Lines="12" />
+                            <div class="stack-row gap-2">
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveEdit">저장</MudButton>
+                                <MudButton Variant="Variant.Text" OnClick="CancelEdit">취소</MudButton>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="pa-3">
+                            <div class="d-flex gap-2 mb-3">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                         Color="@GetTypeColor(_selected.Type)">
+                                    @GetTypeLabel(_selected.Type)
+                                </MudChip>
+                                @if (!string.IsNullOrEmpty(_selected.WorkspaceId))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                             Color="Color.Info">@GetWorkspaceName(_selected.WorkspaceId)</MudChip>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(_selected.Description))
+                            {
+                                <div class="typo-body2 text-secondary mb-3">@_selected.Description</div>
+                            }
+                            <div class="memory-content-view">@_selected.Content</div>
+                            <div class="typo-caption text-secondary mt-3" style="opacity: 0.5;">
+                                생성: @_selected.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm") &middot;
+                                수정: @_selected.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="d-flex flex-column align-center justify-center" style="height: 300px; opacity: 0.5;">
+                        <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Large" />
+                        <div class="typo-body2 mt-2">왼쪽에서 메모리를 선택하세요</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<MemoryEntry> _entries = [];
+    private List<Workspace> _workspaces = [];
+    private MemoryEntry? _selected;
+    private string _search = "";
+    private string _selectedWorkspace = "";
+    private MemoryType? _selectedType;
+    private bool _loading = true;
+    private bool _editing;
+
+    // Edit fields
+    private string _editName = "";
+    private string _editDescription = "";
+    private MemoryType _editType;
+    private string _editContent = "";
+
+    private IEnumerable<MemoryEntry> FilteredEntries
+    {
+        get
+        {
+            IEnumerable<MemoryEntry> result = _entries;
+
+            if (!string.IsNullOrEmpty(_selectedWorkspace))
+                result = result.Where(e => e.WorkspaceId == _selectedWorkspace);
+
+            if (_selectedType.HasValue)
+                result = result.Where(e => e.Type == _selectedType.Value);
+
+            if (!string.IsNullOrWhiteSpace(_search))
+                result = result.Where(e =>
+                    (e.Name?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.Description?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.Content?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false));
+
+            return result.OrderByDescending(e => e.UpdatedAt);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var entriesTask = MemoryService.GetAllAsync();
+        var workspacesTask = WorkspaceService.GetWorkspacesAsync();
+        _entries = await entriesTask;
+        _workspaces = await workspacesTask;
+        _loading = false;
+    }
+
+    private void OnTypeChanged(MemoryType? type)
+    {
+        _selectedType = type;
+    }
+
+    private void SelectEntry(MemoryEntry entry)
+    {
+        _selected = entry;
+        _editing = false;
+    }
+
+    private void ToggleEdit()
+    {
+        if (_editing)
+        {
+            _editing = false;
+            return;
+        }
+        if (_selected == null) return;
+        _editName = _selected.Name;
+        _editDescription = _selected.Description;
+        _editType = _selected.Type;
+        _editContent = _selected.Content;
+        _editing = true;
+    }
+
+    private void CancelEdit()
+    {
+        _editing = false;
+    }
+
+    private async Task SaveEdit()
+    {
+        if (_selected == null) return;
+        _selected.Name = _editName;
+        _selected.Description = _editDescription;
+        _selected.Type = _editType;
+        _selected.Content = _editContent;
+        _selected.UpdatedAt = DateTime.UtcNow;
+        await MemoryService.SaveAsync(_selected);
+        _editing = false;
+        Snackbar.Add("메모리가 저장되었습니다.", Severity.Success);
+        StateHasChanged();
+    }
+
+    private async Task DeleteSelected()
+    {
+        if (_selected == null) return;
+        await MemoryService.DeleteAsync(_selected.Id);
+        _entries.Remove(_selected);
+        _selected = null;
+        _editing = false;
+        Snackbar.Add("메모리가 삭제되었습니다.", Severity.Success);
+        StateHasChanged();
+    }
+
+    private string GetWorkspaceName(string workspaceId)
+    {
+        return _workspaces.FirstOrDefault(w => w.Id == workspaceId)?.Name ?? workspaceId;
+    }
+
+    private string MemoryItemClass(MemoryEntry entry)
+    {
+        var active = _selected?.Id == entry.Id ? " active" : "";
+        return $"memory-item{active}";
+    }
+
+    private static Color GetTypeColor(MemoryType type) => type switch
+    {
+        MemoryType.User => Color.Primary,
+        MemoryType.Feedback => Color.Warning,
+        MemoryType.Project => Color.Info,
+        MemoryType.Reference => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private static string GetTypeLabel(MemoryType type) => type switch
+    {
+        MemoryType.User => "사용자",
+        MemoryType.Feedback => "피드백",
+        MemoryType.Project => "프로젝트",
+        MemoryType.Reference => "참조",
+        _ => "기타"
+    };
+}
+
+<style>
+    .memory-layout {
+        display: flex;
+        gap: 0;
+        min-height: 500px;
+    }
+
+    .memory-sidebar {
+        width: 340px;
+        min-width: 340px;
+        border-right: 1px solid var(--mud-palette-lines-default);
+        padding: 12px;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .memory-item {
+        padding: 10px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-bottom: 4px;
+    }
+
+    .memory-item:hover { background: var(--mud-palette-action-default-hover); }
+    .memory-item.active {
+        background: var(--mud-palette-primary-hover);
+        border-left: 2px solid var(--mud-palette-primary);
+    }
+
+    .memory-detail {
+        flex: 1;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .memory-detail-header {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .memory-content-view {
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        background: var(--mud-palette-action-default-hover);
+        border-radius: 8px;
+        padding: 12px;
+        line-height: 1.5;
+    }
+</style>

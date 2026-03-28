@@ -1,0 +1,169 @@
+@inject IUpdateService UpdateService
+
+<div class="settings-section-title">업데이트</div>
+<div class="settings-section-desc">앱 업데이트 설정 및 확인을 합니다.</div>
+
+<div class="stack gap-3">
+    <div class="stack-row items-center gap-2">
+        <span class="typo-body2">현재 버전:</span>
+        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">
+            @(System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "개발 모드")
+        </MudChip>
+        @if (!UpdateService.IsInstalled)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                개발 빌드
+            </MudChip>
+        }
+    </div>
+
+    <MudSwitch T="bool" @bind-Value="Settings.AutoUpdateEnabled"
+               Label="자동 업데이트 확인"
+               Color="Color.Primary" UncheckedColor="Color.Default" />
+    <small class="typo-caption text-secondary" style="margin-top: -8px;">
+        앱 시작 시 새 버전이 있는지 자동으로 확인합니다.
+    </small>
+
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+               OnClick="CheckForUpdates"
+               StartIcon="@Icons.Material.Filled.Refresh"
+               Disabled="@(_updateChecking || _updateDownloading)"
+               Style="text-transform: none; align-self: flex-start;">
+        @if (_updateChecking)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                 Style="width: 16px; height: 16px; margin-right: 8px;" />
+            @:확인 중...
+        }
+        else
+        {
+            @:업데이트 확인
+        }
+    </MudButton>
+
+    @if (_updateError != null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true">@_updateError</MudAlert>
+    }
+    else if (_updateReady)
+    {
+        <MudAlert Severity="Severity.Success" Dense="true">
+            업데이트 다운로드 완료. 재시작하여 적용합니다.
+        </MudAlert>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   OnClick="@(() => UpdateService.ApplyUpdateAndRestart())"
+                   StartIcon="@Icons.Material.Filled.RestartAlt"
+                   Style="text-transform: none; align-self: flex-start;">
+            재시작하여 적용
+        </MudButton>
+    }
+    else if (_updateDownloading)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                 Style="width: 16px; height: 16px; margin-right: 8px;" />
+            업데이트 다운로드 중...
+        </MudAlert>
+    }
+    else if (_updateInfo != null)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true">
+            새 버전 @_updateInfo.TargetVersion 사용 가능
+            @if (_updateInfo.DownloadSize.HasValue)
+            {
+                @:(@FormatSize(_updateInfo.DownloadSize.Value))
+            }
+        </MudAlert>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   OnClick="DownloadUpdate"
+                   StartIcon="@Icons.Material.Filled.Download"
+                   Style="text-transform: none; align-self: flex-start;">
+            다운로드 및 설치
+        </MudButton>
+    }
+    else if (!_updateChecking)
+    {
+        <small class="typo-caption text-secondary">
+            최신 버전을 사용 중입니다.
+        </small>
+    }
+
+    @if (!UpdateService.IsInstalled)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+            자동 업데이트는 설치 빌드에서만 사용할 수 있습니다.
+            개발 빌드에서는 수동으로 업데이트하세요.
+        </MudAlert>
+    }
+</div>
+
+<div class="settings-group-title" style="margin-top: 24px;">릴리스 노트</div>
+<ReleaseNotesPanel />
+
+@code {
+    [Parameter, EditorRequired] public AppSettings Settings { get; set; } = null!;
+
+    private bool _updateChecking;
+    private UpdateInfo? _updateInfo;
+    private bool _updateDownloading;
+    private bool _updateReady;
+    private string? _updateError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckForUpdates();
+    }
+
+    private async Task CheckForUpdates()
+    {
+        _updateChecking = true;
+        _updateError = null;
+        _updateInfo = null;
+        _updateReady = false;
+        StateHasChanged();
+
+        try
+        {
+            _updateInfo = await UpdateService.CheckForUpdateAsync();
+        }
+        catch (Exception ex)
+        {
+            _updateError = $"업데이트 확인 실패: {ex.Message}";
+        }
+        finally
+        {
+            _updateChecking = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DownloadUpdate()
+    {
+        _updateDownloading = true;
+        _updateError = null;
+        StateHasChanged();
+
+        try
+        {
+            await UpdateService.DownloadUpdateAsync();
+            _updateReady = true;
+            _updateDownloading = false;
+        }
+        catch (Exception ex)
+        {
+            _updateError = $"다운로드 실패: {ex.Message}";
+            _updateDownloading = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes >= 1024 * 1024)
+            return $"{bytes / (1024.0 * 1024.0):F1} MB";
+        if (bytes >= 1024)
+            return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes} B";
+    }
+}

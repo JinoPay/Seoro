@@ -1,0 +1,82 @@
+<div class="streak-card">
+    <div class="streak-card-title">연속 기록</div>
+    <div class="streak-card-main">
+        @if (Current > 0)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Color="Color.Primary" Size="Size.Large" />
+        }
+        <span class="streak-card-number">@Current</span>
+        <span class="streak-card-unit">일</span>
+    </div>
+    <div class="streak-card-details">
+        <div class="streak-card-detail">최장: <span class="streak-card-detail-value">@(Longest)일</span></div>
+        @if (LastActiveDate.HasValue)
+        {
+            <div class="streak-card-detail">마지막 활동: <span class="streak-card-detail-value">@TimeAgo(LastActiveDate.Value)</span></div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Current { get; set; }
+    [Parameter] public int Longest { get; set; }
+    [Parameter] public DateTime? LastActiveDate { get; set; }
+
+    private static string TimeAgo(DateTime dt)
+    {
+        var diff = DateTime.UtcNow - dt;
+        if (diff.TotalMinutes < 1) return "방금";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}분 전";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}시간 전";
+        return $"{(int)diff.TotalDays}일 전";
+    }
+}
+
+<style>
+    .streak-card {
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .streak-card-title {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 12px;
+    }
+
+    .streak-card-main {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+    }
+
+    .streak-card-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--mud-palette-primary);
+        line-height: 1;
+    }
+
+    .streak-card-unit {
+        font-size: 0.9rem;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .streak-card-details {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .streak-card-detail {
+        font-size: 0.7rem;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .streak-card-detail-value {
+        color: var(--mud-palette-text-primary);
+    }
+</style>

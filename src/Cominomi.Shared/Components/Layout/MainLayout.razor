@@ -24,17 +24,13 @@
 {
     <SettingsPage />
 }
-@if (ChatState.ShowActivity)
-{
-    <ActivityView />
-}
 @if (ChatState.ShowNotifications)
 {
     <NotificationHistoryView />
 }
 
 @{
-    var anyOverlay = ChatState.ShowSettings || ChatState.ShowActivity || ChatState.ShowNotifications;
+    var anyOverlay = ChatState.ShowSettings || ChatState.ShowNotifications;
 }
 <div class="cominomi-shell @(!_sidebarOpen ? "sidebar-collapsed" : "")"
      style="@(anyOverlay ? "display:none;height:0;overflow:hidden" : "")">
@@ -42,7 +38,6 @@
         <aside class="cominomi-sidebar">
             <SidebarToolbar SidebarOpen="_sidebarOpen"
                             OnToggleSidebar="@(() => _sidebarOpen = !_sidebarOpen)"
-                            OnOpenActivity="OpenActivity"
                             OnOpenNotifications="OpenNotifications" />
             <SessionList />
             <SidebarFooter OnOpenSettings="@(() => ChatState.OpenSettings())" />
@@ -295,7 +290,6 @@
         });
     }
 
-    private void OpenActivity() => ChatState.OpenActivity();
     private void OpenNotifications() => ChatState.OpenNotifications();
 
     private HashSet<string> _reloadingTabs = new();

@@ -1,0 +1,211 @@
+@using Cominomi.Shared.Models
+
+<MudDialog @bind-Visible="IsOpen" Options="_dialogOptions" Class="template-gallery-dialog">
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" />
+            <span class="typo-h6">템플릿 갤러리</span>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">
+                @_filtered.Count
+            </MudChip>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        @* Category chips + search *@
+        <div class="d-flex flex-column gap-2 mb-3">
+            <MudChipSet T="string" SelectedValue="@_activeCategory" SelectedValueChanged="OnCategoryChanged"
+                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                        Variant="Variant.Outlined" Color="Color.Primary">
+                <MudChip T="string" Value="@("all")" Icon="@Icons.Material.Filled.GridView">
+                    전체 (@BuiltInTemplates.All.Count)
+                </MudChip>
+                <MudChip T="string" Value="@("Skill")" Icon="@Icons.Material.Filled.AutoFixHigh"
+                         Color="Color.Warning">
+                    스킬 (@CountByCategory(TemplateCategory.Skill))
+                </MudChip>
+                <MudChip T="string" Value="@("Agent")" Icon="@Icons.Material.Filled.SmartToy"
+                         Color="Color.Secondary">
+                    에이전트 (@CountByCategory(TemplateCategory.Agent))
+                </MudChip>
+                <MudChip T="string" Value="@("Rule")" Icon="@Icons.Material.Filled.Shield"
+                         Color="Color.Info">
+                    룰 (@CountByCategory(TemplateCategory.Rule))
+                </MudChip>
+                <MudChip T="string" Value="@("Hook")" Icon="@Icons.Material.Filled.Bolt"
+                         Color="Color.Success">
+                    훅 (@CountByCategory(TemplateCategory.Hook))
+                </MudChip>
+                <MudChip T="string" Value="@("Mcp")" Icon="@Icons.Material.Filled.Hub"
+                         Color="Color.Error">
+                    MCP (@CountByCategory(TemplateCategory.Mcp))
+                </MudChip>
+            </MudChipSet>
+
+            <MudTextField T="string" @bind-Value="_search" Placeholder="템플릿 검색..."
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          TextChanged="OnSearchChanged" />
+        </div>
+
+        @* Template grid *@
+        <div class="template-grid">
+            @foreach (var template in _filtered)
+            {
+                <MudPaper Class="template-card" Outlined="true" @onclick="@(() => SelectTemplate(template))">
+                    <div class="d-flex justify-space-between align-start mb-2">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                 Color="@GetCategoryColor(template.Category)">
+                            @GetCategoryLabel(template.Category)
+                        </MudChip>
+                        <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                                 Class="template-add-icon" Color="Color.Primary" />
+                    </div>
+                    <div class="typo-subtitle2">@template.Name</div>
+                    <div class="typo-caption text-secondary mt-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        @template.Description
+                    </div>
+                </MudPaper>
+            }
+        </div>
+
+        @if (_filtered.Count == 0)
+        {
+            <div class="d-flex justify-center pa-8">
+                <MudText Typo="Typo.body2" Color="Color.Default" Class="text-secondary">
+                    검색 결과가 없습니다
+                </MudText>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">닫기</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    /// <summary>Filter to a specific category on open. Null = show all.</summary>
+    [Parameter] public TemplateCategory? DefaultCategory { get; set; }
+
+    /// <summary>Raised when a template is selected.</summary>
+    [Parameter] public EventCallback<TemplateDefinition> OnTemplateSelected { get; set; }
+
+    private static readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true,
+        CloseOnEscapeKey = true
+    };
+
+    private string _activeCategory = "all";
+    private string _search = "";
+    private List<TemplateDefinition> _filtered = [];
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen)
+        {
+            _activeCategory = DefaultCategory?.ToString() ?? "all";
+            _search = "";
+            ApplyFilter();
+        }
+    }
+
+    private void OnCategoryChanged(string value)
+    {
+        _activeCategory = value;
+        ApplyFilter();
+    }
+
+    private void OnSearchChanged(string value)
+    {
+        _search = value;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        _filtered = BuiltInTemplates.All.Where(t =>
+        {
+            if (_activeCategory != "all" &&
+                !string.Equals(t.Category.ToString(), _activeCategory, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(_search))
+            {
+                var q = _search.Trim();
+                return t.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+                    || t.Description.Contains(q, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return true;
+        }).ToList();
+    }
+
+    private async Task SelectTemplate(TemplateDefinition template)
+    {
+        await OnTemplateSelected.InvokeAsync(template);
+        await Close();
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private static int CountByCategory(TemplateCategory category)
+        => BuiltInTemplates.All.Count(t => t.Category == category);
+
+    private static Color GetCategoryColor(TemplateCategory category) => category switch
+    {
+        TemplateCategory.Skill => Color.Warning,
+        TemplateCategory.Agent => Color.Secondary,
+        TemplateCategory.Rule => Color.Info,
+        TemplateCategory.Hook => Color.Success,
+        TemplateCategory.Mcp => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string GetCategoryLabel(TemplateCategory category) => category switch
+    {
+        TemplateCategory.Skill => "스킬",
+        TemplateCategory.Agent => "에이전트",
+        TemplateCategory.Rule => "룰",
+        TemplateCategory.Hook => "훅",
+        TemplateCategory.Mcp => "MCP",
+        _ => category.ToString()
+    };
+}
+
+<style>
+    .template-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 12px;
+        max-height: 50vh;
+        overflow-y: auto;
+        padding: 4px;
+    }
+
+    .template-card {
+        padding: 14px;
+        cursor: pointer;
+        transition: border-color 0.15s;
+    }
+
+    .template-card:hover {
+        border-color: var(--mud-palette-primary) !important;
+    }
+
+    .template-add-icon {
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+
+    .template-card:hover .template-add-icon {
+        opacity: 1;
+    }
+</style>

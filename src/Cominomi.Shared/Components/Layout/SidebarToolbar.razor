@@ -14,10 +14,6 @@
     @if (SidebarOpen)
     {
         <div style="display: flex; align-items: center; gap: 6px;">
-            <MudIconButton Icon="@Icons.Material.Filled.Timeline" Color="Color.Inherit"
-                           Size="Size.Small" OnClick="@OnOpenActivity"
-                           Style="width: 28px; height: 28px; opacity: 0.5;"
-                           title="Activity" />
             <MudBadge Content="@_unreadCount" Visible="@(_unreadCount > 0)" Color="Color.Error"
                       Overlap="true" Dot="@(_unreadCount <= 0)" Class="notification-badge">
                 <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit"
@@ -43,7 +39,6 @@
 @code {
     [Parameter] public bool SidebarOpen { get; set; }
     [Parameter] public EventCallback OnToggleSidebar { get; set; }
-    [Parameter] public EventCallback OnOpenActivity { get; set; }
     [Parameter] public EventCallback OnOpenNotifications { get; set; }
 
     private int _unreadCount;

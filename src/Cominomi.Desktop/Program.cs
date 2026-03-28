@@ -127,11 +127,10 @@ public static class Program
         appBuilder.Services.AddSingleton<IAttachmentService, AttachmentService>();
         appBuilder.Services.AddSingleton<IPluginService, PluginService>();
         appBuilder.Services.AddSingleton<IPluginExecutionEngine, PluginExecutionEngine>();
-        appBuilder.Services.AddSingleton<IUsageService, UsageService>();
+        appBuilder.Services.AddSingleton<IStatsCacheService, StatsCacheService>();
         appBuilder.Services.AddSingleton<IMcpService, McpService>();
         appBuilder.Services.AddSingleton<INotificationService, NotificationService>();
         appBuilder.Services.AddSingleton<INotificationHistoryService, NotificationHistoryService>();
-        appBuilder.Services.AddSingleton<IActivityService, ActivityService>();
         appBuilder.Services.AddSingleton<IStreamEventHandler, SystemInitHandler>();
         appBuilder.Services.AddSingleton<IStreamEventHandler, ContentBlockStartHandler>();
         appBuilder.Services.AddSingleton<IStreamEventHandler, ContentBlockDeltaHandler>();
@@ -151,6 +150,11 @@ public static class Program
         appBuilder.Services.AddSingleton<SessionListDataService>();
         appBuilder.Services.AddScoped<ISessionListFacade, SessionListFacade>();
         appBuilder.Services.AddSingleton<IThemeService, ThemeService>();
+        appBuilder.Services.AddSingleton<IClaudeSettingsService, ClaudeSettingsService>();
+        appBuilder.Services.AddSingleton<IRulesService, RulesService>();
+        appBuilder.Services.AddSingleton<IInstructionsService, InstructionsService>();
+        appBuilder.Services.AddSingleton<IGamificationService, GamificationService>();
+        appBuilder.Services.AddSingleton<ISessionReplayService, SessionReplayService>();
 
         // Load external model definitions
         var modelsJsonPath = Path.Combine(AppPaths.Settings, "models.json");
