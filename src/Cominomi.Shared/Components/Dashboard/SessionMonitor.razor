@@ -1,5 +1,6 @@
 @using Cominomi.Shared.Models
 @inject ISessionReplayService ReplayService
+@inject IChatState ChatState
 @implements IDisposable
 
 <div class="session-monitor-card">
@@ -15,7 +16,7 @@
     <div class="session-monitor-list">
         @foreach (var session in _sessions)
         {
-            <div class="session-monitor-item">
+            <button class="session-monitor-item" @onclick="GoToSessions">
                 <div class="session-monitor-item-top">
                     <span class="session-monitor-project">@GetProjectName(session.ProjectPath)</span>
                     <span class="session-monitor-time">@FormatTime(session.FirstTimestamp)</span>
@@ -29,9 +30,10 @@
                     <span><MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Style="font-size: 0.6rem;" /> @session.ToolCallCount</span>
                     <span><MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" Style="font-size: 0.6rem;" /> ~$@((session.EntryCount * 0.01m).ToString("F2"))</span>
                 </div>
-            </div>
+            </button>
         }
     </div>
+    <button class="session-monitor-footer-link" @onclick="GoToSessions">모든 세션 보기 →</button>
 </div>
 
 @code {
@@ -86,6 +88,8 @@
     private static string Truncate(string s, int max)
         => s.Length <= max ? s : s[..max] + "…";
 
+    private void GoToSessions() => ChatState.SetSettingsSection("session-replay");
+
     public void Dispose() => _timer?.Dispose();
 }
 
@@ -119,9 +123,21 @@
     }
 
     .session-monitor-item {
+        appearance: none;
+        border: none;
+        width: 100%;
+        text-align: left;
         padding: 8px 12px;
         background: var(--mud-palette-action-default-hover);
         border-radius: 8px;
+        cursor: pointer;
+        transition: opacity 0.15s;
+        color: inherit;
+        font: inherit;
+    }
+
+    .session-monitor-item:hover {
+        opacity: 0.8;
     }
 
     .session-monitor-item-top {
@@ -174,5 +190,23 @@
 
     .session-monitor-spin {
         animation: spin 1s linear infinite;
+    }
+
+    .session-monitor-footer-link {
+        display: block;
+        width: 100%;
+        font-size: 0.7rem;
+        color: var(--mud-palette-primary);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px 0 0;
+        margin-top: 4px;
+        transition: color 0.15s;
+        text-align: center;
+    }
+
+    .session-monitor-footer-link:hover {
+        color: var(--mud-palette-primary-darken);
     }
 </style>

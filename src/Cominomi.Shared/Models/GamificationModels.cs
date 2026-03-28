@@ -72,6 +72,9 @@ public class DashboardStats
     public List<DailyActivityEntry> DailyActivity { get; set; } = [];
     public CostSummary Cost { get; set; } = new();
 
+    // Hourly distribution (24-element array, from all sessions)
+    public int[] HourCounts { get; set; } = new int[24];
+
     // Extended stats for achievements
     public int NightSessionCount { get; set; }    // 22:00-04:00
     public int MorningSessionCount { get; set; }  // 05:00-09:00

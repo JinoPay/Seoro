@@ -127,7 +127,7 @@ public static class Program
         appBuilder.Services.AddSingleton<IAttachmentService, AttachmentService>();
         appBuilder.Services.AddSingleton<IPluginService, PluginService>();
         appBuilder.Services.AddSingleton<IPluginExecutionEngine, PluginExecutionEngine>();
-        appBuilder.Services.AddSingleton<IUsageService, UsageService>();
+        appBuilder.Services.AddSingleton<IStatsCacheService, StatsCacheService>();
         appBuilder.Services.AddSingleton<IMcpService, McpService>();
         appBuilder.Services.AddSingleton<INotificationService, NotificationService>();
         appBuilder.Services.AddSingleton<INotificationHistoryService, NotificationHistoryService>();

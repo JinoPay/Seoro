@@ -5,20 +5,20 @@ namespace Cominomi.Shared.Services;
 
 public class GamificationService : IGamificationService
 {
-    private readonly IUsageService _usageService;
+    private readonly IStatsCacheService _statsCacheService;
     private readonly ISessionService _sessionService;
     private readonly ISessionReplayService _replayService;
     private readonly IClaudeSettingsService _claudeSettings;
     private readonly ILogger<GamificationService> _logger;
 
     public GamificationService(
-        IUsageService usageService,
+        IStatsCacheService statsCacheService,
         ISessionService sessionService,
         ISessionReplayService replayService,
         IClaudeSettingsService claudeSettings,
         ILogger<GamificationService> logger)
     {
-        _usageService = usageService;
+        _statsCacheService = statsCacheService;
         _sessionService = sessionService;
         _replayService = replayService;
         _claudeSettings = claudeSettings;
@@ -71,6 +71,7 @@ public class GamificationService : IGamificationService
                 if (s.FirstTimestamp.HasValue)
                 {
                     var hour = s.FirstTimestamp.Value.Hour;
+                    stats.HourCounts[hour]++;
                     if (hour >= 22 || hour < 4) nightSessions++;
                     if (hour >= 5 && hour < 9) morningSessions++;
                 }
@@ -93,8 +94,8 @@ public class GamificationService : IGamificationService
             stats.MorningSessionCount = morningSessions;
             stats.LongestSessionMs = longestMs;
 
-            // Cache stats from usage service
-            var usageStats = await _usageService.GetStatsAsync();
+            // Cache stats from stats-cache.json
+            var usageStats = await _statsCacheService.GetMergedStatsAsync();
             var cacheTotal = usageStats.TotalCacheCreationTokens + usageStats.TotalCacheReadTokens;
             stats.CacheHitRate = cacheTotal > 0
                 ? (double)usageStats.TotalCacheReadTokens / cacheTotal * 100 : 0;
@@ -140,22 +141,48 @@ public class GamificationService : IGamificationService
     private async Task<CostSummary> CalculateCostSummaryAsync()
     {
         var now = DateTime.UtcNow;
-        var todayStart = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
-        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var todayStr = now.ToString("yyyy-MM-dd");
+        var monthStr = new DateTime(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
 
-        var todayStats = await _usageService.GetStatsByDateRangeAsync(todayStart, now);
-        var monthStats = await _usageService.GetStatsByDateRangeAsync(monthStart, now);
+        // Use merged stats (stats-cache.json + fallback)
+        var allStats = await _statsCacheService.GetMergedStatsAsync();
+
+        var todayCost = allStats.DailyTokenTrend
+            .Where(d => d.Date == todayStr)
+            .Sum(d =>
+            {
+                decimal cost = 0;
+                foreach (var (model, tokens) in d.TokensByModel)
+                {
+                    var pricing = ModelDefinitions.GetPricing(model);
+                    if (pricing != null)
+                        cost += (decimal)tokens / 1_000_000m * pricing.Input;
+                }
+                return cost;
+            });
+
+        var monthCost = allStats.DailyTokenTrend
+            .Where(d => string.Compare(d.Date, monthStr, StringComparison.Ordinal) >= 0)
+            .Sum(d =>
+            {
+                decimal cost = 0;
+                foreach (var (model, tokens) in d.TokensByModel)
+                {
+                    var pricing = ModelDefinitions.GetPricing(model);
+                    if (pricing != null)
+                        cost += (decimal)tokens / 1_000_000m * pricing.Input;
+                }
+                return cost;
+            });
 
         var dayOfMonth = now.Day;
         var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
-        var projection = dayOfMonth > 0
-            ? monthStats.TotalCost / dayOfMonth * daysInMonth
-            : 0m;
+        var projection = dayOfMonth > 0 ? monthCost / dayOfMonth * daysInMonth : 0m;
 
         return new CostSummary
         {
-            Today = todayStats.TotalCost,
-            ThisMonth = monthStats.TotalCost,
+            Today = todayCost,
+            ThisMonth = monthCost,
             MonthlyProjection = projection,
         };
     }
