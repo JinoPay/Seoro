@@ -27,7 +27,7 @@ src/
   Cominomi.Shared/           # Core logic (platform-agnostic)
     Models/                  # Data models (Session, ChatMessage, StreamEvent, etc.)
     Services/                # Business logic (ClaudeService, GitService, ChatState, etc.)
-    Components/              # Blazor Razor components (Chat/, Settings/, Sidebar/, etc.)
+    Components/              # Blazor Razor components (Chat/, Dashboard/, Settings/, Sessions/, Hooks/, Rules/, Instructions/, Memory/, Sidebar/, etc.)
     CominomiConstants.cs     # Shared constants and limits
 tests/
   Cominomi.Shared.Tests/    # Unit tests (xUnit)
@@ -44,6 +44,12 @@ tests/
 - `ShellService` - Shell execution and macOS default shell auto-detection
 - `TerminalService` - PTY-based terminal panel management
 - `ReleaseNotesService` - In-app release notes from changelog.json
+- `SessionReplayService` - Session timeline replay and navigation
+- `StatsCacheService` - Usage statistics caching and aggregation (stats-cache.json)
+- `GamificationService` - Achievement calculation, streaks, and level progression
+- `ClaudeSettingsService` - Claude CLI settings (permissions, env vars, MCP) management
+- `RulesService` - Project rules file CRUD
+- `InstructionsService` - Instruction file management
 
 ## Key Constants (`CominomiConstants.cs`)
 - Max 20 active sessions per workspace

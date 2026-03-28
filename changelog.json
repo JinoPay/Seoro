@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.4.0",
+    "date": "2026-03-28",
+    "changes": [
+      { "type": "feat", "description": "대시보드 전면 재구성 — ActivityHeatmap, CostOverviewCard, SessionMonitor, StreakCard 등 신규 위젯" },
+      { "type": "feat", "description": "세션 리플레이 시스템 신규 구축 — 과거 세션 타임라인 재생 및 탐색" },
+      { "type": "feat", "description": "사용량 페이지 전면 재구축 — stats-cache.json 기반 통계 및 차트" },
+      { "type": "feat", "description": "게이미피케이션 시스템 추가 — 업적 그리드, 스트릭 카드, 레벨 진행도" },
+      { "type": "feat", "description": "Hooks, Rules, Instructions, Memory Browser 관리 페이지 추가" },
+      { "type": "feat", "description": "Claude 설정 전용 섹션 — 퍼미션, 환경변수, 슬래시 명령어 편집기" },
+      { "type": "feat", "description": "템플릿 갤러리 다이얼로그 및 프로젝트 스코프 피커 추가" },
+      { "type": "refactor", "description": "설정 시스템 분리·재편 — 모놀리식 설정을 독립 섹션별 컴포넌트로 분할" },
+      { "type": "refactor", "description": "기존 Activity/Usage 서비스 제거 및 StatsCacheService로 대체" },
+      { "type": "style", "description": "채팅 뷰 컴팩트 레이아웃 — 패딩·마진·폰트 축소 및 컨테이너 경량화" }
+    ]
+  },
+  {
     "version": "1.3.7",
     "date": "2026-03-27",
     "changes": [

@@ -9,12 +9,17 @@ Cominomi is a cross-platform desktop application that provides a graphical inter
 ## Features
 
 - **Multi-session chat** - Run multiple Claude sessions with streaming responses
+- **Dashboard** - Activity heatmap, cost overview, session monitor, streak tracking, achievement grid
+- **Session replay** - Browse and replay past session timelines
+- **Usage analytics** - Stats-cache based usage tracking with charts and breakdowns
+- **Gamification** - Achievements, streaks, and level progression
 - **Workspace management** - Organize projects with workspace-level settings and system prompts
 - **Git integration** - Branch management, diff viewing, worktree support, real-time branch tracking
 - **Built-in terminal** - PTY-based terminal panel with split view
 - **Plugin system** - Extend functionality with custom plugins
 - **Memory & context** - Persistent memory entries and context building for system prompts
-- **Hooks** - Custom actions triggered by events
+- **Hooks, Rules & Instructions** - Custom hooks, project rules, and instruction file management
+- **Claude settings** - Permissions, environment variables, slash commands, MCP server management
 - **Release notes** - In-app changelog and release notes viewer
 - **Auto-update** - Automatic delta updates via Velopack
 - **Cross-platform** - Windows (x64) and macOS (Apple Silicon)
