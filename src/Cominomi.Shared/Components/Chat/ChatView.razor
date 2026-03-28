@@ -17,20 +17,22 @@
 @code {
     private RenderFragment ChatContentFragment => __builder =>
     {
+        var session = ChatState.CurrentSession;
+
         <div class="chat-container">
             @* Message area *@
             <CascadingValue Value="_askUserResponseCallback" Name="OnAskUserResponse">
             <div class="message-area" id="message-list">
-                @if (ChatState.CurrentSession == null)
+                @if (session == null)
                 {
                     <LandingPage @ref="_landingPage" />
                 }
-                else if (ChatState.CurrentSession.Messages.Count == 0)
+                else if (session.Messages.Count == 0)
                 {
                     <div class="welcome-container">
                         <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Color="Color.Primary" Style="opacity: 0.4;" />
                         <span class="welcome-title">무엇을 도와드릴까요?</span>
-                        @if (ChatState.CurrentSession.Status == SessionStatus.Pending)
+                        @if (session.Status == SessionStatus.Pending)
                         {
                             <BranchSelector BranchGroups="_branchGroups"
                                             SelectedBranch="@_selectedBranch"
@@ -42,14 +44,14 @@
                 else
                 {
                     <div class="message-container">
-                        @foreach (var message in ChatState.CurrentSession.Messages.ToList())
+                        @foreach (var message in session.Messages.ToList())
                         {
                             <MessageBubble @key="message.Id" Message="message" />
                         }
                     </div>
                 }
             </div>
-            @if (!_isAtBottom && ChatState.CurrentSession?.Messages.Count > 0)
+            @if (!_isAtBottom && session?.Messages.Count > 0)
             {
                 <div class="scroll-to-bottom-btn @(_askUserBarVisible ? "askbar-active" : "")" @onclick="ScrollToBottom">
                     <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
@@ -74,19 +76,19 @@
                            OnAction="HandlePlanReviewAction" />
 
             @* Input area *@
-            @if (ChatState.CurrentSession != null)
+            @if (session != null)
             {
                 <InputArea OnSend="HandleSend" OnCancel="HandleCancel"
                            IsStreaming="ChatState.IsStreaming"
-                           Disabled="@(ChatState.CurrentSession.Status == SessionStatus.Archived)"
-                           PermissionMode="@(ChatState.CurrentSession.PermissionMode ?? "bypassAll")"
+                           Disabled="@(session.Status == SessionStatus.Archived)"
+                           PermissionMode="@(session.PermissionMode ?? "bypassAll")"
                            PermissionModeChanged="HandlePermissionModeChanged"
-                           EffortLevel="@(ChatState.CurrentSession.EffortLevel ?? "auto")"
+                           EffortLevel="@(session.EffortLevel ?? "auto")"
                            EffortLevelChanged="HandleEffortLevelChanged"
-                           Model="@(ChatState.CurrentSession.Model ?? "")"
+                           Model="@(session.Model ?? "")"
                            OnModelChanged="HandleModelChanged"
-                           ResolvedModel="@(ChatState.CurrentSession.ResolvedModel)"
-                           CurrentSession="@ChatState.CurrentSession"
+                           ResolvedModel="@(session.ResolvedModel)"
+                           CurrentSession="@session"
                            PlanFilePath="@_lastPlanFilePath"
                            PlanContent="@_lastPlanContent"
                            IsPlanReviewVisible="_planReviewVisible" />
