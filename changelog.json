@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.5.1",
+    "date": "2026-03-28",
+    "changes": [
+      { "type": "feat", "description": "커밋 메시지 AI 자동생성 기능 및 커밋 UI 리디자인" },
+      { "type": "refactor", "description": "Haiku 요약/브랜치 rename 제거 → 시스템 인스트럭션 기반으로 전환" },
+      { "type": "fix", "description": "ChatView 렌더링 시 CurrentSession race condition으로 인한 NullReferenceException 수정" }
+    ]
+  },
+  {
     "version": "1.4.0",
     "date": "2026-03-28",
     "changes": [
