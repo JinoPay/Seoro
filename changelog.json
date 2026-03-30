@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.5.2",
+    "date": "2026-03-30",
+    "changes": [
+      { "type": "fix", "description": "설정 기본 탭을 대시보드로 변경 및 최근세션 너비 수정" }
+    ]
+  },
+  {
     "version": "1.5.1",
     "date": "2026-03-28",
     "changes": [
