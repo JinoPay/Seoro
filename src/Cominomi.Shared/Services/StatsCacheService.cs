@@ -52,19 +52,68 @@ public class StatsCacheService : IStatsCacheService
         var stats = new UsageStats();
 
         // ── 1. Model usage ──
-        var modelMap = new Dictionary<string, ModelUsage>();
+        // Build all-time totals (normalized) for ratio-based estimation
+        var allTimeTotals = new Dictionary<string, (long input, long output, long cacheCreation, long cacheRead, long total)>();
         foreach (var (modelId, usage) in cache.ModelUsage)
         {
             var normalized = ModelDefinitions.NormalizeModelId(modelId);
-            if (!modelMap.TryGetValue(normalized, out var mu))
+            if (!allTimeTotals.TryGetValue(normalized, out var existing))
+                existing = (0, 0, 0, 0, 0);
+
+            var input = existing.input + usage.InputTokens;
+            var output = existing.output + usage.OutputTokens;
+            var cacheCreation = existing.cacheCreation + usage.CacheCreationInputTokens;
+            var cacheRead = existing.cacheRead + usage.CacheReadInputTokens;
+            allTimeTotals[normalized] = (input, output, cacheCreation, cacheRead, input + output + cacheCreation + cacheRead);
+        }
+
+        var modelMap = new Dictionary<string, ModelUsage>();
+        if (days.HasValue)
+        {
+            // Period-filtered: aggregate from DailyModelTokens, then estimate breakdown via ratio
+            var periodTokensByModel = new Dictionary<string, long>();
+            foreach (var day in cache.DailyModelTokens)
             {
-                mu = new ModelUsage { Model = normalized };
-                modelMap[normalized] = mu;
+                if (string.Compare(day.Date, cutoff, StringComparison.Ordinal) < 0) continue;
+                foreach (var (model, tokens) in day.TokensByModel)
+                {
+                    var normalized = ModelDefinitions.NormalizeModelId(model);
+                    periodTokensByModel[normalized] = periodTokensByModel.GetValueOrDefault(normalized) + tokens;
+                }
             }
-            mu.InputTokens += usage.InputTokens;
-            mu.OutputTokens += usage.OutputTokens;
-            mu.CacheCreationTokens += usage.CacheCreationInputTokens;
-            mu.CacheReadTokens += usage.CacheReadInputTokens;
+
+            foreach (var (model, periodTotal) in periodTokensByModel)
+            {
+                var mu = new ModelUsage { Model = model };
+                if (allTimeTotals.TryGetValue(model, out var allTime) && allTime.total > 0)
+                {
+                    var ratio = (double)periodTotal / allTime.total;
+                    mu.InputTokens = (long)(allTime.input * ratio);
+                    mu.OutputTokens = (long)(allTime.output * ratio);
+                    mu.CacheCreationTokens = (long)(allTime.cacheCreation * ratio);
+                    mu.CacheReadTokens = (long)(allTime.cacheRead * ratio);
+                }
+                else
+                {
+                    mu.InputTokens = periodTotal;
+                }
+                modelMap[model] = mu;
+            }
+        }
+        else
+        {
+            // All-time: use ModelUsage directly
+            foreach (var (normalized, allTime) in allTimeTotals)
+            {
+                modelMap[normalized] = new ModelUsage
+                {
+                    Model = normalized,
+                    InputTokens = allTime.input,
+                    OutputTokens = allTime.output,
+                    CacheCreationTokens = allTime.cacheCreation,
+                    CacheReadTokens = allTime.cacheRead,
+                };
+            }
         }
 
         // Calculate costs per model
