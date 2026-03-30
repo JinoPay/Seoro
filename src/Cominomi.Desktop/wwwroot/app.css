@@ -4508,21 +4508,55 @@ html *::after {
     margin-left: 4px;
 }
 
-.askbar-custom-input {
-    padding: 0 14px 4px;
+/* Custom text input styled as an option */
+.askbar-custom-option {
+    padding: 0;
 }
 
-.askbar-custom-input .askbar-textfield {
-    font-size: var(--text-sm);
-}
-
-.askbar-custom-input .mud-input-outlined .mud-input-outlined-border {
-    border-color: var(--color-info-border);
-    border-radius: 8px;
-}
-
-.askbar-custom-input .mud-input-outlined:hover .mud-input-outlined-border {
+.askbar-custom-option:focus-within {
     border-color: var(--accent);
+    background: var(--color-info-bg);
+}
+
+.askbar-custom-option .askbar-inline-textfield {
+    font-size: var(--text-sm);
+    width: 100%;
+}
+
+.askbar-custom-option .mud-input-control {
+    margin: 0 !important;
+}
+
+.askbar-custom-option .mud-input-slot {
+    padding: 8px 12px !important;
+    font-size: var(--text-sm) !important;
+    font-weight: 500;
+    min-height: unset !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.askbar-custom-option .mud-input-slot::placeholder {
+    font-weight: 400;
+    opacity: 0.5;
+}
+
+.askbar-custom-option .mud-input-text::before,
+.askbar-custom-option .mud-input-text::after {
+    display: none !important;
+}
+
+.askbar-custom-option input,
+.askbar-custom-option textarea {
+    min-height: unset !important;
+    line-height: 1.4;
+}
+
+.askbar-custom-option input:focus-visible,
+.askbar-custom-option textarea:focus-visible {
+    box-shadow: none;
+    outline: none;
 }
 
 .askbar-actions {

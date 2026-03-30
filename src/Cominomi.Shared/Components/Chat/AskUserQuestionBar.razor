@@ -31,11 +31,16 @@
             }
             <div class="askbar-question-text">@q.Question</div>
 
+            @{
+                var customActive = !string.IsNullOrWhiteSpace(_customText);
+                var anyOptionSelected = selectedForThis != null;
+            }
+
             <div class="askbar-options">
                 @foreach (var opt in q.Options)
                 {
                     var isSelected = selectedForThis == opt.Label;
-                    var isOther = selectedForThis != null && !isSelected;
+                    var isOther = (anyOptionSelected && !isSelected) || customActive;
 
                     <button class="askbar-option @(isSelected ? "selected" : "") @(isOther ? "dimmed" : "")"
                             @onclick="@(() => SelectOption(_currentPage, opt.Label))"
@@ -54,17 +59,18 @@
                         }
                     </button>
                 }
-            </div>
 
-            <div class="askbar-custom-input">
-                <MudTextField @bind-Value="_customText"
-                              Placeholder="의견을 직접 입력하세요..."
-                              Variant="Variant.Outlined"
-                              Lines="1"
-                              Immediate="true"
-                              Underline="false"
-                              Class="askbar-textfield"
-                              OnKeyDown="HandleInputKeyDown" />
+                <div class="askbar-option askbar-custom-option @(customActive ? "selected" : "") @(anyOptionSelected ? "dimmed" : "")">
+                    <MudTextField @bind-Value="_customText"
+                                  @bind-Value:after="OnCustomTextChanged"
+                                  Placeholder="의견을 직접 입력하세요..."
+                                  Variant="Variant.Text"
+                                  Lines="1"
+                                  Immediate="true"
+                                  Underline="false"
+                                  Class="askbar-inline-textfield"
+                                  OnKeyDown="HandleInputKeyDown" />
+                </div>
             </div>
         </div>
 
@@ -156,6 +162,10 @@
 
         // Toggle: clicking the same option deselects it
         _selections[questionIndex] = _selections[questionIndex] == label ? null : label;
+
+        // Mutual exclusion: clear custom text when an option is selected
+        if (_selections[questionIndex] != null)
+            _customText = "";
     }
 
     private async Task Submit()
@@ -165,19 +175,8 @@
 
         if (OnResponse.HasDelegate)
         {
-            var hasSelections = AllAnswered;
-            var hasCustom = !string.IsNullOrWhiteSpace(_customText);
-
             string response;
-            if (hasSelections && hasCustom)
-            {
-                var optionPart = _questions.Count == 1
-                    ? _selections[0]!
-                    : string.Join("\n", _questions.Select((q, i) =>
-                        $"{q.Header ?? q.Question}: {_selections[i]}"));
-                response = $"{optionPart}\n\n내 의견: {_customText.Trim()}";
-            }
-            else if (hasCustom)
+            if (!string.IsNullOrWhiteSpace(_customText))
             {
                 response = _customText.Trim();
             }
@@ -190,6 +189,16 @@
             }
 
             await OnResponse.InvokeAsync(response);
+        }
+    }
+
+    private void OnCustomTextChanged()
+    {
+        // Mutual exclusion: clear all selections when custom text is entered
+        if (!string.IsNullOrWhiteSpace(_customText))
+        {
+            for (int i = 0; i < _selections.Length; i++)
+                _selections[i] = null;
         }
     }
 
