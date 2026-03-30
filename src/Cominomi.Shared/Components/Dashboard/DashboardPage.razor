@@ -1,10 +1,21 @@
 @using Cominomi.Shared.Models
 @inject IGamificationService GamificationService
+@inject IStatsCacheService StatsCacheService
 @inject IChatState ChatState
 
 <div class="settings-content-area wide">
     <div class="settings-content-header">
         <span class="typo-h6">대시보드</span>
+        <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+            @if (_refreshing)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="width: 20px; height: 20px;" />
+            }
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                           Disabled="_refreshing || _loading"
+                           OnClick="OnRefreshClick"
+                           Title="통계 새로고침" />
+        </div>
     </div>
     <div class="settings-content-body">
         @if (_loading)
@@ -96,11 +107,25 @@
 @code {
     private DashboardStats _stats = new();
     private bool _loading = true;
+    private bool _refreshing;
 
     protected override async Task OnInitializedAsync()
     {
+        await StatsCacheService.RefreshIfStaleAsync();
         _stats = await GamificationService.GetDashboardStatsAsync();
         _loading = false;
+    }
+
+    private async Task OnRefreshClick()
+    {
+        _refreshing = true;
+        StateHasChanged();
+
+        await StatsCacheService.ForceRefreshAsync();
+        _stats = await GamificationService.GetDashboardStatsAsync();
+
+        _refreshing = false;
+        StateHasChanged();
     }
 }
 

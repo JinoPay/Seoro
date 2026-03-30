@@ -20,4 +20,10 @@ public interface IStatsCacheService
     /// Returns true if a refresh was performed.
     /// </summary>
     Task<bool> RefreshIfStaleAsync();
+
+    /// <summary>
+    /// Forces a refresh of stats-cache.json by scanning session JSONL files,
+    /// regardless of staleness. Used by manual refresh buttons.
+    /// </summary>
+    Task ForceRefreshAsync();
 }
