@@ -49,6 +49,14 @@
             e.preventDefault();
         });
 
+        // Prevent browser refresh shortcuts (F5, Ctrl+R, Cmd+R)
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F5' ||
+                ((e.ctrlKey || e.metaKey) && e.key === 'r')) {
+                e.preventDefault();
+            }
+        });
+
         // Global error capture — surfaces errors hidden by blazor-error-ui
         window.addEventListener('error', function(e) {
             console.error('[Cominomi] Unhandled JS error:', e.message, '\nFile:', e.filename, 'Line:', e.lineno, '\nError:', e.error);
