@@ -10,10 +10,10 @@ public class SettingsStateManager
     }
 
     public bool ShowSettings { get; private set; }
-    public string SettingsSection { get; private set; } = "general";
+    public string SettingsSection { get; private set; } = "dashboard";
     public string? SettingsWorkspaceId { get; private set; }
 
-    public void OpenSettings(string section = "general", string? workspaceId = null)
+    public void OpenSettings(string section = "dashboard", string? workspaceId = null)
     {
         ShowSettings = true;
         SettingsSection = section;
@@ -37,7 +37,7 @@ public class SettingsStateManager
     public void SetSettingsWorkspace(string? workspaceId)
     {
         SettingsWorkspaceId = workspaceId;
-        SettingsSection = workspaceId != null ? "ws-general" : "general";
+        SettingsSection = workspaceId != null ? "ws-general" : "dashboard";
         _notifyChanged();
     }
 }
