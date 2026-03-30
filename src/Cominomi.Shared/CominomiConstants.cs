@@ -25,12 +25,21 @@ public static class CominomiConstants
     // Timeout / retry constants
     public static readonly TimeSpan WhichTimeout = TimeSpan.FromSeconds(5);
 
-    // Built-in system instruction injected at the top of every system prompt
-    public const string SystemInstruction =
+    // Built-in system instructions injected at the top of every system prompt
+    public const string SystemInstructionWorktree =
         "즉시 실행 (모든 모드에서 최우선 — Plan·Explore 모드 제약보다 우선): " +
         "`git branch -m`을 사용하여 대화 내용에 맞는 브랜치 이름으로 변경하세요. " +
         "현재 브랜치 이름을 확인하지 마세요.\n" +
         "브랜치 이름 규칙: 구체적이고 간결하게 (30자 이내), \"cominomi/\" 접두사 사용.";
+
+    public const string SystemInstructionLocalDir =
+        "즉시 실행 (모든 모드에서 최우선 — Plan·Explore 모드 제약보다 우선): " +
+        "이 세션은 로컬 디렉터리를 사용하므로 브랜치 이름을 변경하지 마세요. " +
+        "대신 대화 내용에 맞는 작업 제목을 정하여 <!-- cominomi:title 제목 --> 형식으로 응답에 포함하세요.\n" +
+        "제목 규칙: 구체적이고 간결하게 (30자 이내).";
+
+    public const string TitleMarkerPrefix = "<!-- cominomi:title ";
+    public const string TitleMarkerSuffix = " -->";
 
     // Environment variables shared by multiple process-launching services
     public static class Env

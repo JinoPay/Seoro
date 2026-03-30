@@ -119,6 +119,46 @@ public class StreamEventProcessor : IStreamEventProcessor
                 ctx.QuickResponseOptions = [];
             }
         }
+
+        // Title marker extraction for local dir sessions
+        if (ctx.Session.Git.IsLocalDir)
+            ExtractAndApplyTitleMarker(ctx);
+    }
+
+    private void ExtractAndApplyTitleMarker(StreamProcessingContext ctx)
+    {
+        var text = ctx.AssistantMessage.Text;
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        var startIdx = text.IndexOf(CominomiConstants.TitleMarkerPrefix, StringComparison.Ordinal);
+        if (startIdx < 0)
+            return;
+
+        var titleStart = startIdx + CominomiConstants.TitleMarkerPrefix.Length;
+        var endIdx = text.IndexOf(CominomiConstants.TitleMarkerSuffix, titleStart, StringComparison.Ordinal);
+        if (endIdx < 0)
+            return;
+
+        var title = text[titleStart..endIdx].Trim();
+        if (string.IsNullOrEmpty(title))
+            return;
+
+        if (title.Length > 30)
+            title = title[..30];
+
+        ctx.Session.Title = title;
+        _chatState.Tabs.UpdateChatTabTitle(title);
+
+        // Strip the marker from message text and parts
+        var marker = text[startIdx..(endIdx + CominomiConstants.TitleMarkerSuffix.Length)];
+        ctx.AssistantMessage.Text = text.Replace(marker, "").TrimStart();
+
+        foreach (var part in ctx.AssistantMessage.Parts)
+        {
+            if (part.Type == ContentPartType.Text && part.Text != null)
+                part.Text = part.Text.Replace(marker, "").TrimStart();
+        }
     }
 
     private static bool HasAskUserQuestionToolCall(StreamProcessingContext ctx)
