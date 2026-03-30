@@ -53,7 +53,7 @@ public interface IChatState : IDisposable
     bool ShowSettings { get; }
     string SettingsSection { get; }
     string? SettingsWorkspaceId { get; }
-    void OpenSettings(string section = "dashboard", string? workspaceId = null);
+    void OpenSettings(string section = "general", string? workspaceId = null);
     void CloseSettings();
     void SetSettingsSection(string section);
     void SetSettingsWorkspace(string? workspaceId);

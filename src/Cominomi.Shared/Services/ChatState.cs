@@ -141,7 +141,7 @@ public class ChatState : IChatState
     public string SettingsSection => Settings.SettingsSection;
     public string? SettingsWorkspaceId => Settings.SettingsWorkspaceId;
 
-    public void OpenSettings(string section = "dashboard", string? workspaceId = null)
+    public void OpenSettings(string section = "general", string? workspaceId = null)
     {
         ShowNotifications = false;
         Settings.OpenSettings(section, workspaceId);
