@@ -66,6 +66,23 @@ public class StatsCacheService : IStatsCacheService
         }
     }
 
+    public async Task ForceRefreshAsync()
+    {
+        await RefreshLock.WaitAsync();
+        try
+        {
+            if (!Directory.Exists(ProjectsDir))
+                return;
+
+            var cache = await ReadStatsCacheAsync();
+            await RefreshFromSessionsAsync(cache);
+        }
+        finally
+        {
+            RefreshLock.Release();
+        }
+    }
+
     /// <summary>
     /// Scans all session JSONL files to rebuild dailyModelTokens and modelUsage,
     /// preserving other fields from the existing cache.

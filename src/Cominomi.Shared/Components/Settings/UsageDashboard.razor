@@ -16,10 +16,20 @@
                 <MudChip T="string" Value="@("all")">전체</MudChip>
             </MudChipSet>
         </div>
-        <button class="analytics-nav-link" @onclick="@(() => ChatState.SetSettingsSection("session-replay"))">
-            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" />
-            세션 히스토리 →
-        </button>
+        <div style="display: flex; align-items: center; gap: 4px;">
+            @if (_refreshing)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="width: 20px; height: 20px;" />
+            }
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                           Disabled="_refreshing || _loading"
+                           OnClick="OnRefreshClick"
+                           Title="통계 새로고침" />
+            <button class="analytics-nav-link" @onclick="@(() => ChatState.SetSettingsSection("session-replay"))">
+                <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" />
+                세션 히스토리 →
+            </button>
+        </div>
     </div>
 
     @if (_loading)
@@ -401,6 +411,7 @@
     private UsageStats? _stats;
     private DashboardStats _dashStats = new();
     private bool _loading;
+    private bool _refreshing;
     private bool _exporting;
     private string _selectedRange = "30";
 
@@ -432,6 +443,19 @@
     {
         _selectedRange = range;
         await LoadStats();
+    }
+
+    private async Task OnRefreshClick()
+    {
+        _refreshing = true;
+        StateHasChanged();
+
+        await StatsCacheService.ForceRefreshAsync();
+        _dashStats = await GamificationService.GetDashboardStatsAsync();
+        await LoadStats();
+
+        _refreshing = false;
+        StateHasChanged();
     }
 
     private async Task LoadStats()
