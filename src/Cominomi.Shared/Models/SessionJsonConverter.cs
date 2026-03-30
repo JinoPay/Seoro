@@ -101,6 +101,8 @@ public class SessionJsonConverter : JsonConverter<Session>
             session.TotalInputTokens = tit.GetInt64();
         if (root.TryGetProperty("totalOutputTokens", out var tot) && tot.ValueKind == JsonValueKind.Number)
             session.TotalOutputTokens = tot.GetInt64();
+        if (root.TryGetProperty("titleLocked", out var tl) && tl.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            session.TitleLocked = tl.GetBoolean();
         if (root.TryGetProperty("planCompleted", out var pc) && pc.ValueKind is JsonValueKind.True or JsonValueKind.False)
             session.PlanCompleted = pc.GetBoolean();
         if (root.TryGetProperty("pendingAskUserQuestionInput", out var pauq) && pauq.ValueKind == JsonValueKind.String)
@@ -159,6 +161,7 @@ public class SessionJsonConverter : JsonConverter<Session>
         if (value.MaxBudgetUsd != null) writer.WriteNumber("maxBudgetUsd", value.MaxBudgetUsd.Value);
         writer.WriteNumber("totalInputTokens", value.TotalInputTokens);
         writer.WriteNumber("totalOutputTokens", value.TotalOutputTokens);
+        writer.WriteBoolean("titleLocked", value.TitleLocked);
         writer.WriteBoolean("planCompleted", value.PlanCompleted);
         if (value.PlanFilePath != null) writer.WriteString("planFilePath", value.PlanFilePath);
         if (value.PendingAskUserQuestionInput != null) writer.WriteString("pendingAskUserQuestionInput", value.PendingAskUserQuestionInput);

@@ -10,6 +10,7 @@ public interface IGitBranchWatcherService : IDisposable
     void Watch(Session session);
     void Unwatch();
     Task RefreshBranchAsync(Session session);
+    void RefreshBranchFromHeadFile(Session session);
 }
 
 public partial class GitBranchWatcherService : IGitBranchWatcherService
@@ -68,10 +69,12 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
         {
             _watcher = new FileSystemWatcher(gitDir, "HEAD")
             {
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size,
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName,
                 EnableRaisingEvents = true
             };
             _watcher.Changed += OnHeadChanged;
+            _watcher.Created += OnHeadChanged;
+            _watcher.Renamed += OnHeadRenamed;
 
             _logger.LogDebug("Watching git HEAD at {GitDir} for session {SessionId}", gitDir, session.Id);
         }
@@ -89,6 +92,8 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
         if (_watcher != null)
         {
             _watcher.Changed -= OnHeadChanged;
+            _watcher.Created -= OnHeadChanged;
+            _watcher.Renamed -= OnHeadRenamed;
             _watcher.Dispose();
             _watcher = null;
         }
@@ -121,6 +126,16 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
 
     private void OnHeadChanged(object sender, FileSystemEventArgs e)
     {
+        DebouncedHeadUpdate(e.FullPath);
+    }
+
+    private void OnHeadRenamed(object sender, RenamedEventArgs e)
+    {
+        DebouncedHeadUpdate(e.FullPath);
+    }
+
+    private void DebouncedHeadUpdate(string fullPath)
+    {
         // Debounce: git operations can write HEAD multiple times in quick succession
         _debounceTimer?.Dispose();
         _debounceTimer = new Timer(_ =>
@@ -129,8 +144,23 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
             if (session == null)
                 return;
 
-            UpdateBranchFromHeadFile(e.FullPath, session);
+            UpdateBranchFromHeadFile(fullPath, session);
         }, null, DebounceMs, Timeout.Infinite);
+    }
+
+    public void RefreshBranchFromHeadFile(Session session)
+    {
+        var workDir = session.Git.WorktreePath;
+        if (string.IsNullOrEmpty(workDir))
+            return;
+
+        var gitDir = ResolveGitDir(workDir);
+        if (gitDir == null)
+            return;
+
+        var headPath = Path.Combine(gitDir, "HEAD");
+        if (File.Exists(headPath))
+            UpdateBranchFromHeadFile(headPath, session);
     }
 
     private void UpdateBranchFromHeadFile(string headPath, Session session)
@@ -167,10 +197,14 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
 
     private void ApplyDerivedTitle(Session session, string branch)
     {
+        if (session.TitleLocked)
+            return;
+
         var title = DeriveTitleFromBranch(branch);
         if (title != null)
         {
             session.Title = title;
+            session.TitleLocked = true;
             _chatState.Tabs.UpdateChatTabTitle(title);
         }
     }

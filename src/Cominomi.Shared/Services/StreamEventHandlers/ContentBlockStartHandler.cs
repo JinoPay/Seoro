@@ -5,8 +5,13 @@ namespace Cominomi.Shared.Services.StreamEventHandlers;
 public class ContentBlockStartHandler : IStreamEventHandler
 {
     private readonly IChatState _chatState;
+    private readonly IGitBranchWatcherService _branchWatcher;
 
-    public ContentBlockStartHandler(IChatState chatState) => _chatState = chatState;
+    public ContentBlockStartHandler(IChatState chatState, IGitBranchWatcherService branchWatcher)
+    {
+        _chatState = chatState;
+        _branchWatcher = branchWatcher;
+    }
 
     public string EventType => "content_block_start";
 
@@ -51,6 +56,10 @@ public class ContentBlockStartHandler : IStreamEventHandler
                         if (evt.ContentBlock.Content != null)
                             matchingTool.Output = StreamEventUtils.ExtractToolResultContent(evt.ContentBlock.Content.Value);
                         _chatState.NotifyStateChanged();
+
+                        // Refresh branch from HEAD file after Bash tool completes
+                        if (matchingTool.Name is "Bash" or "execute_bash")
+                            _branchWatcher.RefreshBranchFromHeadFile(ctx.Session);
                     }
                 }
                 break;

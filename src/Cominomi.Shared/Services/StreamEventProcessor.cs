@@ -147,8 +147,12 @@ public class StreamEventProcessor : IStreamEventProcessor
         if (title.Length > 30)
             title = title[..30];
 
-        ctx.Session.Title = title;
-        _chatState.Tabs.UpdateChatTabTitle(title);
+        if (!ctx.Session.TitleLocked)
+        {
+            ctx.Session.Title = title;
+            ctx.Session.TitleLocked = true;
+            _chatState.Tabs.UpdateChatTabTitle(title);
+        }
 
         // Strip the marker from message text and parts
         var marker = text[startIdx..(endIdx + CominomiConstants.TitleMarkerSuffix.Length)];

@@ -72,6 +72,7 @@ public class Session
         get => _totalOutputTokens;
         set => _totalOutputTokens = Guard.NonNegative(value, nameof(TotalOutputTokens));
     }
+    public bool TitleLocked { get; set; }
     public bool PlanCompleted { get; set; }
     public string? PlanFilePath { get; set; }
 

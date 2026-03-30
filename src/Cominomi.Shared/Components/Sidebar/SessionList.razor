@@ -404,6 +404,7 @@
 
     private string? _lastSessionId;
     private string? _lastBranchName;
+    private string? _lastSessionTitle;
     private bool _lastHasStreaming;
     private int _lastStreamingHash;
     private int _lastCompletedHash;
@@ -433,7 +434,9 @@
             }
 
             var branchName = ChatState.CurrentSession?.Git.BranchName;
+            var sessionTitle = ChatState.CurrentSession?.Title;
             if (currentId == _lastSessionId && branchName == _lastBranchName
+                && sessionTitle == _lastSessionTitle
                 && hasStreaming == _lastHasStreaming
                 && streamingHash == _lastStreamingHash && completedHash == _lastCompletedHash)
                 return;
@@ -455,6 +458,7 @@
 
             _lastSessionId = currentId;
             _lastBranchName = branchName;
+            _lastSessionTitle = sessionTitle;
             _lastHasStreaming = hasStreaming;
             _lastStreamingHash = streamingHash;
             _lastCompletedHash = completedHash;
