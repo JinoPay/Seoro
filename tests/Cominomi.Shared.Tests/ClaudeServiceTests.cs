@@ -85,6 +85,9 @@ public class ClaudeServiceTests : IDisposable
         public Task<string?> WhichAsync(string executableName)
             => Task.FromResult(WhichResult);
 
+        public Task<string?> GetLoginShellPathAsync()
+            => Task.FromResult<string?>(null);
+
         public void InvalidateCache() { }
     }
 

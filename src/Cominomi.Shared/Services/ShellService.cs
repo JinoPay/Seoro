@@ -13,6 +13,10 @@ public class ShellService : IShellService
     private DateTime _cachedAt;
     private List<ShellInfo>? _availableShellsCache;
 
+    private string? _cachedLoginPath;
+    private DateTime _loginPathCachedAt;
+    private readonly SemaphoreSlim _pathLock = new(1, 1);
+
     public ShellService(ILogger<ShellService> logger, IProcessRunner processRunner, ISettingsService settingsService)
     {
         _logger = logger;
@@ -85,6 +89,86 @@ public class ShellService : IShellService
     {
         _cached = null;
         _availableShellsCache = null;
+        _cachedLoginPath = null;
+    }
+
+    public async Task<string?> GetLoginShellPathAsync()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return Environment.GetEnvironmentVariable("PATH");
+
+        if (_cachedLoginPath != null && DateTime.UtcNow - _loginPathCachedAt < CominomiConstants.ShellCacheTtl)
+            return _cachedLoginPath;
+
+        await _pathLock.WaitAsync();
+        try
+        {
+            if (_cachedLoginPath != null && DateTime.UtcNow - _loginPathCachedAt < CominomiConstants.ShellCacheTtl)
+                return _cachedLoginPath;
+
+            _cachedLoginPath = await CaptureLoginShellPathAsync();
+            _loginPathCachedAt = DateTime.UtcNow;
+
+            if (_cachedLoginPath != null)
+                _logger.LogInformation("Captured login shell PATH ({Length} chars)", _cachedLoginPath.Length);
+            else
+                _logger.LogWarning("Failed to capture login shell PATH, falling back to process PATH");
+
+            return _cachedLoginPath;
+        }
+        finally
+        {
+            _pathLock.Release();
+        }
+    }
+
+    private async Task<string?> CaptureLoginShellPathAsync()
+    {
+        var shell = ResolveUnixShell();
+        var sentinel = CominomiConstants.PathCaptureSentinel;
+
+        // Source the user's rc file explicitly so PATH includes tool version managers
+        // (mise, nvm, volta, fnm, etc.). The -l flag sources .zprofile/.bash_profile,
+        // and the explicit source covers .zshrc/.bashrc where most activations live.
+        var rcFile = shell.Type == ShellType.Bash ? "~/.bashrc" : "~/.zshrc";
+        var command = $"source {rcFile} 2>/dev/null; echo {sentinel}; echo $PATH";
+
+        try
+        {
+            var result = await _processRunner.RunAsync(new ProcessRunOptions
+            {
+                FileName = shell.FileName,
+                Arguments = ["-l", "-c", command],
+                Timeout = CominomiConstants.WhichTimeout
+            });
+
+            if (!result.Success)
+                return null;
+
+            // Parse PATH from output: find sentinel marker, take the next line
+            var lines = result.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            for (var i = 0; i < lines.Length - 1; i++)
+            {
+                if (lines[i].Trim() == sentinel)
+                {
+                    var path = lines[i + 1].Trim();
+                    if (!string.IsNullOrEmpty(path))
+                        return path;
+                }
+            }
+
+            _logger.LogDebug("PATH capture: sentinel not found in shell output");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Login shell PATH capture timed out");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Login shell PATH capture failed");
+        }
+
+        return null;
     }
 
     public async Task<string?> WhichAsync(string executableName)
@@ -112,7 +196,7 @@ public class ShellService : IShellService
                     };
                     break;
 
-                case ShellType.Bash:
+                case ShellType.Bash when RuntimeInformation.IsOSPlatform(OSPlatform.Windows):
                     // Windows Git Bash: convert Unix path to Windows path via cygpath
                     options = new ProcessRunOptions
                     {
@@ -122,12 +206,18 @@ public class ShellService : IShellService
                     };
                     break;
 
-                default: // ShellType.Sh, Zsh — macOS/Linux
+                default: // ShellType.Sh, Zsh, Bash — macOS/Linux
+                    // Inject login shell PATH so tool version managers (mise, nvm, volta)
+                    // are visible even when the GUI app inherits a minimal PATH.
+                    var loginPath = await GetLoginShellPathAsync();
                     options = new ProcessRunOptions
                     {
                         FileName = shell.FileName,
                         Arguments = ["-c", $"which {executableName}"],
-                        Timeout = CominomiConstants.WhichTimeout
+                        Timeout = CominomiConstants.WhichTimeout,
+                        EnvironmentVariables = loginPath != null
+                            ? new Dictionary<string, string> { ["PATH"] = loginPath }
+                            : null
                     };
                     break;
             }
@@ -148,15 +238,18 @@ public class ShellService : IShellService
         }
 
         // Fallback for macOS: GUI apps launched from Launchpad/Finder inherit a minimal
-        // PATH that excludes Homebrew directories. Check well-known paths directly.
+        // PATH that excludes Homebrew and tool version manager directories.
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string[] wellKnownPaths =
             [
-                $"/opt/homebrew/bin/{executableName}",  // Apple Silicon Homebrew
-                $"/usr/local/bin/{executableName}",     // Intel Homebrew
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    ".npm", "bin", executableName)
+                Path.Combine(home, ".local", "bin", executableName),                        // Anthropic installer, pip
+                Path.Combine(home, ".local", "share", "mise", "shims", executableName),     // mise
+                Path.Combine(home, ".volta", "bin", executableName),                        // volta
+                $"/opt/homebrew/bin/{executableName}",                                      // Apple Silicon Homebrew
+                $"/usr/local/bin/{executableName}",                                         // Intel Homebrew
+                Path.Combine(home, ".npm", "bin", executableName)                           // npm global
             ];
 
             foreach (var candidate in wellKnownPaths)

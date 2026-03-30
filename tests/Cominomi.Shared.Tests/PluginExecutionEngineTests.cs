@@ -393,6 +393,8 @@ public class PluginExecutionEngineTests
             Task.FromResult(new List<ShellInfo> { new("/bin/bash", "-c", ShellType.Bash) });
         public Task<string?> WhichAsync(string executableName) =>
             Task.FromResult<string?>(null);
+        public Task<string?> GetLoginShellPathAsync() =>
+            Task.FromResult<string?>(null);
         public void InvalidateCache() { }
     }
 

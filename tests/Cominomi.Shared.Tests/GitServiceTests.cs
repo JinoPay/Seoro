@@ -260,6 +260,8 @@ public class GitServiceTests
             => Task.FromResult(new List<ShellInfo> { new("/bin/sh", "-c", ShellType.Sh) });
         public Task<string?> WhichAsync(string executableName)
             => Task.FromResult<string?>(null);
+        public Task<string?> GetLoginShellPathAsync()
+            => Task.FromResult<string?>(null);
         public void InvalidateCache() { }
     }
 }
