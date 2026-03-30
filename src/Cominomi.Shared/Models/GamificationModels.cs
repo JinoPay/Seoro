@@ -58,6 +58,12 @@ public class CostSummary
     public decimal MonthlyProjection { get; set; }
 }
 
+public class ConfigItem
+{
+    public string Name { get; set; } = "";
+    public bool IsConfigured { get; set; }
+}
+
 public class DashboardStats
 {
     public int TotalSessions { get; set; }
@@ -69,6 +75,7 @@ public class DashboardStats
     public StreakInfo Streak { get; set; } = new();
     public List<Achievement> Achievements { get; set; } = [];
     public double ConfigCompleteness { get; set; }
+    public List<ConfigItem> ConfigItems { get; set; } = [];
     public List<DailyActivityEntry> DailyActivity { get; set; } = [];
     public CostSummary Cost { get; set; } = new();
 

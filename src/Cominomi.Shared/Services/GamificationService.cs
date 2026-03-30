@@ -122,7 +122,9 @@ public class GamificationService : IGamificationService
             stats.Level = CalculateLevel(xp);
 
             // Config completeness
-            stats.ConfigCompleteness = CalculateConfigCompleteness(settings);
+            var (completeness, configItems) = CalculateConfigCompleteness(settings);
+            stats.ConfigCompleteness = completeness;
+            stats.ConfigItems = configItems;
 
             // Achievements
             stats.Achievements = EvaluateAchievements(stats, settings);
@@ -144,36 +146,42 @@ public class GamificationService : IGamificationService
         var todayStr = now.ToString("yyyy-MM-dd");
         var monthStr = new DateTime(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
 
-        // Use merged stats (stats-cache.json + fallback)
         var allStats = await _statsCacheService.GetMergedStatsAsync();
+
+        // Build weighted average cost-per-token from ByModel (which has correct
+        // input/output/cache breakdown and per-type pricing applied).
+        var costPerToken = new Dictionary<string, decimal>();
+        foreach (var m in allStats.ByModel)
+        {
+            if (m.TotalTokens > 0)
+                costPerToken[m.Model] = m.TotalCost / m.TotalTokens;
+        }
+
+        decimal EstimateDayCost(DailyTokenTrend day)
+        {
+            decimal cost = 0;
+            foreach (var (model, tokens) in day.TokensByModel)
+            {
+                if (costPerToken.TryGetValue(model, out var cpt))
+                    cost += tokens * cpt;
+                else
+                {
+                    // Fallback for unknown models: use input pricing as rough estimate
+                    var pricing = ModelDefinitions.GetPricing(model);
+                    if (pricing != null)
+                        cost += (decimal)tokens / 1_000_000m * pricing.Input;
+                }
+            }
+            return cost;
+        }
 
         var todayCost = allStats.DailyTokenTrend
             .Where(d => d.Date == todayStr)
-            .Sum(d =>
-            {
-                decimal cost = 0;
-                foreach (var (model, tokens) in d.TokensByModel)
-                {
-                    var pricing = ModelDefinitions.GetPricing(model);
-                    if (pricing != null)
-                        cost += (decimal)tokens / 1_000_000m * pricing.Input;
-                }
-                return cost;
-            });
+            .Sum(EstimateDayCost);
 
         var monthCost = allStats.DailyTokenTrend
             .Where(d => string.Compare(d.Date, monthStr, StringComparison.Ordinal) >= 0)
-            .Sum(d =>
-            {
-                decimal cost = 0;
-                foreach (var (model, tokens) in d.TokensByModel)
-                {
-                    var pricing = ModelDefinitions.GetPricing(model);
-                    if (pricing != null)
-                        cost += (decimal)tokens / 1_000_000m * pricing.Input;
-                }
-                return cost;
-            });
+            .Sum(EstimateDayCost);
 
         var dayOfMonth = now.Day;
         var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
@@ -284,16 +292,19 @@ public class GamificationService : IGamificationService
         };
     }
 
-    private static double CalculateConfigCompleteness(ClaudeSettings settings)
+    private static (double completeness, List<ConfigItem> items) CalculateConfigCompleteness(ClaudeSettings settings)
     {
-        int filled = 0, total = 6;
-        if (settings.Model != null) filled++;
-        if (settings.EffortLevel != null) filled++;
-        if (settings.DefaultMode != null) filled++;
-        if (settings.Permissions is { Allow.Count: > 0 } or { Deny.Count: > 0 }) filled++;
-        if (settings.Hooks is { Count: > 0 }) filled++;
-        if (settings.McpServers is { Count: > 0 }) filled++;
-        return (double)filled / total;
+        var items = new List<ConfigItem>
+        {
+            new() { Name = "모델", IsConfigured = settings.Model != null },
+            new() { Name = "성능 수준", IsConfigured = settings.EffortLevel != null },
+            new() { Name = "기본 모드", IsConfigured = settings.DefaultMode != null },
+            new() { Name = "권한", IsConfigured = settings.Permissions is { Allow.Count: > 0 } or { Deny.Count: > 0 } },
+            new() { Name = "훅", IsConfigured = settings.Hooks is { Count: > 0 } },
+            new() { Name = "MCP 서버", IsConfigured = settings.McpServers is { Count: > 0 } },
+        };
+        var filled = items.Count(i => i.IsConfigured);
+        return ((double)filled / items.Count, items);
     }
 
     private static int GetHookCount(ClaudeSettings settings)

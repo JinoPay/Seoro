@@ -421,6 +421,10 @@
     {
         // Scan ALL sessions on computer (same source as dashboard)
         _dashStats = await GamificationService.GetDashboardStatsAsync();
+
+        // Refresh stats cache from session files if stale (lastComputedDate != today)
+        await StatsCacheService.RefreshIfStaleAsync();
+
         await LoadStats();
     }
 

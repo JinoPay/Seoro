@@ -6,6 +6,7 @@ namespace Cominomi.Shared.Services;
 /// <summary>
 /// Reads ~/.claude/stats-cache.json (Claude CLI external indexer)
 /// to provide complete historical usage stats.
+/// When the cache is stale, refreshes by scanning session JSONL files directly.
 /// </summary>
 public class StatsCacheService : IStatsCacheService
 {
@@ -13,10 +14,22 @@ public class StatsCacheService : IStatsCacheService
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".claude", "stats-cache.json");
 
+    private static readonly string ProjectsDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".claude", "projects");
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
+
+    private static readonly JsonSerializerOptions WriteOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = false
+    };
+
+    private static readonly SemaphoreSlim RefreshLock = new(1, 1);
 
     public async Task<UsageStats> GetMergedStatsAsync(int? days = null)
     {
@@ -25,6 +38,146 @@ public class StatsCacheService : IStatsCacheService
             return new UsageStats();
 
         return BuildStats(cache, days);
+    }
+
+    public async Task<bool> RefreshIfStaleAsync()
+    {
+        if (!await RefreshLock.WaitAsync(0))
+            return false; // Another refresh is already running
+
+        try
+        {
+            var cache = await ReadStatsCacheAsync();
+            var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+            if (cache != null && cache.LastComputedDate == today
+                && cache.DailyModelTokens.Count > 0 && cache.ModelUsage.Count > 0)
+                return false; // Cache is fresh and has data
+
+            if (!Directory.Exists(ProjectsDir))
+                return false;
+
+            await RefreshFromSessionsAsync(cache);
+            return true;
+        }
+        finally
+        {
+            RefreshLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Scans all session JSONL files to rebuild dailyModelTokens and modelUsage,
+    /// preserving other fields from the existing cache.
+    /// </summary>
+    private async Task RefreshFromSessionsAsync(StatsCache? existingCache)
+    {
+        var dailyModelTokens = new Dictionary<string, Dictionary<string, long>>();
+        var modelUsage = new Dictionary<string, StatsCacheModelUsage>();
+
+        var files = Directory.EnumerateFiles(ProjectsDir, "*.jsonl", SearchOption.AllDirectories);
+
+        foreach (var file in files)
+        {
+            try
+            {
+                using var reader = new StreamReader(file);
+                while (await reader.ReadLineAsync() is { } line)
+                {
+                    // Fast filter: skip lines that can't be assistant messages with usage
+                    if (!line.Contains("\"assistant\"") || !line.Contains("\"usage\""))
+                        continue;
+
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(line);
+                        var root = doc.RootElement;
+
+                        if (!root.TryGetProperty("type", out var typeProp) ||
+                            typeProp.GetString() != "assistant")
+                            continue;
+
+                        if (!root.TryGetProperty("message", out var msg) ||
+                            msg.ValueKind != JsonValueKind.Object)
+                            continue;
+
+                        if (!msg.TryGetProperty("usage", out var usage))
+                            continue;
+
+                        // Extract timestamp → date (supports both ISO 8601 string and Unix ms number)
+                        if (!root.TryGetProperty("timestamp", out var tsProp))
+                            continue;
+
+                        string dateStr;
+                        if (tsProp.ValueKind == JsonValueKind.String)
+                        {
+                            var tsStr = tsProp.GetString();
+                            if (tsStr == null || !DateTimeOffset.TryParse(tsStr, out var dto))
+                                continue;
+                            dateStr = dto.UtcDateTime.ToString("yyyy-MM-dd");
+                        }
+                        else if (tsProp.ValueKind == JsonValueKind.Number)
+                        {
+                            var tsMs = (long)tsProp.GetDouble();
+                            if (tsMs <= 0) continue;
+                            dateStr = DateTimeOffset.FromUnixTimeMilliseconds(tsMs)
+                                .UtcDateTime.ToString("yyyy-MM-dd");
+                        }
+                        else
+                        {
+                            continue;
+                        }
+
+                        var model = msg.TryGetProperty("model", out var mp)
+                            ? mp.GetString() ?? "unknown"
+                            : "unknown";
+
+                        long inputTokens = usage.TryGetProperty("input_tokens", out var it) ? it.GetInt64() : 0;
+                        long outputTokens = usage.TryGetProperty("output_tokens", out var ot) ? ot.GetInt64() : 0;
+                        long cacheCreation = usage.TryGetProperty("cache_creation_input_tokens", out var cc) ? cc.GetInt64() : 0;
+                        long cacheRead = usage.TryGetProperty("cache_read_input_tokens", out var cr) ? cr.GetInt64() : 0;
+
+                        // dailyModelTokens
+                        if (!dailyModelTokens.TryGetValue(dateStr, out var dayTokens))
+                            dailyModelTokens[dateStr] = dayTokens = new();
+                        var total = inputTokens + outputTokens + cacheCreation + cacheRead;
+                        dayTokens[model] = dayTokens.GetValueOrDefault(model) + total;
+
+                        // modelUsage
+                        if (!modelUsage.TryGetValue(model, out var mu))
+                            modelUsage[model] = mu = new StatsCacheModelUsage();
+                        mu.InputTokens += inputTokens;
+                        mu.OutputTokens += outputTokens;
+                        mu.CacheCreationInputTokens += cacheCreation;
+                        mu.CacheReadInputTokens += cacheRead;
+                    }
+                    catch { /* skip unparseable lines */ }
+                }
+            }
+            catch { /* skip inaccessible files */ }
+        }
+
+        // Safety: don't overwrite existing data with empty results
+        if (dailyModelTokens.Count == 0 && modelUsage.Count == 0)
+            return;
+
+        // Build updated cache, preserving fields we don't compute
+        var updated = existingCache ?? new StatsCache();
+        updated.LastComputedDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        updated.DailyModelTokens = dailyModelTokens
+            .Select(kv => new StatsCacheDailyModelTokens { Date = kv.Key, TokensByModel = kv.Value })
+            .OrderBy(d => d.Date)
+            .ToList();
+        updated.ModelUsage = modelUsage;
+        updated.Version = 2;
+
+        // Write back to disk
+        try
+        {
+            var json = JsonSerializer.Serialize(updated, WriteOptions);
+            await File.WriteAllTextAsync(StatsCachePath, json);
+        }
+        catch { /* write failure is non-fatal */ }
     }
 
     private static async Task<StatsCache?> ReadStatsCacheAsync()
