@@ -476,6 +476,14 @@
                     e.preventDefault();
                     dotNetRef.invokeMethodAsync('OnDeleteCurrentSessionShortcut');
                 }
+                if (modifier && e.shiftKey && (e.key === 'e' || e.key === 'E')) {
+                    e.preventDefault();
+                    dotNetRef.invokeMethodAsync('OnExpandAllProjects');
+                }
+                if (modifier && e.shiftKey && (e.key === 'w' || e.key === 'W')) {
+                    e.preventDefault();
+                    dotNetRef.invokeMethodAsync('OnCollapseAllProjects');
+                }
             };
             document.addEventListener('keydown', window._sessionShortcutHandler);
         };
