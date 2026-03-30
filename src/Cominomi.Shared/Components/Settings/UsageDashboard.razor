@@ -30,34 +30,37 @@
     }
     else if (_stats != null)
     {
-        @* 1.5. Global Activity Overview (from ALL sessions on computer) *@
+        @* 1.5. Global Activity Overview (filtered by selected period) *@
         <div class="analytics-activity-overview">
+            @{
+                var summary = GetFilteredActivitySummary();
+            }
             <div class="analytics-activity-header">
                 <div class="analytics-section-title" style="margin-bottom: 0;">
                     <MudIcon Icon="@Icons.Material.Filled.Insights" Size="Size.Small" />
                     전체 활동 요약
                 </div>
-                <span class="analytics-activity-badge">컴퓨터 내 모든 세션</span>
+                <span class="analytics-activity-badge">@(_selectedRange == "all" ? "컴퓨터 내 모든 세션" : $"최근 {_selectedRange}일")</span>
             </div>
             <div class="analytics-activity-stats">
                 <div class="analytics-activity-stat">
                     <MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Small" Style="font-size: 0.85rem;" />
-                    <span class="analytics-activity-num">@FormatNumber(_dashStats.TotalSessions)</span>
+                    <span class="analytics-activity-num">@FormatNumber(summary.Sessions)</span>
                     <span class="analytics-activity-label">세션</span>
                 </div>
                 <div class="analytics-activity-stat">
                     <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" Style="font-size: 0.85rem;" />
-                    <span class="analytics-activity-num">@FormatNumber(_dashStats.TotalMessages)</span>
+                    <span class="analytics-activity-num">@FormatNumber(summary.Messages)</span>
                     <span class="analytics-activity-label">메시지</span>
                 </div>
                 <div class="analytics-activity-stat">
                     <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Style="font-size: 0.85rem;" />
-                    <span class="analytics-activity-num">@FormatNumber(_dashStats.TotalToolCalls)</span>
+                    <span class="analytics-activity-num">@FormatNumber(summary.ToolCalls)</span>
                     <span class="analytics-activity-label">도구 호출</span>
                 </div>
                 <div class="analytics-activity-stat">
                     <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Style="font-size: 0.85rem;" />
-                    <span class="analytics-activity-num">@_dashStats.DaysActive</span>
+                    <span class="analytics-activity-num">@summary.ActiveDays</span>
                     <span class="analytics-activity-label">활동일</span>
                 </div>
             </div>
@@ -84,7 +87,7 @@
                     <div class="analytics-stat-value" style="color: var(--mud-palette-success);">
                         $@_stats.TotalCost.ToString("F2")
                     </div>
-                    <div class="analytics-stat-subtitle">$@CostPerMessage.ToString("F4")/메시지 · @_dashStats.TotalSessions 세션</div>
+                    <div class="analytics-stat-subtitle">$@CostPerMessage.ToString("F4")/메시지 · @summary.Sessions 세션</div>
                 </div>
             </div>
 
@@ -108,9 +111,11 @@
                 <div class="analytics-stat-content">
                     <div class="analytics-stat-label">최장 세션</div>
                     <div class="analytics-stat-value" style="color: var(--mud-palette-warning);">
-                        @FormatDuration(_dashStats.LongestSessionMs > 0 ? _dashStats.LongestSessionMs : _stats.LongestSession?.DurationMs ?? 0)
+                        @FormatDuration(_selectedRange == "all"
+                            ? (_dashStats.LongestSessionMs > 0 ? _dashStats.LongestSessionMs : _stats.LongestSession?.DurationMs ?? 0)
+                            : (_stats.LongestSession?.DurationMs ?? 0))
                     </div>
-                    <div class="analytics-stat-subtitle">전체 세션 중 최장</div>
+                    <div class="analytics-stat-subtitle">@(_selectedRange == "all" ? "전체 세션 중 최장" : $"최근 {_selectedRange}일 중 최장")</div>
                 </div>
             </div>
 
@@ -515,8 +520,14 @@
         }
     }
 
-    private decimal CostPerMessage =>
-        _dashStats.TotalMessages > 0 ? _stats!.TotalCost / _dashStats.TotalMessages : 0;
+    private decimal CostPerMessage
+    {
+        get
+        {
+            var filteredMessages = GetFilteredActivitySummary().Messages;
+            return filteredMessages > 0 ? _stats!.TotalCost / filteredMessages : 0;
+        }
+    }
 
     private long AvgDailyTokens
     {
@@ -567,6 +578,17 @@
             result.Add(lookup.TryGetValue(key, out var e) ? e : new DailyActivityEntry { Date = key });
         }
         return result;
+    }
+
+    private (int Sessions, int Messages, int ToolCalls, int ActiveDays) GetFilteredActivitySummary()
+    {
+        var filtered = GetFilteredDailyActivity();
+        return (
+            Sessions: filtered.Sum(d => d.SessionCount),
+            Messages: filtered.Sum(d => d.MessageCount),
+            ToolCalls: filtered.Sum(d => d.ToolCallCount),
+            ActiveDays: filtered.Count(d => d.MessageCount > 0 || d.SessionCount > 0)
+        );
     }
 
     private int AvgDailyMessages
