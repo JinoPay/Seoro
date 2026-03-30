@@ -13,6 +13,7 @@ namespace Cominomi.Shared.Services;
 public class ClaudeService : IClaudeService, IDisposable
 {
     private readonly IOptionsMonitor<AppSettings> _appSettings;
+    private readonly IShellService _shellService;
     private readonly ILogger<ClaudeService> _logger;
     private readonly ClaudeCliResolver _cliResolver;
     private readonly ConcurrentDictionary<string, AgentProcess> _agents = new();
@@ -26,6 +27,7 @@ public class ClaudeService : IClaudeService, IDisposable
     public ClaudeService(IOptionsMonitor<AppSettings> appSettings, IShellService shellService, IProcessRunner processRunner, ILogger<ClaudeService> logger)
     {
         _appSettings = appSettings;
+        _shellService = shellService;
         _logger = logger;
         _cliResolver = new ClaudeCliResolver(shellService, processRunner, logger);
     }
@@ -124,7 +126,8 @@ public class ClaudeService : IClaudeService, IDisposable
         [EnumeratorCancellation] CancellationToken token)
     {
         _logger.LogDebug("Executing: {FileName} {Arguments}", fileName, arguments);
-        var process = StartProcess(fileName, arguments, workingDir, envVars);
+        var loginPath = await _shellService.GetLoginShellPathAsync();
+        var process = StartProcess(fileName, arguments, workingDir, envVars, loginPath);
         var agent = new AgentProcess(process, cts, _logger);
         _agents[agentKey] = agent;
 
@@ -155,7 +158,7 @@ public class ClaudeService : IClaudeService, IDisposable
         try { process.Dispose(); } catch { /* process may already be disposed */ }
     }
 
-    private static Process StartProcess(string fileName, string arguments, string workingDir, Dictionary<string, string>? envVars = null)
+    private static Process StartProcess(string fileName, string arguments, string workingDir, Dictionary<string, string>? envVars = null, string? loginShellPath = null)
     {
         var psi = new ProcessStartInfo
         {
@@ -173,6 +176,11 @@ public class ClaudeService : IClaudeService, IDisposable
         };
 
         psi.Environment["NO_COLOR"] = "1";
+
+        // Inject login shell PATH so tool version managers' binaries (node, mise, etc.)
+        // are accessible even when the GUI app inherits a minimal PATH.
+        if (loginShellPath != null)
+            psi.Environment["PATH"] = loginShellPath;
 
         if (envVars != null)
         {
@@ -322,6 +330,7 @@ public class ClaudeService : IClaudeService, IDisposable
         {
             var settings = _appSettings.CurrentValue;
             var (fileName, baseArgs) = await _cliResolver.ResolveAsync(settings.ClaudePath);
+            var loginPath = await _shellService.GetLoginShellPathAsync();
 
             var sb = new StringBuilder(baseArgs);
             sb.Append("--print --output-format text ");
@@ -329,24 +338,25 @@ public class ClaudeService : IClaudeService, IDisposable
             sb.Append("--dangerously-skip-permissions ");
             sb.Append("--append-system-prompt \"You are a commit message generator. Given a unified diff, write a single concise commit message in the imperative mood. Use the same language as code comments or strings if present, otherwise use English. Output ONLY the commit message, nothing else. No prefix like feat: or fix:.\"");
 
-            var process = new Process
+            var psi = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = fileName,
-                    Arguments = sb.ToString(),
-                    WorkingDirectory = workingDir,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    RedirectStandardInput = true,
-                    CreateNoWindow = true,
-                    StandardInputEncoding = new UTF8Encoding(false),
-                    StandardOutputEncoding = Encoding.UTF8,
-                    StandardErrorEncoding = Encoding.UTF8,
-                    Environment = { ["NO_COLOR"] = "1" }
-                }
+                FileName = fileName,
+                Arguments = sb.ToString(),
+                WorkingDirectory = workingDir,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                CreateNoWindow = true,
+                StandardInputEncoding = new UTF8Encoding(false),
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
             };
+            psi.Environment["NO_COLOR"] = "1";
+            if (loginPath != null)
+                psi.Environment["PATH"] = loginPath;
+
+            var process = new Process { StartInfo = psi };
 
             _logger.LogDebug("GenerateCommitMessage: {FileName} {Arguments}", fileName, sb.ToString());
             process.Start();

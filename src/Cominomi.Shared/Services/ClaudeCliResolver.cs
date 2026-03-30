@@ -82,11 +82,15 @@ public class ClaudeCliResolver
 
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string[] candidates =
             [
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".npm", "bin", "claude"),
-                "/usr/local/bin/claude",
-                "/opt/homebrew/bin/claude"
+                Path.Combine(home, ".local", "bin", "claude"),                        // Anthropic installer, pip
+                Path.Combine(home, ".local", "share", "mise", "shims", "claude"),     // mise
+                Path.Combine(home, ".volta", "bin", "claude"),                        // volta
+                "/opt/homebrew/bin/claude",                                           // Apple Silicon Homebrew
+                "/usr/local/bin/claude",                                              // Intel Homebrew
+                Path.Combine(home, ".npm", "bin", "claude")                           // npm global
             ];
 
             foreach (var candidate in candidates)
@@ -108,11 +112,16 @@ public class ClaudeCliResolver
             // Split on whitespace while preserving quoted segments.
             var args = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
+            var loginPath = await _shellService.GetLoginShellPathAsync();
+            var envVars = new Dictionary<string, string>(CominomiConstants.Env.NoColorEnv);
+            if (loginPath != null)
+                envVars["PATH"] = loginPath;
+
             var result = await _processRunner.RunAsync(new ProcessRunOptions
             {
                 FileName = fileName,
                 Arguments = args,
-                EnvironmentVariables = CominomiConstants.Env.NoColorEnv,
+                EnvironmentVariables = envVars,
                 Timeout = TimeSpan.FromSeconds(10)
             });
             return result.Stdout;

@@ -81,11 +81,15 @@ public class DependencyCheckService(
     {
         try
         {
+            var loginPath = await shellService.GetLoginShellPathAsync();
             var result = await processRunner.RunAsync(new ProcessRunOptions
             {
                 FileName = executablePath,
                 Arguments = ["--version"],
-                Timeout = TimeSpan.FromSeconds(5)
+                Timeout = TimeSpan.FromSeconds(5),
+                EnvironmentVariables = loginPath != null
+                    ? new Dictionary<string, string> { ["PATH"] = loginPath }
+                    : null
             });
             var firstLine = result.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
             return firstLine?.Trim();

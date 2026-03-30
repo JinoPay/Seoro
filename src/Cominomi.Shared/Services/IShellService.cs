@@ -33,6 +33,14 @@ public interface IShellService
     Task<string?> WhichAsync(string executableName);
 
     /// <summary>
+    /// Returns the user's full PATH from their login shell.
+    /// On macOS/Linux, runs a login shell (sourcing rc files) to capture PATH.
+    /// On Windows, returns the current process PATH.
+    /// Result is cached with ShellCacheTtl.
+    /// </summary>
+    Task<string?> GetLoginShellPathAsync();
+
+    /// <summary>
     /// Clears the cached shell info so the next <see cref="GetShellAsync"/> re-detects.
     /// Useful when dependencies are reinstalled after app start.
     /// </summary>

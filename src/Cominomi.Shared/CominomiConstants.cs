@@ -24,6 +24,7 @@ public static class CominomiConstants
 
     // Timeout / retry constants
     public static readonly TimeSpan WhichTimeout = TimeSpan.FromSeconds(5);
+    public const string PathCaptureSentinel = "___COMINOMI_PATH___";
 
     // Built-in system instructions injected at the top of every system prompt
     public const string SystemInstructionWorktree =
