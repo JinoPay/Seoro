@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.5.4",
+    "date": "2026-03-30",
+    "changes": [
+      { "type": "feat", "description": "통계 대시보드 수동 새로고침 버튼 추가" },
+      { "type": "feat", "description": "설정 대시보드 개선 및 통계 캐시 처리 추가" },
+      { "type": "feat", "description": "워크스페이스 전체 펼치기/접기 단축키 및 Ctrl+N 번호 불일치 수정" },
+      { "type": "fix", "description": "기본 설정 섹션을 'dashboard'에서 'general'로 변경" },
+      { "type": "fix", "description": "AskUserQuestion 다이얼로그 보기/커스텀 답변 상호배제 및 UI 통일" },
+      { "type": "fix", "description": "사용량 통계 기간 필터 시 총 비용/총 토큰이 변경되지 않는 문제 수정" },
+      { "type": "fix", "description": "macOS 알림이 Script Editor 대신 Cominomi 앱으로 표시되도록 수정" },
+      { "type": "fix", "description": "브랜치명/타이틀 실시간 반영 및 타이틀 잠금" }
+    ]
+  },
+  {
     "version": "1.5.3",
     "date": "2026-03-30",
     "changes": [
