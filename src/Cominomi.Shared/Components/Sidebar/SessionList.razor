@@ -134,6 +134,7 @@
     private string? _filterText;
     private DotNetObjectReference<SessionList>? _dotNetRef;
     private List<SidebarRow> _flatRows = new();
+    private List<(Session Session, Workspace Workspace)> _visibleSessions = new();
     private List<IdeInfo> _availableIdes = [];
 
     private enum SidebarRowKind { ProjectHeader, WorkspaceSubheader, Session }
@@ -151,6 +152,7 @@
     private void RebuildFlatRows()
     {
         var rows = new List<SidebarRow>();
+        var visibleSessions = new List<(Session, Workspace)>();
         var sessionIndex = 0;
 
         foreach (var group in DataService.GetFilteredWorkspaces(_filterText)
@@ -190,6 +192,7 @@
                     {
                         rows.Add(new SidebarRow(SidebarRowKind.Session,
                             Session: session, Workspace: ws, SessionIndex: sessionIndex));
+                        visibleSessions.Add((session, ws));
                         sessionIndex++;
                     }
                 }
@@ -197,6 +200,7 @@
         }
 
         _flatRows = rows;
+        _visibleSessions = visibleSessions;
     }
 
     protected override async Task OnInitializedAsync()
@@ -263,9 +267,9 @@
     [JSInvokable]
     public async Task OnSessionShortcut(int index)
     {
-        if (index >= 0 && index < DataService.OrderedSessions.Count)
+        if (index >= 0 && index < _visibleSessions.Count)
         {
-            var (session, ws) = DataService.OrderedSessions[index];
+            var (session, ws) = _visibleSessions[index];
             await SelectSession(session, ws);
             await InvokeAsync(StateHasChanged);
         }
@@ -280,6 +284,27 @@
             await DeleteSession(current);
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    [JSInvokable]
+    public async Task OnExpandAllProjects()
+    {
+        foreach (var name in DataService.Workspaces
+            .Select(SessionListDataService.GetProjectName).Distinct())
+        {
+            if (_expandedProjects.Add(name))
+                await DataService.LoadSessionsForProjectAsync(name);
+        }
+        RebuildFlatRows();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public void OnCollapseAllProjects()
+    {
+        _expandedProjects.Clear();
+        RebuildFlatRows();
+        InvokeAsync(StateHasChanged);
     }
 
     private static string GetShortcutLabel(int index)
