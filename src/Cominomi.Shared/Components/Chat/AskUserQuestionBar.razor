@@ -32,7 +32,7 @@
             <div class="askbar-question-text">@q.Question</div>
 
             @{
-                var customActive = !string.IsNullOrWhiteSpace(_customText);
+                var customActive = !string.IsNullOrWhiteSpace(_customTexts[_currentPage]);
                 var anyOptionSelected = selectedForThis != null;
             }
 
@@ -61,8 +61,8 @@
                 }
 
                 <div class="askbar-option askbar-custom-option @(customActive ? "selected" : "") @(anyOptionSelected ? "dimmed" : "")">
-                    <MudTextField @bind-Value="_customText"
-                                  @bind-Value:after="OnCustomTextChanged"
+                    <MudTextField Value="@_customTexts[_currentPage]"
+                                  ValueChanged="@((string v) => OnCustomTextChanged(_currentPage, v))"
                                   Placeholder="의견을 직접 입력하세요..."
                                   Variant="Variant.Text"
                                   Lines="1"
@@ -120,14 +120,16 @@
 
     private List<AskQuestion> _questions = [];
     private string?[] _selections = [];
+    private string[] _customTexts = [];
     private bool _submitted;
     private string? _lastInput;
     private int _currentPage;
-    private string _customText = "";
 
-    private bool AllAnswered => _selections.Length > 0 && _selections.All(s => s != null);
-    private bool CurrentAnswered => _selections.Length > 0 && _selections[_currentPage] != null;
-    private bool CanSubmit => AllAnswered || !string.IsNullOrWhiteSpace(_customText);
+    private bool IsQuestionAnswered(int i) =>
+        _selections[i] != null || !string.IsNullOrWhiteSpace(_customTexts[i]);
+    private bool AllAnswered => _selections.Length > 0 && Enumerable.Range(0, _selections.Length).All(IsQuestionAnswered);
+    private bool CurrentAnswered => _selections.Length > 0 && IsQuestionAnswered(_currentPage);
+    private bool CanSubmit => AllAnswered;
     private bool IsFirstPage => _currentPage == 0;
     private bool IsLastPage => _currentPage >= _questions.Count - 1;
 
@@ -139,9 +141,10 @@
         _lastInput = QuestionInput;
         _questions = ParseQuestions(QuestionInput);
         _selections = new string?[_questions.Count];
+        _customTexts = new string[_questions.Count];
+        Array.Fill(_customTexts, "");
         _submitted = false;
         _currentPage = 0;
-        _customText = "";
     }
 
     private void GoNext()
@@ -163,9 +166,9 @@
         // Toggle: clicking the same option deselects it
         _selections[questionIndex] = _selections[questionIndex] == label ? null : label;
 
-        // Mutual exclusion: clear custom text when an option is selected
+        // Mutual exclusion: clear custom text for THIS question only
         if (_selections[questionIndex] != null)
-            _customText = "";
+            _customTexts[questionIndex] = "";
     }
 
     private async Task Submit()
@@ -175,37 +178,35 @@
 
         if (OnResponse.HasDelegate)
         {
-            string response;
-            if (!string.IsNullOrWhiteSpace(_customText))
-            {
-                response = _customText.Trim();
-            }
-            else
-            {
-                response = _questions.Count == 1
-                    ? _selections[0]!
-                    : string.Join("\n", _questions.Select((q, i) =>
-                        $"{q.Header ?? q.Question}: {_selections[i]}"));
-            }
+            string GetAnswer(int i) =>
+                !string.IsNullOrWhiteSpace(_customTexts[i]) ? _customTexts[i].Trim() : _selections[i]!;
+
+            var response = _questions.Count == 1
+                ? GetAnswer(0)
+                : string.Join("\n", _questions.Select((q, i) =>
+                    $"{q.Header ?? q.Question}: {GetAnswer(i)}"));
 
             await OnResponse.InvokeAsync(response);
         }
     }
 
-    private void OnCustomTextChanged()
+    private void OnCustomTextChanged(int questionIndex, string value)
     {
-        // Mutual exclusion: clear all selections when custom text is entered
-        if (!string.IsNullOrWhiteSpace(_customText))
-        {
-            for (int i = 0; i < _selections.Length; i++)
-                _selections[i] = null;
-        }
+        _customTexts[questionIndex] = value;
+
+        // Mutual exclusion: clear selection for THIS question only
+        if (!string.IsNullOrWhiteSpace(value))
+            _selections[questionIndex] = null;
     }
 
     private async Task HandleInputKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && !e.ShiftKey && CanSubmit && !_submitted)
+        if (e.Key != "Enter" || e.ShiftKey || _submitted) return;
+
+        if (IsLastPage && CanSubmit)
             await Submit();
+        else if (!IsLastPage && CurrentAnswered)
+            GoNext();
     }
 
     private static List<AskQuestion> ParseQuestions(string? input)
