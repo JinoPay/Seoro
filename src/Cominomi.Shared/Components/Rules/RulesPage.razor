@@ -1,25 +1,14 @@
 @using Cominomi.Shared.Models
 @inject IRulesService RulesService
+@inject IChatState ChatState
 @inject ISnackbar Snackbar
 
 <div class="settings-content-area">
-    <div class="settings-content-header">
-        <div class="d-flex align-center gap-2">
-            <MudChipSet T="string" SelectedValue="@_scopeStr" SelectedValueChanged="OnScopeChanged"
-                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
-                        Variant="Variant.Outlined" Color="Color.Primary">
-                <MudChip T="string" Value="@("Global")" Icon="@Icons.Material.Filled.Public">글로벌</MudChip>
-                <MudChip T="string" Value="@("Project")" Icon="@Icons.Material.Filled.Folder"
-                         Disabled="@(string.IsNullOrEmpty(_projectPath))">프로젝트</MudChip>
-            </MudChipSet>
-            @if (_scope != ClaudeSettingsScope.Global)
-            {
-                <div style="width: 200px;">
-                    <ProjectScopePicker @bind-SelectedPath="_projectPath" Label="" />
-                </div>
-            }
-        </div>
-        <div class="d-flex gap-2">
+    <ClaudeSettingScopeHeader Scope="_scope" ScopeChanged="OnScopeChanged"
+                              ProjectPath="@_projectPath" ProjectPathChanged="OnProjectPathChanged"
+                              ShowLocalScope="false"
+                              Saving="false" OnSave="SaveSelected">
+        <ExtraActions>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.AutoAwesome" OnClick="@(() => _showTemplates = true)"
                        Style="text-transform: none;">
@@ -30,8 +19,8 @@
                        Style="text-transform: none;">
                 새 룰
             </MudButton>
-        </div>
-    </div>
+        </ExtraActions>
+    </ClaudeSettingScopeHeader>
 
     <div class="settings-content-body">
         <div class="rules-layout">
@@ -106,7 +95,6 @@
     private List<RuleFile> _rules = [];
     private RuleFile? _selectedRule;
     private ClaudeSettingsScope _scope = ClaudeSettingsScope.Global;
-    private string _scopeStr = "Global";
     private string? _projectPath;
     private string _search = "";
     private bool _showTemplates;
@@ -116,12 +104,21 @@
         : _rules.Where(r => r.FileName.Contains(_search, StringComparison.OrdinalIgnoreCase)
             || r.Content.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
 
-    protected override async Task OnInitializedAsync() => await LoadRules();
-
-    private async Task OnScopeChanged(string value)
+    protected override async Task OnInitializedAsync()
     {
-        _scopeStr = value;
-        _scope = Enum.Parse<ClaudeSettingsScope>(value);
+        _projectPath = ChatState.CurrentWorkspace?.RepoLocalPath;
+        await LoadRules();
+    }
+
+    private async Task OnScopeChanged(ClaudeSettingsScope scope)
+    {
+        _scope = scope;
+        await LoadRules();
+    }
+
+    private async Task OnProjectPathChanged(string? path)
+    {
+        _projectPath = path;
         await LoadRules();
     }
 

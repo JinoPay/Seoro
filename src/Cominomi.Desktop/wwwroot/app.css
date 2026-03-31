@@ -3277,10 +3277,58 @@ html *::after {
 }
 
 .settings-group-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
     font-size: var(--text-sm);
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: var(--space-3);
+}
+
+.settings-group {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.settings-toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.settings-list-item .settings-delete-btn {
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.settings-list-item:hover .settings-delete-btn {
+    opacity: 1;
+}
+
+.settings-add-area {
+    border: 2px dashed var(--mud-palette-lines-default);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+.settings-add-area:hover {
+    border-color: var(--mud-palette-primary);
+}
+
+.settings-icon-box {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--mud-palette-primary-hover);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .integration-status {

@@ -1,29 +1,13 @@
 @using Cominomi.Shared.Models
 @inject IClaudeSettingsService ClaudeSettingsService
+@inject IChatState ChatState
 @inject ISnackbar Snackbar
 
 <div class="settings-content-area wide">
-    <div class="settings-content-header">
-        <div class="d-flex align-center gap-2">
-            <MudChipSet T="string" SelectedValue="@_scopeStr" SelectedValueChanged="OnScopeChanged"
-                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
-                        Variant="Variant.Outlined" Color="Color.Primary">
-                <MudChip T="string" Value="@("Global")" Icon="@Icons.Material.Filled.Public">글로벌</MudChip>
-                <MudChip T="string" Value="@("Project")" Icon="@Icons.Material.Filled.Folder"
-                         Disabled="@(string.IsNullOrEmpty(_projectPath))">프로젝트</MudChip>
-            </MudChipSet>
-            @if (_scope == ClaudeSettingsScope.Project)
-            {
-                <div style="width: 200px;">
-                    <ProjectScopePicker @bind-SelectedPath="_projectPath" Label="" />
-                </div>
-            }
-        </div>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
-                   Size="Size.Small" Style="text-transform: none;" Disabled="_saving">
-            저장
-        </MudButton>
-    </div>
+    <ClaudeSettingScopeHeader Scope="_scope" ScopeChanged="OnScopeChanged"
+                              ProjectPath="@_projectPath" ProjectPathChanged="OnProjectPathChanged"
+                              ShowLocalScope="false"
+                              Saving="_saving" OnSave="Save" />
 
     <div class="settings-content-body">
         <div class="hooks-layout">
@@ -110,21 +94,26 @@
 @code {
     private ClaudeSettings _settings = new();
     private ClaudeSettingsScope _scope = ClaudeSettingsScope.Global;
-    private string _scopeStr = "Global";
     private string? _projectPath;
     private string? _selectedEvent;
     private bool _saving;
 
     protected override async Task OnInitializedAsync()
     {
+        _projectPath = ChatState.CurrentWorkspace?.RepoLocalPath;
         _selectedEvent = ClaudeHookEvents.PreToolUse;
         await LoadSettings();
     }
 
-    private async Task OnScopeChanged(string value)
+    private async Task OnScopeChanged(ClaudeSettingsScope scope)
     {
-        _scopeStr = value;
-        _scope = Enum.Parse<ClaudeSettingsScope>(value);
+        _scope = scope;
+        await LoadSettings();
+    }
+
+    private async Task OnProjectPathChanged(string? path)
+    {
+        _projectPath = path;
         await LoadSettings();
     }
 

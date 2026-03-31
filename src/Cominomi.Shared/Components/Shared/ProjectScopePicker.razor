@@ -1,6 +1,6 @@
 @inject IWorkspaceService WorkspaceService
 
-<MudSelect T="string" @bind-Value="SelectedPath" Label="@Label" Variant="Variant.Outlined"
+<MudSelect T="string" Value="SelectedPath" ValueChanged="OnValueChanged" Label="@Label" Variant="Variant.Outlined"
            Margin="Margin.Dense" Dense="true" Clearable="true" Placeholder="프로젝트 선택..."
            AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
     @foreach (var ws in _workspaces)

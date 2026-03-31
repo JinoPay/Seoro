@@ -1,0 +1,68 @@
+@using Cominomi.Shared.Models
+
+<div class="settings-content-header">
+    <div class="d-flex align-center gap-2">
+        <MudChipSet T="string" SelectedValue="@_scopeStr" SelectedValueChanged="OnScopeChipChanged"
+                    SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                    Variant="Variant.Outlined" Color="Color.Primary">
+            <MudChip T="string" Value="@("Global")" Icon="@Icons.Material.Filled.Public">글로벌</MudChip>
+            <MudChip T="string" Value="@("Project")" Icon="@Icons.Material.Filled.Folder"
+                     Disabled="@(string.IsNullOrEmpty(ProjectPath))">프로젝트</MudChip>
+            @if (ShowLocalScope)
+            {
+                <MudChip T="string" Value="@("Local")" Icon="@Icons.Material.Filled.Lock"
+                         Disabled="@(string.IsNullOrEmpty(ProjectPath))">
+                    @(LocalScopeLabel ?? "로컬")
+                </MudChip>
+            }
+        </MudChipSet>
+
+        @if (Scope != ClaudeSettingsScope.Global)
+        {
+            <div style="width: 200px;">
+                <ProjectScopePicker SelectedPath="@ProjectPath"
+                                    SelectedPathChanged="OnProjectChanged" Label="" />
+            </div>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                     Color="@(Scope == ClaudeSettingsScope.Project ? Color.Info : Color.Warning)">
+                @(Scope == ClaudeSettingsScope.Project ? "git tracked" : "gitignored")
+            </MudChip>
+        }
+    </div>
+
+    <div class="d-flex align-center gap-2">
+        @if (ExtraActions != null)
+        {
+            @ExtraActions
+        }
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OnSave"
+                   Size="Size.Small" Style="text-transform: none;" Disabled="Saving">
+            @(Saving ? "저장 중..." : "저장")
+        </MudButton>
+    </div>
+</div>
+
+@code {
+    [Parameter] public ClaudeSettingsScope Scope { get; set; }
+    [Parameter] public EventCallback<ClaudeSettingsScope> ScopeChanged { get; set; }
+    [Parameter] public string? ProjectPath { get; set; }
+    [Parameter] public EventCallback<string?> ProjectPathChanged { get; set; }
+    [Parameter] public bool ShowLocalScope { get; set; } = true;
+    [Parameter] public string? LocalScopeLabel { get; set; }
+    [Parameter] public bool Saving { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public RenderFragment? ExtraActions { get; set; }
+
+    private string _scopeStr => Scope.ToString();
+
+    private async Task OnScopeChipChanged(string value)
+    {
+        var newScope = Enum.Parse<ClaudeSettingsScope>(value);
+        await ScopeChanged.InvokeAsync(newScope);
+    }
+
+    private async Task OnProjectChanged(string? path)
+    {
+        await ProjectPathChanged.InvokeAsync(path);
+    }
+}

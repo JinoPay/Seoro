@@ -1,0 +1,85 @@
+@inject IFolderPickerService FolderPickerService
+
+<div class="stack gap-3">
+    @if (Directories is { Count: > 0 })
+    {
+        <MudSimpleTable Dense="true" Hover="true" Elevation="0"
+                        Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;">
+            <thead>
+                <tr>
+                    <th>경로</th>
+                    <th style="width: 48px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var dir in Directories.ToList())
+                {
+                    <tr class="settings-list-item">
+                        <td class="typo-body2" style="font-family: monospace;">@dir</td>
+                        <td>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                           Color="Color.Error" OnClick="@(() => Remove(dir))"
+                                           Class="settings-delete-btn" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+    else
+    {
+        <div class="settings-add-area" @onclick="BrowseFolder">
+            <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Size="Size.Medium"
+                     Style="opacity: 0.4;" />
+            <div class="typo-caption text-secondary mt-1">디렉토리를 추가하세요</div>
+        </div>
+    }
+
+    <div class="d-flex gap-2 align-end">
+        <MudTextField T="string" @bind-Value="_newPath" Label="경로" Variant="Variant.Outlined"
+                      Margin="Margin.Dense" Placeholder="/path/to/directory" Style="flex: 1;"
+                      OnKeyUp="@(e => { if (e.Key == "Enter") Add(); })" />
+        <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
+                       OnClick="BrowseFolder" Size="Size.Small" title="찾아보기..." />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                   OnClick="Add" Disabled="@(string.IsNullOrWhiteSpace(_newPath))"
+                   Style="text-transform: none; min-width: 60px; height: 40px;">
+            추가
+        </MudButton>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<string>? Directories { get; set; }
+    [Parameter] public EventCallback<List<string>> DirectoriesChanged { get; set; }
+
+    private string _newPath = "";
+
+    private async Task Add()
+    {
+        if (string.IsNullOrWhiteSpace(_newPath)) return;
+
+        Directories ??= [];
+        var trimmed = _newPath.Trim();
+        if (!Directories.Contains(trimmed))
+            Directories.Add(trimmed);
+        _newPath = "";
+        await DirectoriesChanged.InvokeAsync(Directories);
+    }
+
+    private async Task Remove(string path)
+    {
+        Directories?.Remove(path);
+        await DirectoriesChanged.InvokeAsync(Directories ?? []);
+    }
+
+    private async Task BrowseFolder()
+    {
+        var folder = await FolderPickerService.PickFolderAsync();
+        if (!string.IsNullOrEmpty(folder))
+        {
+            _newPath = folder;
+            await Add();
+        }
+    }
+}
