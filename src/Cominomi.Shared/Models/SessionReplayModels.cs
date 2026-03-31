@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Cominomi.Shared.Models;
 
 public class SessionReplaySummary
@@ -71,4 +73,55 @@ public class LiveSessionInfo
     public string FilePath { get; set; } = "";
     public string ProjectPath { get; set; } = "";
     public long ModifiedSecondsAgo { get; set; }
+}
+
+public class SessionIndex
+{
+    [JsonPropertyName("version")]
+    public int Version { get; set; } = 1;
+
+    [JsonPropertyName("lastComputedDate")]
+    public string LastComputedDate { get; set; } = "";
+
+    [JsonPropertyName("entries")]
+    public Dictionary<string, SessionIndexEntry> Entries { get; set; } = new();
+}
+
+public class SessionIndexEntry
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = "";
+
+    [JsonPropertyName("filePath")]
+    public string FilePath { get; set; } = "";
+
+    [JsonPropertyName("projectHash")]
+    public string ProjectHash { get; set; } = "";
+
+    [JsonPropertyName("projectPath")]
+    public string ProjectPath { get; set; } = "";
+
+    [JsonPropertyName("entryCount")]
+    public int EntryCount { get; set; }
+
+    [JsonPropertyName("userMessageCount")]
+    public int UserMessageCount { get; set; }
+
+    [JsonPropertyName("toolCallCount")]
+    public int ToolCallCount { get; set; }
+
+    [JsonPropertyName("firstTimestamp")]
+    public DateTime? FirstTimestamp { get; set; }
+
+    [JsonPropertyName("lastTimestamp")]
+    public DateTime? LastTimestamp { get; set; }
+
+    [JsonPropertyName("firstMessage")]
+    public string? FirstMessage { get; set; }
+
+    [JsonPropertyName("fileSizeBytes")]
+    public long FileSizeBytes { get; set; }
+
+    [JsonPropertyName("fileLastWriteUtc")]
+    public DateTime FileLastWriteUtc { get; set; }
 }

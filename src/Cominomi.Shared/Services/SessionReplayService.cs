@@ -13,68 +13,146 @@ public class SessionReplayService : ISessionReplayService
     private static readonly string TagsFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "cominomi-session-tags.json");
 
+    private static readonly string IndexFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "cominomi-session-index.json");
+
     private static readonly HashSet<string> NoiseEventTypes =
         ["file-history-snapshot", "progress", "last-prompt", "queue-operation"];
 
+    private static readonly JsonSerializerOptions IndexJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = false
+    };
+
     private readonly ILogger<SessionReplayService> _logger;
+    private volatile SessionIndex? _index;
+    private readonly SemaphoreSlim _indexLock = new(1, 1);
 
     public SessionReplayService(ILogger<SessionReplayService> logger)
     {
         _logger = logger;
     }
 
-    // ===== List Sessions (paginated, sorted by modification time) =====
+    // ===== Session Index Management =====
 
-    public Task<SessionListResult> ListSessionsAsync(int limit = 10, int offset = 0)
+    public async Task RefreshSessionIndexAsync(bool force = false)
     {
-        return Task.Run(() =>
+        await _indexLock.WaitAsync();
+        try
         {
-            if (!Directory.Exists(ClaudeProjectsDir))
-                return new SessionListResult();
+            await EnsureIndexLoadedAsync();
+            var index = _index!;
 
-            // Collect all .jsonl file paths (fast — just readdir + metadata)
-            var jsonlPaths = new List<(string Path, double ModifiedAt)>();
+            if (!Directory.Exists(ClaudeProjectsDir))
+                return;
+
+            var existingPaths = new HashSet<string>(index.Entries.Keys, StringComparer.OrdinalIgnoreCase);
+            var currentPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var projectDir in Directory.GetDirectories(ClaudeProjectsDir))
             {
-                try
+                string[] files;
+                try { files = Directory.GetFiles(projectDir, "*.jsonl"); }
+                catch { continue; }
+
+                foreach (var file in files)
                 {
-                    foreach (var file in Directory.GetFiles(projectDir, "*.jsonl"))
+                    try
                     {
-                        try
-                        {
-                            var fi = new FileInfo(file);
-                            if (fi.Length < 200) continue; // skip tiny files
-                            jsonlPaths.Add((file, fi.LastWriteTimeUtc
-                                .Subtract(DateTime.UnixEpoch).TotalSeconds));
-                        }
-                        catch { /* skip inaccessible files */ }
+                        var fi = new FileInfo(file);
+                        if (fi.Length < 200) continue;
+                        currentPaths.Add(file);
+
+                        // Skip unchanged files unless force
+                        if (!force && index.Entries.TryGetValue(file, out var existing)
+                            && existing.FileSizeBytes == fi.Length
+                            && existing.FileLastWriteUtc == fi.LastWriteTimeUtc)
+                            continue;
+
+                        var entry = FullScan(file, fi);
+                        if (entry != null)
+                            index.Entries[file] = entry;
                     }
+                    catch { /* skip inaccessible files */ }
                 }
-                catch { /* skip inaccessible directories */ }
             }
 
-            // Sort by modified time (newest first)
-            jsonlPaths.Sort((a, b) => b.ModifiedAt.CompareTo(a.ModifiedAt));
-
-            var total = jsonlPaths.Count;
-
-            // Only scan the paginated subset
-            var sessions = jsonlPaths
-                .Skip(offset)
-                .Take(limit)
-                .Select(p => QuickScan(p.Path, p.ModifiedAt))
-                .Where(s => s != null)
-                .Select(s => s!)
-                .ToList();
-
-            return new SessionListResult
+            // Remove entries for deleted files
+            foreach (var path in existingPaths)
             {
-                Sessions = sessions,
-                Total = total,
-                HasMore = offset + limit < total
-            };
-        });
+                if (!currentPaths.Contains(path))
+                    index.Entries.Remove(path);
+            }
+
+            index.LastComputedDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
+            await SaveIndexAsync(index);
+        }
+        finally
+        {
+            _indexLock.Release();
+        }
+    }
+
+    public async Task<List<SessionReplaySummary>> SearchIndexAsync(string query, int maxResults = 20)
+    {
+        await EnsureIndexLoadedAsync();
+        var index = _index!;
+
+        if (string.IsNullOrWhiteSpace(query))
+            return [];
+
+        var tokens = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var scored = new List<(SessionIndexEntry entry, int score)>();
+
+        foreach (var entry in index.Entries.Values)
+        {
+            int score = 0;
+            foreach (var token in tokens)
+            {
+                if (entry.FirstMessage?.Contains(token, StringComparison.OrdinalIgnoreCase) == true)
+                    score += 3;
+                if (entry.ProjectPath.Contains(token, StringComparison.OrdinalIgnoreCase))
+                    score += 2;
+                if (entry.Id.Contains(token, StringComparison.OrdinalIgnoreCase))
+                    score += 1;
+            }
+            if (score > 0)
+                scored.Add((entry, score));
+        }
+
+        return scored
+            .OrderByDescending(x => x.score)
+            .ThenByDescending(x => x.entry.FirstTimestamp ?? DateTime.MinValue)
+            .Take(maxResults)
+            .Select(x => IndexEntryToSummary(x.entry))
+            .ToList();
+    }
+
+    // ===== List Sessions (paginated, sorted by session timestamp) =====
+
+    public async Task<SessionListResult> ListSessionsAsync(int limit = 10, int offset = 0)
+    {
+        await EnsureIndexLoadedAsync();
+        var index = _index!;
+
+        var sorted = index.Entries.Values
+            .OrderByDescending(e => e.FirstTimestamp ?? DateTime.MinValue)
+            .ToList();
+
+        var total = sorted.Count;
+        var sessions = sorted
+            .Skip(offset)
+            .Take(limit)
+            .Select(IndexEntryToSummary)
+            .ToList();
+
+        return new SessionListResult
+        {
+            Sessions = sessions,
+            Total = total,
+            HasMore = offset + limit < total
+        };
     }
 
     // ===== Load Session Events (paginated, noise-filtered) =====
@@ -366,36 +444,35 @@ public class SessionReplayService : ISessionReplayService
         });
     }
 
-    // ===== Quick Scan (first 30 lines + file size estimation) =====
+    // ===== Full Scan (reads entire file for exact counts) =====
 
-    private static SessionReplaySummary? QuickScan(string filePath, double modifiedAt)
+    private static SessionIndexEntry? FullScan(string filePath, FileInfo fi)
     {
         try
         {
-            var fi = new FileInfo(filePath);
-            if (fi.Length < 200) return null;
-
             using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             using var reader = new StreamReader(fs);
 
             string? firstTimestamp = null;
             string? lastTimestamp = null;
             string? firstMessage = null;
-            int userCount = 0, toolCount = 0, lineCount = 0;
+            int entryCount = 0, userCount = 0, toolCount = 0;
 
-            for (int i = 0; i < 30; i++)
+            string? line;
+            while ((line = reader.ReadLine()) != null)
             {
-                var line = reader.ReadLine();
-                if (line == null) break;
                 if (string.IsNullOrWhiteSpace(line)) continue;
-                lineCount++;
 
+                // Fast type extraction without full parse for noise filtering
                 JsonNode? node;
                 try { node = JsonNode.Parse(line); }
                 catch { continue; }
                 if (node == null) continue;
 
                 var type = node["type"]?.GetValue<string>() ?? "";
+                if (NoiseEventTypes.Contains(type)) continue;
+
+                entryCount++;
 
                 var ts = node["timestamp"]?.GetValue<string>();
                 if (ts != null)
@@ -406,6 +483,7 @@ public class SessionReplayService : ISessionReplayService
 
                 if (type == "user")
                 {
+                    if (IsToolResultOnlyUser(node)) continue;
                     userCount++;
                     if (firstMessage == null)
                     {
@@ -431,12 +509,7 @@ public class SessionReplayService : ISessionReplayService
                 }
             }
 
-            if (lineCount < 3) return null;
-
-            // Estimate total entries from file size
-            var avgLineBytes = fi.Length / Math.Max(lineCount, 1);
-            var estimatedEntries = (int)(fi.Length / Math.Max(avgLineBytes, 1));
-            var scale = (float)estimatedEntries / lineCount;
+            if (entryCount < 3) return null;
 
             var projectDir = Path.GetDirectoryName(filePath) ?? "";
             var projectHash = Path.GetFileName(projectDir);
@@ -445,25 +518,76 @@ public class SessionReplayService : ISessionReplayService
             if (firstTimestamp != null && DateTime.TryParse(firstTimestamp, out var dt1)) firstTs = dt1;
             if (lastTimestamp != null && DateTime.TryParse(lastTimestamp, out var dt2)) lastTs = dt2;
 
-            return new SessionReplaySummary
+            return new SessionIndexEntry
             {
                 Id = Path.GetFileNameWithoutExtension(filePath),
                 FilePath = filePath,
                 ProjectHash = projectHash,
                 ProjectPath = ProjectHashToPath(projectHash),
-                EntryCount = estimatedEntries,
-                MessageCount = (int)(userCount * scale),
-                ToolCallCount = (int)(toolCount * scale),
+                EntryCount = entryCount,
+                UserMessageCount = userCount,
+                ToolCallCount = toolCount,
                 FirstTimestamp = firstTs,
                 LastTimestamp = lastTs,
                 FirstMessage = firstMessage,
-                ModifiedAtUnix = modifiedAt
+                FileSizeBytes = fi.Length,
+                FileLastWriteUtc = fi.LastWriteTimeUtc,
             };
         }
         catch
         {
             return null;
         }
+    }
+
+    // ===== Index Persistence =====
+
+    private async Task EnsureIndexLoadedAsync()
+    {
+        if (_index != null) return;
+
+        try
+        {
+            if (File.Exists(IndexFilePath))
+            {
+                var json = await File.ReadAllTextAsync(IndexFilePath);
+                _index = JsonSerializer.Deserialize<SessionIndex>(json, IndexJsonOptions);
+            }
+        }
+        catch
+        {
+            // Corrupted index — start fresh
+        }
+
+        _index ??= new SessionIndex();
+    }
+
+    private static async Task SaveIndexAsync(SessionIndex index)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(index, IndexJsonOptions);
+            await File.WriteAllTextAsync(IndexFilePath, json);
+        }
+        catch { /* write failure is non-fatal */ }
+    }
+
+    private static SessionReplaySummary IndexEntryToSummary(SessionIndexEntry e)
+    {
+        return new SessionReplaySummary
+        {
+            Id = e.Id,
+            FilePath = e.FilePath,
+            ProjectHash = e.ProjectHash,
+            ProjectPath = e.ProjectPath,
+            EntryCount = e.EntryCount,
+            MessageCount = e.UserMessageCount,
+            ToolCallCount = e.ToolCallCount,
+            FirstTimestamp = e.FirstTimestamp,
+            LastTimestamp = e.LastTimestamp,
+            FirstMessage = e.FirstMessage,
+            ModifiedAtUnix = e.FileLastWriteUtc.Subtract(DateTime.UnixEpoch).TotalSeconds,
+        };
     }
 
     // ===== Event Parsing =====

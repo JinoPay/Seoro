@@ -11,6 +11,10 @@ public class GamificationService : IGamificationService
     private readonly IClaudeSettingsService _claudeSettings;
     private readonly ILogger<GamificationService> _logger;
 
+    private DashboardStats? _cachedStats;
+    private DateTime _cachedAt;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+
     public GamificationService(
         IStatsCacheService statsCacheService,
         ISessionService sessionService,
@@ -27,21 +31,16 @@ public class GamificationService : IGamificationService
 
     public async Task<DashboardStats> GetDashboardStatsAsync()
     {
+        if (_cachedStats != null && DateTime.UtcNow - _cachedAt < CacheTtl)
+            return _cachedStats;
         var stats = new DashboardStats();
 
         try
         {
-            // Gather ALL replay sessions for daily activity breakdown
-            var replaySessions = new List<SessionReplaySummary>();
-            int offset = 0;
-            const int batchSize = 50;
-            SessionListResult batch;
-            do
-            {
-                batch = await _replayService.ListSessionsAsync(limit: batchSize, offset: offset);
-                replaySessions.AddRange(batch.Sessions);
-                offset += batchSize;
-            } while (batch.HasMore);
+            // Ensure session index is up-to-date, then load all sessions at once
+            await _replayService.RefreshSessionIndexAsync();
+            var allResult = await _replayService.ListSessionsAsync(limit: int.MaxValue, offset: 0);
+            var replaySessions = allResult.Sessions;
 
             // Build daily activity from replay sessions
             var dailyMap = new Dictionary<string, DailyActivityEntry>();
@@ -137,60 +136,34 @@ public class GamificationService : IGamificationService
             _logger.LogWarning(ex, "Error computing dashboard stats");
         }
 
+        _cachedStats = stats;
+        _cachedAt = DateTime.UtcNow;
         return stats;
+    }
+
+    public async Task<DashboardStats> ForceRefreshDashboardAsync()
+    {
+        _cachedStats = null;
+        return await GetDashboardStatsAsync();
     }
 
     private async Task<CostSummary> CalculateCostSummaryAsync()
     {
         var now = DateTime.UtcNow;
-        var todayStr = now.ToString("yyyy-MM-dd");
-        var monthStr = new DateTime(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
-
-        var allStats = await _statsCacheService.GetMergedStatsAsync();
-
-        // Build weighted average cost-per-token from ByModel (which has correct
-        // input/output/cache breakdown and per-type pricing applied).
-        var costPerToken = new Dictionary<string, decimal>();
-        foreach (var m in allStats.ByModel)
-        {
-            if (m.TotalTokens > 0)
-                costPerToken[m.Model] = m.TotalCost / m.TotalTokens;
-        }
-
-        decimal EstimateDayCost(DailyTokenTrend day)
-        {
-            decimal cost = 0;
-            foreach (var (model, tokens) in day.TokensByModel)
-            {
-                if (costPerToken.TryGetValue(model, out var cpt))
-                    cost += tokens * cpt;
-                else
-                {
-                    // Fallback for unknown models: use input pricing as rough estimate
-                    var pricing = ModelDefinitions.GetPricing(model);
-                    if (pricing != null)
-                        cost += (decimal)tokens / 1_000_000m * pricing.Input;
-                }
-            }
-            return cost;
-        }
-
-        var todayCost = allStats.DailyTokenTrend
-            .Where(d => d.Date == todayStr)
-            .Sum(EstimateDayCost);
-
-        var monthCost = allStats.DailyTokenTrend
-            .Where(d => string.Compare(d.Date, monthStr, StringComparison.Ordinal) >= 0)
-            .Sum(EstimateDayCost);
-
         var dayOfMonth = now.Day;
+
+        // GetMergedStatsAsync now computes accurate per-model period costs
+        // from DailyModelTokenBreakdown (no more ratio estimation)
+        var todayStats = await _statsCacheService.GetMergedStatsAsync(days: 1);
+        var monthStats = await _statsCacheService.GetMergedStatsAsync(days: dayOfMonth);
+
         var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
-        var projection = dayOfMonth > 0 ? monthCost / dayOfMonth * daysInMonth : 0m;
+        var projection = dayOfMonth > 0 ? monthStats.TotalCost / dayOfMonth * daysInMonth : 0m;
 
         return new CostSummary
         {
-            Today = todayCost,
-            ThisMonth = monthCost,
+            Today = todayStats.TotalCost,
+            ThisMonth = monthStats.TotalCost,
             MonthlyProjection = projection,
         };
     }

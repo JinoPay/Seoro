@@ -50,9 +50,9 @@ public class StatsCacheService : IStatsCacheService
             var cache = await ReadStatsCacheAsync();
             var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
 
-            if (cache != null && cache.LastComputedDate == today
+            if (cache != null && cache.Version >= 3 && cache.LastComputedDate == today
                 && cache.DailyModelTokens.Count > 0 && cache.ModelUsage.Count > 0)
-                return false; // Cache is fresh and has data
+                return false; // Cache is fresh (v3+) and has data
 
             if (!Directory.Exists(ProjectsDir))
                 return false;
@@ -89,7 +89,7 @@ public class StatsCacheService : IStatsCacheService
     /// </summary>
     private async Task RefreshFromSessionsAsync(StatsCache? existingCache)
     {
-        var dailyModelTokens = new Dictionary<string, Dictionary<string, long>>();
+        var dailyModelTokens = new Dictionary<string, Dictionary<string, DailyModelTokenBreakdown>>();
         var modelUsage = new Dictionary<string, StatsCacheModelUsage>();
 
         var files = Directory.EnumerateFiles(ProjectsDir, "*.jsonl", SearchOption.AllDirectories);
@@ -154,11 +154,15 @@ public class StatsCacheService : IStatsCacheService
                         long cacheCreation = usage.TryGetProperty("cache_creation_input_tokens", out var cc) ? cc.GetInt64() : 0;
                         long cacheRead = usage.TryGetProperty("cache_read_input_tokens", out var cr) ? cr.GetInt64() : 0;
 
-                        // dailyModelTokens
+                        // dailyModelTokens (per-model breakdown)
                         if (!dailyModelTokens.TryGetValue(dateStr, out var dayTokens))
                             dailyModelTokens[dateStr] = dayTokens = new();
-                        var total = inputTokens + outputTokens + cacheCreation + cacheRead;
-                        dayTokens[model] = dayTokens.GetValueOrDefault(model) + total;
+                        if (!dayTokens.TryGetValue(model, out var breakdown))
+                            dayTokens[model] = breakdown = new DailyModelTokenBreakdown();
+                        breakdown.InputTokens += inputTokens;
+                        breakdown.OutputTokens += outputTokens;
+                        breakdown.CacheCreationInputTokens += cacheCreation;
+                        breakdown.CacheReadInputTokens += cacheRead;
 
                         // modelUsage
                         if (!modelUsage.TryGetValue(model, out var mu))
@@ -186,7 +190,7 @@ public class StatsCacheService : IStatsCacheService
             .OrderBy(d => d.Date)
             .ToList();
         updated.ModelUsage = modelUsage;
-        updated.Version = 2;
+        updated.Version = 3;
 
         // Write back to disk
         try
@@ -222,67 +226,37 @@ public class StatsCacheService : IStatsCacheService
         var stats = new UsageStats();
 
         // ── 1. Model usage ──
-        // Build all-time totals (normalized) for ratio-based estimation
-        var allTimeTotals = new Dictionary<string, (long input, long output, long cacheCreation, long cacheRead, long total)>();
-        foreach (var (modelId, usage) in cache.ModelUsage)
-        {
-            var normalized = ModelDefinitions.NormalizeModelId(modelId);
-            if (!allTimeTotals.TryGetValue(normalized, out var existing))
-                existing = (0, 0, 0, 0, 0);
-
-            var input = existing.input + usage.InputTokens;
-            var output = existing.output + usage.OutputTokens;
-            var cacheCreation = existing.cacheCreation + usage.CacheCreationInputTokens;
-            var cacheRead = existing.cacheRead + usage.CacheReadInputTokens;
-            allTimeTotals[normalized] = (input, output, cacheCreation, cacheRead, input + output + cacheCreation + cacheRead);
-        }
-
         var modelMap = new Dictionary<string, ModelUsage>();
         if (days.HasValue)
         {
-            // Period-filtered: aggregate from DailyModelTokens, then estimate breakdown via ratio
-            var periodTokensByModel = new Dictionary<string, long>();
+            // Period-filtered: aggregate directly from DailyModelTokens breakdown
             foreach (var day in cache.DailyModelTokens)
             {
                 if (string.Compare(day.Date, cutoff, StringComparison.Ordinal) < 0) continue;
-                foreach (var (model, tokens) in day.TokensByModel)
+                foreach (var (model, bd) in day.TokensByModel)
                 {
                     var normalized = ModelDefinitions.NormalizeModelId(model);
-                    periodTokensByModel[normalized] = periodTokensByModel.GetValueOrDefault(normalized) + tokens;
+                    if (!modelMap.TryGetValue(normalized, out var mu))
+                        modelMap[normalized] = mu = new ModelUsage { Model = normalized };
+                    mu.InputTokens += bd.InputTokens;
+                    mu.OutputTokens += bd.OutputTokens;
+                    mu.CacheCreationTokens += bd.CacheCreationInputTokens;
+                    mu.CacheReadTokens += bd.CacheReadInputTokens;
                 }
-            }
-
-            foreach (var (model, periodTotal) in periodTokensByModel)
-            {
-                var mu = new ModelUsage { Model = model };
-                if (allTimeTotals.TryGetValue(model, out var allTime) && allTime.total > 0)
-                {
-                    var ratio = (double)periodTotal / allTime.total;
-                    mu.InputTokens = (long)(allTime.input * ratio);
-                    mu.OutputTokens = (long)(allTime.output * ratio);
-                    mu.CacheCreationTokens = (long)(allTime.cacheCreation * ratio);
-                    mu.CacheReadTokens = (long)(allTime.cacheRead * ratio);
-                }
-                else
-                {
-                    mu.InputTokens = periodTotal;
-                }
-                modelMap[model] = mu;
             }
         }
         else
         {
-            // All-time: use ModelUsage directly
-            foreach (var (normalized, allTime) in allTimeTotals)
+            // All-time: use ModelUsage directly (already has full breakdown)
+            foreach (var (modelId, usage) in cache.ModelUsage)
             {
-                modelMap[normalized] = new ModelUsage
-                {
-                    Model = normalized,
-                    InputTokens = allTime.input,
-                    OutputTokens = allTime.output,
-                    CacheCreationTokens = allTime.cacheCreation,
-                    CacheReadTokens = allTime.cacheRead,
-                };
+                var normalized = ModelDefinitions.NormalizeModelId(modelId);
+                if (!modelMap.TryGetValue(normalized, out var mu))
+                    modelMap[normalized] = mu = new ModelUsage { Model = normalized };
+                mu.InputTokens += usage.InputTokens;
+                mu.OutputTokens += usage.OutputTokens;
+                mu.CacheCreationTokens += usage.CacheCreationInputTokens;
+                mu.CacheReadTokens += usage.CacheReadInputTokens;
             }
         }
 
@@ -323,11 +297,11 @@ public class StatsCacheService : IStatsCacheService
             if (string.Compare(day.Date, cutoff, StringComparison.Ordinal) < 0) continue;
 
             var dtt = new DailyTokenTrend { Date = day.Date };
-            foreach (var (model, tokens) in day.TokensByModel)
+            foreach (var (model, bd) in day.TokensByModel)
             {
                 var normalized = ModelDefinitions.NormalizeModelId(model);
-                dtt.TotalTokens += tokens;
-                dtt.TokensByModel[normalized] = dtt.TokensByModel.GetValueOrDefault(normalized) + tokens;
+                dtt.TotalTokens += bd.Total;
+                dtt.TokensByModel[normalized] = dtt.TokensByModel.GetValueOrDefault(normalized) + bd.Total;
             }
             dailyMap[day.Date] = dtt;
         }

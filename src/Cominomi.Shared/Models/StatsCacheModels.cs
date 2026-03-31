@@ -60,7 +60,25 @@ public class StatsCacheDailyModelTokens
     public string Date { get; set; } = "";
 
     [JsonPropertyName("tokensByModel")]
-    public Dictionary<string, long> TokensByModel { get; set; } = new();
+    public Dictionary<string, DailyModelTokenBreakdown> TokensByModel { get; set; } = new();
+}
+
+public class DailyModelTokenBreakdown
+{
+    [JsonPropertyName("input")]
+    public long InputTokens { get; set; }
+
+    [JsonPropertyName("output")]
+    public long OutputTokens { get; set; }
+
+    [JsonPropertyName("cacheRead")]
+    public long CacheReadInputTokens { get; set; }
+
+    [JsonPropertyName("cacheCreation")]
+    public long CacheCreationInputTokens { get; set; }
+
+    [JsonIgnore]
+    public long Total => InputTokens + OutputTokens + CacheReadInputTokens + CacheCreationInputTokens;
 }
 
 public class StatsCacheModelUsage

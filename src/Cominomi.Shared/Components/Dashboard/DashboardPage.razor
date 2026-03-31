@@ -1,6 +1,7 @@
 @using Cominomi.Shared.Models
 @inject IGamificationService GamificationService
 @inject IStatsCacheService StatsCacheService
+@inject ISessionReplayService ReplayService
 @inject IChatState ChatState
 
 <div class="settings-content-area wide">
@@ -111,7 +112,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await StatsCacheService.RefreshIfStaleAsync();
+        // Parallel: refresh stats cache if stale + ensure session index loaded
+        var t1 = StatsCacheService.RefreshIfStaleAsync();
+        var t2 = ReplayService.RefreshSessionIndexAsync();
+        await Task.WhenAll(t1, t2);
+
         _stats = await GamificationService.GetDashboardStatsAsync();
         _loading = false;
     }
@@ -122,7 +127,8 @@
         StateHasChanged();
 
         await StatsCacheService.ForceRefreshAsync();
-        _stats = await GamificationService.GetDashboardStatsAsync();
+        await ReplayService.RefreshSessionIndexAsync(force: true);
+        _stats = await GamificationService.ForceRefreshDashboardAsync();
 
         _refreshing = false;
         StateHasChanged();

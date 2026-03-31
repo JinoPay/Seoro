@@ -112,7 +112,7 @@ public static class ModelDefinitions
             new("haiku", "Claude Haiku")
             {
                 Keywords = ["haiku"],
-                Pricing = new ModelPricing(0.80m, 4.0m, 1.0m, 0.08m)
+                Pricing = new ModelPricing(1.0m, 5.0m, 1.25m, 0.10m)
             },
         ]
     };
