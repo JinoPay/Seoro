@@ -1,5 +1,6 @@
 @inject IChatState ChatState
 @inject IWorkspaceService WorkspaceService
+@inject SessionListDataService DataService
 @implements IDisposable
 
 <div class="settings-page">
@@ -214,6 +215,7 @@
     {
         _workspaces = await WorkspaceService.GetWorkspacesAsync();
         ChatState.SetSettingsWorkspace(null);
+        await DataService.RefreshWorkspacesAsync();
     }
 
     private string ActiveClass(string section)
