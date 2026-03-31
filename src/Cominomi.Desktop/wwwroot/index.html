@@ -615,6 +615,14 @@
                     e.preventDefault();
                     dotNetRef.invokeMethodAsync('OnToggleThemeShortcut');
                 }
+                if (e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+                    e.preventDefault();
+                    dotNetRef.invokeMethodAsync('OnTogglePlanModeShortcut');
+                }
+                if (e.shiftKey && (e.key === 'm' || e.key === 'M')) {
+                    e.preventDefault();
+                    dotNetRef.invokeMethodAsync('OnToggleEffortLevelShortcut');
+                }
             };
             document.addEventListener('keydown', window._panelShortcutHandler);
         };

@@ -10,6 +10,7 @@
 @inject ISnackbar Snackbar
 @inject IUpdateService UpdateService
 @inject ILogger<MainLayout> Logger
+@inject IChatEventBus EventBus
 @implements IAsyncDisposable
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="ThemeService.Theme" />
@@ -188,6 +189,30 @@
     public async Task OnToggleThemeShortcut()
     {
         await ThemeService.ToggleDarkModeAsync();
+    }
+
+    [JSInvokable]
+    public void OnTogglePlanModeShortcut()
+    {
+        if (ChatState.CurrentSession == null
+            || ChatState.IsStreaming
+            || ChatState.CurrentSession.Status == SessionStatus.Archived
+            || ChatState.ShowSettings
+            || ChatState.ShowNotifications)
+            return;
+        EventBus.Publish(new TogglePlanModeEvent());
+    }
+
+    [JSInvokable]
+    public void OnToggleEffortLevelShortcut()
+    {
+        if (ChatState.CurrentSession == null
+            || ChatState.IsStreaming
+            || ChatState.CurrentSession.Status == SessionStatus.Archived
+            || ChatState.ShowSettings
+            || ChatState.ShowNotifications)
+            return;
+        EventBus.Publish(new ToggleEffortLevelEvent());
     }
 
     private void HandleThemeChanged()

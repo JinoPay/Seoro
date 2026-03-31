@@ -10,6 +10,7 @@
 @inject ISnackbar Snackbar
 @inject INotificationService NotificationService
 @inject INotificationHistoryService NotificationHistory
+@inject IChatEventBus EventBus
 @implements IDisposable
 
 @ChatContentFragment
@@ -117,10 +118,33 @@
     private LandingPage? _landingPage;
     private readonly Dictionary<string, (CancellationTokenSource Cts, Task Task)> _sessionTasks = new();
     private List<SkillChainStep>? _pendingChain;
+    private IDisposable? _planModeSub;
+    private IDisposable? _effortLevelSub;
+
     protected override void OnInitialized()
     {
         ChatState.OnChange += HandleStateChanged;
         _askUserResponseCallback = EventCallback.Factory.Create<string>(this, HandleQuickResponse);
+
+        _planModeSub = EventBus.Subscribe<TogglePlanModeEvent>(_ =>
+            InvokeAsync(async () =>
+            {
+                var session = ChatState.CurrentSession;
+                if (session == null) return;
+                var modes = new[] { "bypassAll", "plan" };
+                var idx = Array.IndexOf(modes, session.PermissionMode ?? "bypassAll");
+                await HandlePermissionModeChanged(modes[(idx + 1) % modes.Length]);
+            }));
+
+        _effortLevelSub = EventBus.Subscribe<ToggleEffortLevelEvent>(_ =>
+            InvokeAsync(async () =>
+            {
+                var session = ChatState.CurrentSession;
+                if (session == null) return;
+                var levels = new[] { "auto", "max" };
+                var idx = Array.IndexOf(levels, session.EffortLevel ?? "auto");
+                await HandleEffortLevelChanged(levels[(idx + 1) % levels.Length]);
+            }));
     }
 
     private void HandleStateChanged()
@@ -575,6 +599,8 @@
     {
         ChatState.OnChange -= HandleStateChanged;
         _selfRef?.Dispose();
+        _planModeSub?.Dispose();
+        _effortLevelSub?.Dispose();
 
         foreach (var (_, (cts, task)) in _sessionTasks)
         {
