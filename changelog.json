@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.5.5",
+    "date": "2026-03-31",
+    "changes": [
+      { "type": "feat", "description": "세션 전환 시 채팅 입력 임시 보존" },
+      { "type": "fix", "description": "슬래시 명령 팝업에서 방향키 선택 시 스크롤 추적" },
+      { "type": "fix", "description": "Windows 알림에서 본문 텍스트 미표시 수정" },
+      { "type": "fix", "description": "타이틀 인스트럭션을 첫 메시지에서만 전송" }
+    ]
+  },
+  {
     "version": "1.5.4",
     "date": "2026-03-30",
     "changes": [
