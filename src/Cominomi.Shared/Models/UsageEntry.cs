@@ -17,6 +17,7 @@ public class UsageStats
     public List<ModelUsage> ByModel { get; set; } = [];
     public List<DailyUsage> ByDate { get; set; } = [];
     public List<ProjectUsage> ByProject { get; set; } = [];
+    public List<DailyActivityEntry> DailyActivity { get; set; } = [];
 }
 
 public class ModelUsage
@@ -36,6 +37,7 @@ public class DailyTokenTrend
 {
     public string Date { get; set; } = string.Empty;
     public long TotalTokens { get; set; }
+    public decimal DailyCost { get; set; }
     public Dictionary<string, long> TokensByModel { get; set; } = new();
 }
 

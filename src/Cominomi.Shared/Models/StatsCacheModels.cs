@@ -96,6 +96,27 @@ public class StatsCacheModelUsage
     public long CacheCreationInputTokens { get; set; }
 }
 
+/// <summary>
+/// Live activity stats computed from ~/.claude/history.jsonl
+/// </summary>
+public class LiveActivityStats
+{
+    public List<LiveDailyActivity> DailyActivity { get; set; } = [];
+    public int TotalSessions { get; set; }
+    public int TotalMessages { get; set; }
+    public string FirstSessionDate { get; set; } = "";
+    public string LastSessionDate { get; set; } = "";
+    public Dictionary<string, int> HourCounts { get; set; } = new();
+}
+
+public class LiveDailyActivity
+{
+    public string Date { get; set; } = "";
+    public int MessageCount { get; set; }
+    public int SessionCount { get; set; }
+    public int ToolCallCount { get; set; }
+}
+
 public class StatsCacheLongestSession
 {
     [JsonPropertyName("sessionId")]

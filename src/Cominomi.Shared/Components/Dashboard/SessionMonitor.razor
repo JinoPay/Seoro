@@ -28,7 +28,7 @@
                 <div class="session-monitor-meta">
                     <span><MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" Style="font-size: 0.6rem;" /> @session.MessageCount</span>
                     <span><MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Style="font-size: 0.6rem;" /> @session.ToolCallCount</span>
-                    <span><MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" Style="font-size: 0.6rem;" /> ~$@((session.EntryCount * 0.01m).ToString("F2"))</span>
+                    <span title="추정 비용 (엔트리 수 기반)"><MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" Style="font-size: 0.6rem;" /> ~$@EstimateCost(session.EntryCount)</span>
                 </div>
             </button>
         }
@@ -87,6 +87,10 @@
 
     private static string Truncate(string s, int max)
         => s.Length <= max ? s : s[..max] + "…";
+
+    private const decimal CostPerEntry = 0.01m;
+    private static string EstimateCost(int entryCount)
+        => (entryCount * CostPerEntry).ToString("F2");
 
     private void GoToSessions() => ChatState.SetSettingsSection("session-replay");
 

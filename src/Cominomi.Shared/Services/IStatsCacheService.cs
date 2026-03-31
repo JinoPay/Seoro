@@ -26,4 +26,11 @@ public interface IStatsCacheService
     /// regardless of staleness. Used by manual refresh buttons.
     /// </summary>
     Task ForceRefreshAsync();
+
+    /// <summary>
+    /// Computes live activity stats from ~/.claude/history.jsonl.
+    /// Returns null if history.jsonl does not exist.
+    /// Merges tool call counts from stats-cache.json dailyActivity.
+    /// </summary>
+    Task<LiveActivityStats?> ComputeLiveActivityAsync();
 }

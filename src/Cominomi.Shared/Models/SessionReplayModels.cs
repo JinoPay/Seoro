@@ -124,4 +124,7 @@ public class SessionIndexEntry
 
     [JsonPropertyName("fileLastWriteUtc")]
     public DateTime FileLastWriteUtc { get; set; }
+
+    [JsonPropertyName("isEstimated")]
+    public bool IsEstimated { get; set; }
 }

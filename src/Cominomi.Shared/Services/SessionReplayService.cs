@@ -70,7 +70,7 @@ public class SessionReplayService : ISessionReplayService
                             && existing.FileLastWriteUtc == fi.LastWriteTimeUtc)
                             continue;
 
-                        var entry = FullScan(file, fi);
+                        var entry = QuickScan(file, fi);
                         if (entry != null)
                             index.Entries[file] = entry;
                     }
@@ -444,9 +444,11 @@ public class SessionReplayService : ISessionReplayService
         });
     }
 
-    // ===== Full Scan (reads entire file for exact counts) =====
+    // ===== Quick Scan (reads first N lines, estimates the rest from file size) =====
 
-    private static SessionIndexEntry? FullScan(string filePath, FileInfo fi)
+    private const int SampleLineCount = 30;
+
+    private static SessionIndexEntry? QuickScan(string filePath, FileInfo fi)
     {
         try
         {
@@ -456,14 +458,16 @@ public class SessionReplayService : ISessionReplayService
             string? firstTimestamp = null;
             string? lastTimestamp = null;
             string? firstMessage = null;
-            int entryCount = 0, userCount = 0, toolCount = 0;
+            int parsedCount = 0, userCount = 0, toolCount = 0;
+            long totalBytesRead = 0;
 
             string? line;
             while ((line = reader.ReadLine()) != null)
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
 
-                // Fast type extraction without full parse for noise filtering
+                totalBytesRead += System.Text.Encoding.UTF8.GetByteCount(line) + 1; // +1 for newline
+
                 JsonNode? node;
                 try { node = JsonNode.Parse(line); }
                 catch { continue; }
@@ -472,7 +476,7 @@ public class SessionReplayService : ISessionReplayService
                 var type = node["type"]?.GetValue<string>() ?? "";
                 if (NoiseEventTypes.Contains(type)) continue;
 
-                entryCount++;
+                parsedCount++;
 
                 var ts = node["timestamp"]?.GetValue<string>();
                 if (ts != null)
@@ -507,9 +511,34 @@ public class SessionReplayService : ISessionReplayService
                         }
                     }
                 }
+
+                // After SampleLineCount parsed entries, estimate the rest from file size
+                if (parsedCount >= SampleLineCount)
+                    break;
             }
 
-            if (entryCount < 3) return null;
+            if (parsedCount < 3) return null;
+
+            // Estimate total entries from file size and average line bytes
+            int estimatedEntries;
+            int estimatedUsers;
+            int estimatedTools;
+
+            if (reader.EndOfStream || parsedCount < SampleLineCount)
+            {
+                // File fully read within sample — exact counts
+                estimatedEntries = parsedCount;
+                estimatedUsers = userCount;
+                estimatedTools = toolCount;
+            }
+            else
+            {
+                var avgLineBytes = totalBytesRead / Math.Max(parsedCount, 1);
+                estimatedEntries = (int)(fi.Length / Math.Max(avgLineBytes, 1));
+                var scale = (float)estimatedEntries / parsedCount;
+                estimatedUsers = (int)(userCount * scale);
+                estimatedTools = (int)(toolCount * scale);
+            }
 
             var projectDir = Path.GetDirectoryName(filePath) ?? "";
             var projectHash = Path.GetFileName(projectDir);
@@ -524,20 +553,81 @@ public class SessionReplayService : ISessionReplayService
                 FilePath = filePath,
                 ProjectHash = projectHash,
                 ProjectPath = ProjectHashToPath(projectHash),
-                EntryCount = entryCount,
-                UserMessageCount = userCount,
-                ToolCallCount = toolCount,
+                EntryCount = estimatedEntries,
+                UserMessageCount = estimatedUsers,
+                ToolCallCount = estimatedTools,
                 FirstTimestamp = firstTs,
                 LastTimestamp = lastTs,
                 FirstMessage = firstMessage,
                 FileSizeBytes = fi.Length,
                 FileLastWriteUtc = fi.LastWriteTimeUtc,
+                IsEstimated = parsedCount >= SampleLineCount && !reader.EndOfStream,
             };
         }
         catch
         {
             return null;
         }
+    }
+
+    // ===== Aggregated Index Stats (lightweight, no list allocation) =====
+
+    public async Task<SessionIndexStats> GetIndexStatsAsync()
+    {
+        await EnsureIndexLoadedAsync();
+        var index = _index!;
+
+        var dailyMap = new Dictionary<string, DailyActivityEntry>();
+        var projectPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hourCounts = new int[24];
+        int nightSessions = 0, morningSessions = 0;
+        long longestMs = 0;
+
+        foreach (var e in index.Entries.Values)
+        {
+            var dateKey = e.FirstTimestamp?.ToLocalTime().ToString("yyyy-MM-dd") ?? "";
+            if (string.IsNullOrEmpty(dateKey)) continue;
+
+            if (!dailyMap.TryGetValue(dateKey, out var entry))
+            {
+                entry = new DailyActivityEntry { Date = dateKey };
+                dailyMap[dateKey] = entry;
+            }
+            entry.MessageCount += e.UserMessageCount;
+            entry.SessionCount++;
+            entry.ToolCallCount += e.ToolCallCount;
+
+            if (!string.IsNullOrEmpty(e.ProjectPath))
+                projectPaths.Add(e.ProjectPath);
+
+            if (e.FirstTimestamp.HasValue)
+            {
+                var hour = e.FirstTimestamp.Value.ToLocalTime().Hour;
+                hourCounts[hour]++;
+                if (hour >= 22 || hour < 4) nightSessions++;
+                if (hour >= 5 && hour < 9) morningSessions++;
+            }
+
+            if (e.FirstTimestamp.HasValue && e.LastTimestamp.HasValue)
+            {
+                var ms = (long)(e.LastTimestamp.Value - e.FirstTimestamp.Value).TotalMilliseconds;
+                if (ms > longestMs) longestMs = ms;
+            }
+        }
+
+        var dailyActivity = dailyMap.Values.OrderBy(d => d.Date).ToList();
+
+        return new SessionIndexStats(
+            TotalSessions: index.Entries.Count,
+            TotalMessages: index.Entries.Values.Sum(e => e.UserMessageCount),
+            TotalToolCalls: index.Entries.Values.Sum(e => e.ToolCallCount),
+            DaysActive: dailyMap.Count,
+            TotalProjects: projectPaths.Count,
+            DailyActivity: dailyActivity,
+            HourCounts: hourCounts,
+            NightSessions: nightSessions,
+            MorningSessions: morningSessions,
+            LongestSessionMs: longestMs);
     }
 
     // ===== Index Persistence =====

@@ -37,61 +37,20 @@ public class GamificationService : IGamificationService
 
         try
         {
-            // Ensure session index is up-to-date, then load all sessions at once
+            // Ensure session index is up-to-date, then aggregate from index (no list allocation)
             await _replayService.RefreshSessionIndexAsync();
-            var allResult = await _replayService.ListSessionsAsync(limit: int.MaxValue, offset: 0);
-            var replaySessions = allResult.Sessions;
+            var indexStats = await _replayService.GetIndexStatsAsync();
 
-            // Build daily activity from replay sessions
-            var dailyMap = new Dictionary<string, DailyActivityEntry>();
-            var projectPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            int nightSessions = 0, morningSessions = 0;
-            long longestMs = 0;
-
-            foreach (var s in replaySessions)
-            {
-                var dateKey = s.FirstTimestamp?.ToString("yyyy-MM-dd") ?? "";
-                if (string.IsNullOrEmpty(dateKey)) continue;
-
-                if (!dailyMap.TryGetValue(dateKey, out var entry))
-                {
-                    entry = new DailyActivityEntry { Date = dateKey };
-                    dailyMap[dateKey] = entry;
-                }
-                entry.MessageCount += s.MessageCount;
-                entry.SessionCount++;
-                entry.ToolCallCount += s.ToolCallCount;
-
-                // Track projects
-                if (!string.IsNullOrEmpty(s.ProjectPath))
-                    projectPaths.Add(s.ProjectPath);
-
-                // Time-of-day tracking
-                if (s.FirstTimestamp.HasValue)
-                {
-                    var hour = s.FirstTimestamp.Value.Hour;
-                    stats.HourCounts[hour]++;
-                    if (hour >= 22 || hour < 4) nightSessions++;
-                    if (hour >= 5 && hour < 9) morningSessions++;
-                }
-
-                // Longest session
-                if (s.Duration.HasValue)
-                {
-                    var ms = (long)s.Duration.Value.TotalMilliseconds;
-                    if (ms > longestMs) longestMs = ms;
-                }
-            }
-
-            stats.DailyActivity = dailyMap.Values.OrderBy(d => d.Date).ToList();
-            stats.TotalSessions = replaySessions.Count;
-            stats.TotalMessages = replaySessions.Sum(s => s.MessageCount);
-            stats.TotalToolCalls = replaySessions.Sum(s => s.ToolCallCount);
-            stats.DaysActive = dailyMap.Count;
-            stats.TotalProjects = projectPaths.Count;
-            stats.NightSessionCount = nightSessions;
-            stats.MorningSessionCount = morningSessions;
-            stats.LongestSessionMs = longestMs;
+            stats.DailyActivity = indexStats.DailyActivity;
+            stats.TotalSessions = indexStats.TotalSessions;
+            stats.TotalMessages = indexStats.TotalMessages;
+            stats.TotalToolCalls = indexStats.TotalToolCalls;
+            stats.DaysActive = indexStats.DaysActive;
+            stats.TotalProjects = indexStats.TotalProjects;
+            stats.HourCounts = indexStats.HourCounts;
+            stats.NightSessionCount = indexStats.NightSessions;
+            stats.MorningSessionCount = indexStats.MorningSessions;
+            stats.LongestSessionMs = indexStats.LongestSessionMs;
 
             // Cache stats from stats-cache.json
             var usageStats = await _statsCacheService.GetMergedStatsAsync();
@@ -110,9 +69,9 @@ public class GamificationService : IGamificationService
             stats.EstimatedCacheSavings = savings;
 
             // Streak
-            var activeDates = dailyMap.Keys
-                .Where(k => dailyMap[k].MessageCount > 0)
-                .Select(DateOnly.Parse).ToList();
+            var activeDates = indexStats.DailyActivity
+                .Where(d => d.MessageCount > 0)
+                .Select(d => DateOnly.Parse(d.Date)).ToList();
             stats.Streak = CalculateStreak(activeDates);
 
             // XP and level
@@ -152,19 +111,24 @@ public class GamificationService : IGamificationService
         var now = DateTime.UtcNow;
         var dayOfMonth = now.Day;
 
-        // GetMergedStatsAsync now computes accurate per-model period costs
-        // from DailyModelTokenBreakdown (no more ratio estimation)
         var todayStats = await _statsCacheService.GetMergedStatsAsync(days: 1);
+        var weekStats = await _statsCacheService.GetMergedStatsAsync(days: 7);
         var monthStats = await _statsCacheService.GetMergedStatsAsync(days: dayOfMonth);
 
         var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
         var projection = dayOfMonth > 0 ? monthStats.TotalCost / dayOfMonth * daysInMonth : 0m;
+
+        var last7 = weekStats.DailyTokenTrend
+            .OrderBy(d => d.Date)
+            .Select(d => d.DailyCost)
+            .ToList();
 
         return new CostSummary
         {
             Today = todayStats.TotalCost,
             ThisMonth = monthStats.TotalCost,
             MonthlyProjection = projection,
+            Last7Days = last7,
         };
     }
 
@@ -229,7 +193,7 @@ public class GamificationService : IGamificationService
         if (activeDates.Count == 0) return new StreakInfo();
 
         var sorted = activeDates.OrderDescending().ToList();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = DateOnly.FromDateTime(DateTime.Now);
 
         int current = 0;
         var checkDate = today;

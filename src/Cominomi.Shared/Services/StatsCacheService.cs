@@ -52,7 +52,21 @@ public class StatsCacheService : IStatsCacheService
 
             if (cache != null && cache.Version >= 3 && cache.LastComputedDate == today
                 && cache.DailyModelTokens.Count > 0 && cache.ModelUsage.Count > 0)
-                return false; // Cache is fresh (v3+) and has data
+            {
+                // Date matches today, but check if any session file is newer than the cache
+                if (File.Exists(StatsCachePath) && Directory.Exists(ProjectsDir))
+                {
+                    var cacheLastWrite = File.GetLastWriteTimeUtc(StatsCachePath);
+                    var anyNewer = Directory.EnumerateFiles(ProjectsDir, "*.jsonl", SearchOption.AllDirectories)
+                        .Any(f => File.GetLastWriteTimeUtc(f) > cacheLastWrite);
+                    if (!anyNewer)
+                        return false; // Cache is truly fresh
+                }
+                else
+                {
+                    return false;
+                }
+            }
 
             if (!Directory.Exists(ProjectsDir))
                 return false;
@@ -201,6 +215,106 @@ public class StatsCacheService : IStatsCacheService
         catch { /* write failure is non-fatal */ }
     }
 
+    private static readonly string HistoryPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".claude", "history.jsonl");
+
+    public async Task<LiveActivityStats?> ComputeLiveActivityAsync()
+    {
+        if (!File.Exists(HistoryPath))
+            return null;
+
+        return await Task.Run(async () =>
+        {
+            var messagesByDate = new Dictionary<string, int>();
+            var sessionsByDate = new Dictionary<string, HashSet<string>>();
+            var hourCounts = new Dictionary<string, int>();
+            var allSessions = new HashSet<string>();
+            int totalMessages = 0;
+            string firstDate = "", lastDate = "";
+
+            try
+            {
+                using var fs = new FileStream(HistoryPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var reader = new StreamReader(fs);
+
+                string? line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(line);
+                        var root = doc.RootElement;
+
+                        // Extract timestamp (Unix ms number)
+                        if (!root.TryGetProperty("timestamp", out var tsProp)) continue;
+                        double tsMs = 0;
+                        if (tsProp.ValueKind == JsonValueKind.Number)
+                            tsMs = tsProp.GetDouble();
+                        else if (tsProp.ValueKind == JsonValueKind.String &&
+                                 double.TryParse(tsProp.GetString(), out var parsed))
+                            tsMs = parsed;
+                        if (tsMs <= 0) continue;
+
+                        var dto = DateTimeOffset.FromUnixTimeMilliseconds((long)tsMs).ToLocalTime();
+                        var date = dto.ToString("yyyy-MM-dd");
+                        var hour = dto.Hour.ToString();
+
+                        var sessionId = root.TryGetProperty("sessionId", out var sidProp)
+                            ? sidProp.GetString() ?? "" : "";
+
+                        messagesByDate[date] = messagesByDate.GetValueOrDefault(date) + 1;
+                        if (!sessionsByDate.TryGetValue(date, out var sessions))
+                            sessionsByDate[date] = sessions = new HashSet<string>();
+                        sessions.Add(sessionId);
+                        hourCounts[hour] = hourCounts.GetValueOrDefault(hour) + 1;
+                        allSessions.Add(sessionId);
+                        totalMessages++;
+
+                        if (firstDate == "" || string.Compare(date, firstDate, StringComparison.Ordinal) < 0)
+                            firstDate = date;
+                        if (lastDate == "" || string.Compare(date, lastDate, StringComparison.Ordinal) > 0)
+                            lastDate = date;
+                    }
+                    catch { /* skip unparseable lines */ }
+                }
+            }
+            catch { return null; }
+
+            // Build daily activity sorted by date
+            var dates = messagesByDate.Keys.OrderBy(d => d).ToList();
+
+            // Merge tool call counts from stats-cache.json dailyActivity (if available)
+            var cache = await ReadStatsCacheAsync();
+            var cachedToolCalls = new Dictionary<string, int>();
+            if (cache?.DailyActivity != null)
+            {
+                foreach (var d in cache.DailyActivity)
+                    cachedToolCalls[d.Date] = d.ToolCallCount;
+            }
+
+            var dailyActivity = dates.Select(date => new LiveDailyActivity
+            {
+                Date = date,
+                MessageCount = messagesByDate.GetValueOrDefault(date),
+                SessionCount = sessionsByDate.TryGetValue(date, out var s) ? s.Count : 0,
+                ToolCallCount = cachedToolCalls.GetValueOrDefault(date),
+            }).ToList();
+
+            return new LiveActivityStats
+            {
+                DailyActivity = dailyActivity,
+                TotalSessions = allSessions.Count,
+                TotalMessages = totalMessages,
+                FirstSessionDate = firstDate,
+                LastSessionDate = lastDate,
+                HourCounts = hourCounts,
+            };
+        });
+    }
+
     private static async Task<StatsCache?> ReadStatsCacheAsync()
     {
         try
@@ -220,7 +334,7 @@ public class StatsCacheService : IStatsCacheService
     private static UsageStats BuildStats(StatsCache cache, int? days)
     {
         var cutoff = days.HasValue
-            ? DateTime.UtcNow.Date.AddDays(-days.Value).ToString("yyyy-MM-dd")
+            ? DateTime.UtcNow.Date.AddDays(-(days.Value - 1)).ToString("yyyy-MM-dd")
             : "0000-01-01";
 
         var stats = new UsageStats();
@@ -307,6 +421,30 @@ public class StatsCacheService : IStatsCacheService
         }
         stats.DailyTokenTrend = dailyMap.Values.OrderBy(d => d.Date).ToList();
 
+        // ── 3.5 Compute DailyCost on each trend entry ──
+        foreach (var dtt in stats.DailyTokenTrend)
+        {
+            // Find the raw day data to compute per-model cost
+            var rawDay = cache.DailyModelTokens.FirstOrDefault(d => d.Date == dtt.Date);
+            if (rawDay != null)
+            {
+                decimal dayCost = 0;
+                foreach (var (model, bd) in rawDay.TokensByModel)
+                {
+                    var normalized = ModelDefinitions.NormalizeModelId(model);
+                    var pricing = ModelDefinitions.GetPricing(normalized);
+                    if (pricing != null)
+                    {
+                        dayCost += (decimal)bd.InputTokens / 1_000_000m * pricing.Input
+                                 + (decimal)bd.OutputTokens / 1_000_000m * pricing.Output
+                                 + (decimal)bd.CacheCreationInputTokens / 1_000_000m * pricing.CacheWrite
+                                 + (decimal)bd.CacheReadInputTokens / 1_000_000m * pricing.CacheRead;
+                    }
+                }
+                dtt.DailyCost = dayCost;
+            }
+        }
+
         // ── 4. Hour counts ──
         stats.HourCounts = new int[24];
         foreach (var (hourStr, count) in cache.HourCounts)
@@ -327,6 +465,22 @@ public class StatsCacheService : IStatsCacheService
                 DurationMs = cache.LongestSession.Duration,
                 MessageCount = cache.LongestSession.MessageCount
             };
+        }
+
+        // ── 7. DailyActivity from cache ──
+        if (cache.DailyActivity.Count > 0)
+        {
+            stats.DailyActivity = cache.DailyActivity
+                .Where(d => string.Compare(d.Date, cutoff, StringComparison.Ordinal) >= 0)
+                .Select(d => new DailyActivityEntry
+                {
+                    Date = d.Date,
+                    MessageCount = d.MessageCount,
+                    SessionCount = d.SessionCount,
+                    ToolCallCount = d.ToolCallCount,
+                })
+                .OrderBy(d => d.Date)
+                .ToList();
         }
 
         return stats;

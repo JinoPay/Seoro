@@ -56,6 +56,7 @@ public class CostSummary
     public bool DailyExceeded { get; set; }
     public bool MonthlyExceeded { get; set; }
     public decimal MonthlyProjection { get; set; }
+    public List<decimal> Last7Days { get; set; } = [];
 }
 
 public class ConfigItem
@@ -63,6 +64,18 @@ public class ConfigItem
     public string Name { get; set; } = "";
     public bool IsConfigured { get; set; }
 }
+
+public record SessionIndexStats(
+    int TotalSessions,
+    int TotalMessages,
+    int TotalToolCalls,
+    int DaysActive,
+    int TotalProjects,
+    List<DailyActivityEntry> DailyActivity,
+    int[] HourCounts,
+    int NightSessions,
+    int MorningSessions,
+    long LongestSessionMs);
 
 public class DashboardStats
 {
