@@ -1,6 +1,7 @@
 @using Cominomi.Shared.Models
 @inject IRulesService RulesService
 @inject IChatState ChatState
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
 <div class="settings-content-area">
@@ -61,10 +62,19 @@
             <div class="rules-editor">
                 @if (_selectedRule != null)
                 {
+                    <div class="typo-caption text-secondary mb-2" style="font-family: monospace;">
+                        @_selectedRule.FilePath
+                    </div>
+
                     <div class="d-flex justify-space-between align-center mb-3">
                         <MudTextField T="string" @bind-Value="_selectedRule.FileName" Label="파일명"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 300px;" />
                         <div class="d-flex gap-2">
+                            <MudToggleIconButton @bind-Toggled="_showPreview"
+                                                 Icon="@Icons.Material.Filled.Visibility"
+                                                 ToggledIcon="@Icons.Material.Filled.Edit"
+                                                 Size="Size.Small" Color="Color.Primary"
+                                                 title="@(_showPreview ? "에디터로 전환" : "프리뷰로 전환")" />
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
                                            OnClick="DeleteSelected" Size="Size.Small" />
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
@@ -72,9 +82,19 @@
                         </div>
                     </div>
 
-                    <MudTextField T="string" @bind-Value="_selectedRule.Content" Label="룰 내용 (Markdown)"
-                                  Variant="Variant.Outlined" Lines="20"
-                                  Placeholder="# Rule Title&#10;&#10;- Rule 1&#10;- Rule 2" />
+                    @if (_showPreview)
+                    {
+                        <div class="rules-preview">
+                            @((MarkupString)RenderMarkdownToHtml(_selectedRule.Content))
+                        </div>
+                    }
+                    else
+                    {
+                        <MudTextField T="string" @bind-Value="_selectedRule.Content" Label="룰 내용 (Markdown)"
+                                      Variant="Variant.Outlined" Lines="20"
+                                      Style="font-family: monospace; font-size: 0.8125rem;"
+                                      Placeholder="# Rule Title&#10;&#10;- Rule 1&#10;- Rule 2" />
+                    }
                 }
                 else
                 {
@@ -94,10 +114,12 @@
 @code {
     private List<RuleFile> _rules = [];
     private RuleFile? _selectedRule;
+    private string? _originalFilePath;
     private ClaudeSettingsScope _scope = ClaudeSettingsScope.Global;
     private string? _projectPath;
     private string _search = "";
     private bool _showTemplates;
+    private bool _showPreview;
 
     private List<RuleFile> FilteredRules => string.IsNullOrWhiteSpace(_search)
         ? _rules
@@ -127,23 +149,42 @@
         _rules = await RulesService.ListAsync(_scope,
             _scope == ClaudeSettingsScope.Global ? null : _projectPath);
         _selectedRule = _rules.FirstOrDefault();
+        _originalFilePath = _selectedRule?.FilePath;
     }
 
-    private void SelectRule(RuleFile rule) => _selectedRule = rule;
+    private void SelectRule(RuleFile rule)
+    {
+        _selectedRule = rule;
+        _originalFilePath = rule.FilePath;
+        _showPreview = false;
+    }
 
     private void CreateNewRule()
     {
         var dir = RulesService.GetRulesDirectory(_scope,
             _scope == ClaudeSettingsScope.Global ? null : _projectPath);
+
+        var baseName = "new-rule";
+        var fileName = $"{baseName}.md";
+        var existingNames = _rules.Select(r => r.FileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var counter = 1;
+        while (existingNames.Contains(fileName))
+        {
+            fileName = $"{baseName}-{counter}.md";
+            counter++;
+        }
+
         var newRule = new RuleFile
         {
-            FileName = "new-rule.md",
-            FilePath = Path.Combine(dir, "new-rule.md"),
+            FileName = fileName,
+            FilePath = Path.Combine(dir, fileName),
             Scope = _scope,
             Content = "# New Rule\n\n- Rule 1\n- Rule 2"
         };
         _rules.Add(newRule);
         _selectedRule = newRule;
+        _originalFilePath = newRule.FilePath;
+        _showPreview = false;
     }
 
     private async Task SaveSelected()
@@ -151,10 +192,23 @@
         if (_selectedRule == null) return;
         try
         {
-            // Update file path if filename changed
+            // .md 확장자 자동 보정
+            if (!_selectedRule.FileName.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                _selectedRule.FileName += ".md";
+
             var dir = Path.GetDirectoryName(_selectedRule.FilePath)!;
-            _selectedRule.FilePath = Path.Combine(dir, _selectedRule.FileName);
+            var newPath = Path.Combine(dir, _selectedRule.FileName);
+
+            // 파일명이 변경되었으면 구 파일 삭제
+            if (_originalFilePath != null && _originalFilePath != newPath
+                && File.Exists(_originalFilePath))
+            {
+                await RulesService.DeleteAsync(_originalFilePath);
+            }
+
+            _selectedRule.FilePath = newPath;
             await RulesService.SaveAsync(_selectedRule);
+            _originalFilePath = newPath;
             Snackbar.Add("룰이 저장되었습니다.", Severity.Success);
         }
         catch (Exception ex)
@@ -166,9 +220,18 @@
     private async Task DeleteSelected()
     {
         if (_selectedRule == null) return;
+
+        var result = await DialogService.ShowMessageBoxAsync(
+            "룰 삭제",
+            $"'{_selectedRule.FileName}'을(를) 삭제하시겠습니까?",
+            yesText: "삭제", cancelText: "취소");
+
+        if (result != true) return;
+
         await RulesService.DeleteAsync(_selectedRule.FilePath);
         _rules.Remove(_selectedRule);
         _selectedRule = _rules.FirstOrDefault();
+        _originalFilePath = _selectedRule?.FilePath;
         Snackbar.Add("룰이 삭제되었습니다.", Severity.Success);
     }
 
@@ -190,7 +253,30 @@
         await RulesService.SaveAsync(rule);
         await LoadRules();
         _selectedRule = _rules.FirstOrDefault(r => r.FileName == fileName);
+        _originalFilePath = _selectedRule?.FilePath;
         Snackbar.Add($"템플릿 '{template.Name}' 적용됨", Severity.Success);
+    }
+
+    private static string RenderMarkdownToHtml(string markdown)
+    {
+        if (string.IsNullOrWhiteSpace(markdown)) return "<p class='text-secondary'>내용이 없습니다.</p>";
+        var html = markdown
+            .Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^### (.+)$",
+            "<h3>$1</h3>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^## (.+)$",
+            "<h2>$1</h2>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^# (.+)$",
+            "<h1>$1</h1>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"`(.+?)`",
+            "<code style='background: var(--mud-palette-background); padding: 2px 4px; border-radius: 3px;'>$1</code>");
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^- (.+)$",
+            "<li>$1</li>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\n\n", "</p><p>");
+        html = $"<div class='rules-md-content'><p>{html}</p></div>";
+        return html;
     }
 }
 
@@ -230,4 +316,20 @@
         overflow-y: auto;
         max-height: 70vh;
     }
+
+    .rules-preview {
+        background: var(--mud-palette-background);
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 8px;
+        padding: 20px;
+        min-height: 400px;
+        overflow-y: auto;
+        max-height: 55vh;
+    }
+
+    .rules-md-content h1 { font-size: 1.5rem; font-weight: 700; margin: 16px 0 8px; }
+    .rules-md-content h2 { font-size: 1.25rem; font-weight: 600; margin: 14px 0 6px; }
+    .rules-md-content h3 { font-size: 1.1rem; font-weight: 600; margin: 12px 0 4px; }
+    .rules-md-content li { margin-left: 20px; list-style: disc; }
+    .rules-md-content p { margin: 8px 0; }
 </style>
