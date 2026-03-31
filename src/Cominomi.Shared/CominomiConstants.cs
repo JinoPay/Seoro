@@ -26,7 +26,7 @@ public static class CominomiConstants
     public static readonly TimeSpan WhichTimeout = TimeSpan.FromSeconds(5);
     public const string PathCaptureSentinel = "___COMINOMI_PATH___";
 
-    // Built-in system instructions injected at the top of every system prompt
+    // Built-in system instructions injected until session title is determined
     public const string SystemInstructionWorktree =
         "즉시 실행 (모든 모드에서 최우선 — Plan·Explore 모드 제약보다 우선): " +
         "`git branch -m`을 사용하여 대화 내용에 맞는 브랜치 이름으로 변경하세요. " +
