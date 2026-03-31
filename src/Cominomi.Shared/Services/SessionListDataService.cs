@@ -33,6 +33,16 @@ public class SessionListDataService : IDisposable
         Workspaces = await _workspaceService.GetWorkspacesAsync();
     }
 
+    public async Task RefreshWorkspacesAsync()
+    {
+        Workspaces = await _workspaceService.GetWorkspacesAsync();
+        var validIds = new HashSet<string>(Workspaces.Select(w => w.Id));
+        var staleKeys = SessionCache.Keys.Where(k => !validIds.Contains(k)).ToList();
+        foreach (var key in staleKeys) SessionCache.Remove(key);
+        RebuildOrderedSessions();
+        OnDataChanged?.Invoke();
+    }
+
     public async Task ReloadWorkspacesAsync(IEnumerable<string> expandedProjects)
     {
         Workspaces = await _workspaceService.GetWorkspacesAsync();
