@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.5.7",
+    "date": "2026-03-31",
+    "changes": [
+      { "type": "feat", "description": "온보딩 튜토리얼 및 새 버전 안내 다이얼로그 추가" },
+      { "type": "docs", "description": "README.md 전면 리디자인 — 한국어 기반 비주얼 리치 구성" },
+      { "type": "chore", "description": "MIT 라이센스 추가 (오픈소스 공개 준비)" }
+    ]
+  },
+  {
     "version": "1.5.6",
     "date": "2026-03-31",
     "changes": [
