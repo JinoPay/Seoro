@@ -3,6 +3,7 @@
 @inject IFilePickerService FilePickerService
 @inject ISkillRegistry SkillRegistry
 @inject IJSRuntime JSRuntime
+@inject IChatState ChatState
 @implements IAsyncDisposable
 
 <div class="input-area-container" id="input-area">
@@ -72,6 +73,7 @@
     private DotNetObjectReference<InputArea>? _dotNetRef;
     private bool _handlersRegistered;
     private bool _suppressInputUpdates;
+    private string? _trackedSessionId;
 
     // Local copies of toolbar state — updated both from parent parameters AND from
     // user clicks (optimistic update). This decouples toolbar rendering from the
@@ -101,6 +103,18 @@
 
     protected override void OnParametersSet()
     {
+        // Save/restore input draft on session change
+        var newSessionId = CurrentSession?.Id;
+        if (_trackedSessionId != newSessionId)
+        {
+            if (_trackedSessionId != null && !string.IsNullOrEmpty(_inputText))
+                ChatState.SetInputDraft(_trackedSessionId, _inputText);
+
+            _inputText = newSessionId != null ? ChatState.GetInputDraft(newSessionId) : string.Empty;
+            _trackedSessionId = newSessionId;
+            _forceRender = true;
+        }
+
         // Sync local copies from parent parameters
         if (_prevPermissionMode != PermissionMode)
             _currentPermissionMode = PermissionMode;
@@ -181,6 +195,9 @@
         var wasEmpty = string.IsNullOrWhiteSpace(_inputText);
         _inputText = value;
         var isEmpty = string.IsNullOrWhiteSpace(_inputText);
+
+        if (_trackedSessionId != null)
+            ChatState.SetInputDraft(_trackedSessionId, _inputText);
 
         UpdateSlashPopupState();
 
@@ -424,6 +441,8 @@
 
         _suppressInputUpdates = true;   // Block oninput from reinserting newline
         _inputText = string.Empty;
+        if (_trackedSessionId != null)
+            ChatState.SetInputDraft(_trackedSessionId, string.Empty);
         _pendingAttachments.Clear();
         StateHasChanged();
         await OnSend.InvokeAsync(input);

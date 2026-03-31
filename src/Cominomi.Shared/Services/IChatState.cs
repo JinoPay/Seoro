@@ -73,6 +73,10 @@ public interface IChatState : IDisposable
     void SetRightPanel(RightPanelMode mode);
     void ToggleRightPanel(RightPanelMode mode);
 
+    // Input draft (per-session temporary storage)
+    void SetInputDraft(string sessionId, string text);
+    string GetInputDraft(string sessionId);
+
     // Notification
     void NotifyStateChanged();
 

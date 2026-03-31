@@ -21,6 +21,9 @@ public class ChatState : IChatState
     // Mediator: typed event bus
     private readonly IChatEventBus _eventBus;
 
+    // Input draft storage (per-session, memory only)
+    private readonly Dictionary<string, string> _inputDrafts = new();
+
     // Navigation state
     public Workspace? CurrentWorkspace { get; private set; }
     public Session? CurrentSession { get; private set; }
@@ -234,6 +237,19 @@ public class ChatState : IChatState
         _eventBus.Publish(new RightPanelChangedEvent(RightPanel));
         NotifyStateChanged();
     }
+
+    // --- Input draft (per-session) ---
+
+    public void SetInputDraft(string sessionId, string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            _inputDrafts.Remove(sessionId);
+        else
+            _inputDrafts[sessionId] = text;
+    }
+
+    public string GetInputDraft(string sessionId)
+        => _inputDrafts.TryGetValue(sessionId, out var draft) ? draft : string.Empty;
 
     // --- Debounced notification ---
 
