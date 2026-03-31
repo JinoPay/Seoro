@@ -2709,14 +2709,14 @@ html *::after {
 .landing-orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(80px);
+    filter: blur(clamp(40px, 8vw, 80px));
     opacity: 0.15;
     will-change: transform;
 }
 
 .landing-orb--1 {
-    width: 300px;
-    height: 300px;
+    width: clamp(140px, 30vw, 300px);
+    height: clamp(140px, 30vw, 300px);
     background: var(--accent);
     top: 10%;
     left: 15%;
@@ -2724,8 +2724,8 @@ html *::after {
 }
 
 .landing-orb--2 {
-    width: 220px;
-    height: 220px;
+    width: clamp(100px, 22vw, 220px);
+    height: clamp(100px, 22vw, 220px);
     background: var(--color-info);
     top: 55%;
     right: 10%;
@@ -2733,8 +2733,8 @@ html *::after {
 }
 
 .landing-orb--3 {
-    width: 180px;
-    height: 180px;
+    width: clamp(80px, 18vw, 180px);
+    height: clamp(80px, 18vw, 180px);
     background: var(--color-success);
     bottom: 15%;
     left: 35%;
@@ -2743,20 +2743,20 @@ html *::after {
 
 @keyframes landing-float-1 {
     0%, 100% { transform: translate(0, 0); }
-    33%      { transform: translate(30px, -20px); }
-    66%      { transform: translate(-20px, 15px); }
+    33%      { transform: translate(3vw, -2vw); }
+    66%      { transform: translate(-2vw, 1.5vw); }
 }
 
 @keyframes landing-float-2 {
     0%, 100% { transform: translate(0, 0); }
-    33%      { transform: translate(-25px, 20px); }
-    66%      { transform: translate(15px, -25px); }
+    33%      { transform: translate(-2.5vw, 2vw); }
+    66%      { transform: translate(1.5vw, -2.5vw); }
 }
 
 @keyframes landing-float-3 {
     0%, 100% { transform: translate(0, 0); }
-    33%      { transform: translate(20px, 15px); }
-    66%      { transform: translate(-15px, -20px); }
+    33%      { transform: translate(2vw, 1.5vw); }
+    66%      { transform: translate(-1.5vw, -2vw); }
 }
 
 /* --- Landing: Logo + Glow --- */
