@@ -14,6 +14,8 @@ public class WorktreeSyncService : IWorktreeSyncService
     private FileSystemWatcher? _watcher;
     private System.Timers.Timer? _debounceTimer;
     private readonly SemaphoreSlim _syncLock = new(1, 1);
+    private readonly HashSet<string> _pendingPaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _pendingLock = new();
     private bool _disposed;
 
     private const string StateFileName = "sync-state.json";
@@ -231,11 +233,49 @@ public class WorktreeSyncService : IWorktreeSyncService
 
     private async Task CopyWorktreeChangesAsync(SyncState state, CancellationToken ct = default)
     {
-        var changedFiles = await _gitService.GetChangedFilesAsync(state.WorktreePath, state.BaseBranch, ct);
+        var worktreeRoot = state.WorktreePath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var copied = 0;
 
-        state.CopiedFromWorktree.Clear();
+        foreach (var srcPath in Directory.EnumerateFiles(state.WorktreePath, "*", SearchOption.AllDirectories))
+        {
+            ct.ThrowIfCancellationRequested();
 
-        foreach (var relativePath in changedFiles)
+            if (ShouldIgnorePath(srcPath))
+                continue;
+
+            var relativePath = srcPath[worktreeRoot.Length..].Replace(Path.DirectorySeparatorChar, '/');
+
+            var info = new FileInfo(srcPath);
+            if (info.Length > MaxFileSizeBytes)
+            {
+                _logger.LogWarning("Skipping large file during initial sync: {Path} ({Size} bytes)", relativePath, info.Length);
+                continue;
+            }
+
+            var destPath = Path.Combine(state.RepoLocalPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+
+            if (File.Exists(destPath) && await FilesAreEqualAsync(srcPath, destPath))
+                continue;
+
+            var destParent = Path.GetDirectoryName(destPath);
+            if (destParent != null)
+                Directory.CreateDirectory(destParent);
+
+            await CopyFileWithRetryAsync(srcPath, destPath);
+            if (!state.CopiedFromWorktree.Contains(relativePath))
+                state.CopiedFromWorktree.Add(relativePath);
+            copied++;
+        }
+
+        _logger.LogDebug("Initial sync: copied {Count} files from worktree to local dir", copied);
+    }
+
+    // ────────────────────── Internal: Live sync (specific files) ──────────────────────
+
+    private async Task SyncSpecificFilesAsync(SyncState state, List<string> relativePaths)
+    {
+        var synced = 0;
+        foreach (var relativePath in relativePaths)
         {
             var srcPath = Path.Combine(state.WorktreePath, relativePath.Replace('/', Path.DirectorySeparatorChar));
             var destPath = Path.Combine(state.RepoLocalPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
@@ -245,26 +285,36 @@ public class WorktreeSyncService : IWorktreeSyncService
                 var info = new FileInfo(srcPath);
                 if (info.Length > MaxFileSizeBytes)
                 {
-                    _logger.LogWarning("Skipping large file during sync: {Path} ({Size} bytes)", relativePath, info.Length);
+                    _logger.LogWarning("Skipping large file during live sync: {Path} ({Size} bytes)", relativePath, info.Length);
                     continue;
                 }
+
+                if (File.Exists(destPath) && await FilesAreEqualAsync(srcPath, destPath))
+                    continue;
 
                 var destParent = Path.GetDirectoryName(destPath);
                 if (destParent != null)
                     Directory.CreateDirectory(destParent);
 
                 await CopyFileWithRetryAsync(srcPath, destPath);
-                state.CopiedFromWorktree.Add(relativePath);
+                if (!state.CopiedFromWorktree.Contains(relativePath))
+                    state.CopiedFromWorktree.Add(relativePath);
+                synced++;
             }
             else
             {
-                // File was deleted in worktree
-                DeleteFileWithRetry(destPath);
-                state.CopiedFromWorktree.Add(relativePath);
+                if (File.Exists(destPath))
+                {
+                    DeleteFileWithRetry(destPath);
+                    if (!state.CopiedFromWorktree.Contains(relativePath))
+                        state.CopiedFromWorktree.Add(relativePath);
+                    synced++;
+                }
             }
         }
 
-        _logger.LogDebug("Copied {Count} files from worktree to local dir", state.CopiedFromWorktree.Count);
+        if (synced > 0)
+            _logger.LogDebug("Live-synced {Count} files from worktree to local dir", synced);
     }
 
     // ────────────────────── Internal: Live sync watcher ──────────────────────
@@ -275,6 +325,8 @@ public class WorktreeSyncService : IWorktreeSyncService
 
         if (!Directory.Exists(state.WorktreePath))
             return;
+
+        var worktreeRoot = state.WorktreePath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
         _watcher = new FileSystemWatcher(state.WorktreePath)
         {
@@ -294,14 +346,36 @@ public class WorktreeSyncService : IWorktreeSyncService
         {
             if (ShouldIgnorePath(e.FullPath))
                 return;
+
+            var rel = ToRelativePath(e.FullPath, worktreeRoot);
+            if (rel == null) return;
+
+            lock (_pendingLock)
+            {
+                _pendingPaths.Add(rel);
+            }
+
             _debounceTimer.Stop();
             _debounceTimer.Start();
+        }
+
+        void OnFsRename(object sender, RenamedEventArgs e)
+        {
+            if (!ShouldIgnorePath(e.OldFullPath))
+            {
+                var oldRel = ToRelativePath(e.OldFullPath, worktreeRoot);
+                if (oldRel != null)
+                {
+                    lock (_pendingLock) { _pendingPaths.Add(oldRel); }
+                }
+            }
+            OnFsChange(sender, e);
         }
 
         _watcher.Changed += OnFsChange;
         _watcher.Created += OnFsChange;
         _watcher.Deleted += OnFsChange;
-        _watcher.Renamed += (s, e) => OnFsChange(s, e);
+        _watcher.Renamed += OnFsRename;
     }
 
     private void StopWatching()
@@ -314,6 +388,11 @@ public class WorktreeSyncService : IWorktreeSyncService
         }
         _debounceTimer?.Dispose();
         _debounceTimer = null;
+
+        lock (_pendingLock)
+        {
+            _pendingPaths.Clear();
+        }
     }
 
     private async Task OnWorktreeChangedAsync()
@@ -321,12 +400,21 @@ public class WorktreeSyncService : IWorktreeSyncService
         if (_state == null)
             return;
 
+        List<string> paths;
+        lock (_pendingLock)
+        {
+            if (_pendingPaths.Count == 0)
+                return;
+            paths = _pendingPaths.ToList();
+            _pendingPaths.Clear();
+        }
+
         await _syncLock.WaitAsync();
         try
         {
             if (_state == null)
                 return;
-            await CopyWorktreeChangesAsync(_state);
+            await SyncSpecificFilesAsync(_state, paths);
             await SaveStateAsync(_state);
         }
         finally
@@ -439,6 +527,51 @@ public class WorktreeSyncService : IWorktreeSyncService
     }
 
     // ────────────────────── Internal: File helpers ──────────────────────
+
+    private static string? ToRelativePath(string fullPath, string worktreeRoot)
+    {
+        if (!fullPath.StartsWith(worktreeRoot, StringComparison.OrdinalIgnoreCase))
+            return null;
+        var rel = fullPath[worktreeRoot.Length..].TrimStart(Path.DirectorySeparatorChar);
+        return rel.Length > 0 ? rel.Replace(Path.DirectorySeparatorChar, '/') : null;
+    }
+
+    private static async Task<bool> FilesAreEqualAsync(string pathA, string pathB)
+    {
+        var infoA = new FileInfo(pathA);
+        var infoB = new FileInfo(pathB);
+
+        if (!infoA.Exists || !infoB.Exists)
+            return false;
+
+        if (infoA.Length != infoB.Length)
+            return false;
+
+        if (infoA.Length == 0)
+            return true;
+
+        const int bufferSize = 8192;
+        var bufferA = new byte[bufferSize];
+        var bufferB = new byte[bufferSize];
+
+        await using var streamA = new FileStream(pathA, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, bufferSize);
+        await using var streamB = new FileStream(pathB, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, bufferSize);
+
+        while (true)
+        {
+            var readA = await streamA.ReadAsync(bufferA);
+            var readB = await streamB.ReadAsync(bufferB);
+
+            if (readA != readB)
+                return false;
+
+            if (readA == 0)
+                return true;
+
+            if (!bufferA.AsSpan(0, readA).SequenceEqual(bufferB.AsSpan(0, readB)))
+                return false;
+        }
+    }
 
     private async Task CopyFileWithRetryAsync(string source, string destination)
     {
