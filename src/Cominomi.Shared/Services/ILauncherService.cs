@@ -1,6 +1,8 @@
 namespace Cominomi.Shared.Services;
 
-public record IdeInfo(string Name, string Command, string Icon);
+public enum IdeLaunchMode { Cli, MacApp }
+
+public record IdeInfo(string Name, string Command, string Icon, IdeLaunchMode LaunchMode = IdeLaunchMode.Cli);
 
 public interface ILauncherService
 {
