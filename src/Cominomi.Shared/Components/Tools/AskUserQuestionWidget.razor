@@ -24,7 +24,14 @@
                     @foreach (var opt in q.Options)
                     {
                         <div class="askuser-option readonly">
-                            <span class="askuser-option-label">@opt.Label</span>
+                            <span class="askuser-option-label">
+                                <MudIcon Icon="@(q.MultiSelect
+                                    ? Icons.Material.Filled.CheckBoxOutlineBlank
+                                    : Icons.Material.Outlined.RadioButtonUnchecked)"
+                                    Size="Size.Small"
+                                    Style="width: 12px; height: 12px; opacity: 0.35;" />
+                                @opt.Label
+                            </span>
                             @if (!string.IsNullOrEmpty(opt.Description))
                             {
                                 <span class="askuser-option-desc">@opt.Description</span>
@@ -42,7 +49,7 @@
     public ToolCall Tool { get; set; } = default!;
 
     private record AskUserOption(string Label, string? Description);
-    private record AskUserQuestionItem(string? Header, string Question, List<AskUserOption> Options);
+    private record AskUserQuestionItem(string? Header, string Question, List<AskUserOption> Options, bool MultiSelect);
 
     private List<AskUserQuestionItem> _questions = [];
     private string? _lastInput;
@@ -75,6 +82,8 @@
             {
                 var question = q.TryGetProperty("question", out var qProp) ? qProp.GetString() ?? "" : "";
                 var header = q.TryGetProperty("header", out var hProp) ? hProp.GetString() : null;
+                var multiSelect = q.TryGetProperty("multiSelect", out var msProp)
+                    && msProp.ValueKind == JsonValueKind.True;
 
                 var options = new List<AskUserOption>();
                 if (q.TryGetProperty("options", out var optsArr) && optsArr.ValueKind == JsonValueKind.Array)
@@ -89,7 +98,7 @@
                 }
 
                 if (!string.IsNullOrEmpty(question) || options.Count > 0)
-                    result.Add(new AskUserQuestionItem(header, question, options));
+                    result.Add(new AskUserQuestionItem(header, question, options, multiSelect));
             }
 
             return result;
