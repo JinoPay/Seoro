@@ -134,6 +134,8 @@ jobs:
             <true/>
             <key>LSMinimumSystemVersion</key>
             <string>12.0</string>
+            <key>NSUserNotificationAlertStyle</key>
+            <string>alert</string>
           </dict>
           </plist>
           PLIST
