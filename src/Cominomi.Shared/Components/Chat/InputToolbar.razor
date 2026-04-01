@@ -36,7 +36,7 @@
             </MudTooltip>
         }
 
-        <ModelSelector Model="Model" ResolvedModel="ResolvedModel"
+        <ModelSelector @key="Model" Model="Model" ResolvedModel="ResolvedModel"
                        OnModelChanged="OnModelChanged"
                        OnMenuClosed="@(() => OnModelMenuClosed.InvokeAsync())"
                        Disabled="Disabled" IsStreaming="IsStreaming" />
