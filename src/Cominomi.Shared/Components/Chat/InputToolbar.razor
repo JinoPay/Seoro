@@ -13,7 +13,7 @@
                            Color="@GetEffortLevelColor()"
                            Size="Size.Small"
                            OnClick="CycleEffortLevel"
-                           Disabled="Disabled || IsStreaming" />
+                           Disabled="@(Disabled || IsStreaming || !ModelDefinitions.SupportsMaxEffort(Model))" />
         </MudTooltip>
 
         <MudTooltip Text="파일 첨부">
@@ -120,11 +120,16 @@
         await OnPermissionModeChanged.InvokeAsync(next);
     }
 
-    private string GetEffortLevelTooltip() => EffortLevel switch
+    private string GetEffortLevelTooltip()
     {
-        "max" => "Effort: Max (Thinking)",
-        _ => "Effort: Auto"
-    };
+        if (!ModelDefinitions.SupportsMaxEffort(Model))
+            return "Effort: Max는 Opus 전용";
+        return EffortLevel switch
+        {
+            "max" => "Effort: Max (Thinking)",
+            _ => "Effort: Auto"
+        };
+    }
 
     private Color GetEffortLevelColor() => EffortLevel switch
     {

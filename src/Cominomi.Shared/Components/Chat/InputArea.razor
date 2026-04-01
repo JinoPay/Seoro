@@ -173,6 +173,14 @@
     private async Task HandleModelChangedLocal(string model)
     {
         _currentModel = model;
+
+        // Auto-downgrade: "max" effort는 Opus 전용
+        if (_currentEffortLevel == "max" && !ModelDefinitions.SupportsMaxEffort(model))
+        {
+            _currentEffortLevel = "auto";
+            await EffortLevelChanged.InvokeAsync("auto");
+        }
+
         _forceRender = true;
         StateHasChanged();
         await OnModelChanged.InvokeAsync(model);
