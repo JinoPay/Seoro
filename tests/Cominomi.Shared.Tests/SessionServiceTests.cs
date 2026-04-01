@@ -311,6 +311,7 @@ public class SessionServiceTests : IDisposable
 
     private class FakeWorkspaceService : IWorkspaceService
     {
+        public event Action<Workspace>? OnWorkspaceSaved;
         public Workspace? WorkspaceToReturn;
 
         public FakeWorkspaceService(string tempDir)
