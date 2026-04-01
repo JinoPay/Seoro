@@ -4,6 +4,7 @@
 @inject IWorkspaceService WorkspaceService
 @inject IChatEventBus EventBus
 @inject ISnackbar Snackbar
+@using System.Runtime.InteropServices
 @implements IDisposable
 
 <div class="main-toolbar">
@@ -105,11 +106,13 @@
     private bool IsSynced => SyncService.IsSessionSynced(ChatState.CurrentSession?.Id ?? "");
     private bool IsSyncBlockedByOther => SyncService.IsSyncActive && !IsSynced;
 
+    private string _mod = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "\u2318" : "Ctrl";
+
     private string SyncTooltip => IsSynced
-        ? "로컬 동기화 해제 (Ctrl+Shift+S)"
+        ? $"로컬 동기화 해제 ({_mod}+Shift+S)"
         : IsSyncBlockedByOther
             ? "다른 세션이 동기화 중입니다"
-            : "로컬 디렉터리에 동기화 (Ctrl+Shift+S)";
+            : $"로컬 디렉터리에 동기화 ({_mod}+Shift+S)";
 
     private bool ShowSyncButton
     {
