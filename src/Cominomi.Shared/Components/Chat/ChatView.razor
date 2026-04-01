@@ -45,7 +45,7 @@
                 else
                 {
                     <div class="message-container">
-                        @foreach (var message in session.Messages.ToList())
+                        @foreach (var message in session.GetMessagesSnapshot())
                         {
                             <MessageBubble @key="message.Id" Message="message" />
                         }

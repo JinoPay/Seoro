@@ -351,10 +351,14 @@ public partial class SessionService : ISessionService
         // Write back if schema was outdated (adds $schemaVersion)
         if (needsMigration)
         {
-            var messages = session.Messages;
-            session.Messages = [];
-            var upgraded = JsonSerializer.Serialize(session, JsonDefaults.Options);
-            session.Messages = messages;
+            string upgraded;
+            lock (session.MessagesLock)
+            {
+                var messages = session.Messages;
+                session.Messages = [];
+                upgraded = JsonSerializer.Serialize(session, JsonDefaults.Options);
+                session.Messages = messages;
+            }
             await AtomicFileWriter.WriteAsync(path, upgraded);
         }
 
@@ -428,22 +432,28 @@ public partial class SessionService : ISessionService
             session.UpdatedAt = DateTime.UtcNow;
 
             // Fallback title: only if title is still the initial city name (Haiku summary not yet applied)
-            if (session.Title == session.CityName && session.Messages.Count > 0)
+            string metadataJson;
+            List<ChatMessage> messages;
+            lock (session.MessagesLock)
             {
-                var firstMessage = session.Messages.FirstOrDefault(m => m.Role == MessageRole.User);
-                if (firstMessage != null)
+                if (session.Title == session.CityName && session.Messages.Count > 0)
                 {
-                    session.Title = firstMessage.Text.Length > 50
-                        ? firstMessage.Text[..50] + "..."
-                        : firstMessage.Text;
+                    var firstMessage = session.Messages.FirstOrDefault(m => m.Role == MessageRole.User);
+                    if (firstMessage != null)
+                    {
+                        session.Title = firstMessage.Text.Length > 50
+                            ? firstMessage.Text[..50] + "..."
+                            : firstMessage.Text;
+                    }
                 }
-            }
 
-            // Save metadata (without messages)
-            var messages = session.Messages;
-            session.Messages = [];
-            var metadataJson = JsonSerializer.Serialize(session, JsonDefaults.Options);
-            session.Messages = messages;
+                // Save metadata (without messages) — swap under lock to prevent
+                // concurrent readers (e.g. Blazor renderer) from seeing an empty list
+                messages = session.Messages;
+                session.Messages = [];
+                metadataJson = JsonSerializer.Serialize(session, JsonDefaults.Options);
+                session.Messages = messages;
+            }
 
             var metadataPath = Path.Combine(_sessionsDir, $"{session.Id}.json");
             await AtomicFileWriter.WriteAsync(metadataPath, metadataJson);

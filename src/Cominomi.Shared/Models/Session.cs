@@ -52,6 +52,14 @@ public class Session
     public string? ErrorMessage => Error?.Message;
     public List<ChatMessage> Messages { get; set; } = [];
 
+    [JsonIgnore]
+    public object MessagesLock { get; } = new();
+
+    public List<ChatMessage> GetMessagesSnapshot()
+    {
+        lock (MessagesLock) return Messages.ToList();
+    }
+
     // Git 관심사 (worktree, branch)
     public GitContext Git { get; init; } = new();
 

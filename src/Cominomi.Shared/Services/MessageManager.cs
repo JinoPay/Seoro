@@ -18,11 +18,14 @@ public class MessageManager
         Guard.NotNull(session, nameof(session));
         Guard.NotNull(text, nameof(text));
 
-        session.Messages.Add(new ChatMessage
+        lock (session.MessagesLock)
         {
-            Role = MessageRole.User,
-            Text = text
-        });
+            session.Messages.Add(new ChatMessage
+            {
+                Role = MessageRole.User,
+                Text = text
+            });
+        }
         _notifyChanged();
     }
 
@@ -32,12 +35,15 @@ public class MessageManager
         Guard.NotNull(text, nameof(text));
         Guard.NotNull(attachments, nameof(attachments));
 
-        session.Messages.Add(new ChatMessage
+        lock (session.MessagesLock)
         {
-            Role = MessageRole.User,
-            Text = text,
-            Attachments = attachments
-        });
+            session.Messages.Add(new ChatMessage
+            {
+                Role = MessageRole.User,
+                Text = text,
+                Attachments = attachments
+            });
+        }
         _notifyChanged();
     }
 
@@ -49,7 +55,10 @@ public class MessageManager
             IsStreaming = true,
             StreamingStartedAt = DateTime.UtcNow
         };
-        session.Messages.Add(msg);
+        lock (session.MessagesLock)
+        {
+            session.Messages.Add(msg);
+        }
         _notifyChanged();
         return msg;
     }
@@ -129,11 +138,14 @@ public class MessageManager
 
     public void AddSystemMessage(Session session, string text)
     {
-        session.Messages.Add(new ChatMessage
+        lock (session.MessagesLock)
         {
-            Role = MessageRole.System,
-            Text = text
-        });
+            session.Messages.Add(new ChatMessage
+            {
+                Role = MessageRole.System,
+                Text = text
+            });
+        }
         _notifyChanged();
     }
 }
