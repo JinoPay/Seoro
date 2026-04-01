@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.6.0",
+    "date": "2026-04-01",
+    "changes": [
+      { "type": "feat", "description": "워크트리 → 로컬 디렉터리 동기화 토글 기능 추가" },
+      { "type": "feat", "description": "서비스 전반 로깅 보강" },
+      { "type": "fix", "description": "동기화 해제 시 수정된 파일이 삭제되는 버그 수정" }
+    ]
+  },
+  {
     "version": "1.5.11",
     "date": "2026-04-01",
     "changes": [
