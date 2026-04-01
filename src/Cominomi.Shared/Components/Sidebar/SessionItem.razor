@@ -33,47 +33,44 @@
 
     <div class="tree-session-info">
         <span class="tree-session-title">@Session.Title</span>
-
-        @if (IsStreaming)
-        {
-            <span class="tree-session-status">@StreamingStatusText</span>
-        }
-        else
-        {
-            <div class="tree-session-meta">
-                @if (Session.Git.IsLocalDir)
+        <div class="tree-session-meta">
+            @if (Session.Git.IsLocalDir)
+            {
+                @if (!string.IsNullOrEmpty(Session.Git.BranchName))
                 {
-                    @if (!string.IsNullOrEmpty(Session.Git.BranchName))
-                    {
-                        <span class="tree-session-branch">
-                            <span style="opacity: 0.5;">로컬</span> @Session.Git.BranchName
-                        </span>
-                    }
-                    else
-                    {
-                        <span class="tree-session-branch" style="opacity: 0.5;">로컬</span>
-                    }
-                }
-                else if (!string.IsNullOrEmpty(Session.Git.BranchName))
-                {
-                    <span class="tree-session-branch">@Session.Git.BranchName</span>
-                }
-
-                @if (DiffAdditions > 0 || DiffDeletions > 0)
-                {
-                    <span class="tree-session-diff-stats">
-                        @if (DiffAdditions > 0)
-                        {
-                            <span class="diff-add">+@DiffAdditions</span>
-                        }
-                        @if (DiffDeletions > 0)
-                        {
-                            <span class="diff-del">-@DiffDeletions</span>
-                        }
+                    <span class="tree-session-branch">
+                        <span style="opacity: 0.5;">로컬</span> @Session.Git.BranchName
                     </span>
                 }
-            </div>
-        }
+                else
+                {
+                    <span class="tree-session-branch" style="opacity: 0.5;">로컬</span>
+                }
+            }
+            else if (!string.IsNullOrEmpty(Session.Git.BranchName))
+            {
+                <span class="tree-session-branch">@Session.Git.BranchName</span>
+            }
+
+            @if (DiffAdditions > 0 || DiffDeletions > 0)
+            {
+                <span class="tree-session-diff-stats">
+                    @if (DiffAdditions > 0)
+                    {
+                        <span class="diff-add">+@DiffAdditions</span>
+                    }
+                    @if (DiffDeletions > 0)
+                    {
+                        <span class="diff-del">-@DiffDeletions</span>
+                    }
+                </span>
+            }
+
+            @if (IsStreaming)
+            {
+                <span class="tree-session-status">@StreamingStatusText</span>
+            }
+        </div>
     </div>
 
     @if (DeleteShortcutLabel != null || ShortcutLabel != null)
