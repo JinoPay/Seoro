@@ -249,7 +249,9 @@ public class ShellService : IShellService
                 Path.Combine(home, ".volta", "bin", executableName),                        // volta
                 $"/opt/homebrew/bin/{executableName}",                                      // Apple Silicon Homebrew
                 $"/usr/local/bin/{executableName}",                                         // Intel Homebrew
-                Path.Combine(home, ".npm", "bin", executableName)                           // npm global
+                Path.Combine(home, ".npm", "bin", executableName),                          // npm global
+                Path.Combine(home, "Library", "Application Support", "JetBrains",
+                    "Toolbox", "scripts", executableName),                                  // JetBrains Toolbox
             ];
 
             foreach (var candidate in wellKnownPaths)
