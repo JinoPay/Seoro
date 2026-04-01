@@ -14,16 +14,18 @@
 
         @if (!string.IsNullOrEmpty(ChatState.CurrentSession.Git.BranchName))
         {
-            <span class="toolbar-branch-badge">
-                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
-                         Style="width: 12px; height: 12px; opacity: 0.6;" />
-                @ChatState.CurrentSession.Git.BranchName
-            </span>
+            <MudTooltip Text="@($"브랜치: {ChatState.CurrentSession.Git.BranchName}")" Placement="Placement.Bottom">
+                <span class="toolbar-branch-badge">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
+                             Style="width: 12px; height: 12px; opacity: 0.6;" />
+                    @ChatState.CurrentSession.Git.BranchName
+                </span>
+            </MudTooltip>
         }
 
         @if (ChatState.CurrentSession.PermissionMode == "plan")
         {
-            <MudTooltip Text="플랜 모드" Placement="Placement.Bottom">
+            <MudTooltip Text="플랜 모드 — 코드 변경 없이 분석만 수행" Placement="Placement.Bottom">
                 <span class="toolbar-indicator plan">
                     <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"
                              Style="width: 14px; height: 14px;" />
@@ -33,7 +35,7 @@
 
         @if (ChatState.CurrentSession.EffortLevel is not (null or "" or "auto"))
         {
-            <MudTooltip Text="@($"Effort: {ChatState.CurrentSession.EffortLevel}")" Placement="Placement.Bottom">
+            <MudTooltip Text="@($"사고 수준: {FormatEffortLevel(ChatState.CurrentSession.EffortLevel)}")" Placement="Placement.Bottom">
                 <span class="toolbar-indicator effort">
                     <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
                              Style="width: 14px; height: 14px;" />
@@ -204,6 +206,13 @@
     {
         InvokeAsync(StateHasChanged);
     }
+
+    private static string FormatEffortLevel(string? level) => level switch
+    {
+        "low" => "낮음 (low)",
+        "high" => "높음 (high)",
+        _ => level ?? "auto"
+    };
 
     public void Dispose()
     {

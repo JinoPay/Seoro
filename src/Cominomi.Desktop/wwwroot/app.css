@@ -676,6 +676,7 @@ html *::after {
     border-radius: var(--radius-full);
     background: var(--bg-surface);
     opacity: 0.6;
+    cursor: help;
 }
 
 .toolbar-indicator {
@@ -686,7 +687,7 @@ html *::after {
     height: 22px;
     border-radius: var(--radius-full);
     opacity: 0.7;
-    cursor: default;
+    cursor: help;
 }
 
 .toolbar-indicator.plan {
