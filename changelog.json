@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.6.1",
+    "date": "2026-04-01",
+    "changes": [
+      { "type": "fix", "description": "동기화 안정성 개선 — FSWatcher fallback, HashSet 최적화, UI 블로킹 해소" },
+      { "type": "fix", "description": "동기화 기능 git diff 의존 제거, 실제 파일 비교 기반으로 전환" }
+    ]
+  },
+  {
     "version": "1.6.0",
     "date": "2026-04-01",
     "changes": [
