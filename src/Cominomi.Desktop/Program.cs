@@ -109,6 +109,7 @@ public static class Program
         appBuilder.Services.AddSingleton<FilePreviewService>();
         appBuilder.Services.AddSingleton<IGitService, GitService>();
         appBuilder.Services.AddSingleton<IGitBranchWatcherService, GitBranchWatcherService>();
+        appBuilder.Services.AddSingleton<IWorktreeSyncService, WorktreeSyncService>();
         appBuilder.Services.AddSingleton<IClaudeService, ClaudeService>();
         appBuilder.Services.AddSingleton<IContextService, ContextService>();
         appBuilder.Services.AddSingleton<IMemoryService, MemoryService>();
@@ -244,6 +245,10 @@ public static class Program
             Log.Warning(ex, "Plugin engine initialization failed during startup");
         }
 
+        // Recover from any orphaned sync state (crash recovery)
+        try { app.Services.GetRequiredService<IWorktreeSyncService>().RecoverFromCrashAsync().GetAwaiter().GetResult(); }
+        catch (Exception ex) { Log.Warning(ex, "Worktree sync crash recovery failed"); }
+
         app.Run();
 
         // Cleanup after window closes
@@ -264,6 +269,7 @@ public static class Program
     {
         try
         {
+            services.GetService<IWorktreeSyncService>()?.Dispose();
             services.GetService<IClaudeService>()?.Dispose();
             services.GetService<IGitBranchWatcherService>()?.Dispose();
             (services.GetService<ChatState>() as IDisposable)?.Dispose();

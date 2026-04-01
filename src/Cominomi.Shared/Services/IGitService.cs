@@ -37,4 +37,8 @@ public interface IGitService
     Task<GitResult> StageAllAsync(string workingDir, CancellationToken ct = default);
     Task<GitResult> CommitAsync(string workingDir, string message, CancellationToken ct = default);
     Task<(int Ahead, int Behind)> GetAheadBehindAsync(string workingDir, CancellationToken ct = default);
+
+    Task<List<string>> GetStatusPorcelainAsync(string workingDir, CancellationToken ct = default);
+    Task<List<string>> GetChangedFilesAsync(string workingDir, string baseBranch, CancellationToken ct = default);
+    Task<GitResult> CheckoutFilesAsync(string workingDir, IEnumerable<string> relativePaths, CancellationToken ct = default);
 }

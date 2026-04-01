@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject ILauncherService Launcher
 @inject ILogger<SessionList> Logger
+@inject IWorktreeSyncService SyncService
 @implements IDisposable
 
 <div class="sidebar-tree">
@@ -90,6 +91,7 @@
                                      IsActive="@(ChatState.CurrentSession?.Id == row.Session!.Id)"
                                      IsStreaming="isStreaming"
                                      IsCompleted="isCompleted"
+                                     IsSynced="@(SyncService.IsSessionSynced(row.Session!.Id))"
                                      StreamingStatusText="@(isStreaming ? GetStreamingStatusText(row.Session!) : null)"
                                      DiffAdditions="@(hasDiffStats ? stats.Additions : 0)"
                                      DiffDeletions="@(hasDiffStats ? stats.Deletions : 0)"

@@ -18,6 +18,7 @@ public partial class SessionService : ISessionService
     private readonly IContextService _contextService;
     private readonly IHooksEngine _hooksEngine;
     private readonly IActiveSessionRegistry _activeSessionRegistry;
+    private readonly IWorktreeSyncService _worktreeSyncService;
     private readonly ILogger<SessionService> _logger;
     private readonly string _sessionsDir = AppPaths.Sessions;
     private readonly string _archiveDir = AppPaths.ArchivedContexts;
@@ -37,7 +38,7 @@ public partial class SessionService : ISessionService
 
     public SessionService(IGitService gitService, IWorkspaceService workspaceService,
         IOptionsMonitor<AppSettings> appSettings, IContextService contextService, IHooksEngine hooksEngine,
-        IActiveSessionRegistry activeSessionRegistry,
+        IActiveSessionRegistry activeSessionRegistry, IWorktreeSyncService worktreeSyncService,
         ILogger<SessionService> logger)
     {
         _gitService = gitService;
@@ -46,6 +47,7 @@ public partial class SessionService : ISessionService
         _contextService = contextService;
         _hooksEngine = hooksEngine;
         _activeSessionRegistry = activeSessionRegistry;
+        _worktreeSyncService = worktreeSyncService;
         _logger = logger;
     }
 
@@ -546,6 +548,13 @@ public partial class SessionService : ISessionService
 
     public async Task CleanupSessionAsync(string sessionId)
     {
+        // Auto-unsync if this session is currently synced to the local dir
+        if (_worktreeSyncService.IsSessionSynced(sessionId))
+        {
+            try { await _worktreeSyncService.StopSyncAsync(); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to auto-unsync session {SessionId} during cleanup", sessionId); }
+        }
+
         var session = await LoadSessionAsync(sessionId);
         if (session == null)
             return;

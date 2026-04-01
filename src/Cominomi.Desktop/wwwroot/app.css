@@ -611,6 +611,7 @@ html *::after {
 .status-badge.completed { color: var(--accent); background: var(--accent-dim); }
 .status-badge.error { color: var(--color-error); background: var(--color-error-bg); }
 .status-badge.archived { color: var(--text-muted); background: var(--bg-hover); }
+.status-badge.synced { color: var(--color-success); background: color-mix(in srgb, var(--color-success) 15%, transparent); }
 
 
 /* ===== Main Panel ===== */

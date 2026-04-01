@@ -13,6 +13,11 @@
                        ClickPropagation="false" />
     </div>
 
+    @if (IsSynced)
+    {
+        <span class="status-badge synced">동기화</span>
+    }
+
     @if (IsCompleted)
     {
         <span class="status-badge completed">완료</span>
@@ -114,6 +119,7 @@
     [Parameter] public bool IsActive { get; set; }
     [Parameter] public bool IsStreaming { get; set; }
     [Parameter] public bool IsCompleted { get; set; }
+    [Parameter] public bool IsSynced { get; set; }
     [Parameter] public string? StreamingStatusText { get; set; }
     [Parameter] public int DiffAdditions { get; set; }
     [Parameter] public int DiffDeletions { get; set; }

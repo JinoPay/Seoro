@@ -715,6 +715,59 @@ public class GitService : IGitService
         return (ahead, behind);
     }
 
+    public async Task<List<string>> GetStatusPorcelainAsync(string workingDir, CancellationToken ct = default)
+    {
+        var result = await RunGitBoundedAsync(workingDir, ct, "status", "--porcelain");
+        if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
+            return [];
+
+        return result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.TrimEnd('\r'))
+            .Where(line => line.Length > 3)
+            .ToList();
+    }
+
+    public async Task<List<string>> GetChangedFilesAsync(string workingDir, string baseBranch, CancellationToken ct = default)
+    {
+        // tracked changes vs base branch (includes uncommitted)
+        var diffResult = await RunGitBoundedAsync(workingDir, ct, "diff", "--name-only", baseBranch);
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (diffResult.Success && !string.IsNullOrWhiteSpace(diffResult.Output))
+        {
+            foreach (var line in diffResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var trimmed = line.TrimEnd('\r').Trim();
+                if (!string.IsNullOrEmpty(trimmed))
+                    files.Add(trimmed);
+            }
+        }
+
+        // untracked files
+        var untrackedResult = await RunGitBoundedAsync(workingDir, ct, "ls-files", "--others", "--exclude-standard");
+        if (untrackedResult.Success && !string.IsNullOrWhiteSpace(untrackedResult.Output))
+        {
+            foreach (var line in untrackedResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var trimmed = line.TrimEnd('\r').Trim();
+                if (!string.IsNullOrEmpty(trimmed))
+                    files.Add(trimmed);
+            }
+        }
+
+        return files.ToList();
+    }
+
+    public async Task<GitResult> CheckoutFilesAsync(string workingDir, IEnumerable<string> relativePaths, CancellationToken ct = default)
+    {
+        var paths = relativePaths.ToList();
+        if (paths.Count == 0)
+            return new GitResult(true, "", "");
+
+        var args = new List<string> { "checkout", "--" };
+        args.AddRange(paths);
+        return await RunGitAsync(workingDir, ct, args.ToArray());
+    }
+
     /// <summary>
     /// Creates a git process for CloneAsync which needs character-by-character stderr streaming.
     /// All other git commands use IProcessRunner via RunGitAsync.

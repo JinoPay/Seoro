@@ -1,5 +1,9 @@
 @inject IChatState ChatState
 @inject ILauncherService Launcher
+@inject IWorktreeSyncService SyncService
+@inject IWorkspaceService WorkspaceService
+@inject IChatEventBus EventBus
+@inject ISnackbar Snackbar
 @implements IDisposable
 
 <div class="main-toolbar">
@@ -14,6 +18,11 @@
                          Style="width: 12px; height: 12px; opacity: 0.6;" />
                 @ChatState.CurrentSession.Git.BranchName
             </span>
+        }
+
+        @if (IsSynced)
+        {
+            <span class="toolbar-sync-badge">동기화</span>
         }
 
         @if (ChatState.CurrentSession.PermissionMode == "plan")
@@ -38,6 +47,18 @@
     @if (ChatState.CurrentSession != null && !string.IsNullOrEmpty(GetEffectivePath()))
     {
         <div class="toolbar-actions">
+            @if (ShowSyncButton)
+            {
+                <MudTooltip Text="@(IsSynced ? "로컬 동기화 해제" : "로컬 디렉터리에 동기화")" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@(IsSynced ? Icons.Material.Filled.SyncDisabled : Icons.Material.Filled.Sync)"
+                                   Color="@(IsSynced ? Color.Success : Color.Default)"
+                                   Size="Size.Small"
+                                   OnClick="ToggleSync"
+                                   Disabled="_syncBusy"
+                                   Style="width: 28px; height: 28px;" />
+                </MudTooltip>
+            }
+
             <MudTooltip Text="폴더 열기" Placement="Placement.Bottom">
                 <MudIconButton Icon="@Icons.Material.Outlined.FolderOpen" Size="Size.Small"
                                OnClick="OpenFolder"
@@ -76,10 +97,28 @@
 
 @code {
     private List<IdeInfo> _availableIdes = [];
+    private bool _syncBusy;
+    private IDisposable? _syncStartSub;
+    private IDisposable? _syncStopSub;
+
+    private bool IsSynced => SyncService.IsSessionSynced(ChatState.CurrentSession?.Id ?? "");
+
+    private bool ShowSyncButton
+    {
+        get
+        {
+            var session = ChatState.CurrentSession;
+            return session != null &&
+                   !session.Git.IsLocalDir &&
+                   !string.IsNullOrEmpty(session.Git.WorktreePath);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += HandleStateChanged;
+        _syncStartSub = EventBus.Subscribe<WorktreeSyncStartedEvent>(_ => InvokeAsync(StateHasChanged));
+        _syncStopSub = EventBus.Subscribe<WorktreeSyncStoppedEvent>(_ => InvokeAsync(StateHasChanged));
         _availableIdes = await Launcher.GetAvailableIdesAsync();
     }
 
@@ -92,6 +131,40 @@
             return session.Git.WorktreePath;
 
         return ChatState.CurrentWorkspace?.RepoLocalPath;
+    }
+
+    private async Task ToggleSync()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null) return;
+
+        _syncBusy = true;
+        StateHasChanged();
+
+        try
+        {
+            if (IsSynced)
+            {
+                await SyncService.StopSyncAsync();
+                Snackbar.Add("동기화 해제됨", Severity.Info);
+            }
+            else
+            {
+                var workspace = ChatState.CurrentWorkspace;
+                if (workspace == null) return;
+                var success = await SyncService.StartSyncAsync(session, workspace);
+                Snackbar.Add(success ? "로컬 디렉터리에 동기화됨" : "동기화 실패 — 이미 다른 세션이 동기화 중이거나 세션 상태가 유효하지 않습니다", success ? Severity.Success : Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"동기화 오류: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _syncBusy = false;
+            StateHasChanged();
+        }
     }
 
     private async Task OpenFolder()
@@ -116,5 +189,19 @@
     public void Dispose()
     {
         ChatState.OnChange -= HandleStateChanged;
+        _syncStartSub?.Dispose();
+        _syncStopSub?.Dispose();
     }
 }
+
+<style>
+    .toolbar-sync-badge {
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: var(--color-success);
+        color: white;
+        line-height: 1.4;
+    }
+</style>

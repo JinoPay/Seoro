@@ -31,6 +31,7 @@ public class SessionServiceTests : IDisposable
             _contextService,
             _hooksEngine,
             new ActiveSessionRegistry(),
+            new FakeWorktreeSyncService(),
             NullLogger<SessionService>.Instance);
 
         // Override internal _sessionsDir via reflection
@@ -307,6 +308,12 @@ public class SessionServiceTests : IDisposable
             => Task.FromResult(NextResult);
         public Task<(int Ahead, int Behind)> GetAheadBehindAsync(string workingDir, CancellationToken ct = default)
             => Task.FromResult((0, 0));
+        public Task<List<string>> GetStatusPorcelainAsync(string workingDir, CancellationToken ct = default)
+            => Task.FromResult<List<string>>([]);
+        public Task<List<string>> GetChangedFilesAsync(string workingDir, string baseBranch, CancellationToken ct = default)
+            => Task.FromResult<List<string>>([]);
+        public Task<GitResult> CheckoutFilesAsync(string workingDir, IEnumerable<string> relativePaths, CancellationToken ct = default)
+            => Task.FromResult(NextResult);
     }
 
     private class FakeWorkspaceService : IWorkspaceService
@@ -355,6 +362,17 @@ public class SessionServiceTests : IDisposable
         public Task EnsureContextDirectoryAsync(string worktreePath) => Task.CompletedTask;
         public Task ArchiveContextAsync(string worktreePath, string archivePath) => Task.CompletedTask;
         public string BuildContextPrompt(ContextInfo context) => "";
+    }
+
+    private class FakeWorktreeSyncService : IWorktreeSyncService
+    {
+        public bool IsSyncActive => false;
+        public string? SyncedSessionId => null;
+        public Task<bool> StartSyncAsync(Session session, Workspace workspace, CancellationToken ct = default) => Task.FromResult(false);
+        public Task StopSyncAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public bool IsSessionSynced(string sessionId) => false;
+        public Task RecoverFromCrashAsync() => Task.CompletedTask;
+        public void Dispose() { }
     }
 
     private class FakeHooksEngine : IHooksEngine

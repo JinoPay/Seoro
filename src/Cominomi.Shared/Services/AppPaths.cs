@@ -12,6 +12,7 @@ public static class AppPaths
     public static string Repos { get; } = EnsureDir(Path.Combine(BaseDir, "repos"));
     public static string Memory { get; } = EnsureDir(Path.Combine(BaseDir, "memory"));
     public static string Tasks { get; } = EnsureDir(Path.Combine(BaseDir, "tasks"));
+    public static string SyncBackups { get; } = EnsureDir(Path.Combine(BaseDir, "sync-backups"));
     public static string Usage { get; } = EnsureDir(BaseDir);
     public static string Settings { get; } = EnsureDir(BaseDir);
     public static string SettingsFile { get; } = Path.Combine(BaseDir, "settings.json");
