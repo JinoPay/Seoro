@@ -93,6 +93,12 @@ public static class ModelDefinitions
         return All.FirstOrDefault(m => m.Id == PricingFallbackId)?.Pricing;
     }
 
+    public static bool SupportsMaxEffort(string modelId)
+    {
+        var normalized = NormalizeModelId(modelId);
+        return normalized == "opus";
+    }
+
     private static ModelConfig CreateDefaultConfig() => new()
     {
         DefaultModelId = "opus",
