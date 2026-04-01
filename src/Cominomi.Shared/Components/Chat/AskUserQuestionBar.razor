@@ -33,14 +33,14 @@
 
             @{
                 var customActive = !string.IsNullOrWhiteSpace(_customTexts[_currentPage]);
-                var anyOptionSelected = selectedForThis != null;
+                var anyOptionSelected = selectedForThis.Count > 0;
             }
 
             <div class="askbar-options">
                 @foreach (var opt in q.Options)
                 {
-                    var isSelected = selectedForThis == opt.Label;
-                    var isOther = (anyOptionSelected && !isSelected) || customActive;
+                    var isSelected = selectedForThis.Contains(opt.Label);
+                    var isOther = !q.MultiSelect && (anyOptionSelected && !isSelected) || customActive;
 
                     <button class="askbar-option @(isSelected ? "selected" : "") @(isOther ? "dimmed" : "")"
                             @onclick="@(() => SelectOption(_currentPage, opt.Label))"
@@ -48,8 +48,15 @@
                         <span class="askbar-option-label">
                             @if (isSelected)
                             {
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                <MudIcon Icon="@(q.MultiSelect ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckCircle)"
+                                         Size="Size.Small"
                                          Style="width: 14px; height: 14px; color: var(--accent);" />
+                            }
+                            else if (q.MultiSelect)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckBoxOutlineBlank"
+                                         Size="Size.Small"
+                                         Style="width: 14px; height: 14px; opacity: 0.4;" />
                             }
                             @opt.Label
                         </span>
@@ -116,17 +123,17 @@
     [Parameter] public EventCallback<string> OnResponse { get; set; }
 
     private record AskOption(string Label, string? Description);
-    private record AskQuestion(string? Header, string Question, List<AskOption> Options);
+    private record AskQuestion(string? Header, string Question, List<AskOption> Options, bool MultiSelect);
 
     private List<AskQuestion> _questions = [];
-    private string?[] _selections = [];
+    private HashSet<string>[] _selections = [];
     private string[] _customTexts = [];
     private bool _submitted;
     private string? _lastInput;
     private int _currentPage;
 
     private bool IsQuestionAnswered(int i) =>
-        _selections[i] != null || !string.IsNullOrWhiteSpace(_customTexts[i]);
+        _selections[i].Count > 0 || !string.IsNullOrWhiteSpace(_customTexts[i]);
     private bool AllAnswered => _selections.Length > 0 && Enumerable.Range(0, _selections.Length).All(IsQuestionAnswered);
     private bool CurrentAnswered => _selections.Length > 0 && IsQuestionAnswered(_currentPage);
     private bool CanSubmit => AllAnswered;
@@ -140,7 +147,9 @@
 
         _lastInput = QuestionInput;
         _questions = ParseQuestions(QuestionInput);
-        _selections = new string?[_questions.Count];
+        _selections = new HashSet<string>[_questions.Count];
+        for (int i = 0; i < _questions.Count; i++)
+            _selections[i] = new HashSet<string>();
         _customTexts = new string[_questions.Count];
         Array.Fill(_customTexts, "");
         _submitted = false;
@@ -163,11 +172,26 @@
     {
         if (_submitted) return;
 
-        // Toggle: clicking the same option deselects it
-        _selections[questionIndex] = _selections[questionIndex] == label ? null : label;
+        var set = _selections[questionIndex];
+        var isMulti = _questions[questionIndex].MultiSelect;
 
-        // Mutual exclusion: clear custom text for THIS question only
-        if (_selections[questionIndex] != null)
+        if (isMulti)
+        {
+            if (!set.Remove(label))
+                set.Add(label);
+        }
+        else
+        {
+            if (set.Contains(label))
+                set.Clear();
+            else
+            {
+                set.Clear();
+                set.Add(label);
+            }
+        }
+
+        if (set.Count > 0)
             _customTexts[questionIndex] = "";
     }
 
@@ -179,7 +203,9 @@
         if (OnResponse.HasDelegate)
         {
             string GetAnswer(int i) =>
-                !string.IsNullOrWhiteSpace(_customTexts[i]) ? _customTexts[i].Trim() : _selections[i]!;
+                !string.IsNullOrWhiteSpace(_customTexts[i])
+                    ? _customTexts[i].Trim()
+                    : string.Join(", ", _selections[i]);
 
             var response = _questions.Count == 1
                 ? GetAnswer(0)
@@ -196,7 +222,7 @@
 
         // Mutual exclusion: clear selection for THIS question only
         if (!string.IsNullOrWhiteSpace(value))
-            _selections[questionIndex] = null;
+            _selections[questionIndex].Clear();
     }
 
     private async Task HandleInputKeyDown(KeyboardEventArgs e)
@@ -228,6 +254,8 @@
             {
                 var question = q.TryGetProperty("question", out var qProp) ? qProp.GetString() ?? "" : "";
                 var header = q.TryGetProperty("header", out var hProp) ? hProp.GetString() : null;
+                var multiSelect = q.TryGetProperty("multiSelect", out var msProp)
+                    && msProp.ValueKind == JsonValueKind.True;
 
                 var options = new List<AskOption>();
                 if (q.TryGetProperty("options", out var optsArr) && optsArr.ValueKind == JsonValueKind.Array)
@@ -242,7 +270,7 @@
                 }
 
                 if (!string.IsNullOrEmpty(question) || options.Count > 0)
-                    result.Add(new AskQuestion(header, question, options));
+                    result.Add(new AskQuestion(header, question, options, multiSelect));
             }
 
             return result;
