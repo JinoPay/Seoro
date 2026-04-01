@@ -447,6 +447,14 @@ public class GitService : IGitService
 
     public async Task<DiffSummary> GetDiffSummaryAsync(string workingDir, string baseBranch, CancellationToken ct = default)
     {
+        // If baseBranch (e.g. "HEAD") is not a valid ref (no commits yet), fall back to empty tree
+        var verifyResult = await RunGitAsync(workingDir, ct, "rev-parse", "--verify", "--quiet", baseBranch);
+        if (!verifyResult.Success)
+        {
+            // 4b825dc... is git's well-known empty tree hash
+            baseBranch = "4b825dc642cb6eb9a060e54bf899d69f82e20891";
+        }
+
         // Fetch name-status, untracked files, and stream diff in parallel
         var nameStatusTask = GetNameStatusAsync(workingDir, baseBranch, ct);
         var untrackedTask = GetUntrackedFilesAsync(workingDir, ct);
