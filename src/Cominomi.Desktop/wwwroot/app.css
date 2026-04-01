@@ -663,7 +663,7 @@ html *::after {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 240px;
+    max-width: 300px;
 }
 
 .toolbar-branch-badge {
@@ -678,48 +678,23 @@ html *::after {
     opacity: 0.6;
 }
 
-.toolbar-mode-badge {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    padding: 2px var(--space-2);
+.toolbar-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
     border-radius: var(--radius-full);
+    opacity: 0.7;
+    cursor: default;
 }
 
-.toolbar-mode-badge.plan {
+.toolbar-indicator.plan {
     background: var(--color-info-bg);
     color: var(--color-info);
 }
 
-.toolbar-mode-badge.full-access {
-    background: var(--color-success-bg);
-    color: var(--color-success);
-}
-
-.toolbar-effort-badge {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    padding: 2px var(--space-2);
-    border-radius: var(--radius-full);
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-}
-
-.toolbar-effort-badge.low {
-    background: var(--color-info-bg);
-    color: var(--color-info);
-}
-
-.toolbar-effort-badge.medium {
-    background: var(--bg-surface);
-    color: var(--text-secondary);
-}
-
-.toolbar-effort-badge.high {
-    background: var(--color-warning-bg);
-    color: var(--color-warning);
-}
-
-.toolbar-effort-badge.max {
+.toolbar-indicator.effort {
     background: var(--color-error-bg);
     color: var(--color-error);
 }
@@ -736,6 +711,22 @@ html *::after {
     opacity: 0.9 !important;
     background: var(--bg-surface);
     border-radius: var(--radius-md);
+}
+
+.sync-active {
+    position: relative;
+}
+
+.sync-active::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-success);
+    box-shadow: 0 0 0 1.5px var(--bg-base);
 }
 
 .main-content {

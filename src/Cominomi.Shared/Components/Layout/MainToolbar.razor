@@ -21,21 +21,24 @@
             </span>
         }
 
-        @if (IsSynced)
-        {
-            <span class="toolbar-sync-badge">동기화</span>
-        }
-
         @if (ChatState.CurrentSession.PermissionMode == "plan")
         {
-            <span class="toolbar-mode-badge plan">플랜</span>
+            <MudTooltip Text="플랜 모드" Placement="Placement.Bottom">
+                <span class="toolbar-indicator plan">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"
+                             Style="width: 14px; height: 14px;" />
+                </span>
+            </MudTooltip>
         }
 
         @if (ChatState.CurrentSession.EffortLevel is not (null or "" or "auto"))
         {
-            <span class="toolbar-effort-badge @ChatState.CurrentSession.EffortLevel">
-                @ChatState.CurrentSession.EffortLevel
-            </span>
+            <MudTooltip Text="@($"Effort: {ChatState.CurrentSession.EffortLevel}")" Placement="Placement.Bottom">
+                <span class="toolbar-indicator effort">
+                    <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
+                             Style="width: 14px; height: 14px;" />
+                </span>
+            </MudTooltip>
         }
     }
     else
@@ -56,6 +59,7 @@
                                    Size="Size.Small"
                                    OnClick="ToggleSync"
                                    Disabled="_syncBusy || IsSyncBlockedByOther"
+                                   Class="@(IsSynced ? "sync-active" : "")"
                                    Style="width: 28px; height: 28px;" />
                 </MudTooltip>
             }
@@ -93,7 +97,6 @@
         </div>
     }
 
-    <StatusBar />
 </div>
 
 @code {
@@ -211,14 +214,3 @@
     }
 }
 
-<style>
-    .toolbar-sync-badge {
-        font-size: 0.65rem;
-        font-weight: 600;
-        padding: 1px 6px;
-        border-radius: 4px;
-        background: var(--color-success);
-        color: white;
-        line-height: 1.4;
-    }
-</style>
