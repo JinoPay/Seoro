@@ -15,61 +15,64 @@
 
     @if (IsSynced)
     {
-        <span class="status-badge synced">동기화</span>
+        <span class="status-badge synced" title="동기화">동기화</span>
     }
 
     @if (IsCompleted)
     {
-        <span class="status-badge completed">완료</span>
+        <span class="status-badge completed" title="완료">완료</span>
     }
     else if (Session.Status == SessionStatus.Error)
     {
-        <span class="status-badge error">@GetStatusLabel(Session.Status)</span>
+        <span class="status-badge error" title="오류">@GetStatusLabel(Session.Status)</span>
     }
     else if (Session.Status == SessionStatus.Archived)
     {
-        <span class="status-badge archived">@GetStatusLabel(Session.Status)</span>
+        <span class="status-badge archived" title="보관">@GetStatusLabel(Session.Status)</span>
     }
 
     <div class="tree-session-info">
         <span class="tree-session-title">@Session.Title</span>
-        <div class="tree-session-meta">
-            @if (Session.Git.IsLocalDir)
-            {
-                @if (!string.IsNullOrEmpty(Session.Git.BranchName))
-                {
-                    <span class="tree-session-branch">
-                        <span style="opacity: 0.5;">로컬</span> @Session.Git.BranchName
-                    </span>
-                }
-                else
-                {
-                    <span class="tree-session-branch" style="opacity: 0.5;">로컬</span>
-                }
-            }
-            else if (!string.IsNullOrEmpty(Session.Git.BranchName))
-            {
-                <span class="tree-session-branch">@Session.Git.BranchName</span>
-            }
-
-            @if (DiffAdditions > 0 || DiffDeletions > 0)
-            {
-                <span class="tree-session-diff-stats">
-                    @if (DiffAdditions > 0)
-                    {
-                        <span class="diff-add">+@DiffAdditions</span>
-                    }
-                    @if (DiffDeletions > 0)
-                    {
-                        <span class="diff-del">-@DiffDeletions</span>
-                    }
-                </span>
-            }
-        </div>
 
         @if (IsStreaming)
         {
             <span class="tree-session-status">@StreamingStatusText</span>
+        }
+        else
+        {
+            <div class="tree-session-meta">
+                @if (Session.Git.IsLocalDir)
+                {
+                    @if (!string.IsNullOrEmpty(Session.Git.BranchName))
+                    {
+                        <span class="tree-session-branch">
+                            <span style="opacity: 0.5;">로컬</span> @Session.Git.BranchName
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="tree-session-branch" style="opacity: 0.5;">로컬</span>
+                    }
+                }
+                else if (!string.IsNullOrEmpty(Session.Git.BranchName))
+                {
+                    <span class="tree-session-branch">@Session.Git.BranchName</span>
+                }
+
+                @if (DiffAdditions > 0 || DiffDeletions > 0)
+                {
+                    <span class="tree-session-diff-stats">
+                        @if (DiffAdditions > 0)
+                        {
+                            <span class="diff-add">+@DiffAdditions</span>
+                        }
+                        @if (DiffDeletions > 0)
+                        {
+                            <span class="diff-del">-@DiffDeletions</span>
+                        }
+                    </span>
+                }
+            </div>
         }
     </div>
 
