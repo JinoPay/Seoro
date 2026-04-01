@@ -1,4 +1,7 @@
 @using Cominomi.Shared.Models
+@using Cominomi.Shared.Services
+@inject IChatState ChatState
+@implements IDisposable
 
 <MudTooltip Text="@GetTooltip()">
     <button class="model-selector-pill" type="button"
@@ -56,35 +59,63 @@
     private bool _modelMenuOpen;
     private bool _customModelInput;
     private string _customModelId = "";
-    // Local display state — synced from parent parameter AND updated optimistically on user selection.
-    // This avoids the Blazor anti-pattern of setting [Parameter] properties directly.
-    private string _effectiveModel = string.Empty;
+    // Optimistic model — set only during user selection, before parent confirms.
+    // Cleared as soon as parent delivers the matching Model parameter.
+    private string? _pendingModel;
 
-    private bool _isCustomModel => !string.IsNullOrEmpty(_effectiveModel)
-        && !ModelDefinitions.All.Any(m => m.Id == _effectiveModel)
-        && ModelDefinitions.NormalizeModelId(_effectiveModel) == _effectiveModel; // truly custom: normalization couldn't resolve it
+    private string EffectiveModel => _pendingModel ?? ChatState.CurrentSession?.Model ?? Model;
+
+    private bool _isCustomModel => !string.IsNullOrEmpty(EffectiveModel)
+        && !ModelDefinitions.All.Any(m => m.Id == EffectiveModel)
+        && ModelDefinitions.NormalizeModelId(EffectiveModel) == EffectiveModel;
+
+    protected override void OnInitialized()
+    {
+        ChatState.OnChange += SyncFromState;
+    }
 
     protected override void OnParametersSet()
     {
-        _effectiveModel = Model;
+        // Parent confirmed the pending selection (or sent a new model via session switch)
+        _pendingModel = null;
+    }
+
+    private void SyncFromState()
+    {
+        InvokeAsync(() =>
+        {
+            var sessionModel = ChatState.CurrentSession?.Model ?? string.Empty;
+            if (EffectiveModel != sessionModel)
+            {
+                // Parameter chain hasn't delivered the new model yet — force re-render.
+                // EffectiveModel will resolve via Model parameter or next OnParametersSet.
+                _pendingModel = null;
+                StateHasChanged();
+            }
+        });
+    }
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= SyncFromState;
     }
 
     private string GetModelDisplayName()
     {
-        if (string.IsNullOrEmpty(_effectiveModel))
+        if (string.IsNullOrEmpty(EffectiveModel))
             return ModelDefinitions.Default.DisplayName;
 
-        var model = ModelDefinitions.All.FirstOrDefault(m => m.Id == _effectiveModel);
+        var model = ModelDefinitions.All.FirstOrDefault(m => m.Id == EffectiveModel);
         if (model != null) return model.DisplayName;
 
         // Try keyword normalization for non-standard IDs (e.g. "claude-opus-4-6-...")
-        var normalized = ModelDefinitions.NormalizeModelId(_effectiveModel);
+        var normalized = ModelDefinitions.NormalizeModelId(EffectiveModel);
         var normalizedModel = ModelDefinitions.All.FirstOrDefault(m => m.Id == normalized);
         if (normalizedModel != null) return normalizedModel.DisplayName;
 
         // Custom model IDs that look like API model IDs (e.g. "claude-...") — show as-is
-        if (_effectiveModel.StartsWith("claude-", StringComparison.OrdinalIgnoreCase))
-            return _effectiveModel;
+        if (EffectiveModel.StartsWith("claude-", StringComparison.OrdinalIgnoreCase))
+            return EffectiveModel;
 
         // Unknown short strings (e.g. "Model") — fall back to default display name
         return ModelDefinitions.Default.DisplayName;
@@ -93,16 +124,16 @@
     private string GetTooltip()
     {
         var displayName = GetModelDisplayName();
-        if (!string.IsNullOrEmpty(ResolvedModel) && ResolvedModel != _effectiveModel)
+        if (!string.IsNullOrEmpty(ResolvedModel) && ResolvedModel != EffectiveModel)
             return $"{displayName} ({ResolvedModel})";
         return displayName;
     }
 
     private bool IsModelActive(string modelId)
     {
-        if (_effectiveModel == modelId) return true;
+        if (EffectiveModel == modelId) return true;
         // Handle non-standard IDs — normalize and compare
-        if (!string.IsNullOrEmpty(_effectiveModel) && ModelDefinitions.NormalizeModelId(_effectiveModel) == modelId)
+        if (!string.IsNullOrEmpty(EffectiveModel) && ModelDefinitions.NormalizeModelId(EffectiveModel) == modelId)
             return true;
         return false;
     }
@@ -136,7 +167,7 @@
     private async Task SelectModel(string modelId)
     {
         _modelMenuOpen = false;
-        _effectiveModel = modelId;
+        _pendingModel = modelId;
         await OnModelChanged.InvokeAsync(modelId);
         await OnMenuClosed.InvokeAsync();
     }

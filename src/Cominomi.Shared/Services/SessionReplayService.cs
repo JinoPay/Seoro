@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
-public class SessionReplayService : ISessionReplayService
+public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessionReplayService
 {
     private static readonly string ClaudeProjectsDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "projects");
@@ -25,14 +25,8 @@ public class SessionReplayService : ISessionReplayService
         WriteIndented = false
     };
 
-    private readonly ILogger<SessionReplayService> _logger;
     private volatile SessionIndex? _index;
     private readonly SemaphoreSlim _indexLock = new(1, 1);
-
-    public SessionReplayService(ILogger<SessionReplayService> logger)
-    {
-        _logger = logger;
-    }
 
     // ===== Session Index Management =====
 
@@ -197,7 +191,7 @@ public class SessionReplayService : ISessionReplayService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error loading session events: {Path}", filePath);
+                logger.LogWarning(ex, "Error loading session events: {Path}", filePath);
             }
 
             return new SessionLoadResult
@@ -436,7 +430,7 @@ public class SessionReplayService : ISessionReplayService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error exporting session: {Path}", filePath);
+                logger.LogWarning(ex, "Error exporting session: {Path}", filePath);
             }
 
             md += $"\n---\n*{userCount} messages, {toolCount} tool calls*\n";
