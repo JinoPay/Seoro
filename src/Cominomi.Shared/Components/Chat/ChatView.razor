@@ -112,6 +112,7 @@
     private string? _lastPlanContent;
     private bool _shouldAutoScroll;
     private bool _isAtBottom = true;
+    private string? _lastRenderedSessionId;
     private DotNetObjectReference<ChatView>? _selfRef;
     private bool _isLoadingBranches;
     private string? _branchesForSessionId;
@@ -229,6 +230,14 @@
                             _lastPlanContent = null;
                         }
                     }
+                }
+
+                var newSessionId = ChatState.CurrentSession?.Id;
+                if (newSessionId != _lastRenderedSessionId)
+                {
+                    _lastRenderedSessionId = newSessionId;
+                    _shouldAutoScroll = true;
+                    _isAtBottom = true;
                 }
 
                 if (ChatState.IsStreaming)
