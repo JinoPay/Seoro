@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.5.11",
+    "date": "2026-04-01",
+    "changes": [
+      { "type": "feat", "description": "주기적 업데이트 체크 및 네이티브 알림 기능 추가" },
+      { "type": "fix", "description": "cmd.exe에서 괄호 포함 인자 파싱 오류 수정" },
+      { "type": "fix", "description": "초기 커밋 없는 저장소에서 git diff HEAD 실패 수정" }
+    ]
+  },
+  {
     "version": "1.5.10",
     "date": "2026-04-01",
     "changes": [
