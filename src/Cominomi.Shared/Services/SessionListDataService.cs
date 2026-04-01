@@ -26,6 +26,8 @@ public class SessionListDataService : IDisposable
         _gitService = gitService;
         _workspaceService = workspaceService;
         _logger = logger;
+
+        _workspaceService.OnWorkspaceSaved += HandleWorkspaceSaved;
     }
 
     public async Task LoadWorkspacesAsync()
@@ -208,8 +210,20 @@ public class SessionListDataService : IDisposable
             || s.CityName.Contains(filter, StringComparison.OrdinalIgnoreCase));
     }
 
+    private void HandleWorkspaceSaved(Workspace updated)
+    {
+        var index = Workspaces.FindIndex(w => w.Id == updated.Id);
+        if (index >= 0)
+        {
+            Workspaces[index] = updated;
+            RebuildOrderedSessions();
+            OnDataChanged?.Invoke();
+        }
+    }
+
     public void Dispose()
     {
+        _workspaceService.OnWorkspaceSaved -= HandleWorkspaceSaved;
         OnDataChanged = null;
     }
 }
