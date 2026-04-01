@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.5.10",
+    "date": "2026-04-01",
+    "changes": [
+      { "type": "feat", "description": "AskUserQuestion에 multiSelect 지원 추가" },
+      { "type": "fix", "description": "Windows에서 npm 설치된 Claude CLI 실행 실패 수정" },
+      { "type": "fix", "description": "Sonnet/Haiku 모델에서 Max Thinking 버튼 비활성화" },
+      { "type": "fix", "description": "모델 설정이 새 세션 생성 시 반영되지 않는 버그 수정" }
+    ]
+  },
+  {
     "version": "1.5.9",
     "date": "2026-03-31",
     "changes": [
