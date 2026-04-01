@@ -112,6 +112,12 @@
 
             _inputText = newSessionId != null ? ChatState.GetInputDraft(newSessionId) : string.Empty;
             _trackedSessionId = newSessionId;
+
+            // 세션 변경 시 로컬 복사본을 부모 파라미터에서 무조건 동기화 (stale optimistic state 방지)
+            _currentPermissionMode = PermissionMode;
+            _currentModel = Model;
+            _currentEffortLevel = EffortLevel;
+
             _forceRender = true;
         }
 
