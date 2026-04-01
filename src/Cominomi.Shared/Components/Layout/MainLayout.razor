@@ -12,6 +12,8 @@
 @inject ILogger<MainLayout> Logger
 @inject IChatEventBus EventBus
 @inject IReleaseNotesService ReleaseNotesService
+@inject INotificationService NotificationService
+@inject INotificationHistoryService NotificationHistory
 @implements IAsyncDisposable
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="ThemeService.Theme" />
@@ -129,6 +131,7 @@
     private int _sidebarWidth = 260;
     private int _rightPanelWidth = 400;
     private DotNetObjectReference<MainLayout>? _panelShortcutRef;
+    private CancellationTokenSource? _updateTimerCts;
 
     protected override async Task OnInitializedAsync()
     {
@@ -307,6 +310,62 @@
         }
     }
 
+    private void StartPeriodicUpdateCheck(int intervalMinutes)
+    {
+        _updateTimerCts?.Cancel();
+        if (intervalMinutes <= 0) return;
+
+        _updateTimerCts = new CancellationTokenSource();
+        var ct = _updateTimerCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(intervalMinutes));
+            while (await timer.WaitForNextTickAsync(ct))
+            {
+                try
+                {
+                    var update = await UpdateService.CheckForUpdateAsync();
+                    if (update == null) continue;
+
+                    NotificationHistory.Record(
+                        "업데이트 사용 가능",
+                        $"새 버전 {update.TargetVersion}이(가) 있습니다.",
+                        NotificationType.Info);
+
+                    await NotificationService.SendAsync(
+                        "Cominomi 업데이트",
+                        $"새 버전 {update.TargetVersion}이(가) 사용 가능합니다.");
+
+                    await InvokeAsync(() =>
+                    {
+                        Snackbar.AppUpdateAvailable(update.TargetVersion, async () =>
+                        {
+                            try
+                            {
+                                await UpdateService.DownloadUpdateAsync();
+                                await InvokeAsync(() =>
+                                {
+                                    Snackbar.AppUpdateReady(() => UpdateService.ApplyUpdateAndRestart());
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogError(ex, "Update download failed");
+                            }
+                        });
+                    });
+
+                    break; // 업데이트를 찾았으면 주기적 체크 중단
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogDebug(ex, "Periodic update check failed");
+                }
+            }
+        }, ct);
+    }
+
     private void HandleStateChanged()
     {
         _ = InvokeAsync(async () =>
@@ -341,6 +400,7 @@
         if (settings.AutoUpdateEnabled)
         {
             _ = CheckAppUpdateAsync();
+            StartPeriodicUpdateCheck(settings.UpdateCheckIntervalMinutes);
         }
 
         if (!settings.OnboardingCompleted)
@@ -468,6 +528,8 @@
 
     public async ValueTask DisposeAsync()
     {
+        _updateTimerCts?.Cancel();
+        _updateTimerCts?.Dispose();
         ChatState.OnChange -= HandleStateChanged;
         ThemeService.OnThemeChanged -= HandleThemeChanged;
         SettingsService.OnSettingsChanged -= HandleUiScaleChanged;
