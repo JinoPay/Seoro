@@ -60,7 +60,9 @@
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">기본 모델</label>
                             <MudSelect T="string" @bind-Value="_editModel"
-                                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                                       HelperText="비워두면 앱 기본값을 따릅니다.">
+                                <MudSelectItem T="string" Value="@("")">앱 기본값 사용</MudSelectItem>
                                 @foreach (var model in ModelDefinitions.All)
                                 {
                                     <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
@@ -100,7 +102,9 @@
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">기본 모델</label>
                             <MudSelect T="string" @bind-Value="_editModel"
-                                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                                       HelperText="비워두면 앱 기본값을 따릅니다.">
+                                <MudSelectItem T="string" Value="@("")">앱 기본값 사용</MudSelectItem>
                                 @foreach (var model in ModelDefinitions.All)
                                 {
                                     <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
@@ -149,7 +153,7 @@
     private int _activeTab;
     private bool _isCreating;
     private string _editName = "";
-    private string _editModel = ModelDefinitions.Default.Id;
+    private string _editModel = "";
     private string _repoUrl = "";
     private string _localPath = "";
     private string _progressMessage = "";
@@ -183,7 +187,7 @@
     {
         _activeTab = 0;
         _editName = "";
-        _editModel = ModelDefinitions.Default.Id;
+        _editModel = "";
         _repoUrl = "";
         _localPath = "";
         _errorMessage = null;

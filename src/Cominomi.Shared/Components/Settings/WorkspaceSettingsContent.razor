@@ -188,6 +188,10 @@
         if (_workspace == null) return;
         _workspace.UpdatedAt = DateTime.UtcNow;
         await WorkspaceService.SaveWorkspaceAsync(_workspace);
+
+        if (ChatState.CurrentWorkspace?.Id == _workspace.Id)
+            ChatState.SetWorkspace(_workspace);
+
         Snackbar.SettingsSaved();
     }
 
