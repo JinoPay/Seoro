@@ -9,6 +9,8 @@ namespace Cominomi.Shared.Services;
 
 public partial class WorkspaceService : IWorkspaceService
 {
+    public event Action<Workspace>? OnWorkspaceSaved;
+
     private readonly IGitService _gitService;
     private readonly IOptionsMonitor<AppSettings> _appSettings;
     private readonly ILogger<WorkspaceService> _logger;
@@ -97,6 +99,7 @@ public partial class WorkspaceService : IWorkspaceService
         var path = Path.Combine(_workspacesDir, $"{workspace.Id}.json");
         var json = MigratingJsonWriter.Write(workspace, JsonDefaults.Options);
         await AtomicFileWriter.WriteAsync(path, json);
+        OnWorkspaceSaved?.Invoke(workspace);
     }
 
     public async Task DeleteWorkspaceAsync(string workspaceId)

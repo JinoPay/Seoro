@@ -4,6 +4,8 @@ namespace Cominomi.Shared.Services;
 
 public interface IWorkspaceService
 {
+    event Action<Workspace>? OnWorkspaceSaved;
+
     Task<List<Workspace>> GetWorkspacesAsync();
     Task<Workspace?> LoadWorkspaceAsync(string workspaceId);
     Task SaveWorkspaceAsync(Workspace workspace);
