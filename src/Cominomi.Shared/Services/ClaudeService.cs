@@ -160,6 +160,15 @@ public class ClaudeService : IClaudeService, IDisposable
 
     private static Process StartProcess(string fileName, string arguments, string workingDir, Dictionary<string, string>? envVars = null, string? loginShellPath = null)
     {
+        // cmd.exe /c strips the first and last quote characters from the argument string,
+        // which leaves special characters like parentheses (e.g. in "Bash(git branch*)")
+        // unprotected. Wrapping in an extra pair of outer quotes ensures inner quotes survive.
+        if (fileName.Equals("cmd.exe", StringComparison.OrdinalIgnoreCase)
+            && arguments.StartsWith("/c ", StringComparison.OrdinalIgnoreCase))
+        {
+            arguments = $"/c \"{arguments[3..].TrimEnd()}\"";
+        }
+
         var psi = new ProcessStartInfo
         {
             FileName = fileName,
@@ -338,10 +347,17 @@ public class ClaudeService : IClaudeService, IDisposable
             sb.Append("--dangerously-skip-permissions ");
             sb.Append("--append-system-prompt \"You are a commit message generator. Given a unified diff, write a single concise commit message in the imperative mood. Use the same language as code comments or strings if present, otherwise use English. Output ONLY the commit message, nothing else. No prefix like feat: or fix:.\"");
 
+            var finalArgs = sb.ToString();
+            if (fileName.Equals("cmd.exe", StringComparison.OrdinalIgnoreCase)
+                && finalArgs.StartsWith("/c ", StringComparison.OrdinalIgnoreCase))
+            {
+                finalArgs = $"/c \"{finalArgs[3..].TrimEnd()}\"";
+            }
+
             var psi = new ProcessStartInfo
             {
                 FileName = fileName,
-                Arguments = sb.ToString(),
+                Arguments = finalArgs,
                 WorkingDirectory = workingDir,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -358,7 +374,7 @@ public class ClaudeService : IClaudeService, IDisposable
 
             var process = new Process { StartInfo = psi };
 
-            _logger.LogDebug("GenerateCommitMessage: {FileName} {Arguments}", fileName, sb.ToString());
+            _logger.LogDebug("GenerateCommitMessage: {FileName} {Arguments}", fileName, finalArgs);
             process.Start();
 
             const int maxDiffLength = 8000;
