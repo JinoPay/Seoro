@@ -1,11 +1,12 @@
 using Cominomi.Shared.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cominomi.Shared.Tests;
 
 public class ContextServiceGitignoreTests : IDisposable
 {
     private readonly string _tempDir;
-    private readonly ContextService _sut = new();
+    private readonly ContextService _sut = new(NullLogger<ContextService>.Instance);
 
     public ContextServiceGitignoreTests()
     {

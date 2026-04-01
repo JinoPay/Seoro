@@ -1,6 +1,7 @@
 using System.Text;
 using Cominomi.Shared;
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
@@ -15,6 +16,12 @@ public interface IAttachmentService
 public class AttachmentService : IAttachmentService
 {
     private const string AttachmentsDir = ".cominomi-attachments";
+    private readonly ILogger<AttachmentService> _logger;
+
+    public AttachmentService(ILogger<AttachmentService> logger)
+    {
+        _logger = logger;
+    }
 
     public async Task<FileAttachment> CopyFileToWorktreeAsync(string sourceFilePath, string worktreePath)
     {
@@ -27,11 +34,20 @@ public class AttachmentService : IAttachmentService
         var storedName = $"{Guid.NewGuid():N}{ext}";
         var destPath = Path.Combine(dir, storedName);
 
-        await using var source = File.OpenRead(sourceFilePath);
-        await using var dest = File.Create(destPath);
-        await source.CopyToAsync(dest);
+        try
+        {
+            await using var source = File.OpenRead(sourceFilePath);
+            await using var dest = File.Create(destPath);
+            await source.CopyToAsync(dest);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to copy attachment: {SourcePath}", sourceFilePath);
+            throw;
+        }
 
         var fileInfo = new FileInfo(destPath);
+        _logger.LogDebug("Attachment copied: {OriginalName} -> {StoredName} ({SizeBytes} bytes)", originalName, storedName, fileInfo.Length);
         return new FileAttachment
         {
             OriginalFileName = originalName,
@@ -68,8 +84,17 @@ public class AttachmentService : IAttachmentService
         var storedName = $"{Guid.NewGuid():N}{ext}";
         var destPath = Path.Combine(dir, storedName);
 
-        await File.WriteAllBytesAsync(destPath, data);
+        try
+        {
+            await File.WriteAllBytesAsync(destPath, data);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save attachment bytes: {FileName}", fileName);
+            throw;
+        }
 
+        _logger.LogDebug("Attachment saved: {FileName} ({Size} bytes)", fileName, data.Length);
         return new FileAttachment
         {
             OriginalFileName = fileName,

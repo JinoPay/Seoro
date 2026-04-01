@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services.Migration;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
@@ -10,11 +11,13 @@ public class SettingsService : ISettingsService
 
     private readonly string _settingsPath = AppPaths.SettingsFile;
     private readonly AppSettingsChangeNotifier _changeNotifier;
+    private readonly ILogger<SettingsService> _logger;
     private AppSettings? _cached;
 
-    public SettingsService(AppSettingsChangeNotifier changeNotifier)
+    public SettingsService(AppSettingsChangeNotifier changeNotifier, ILogger<SettingsService> logger)
     {
         _changeNotifier = changeNotifier;
+        _logger = logger;
     }
 
     public async Task<AppSettings> LoadAsync()
@@ -24,6 +27,7 @@ public class SettingsService : ISettingsService
 
         if (!File.Exists(_settingsPath))
         {
+            _logger.LogDebug("Settings file not found, using defaults");
             _cached = new AppSettings();
             return _cached;
         }
@@ -34,7 +38,11 @@ public class SettingsService : ISettingsService
         _cached.DefaultModel = ModelDefinitions.NormalizeModelId(_cached.DefaultModel);
         SettingsValidator.Sanitize(_cached);
         if (migrated && migratedJson != null)
+        {
             await AtomicFileWriter.WriteAsync(_settingsPath, migratedJson);
+            _logger.LogInformation("Settings migrated from disk");
+        }
+        _logger.LogDebug("Settings loaded from {Path}", _settingsPath);
         return _cached;
     }
 
@@ -46,5 +54,6 @@ public class SettingsService : ISettingsService
         await AtomicFileWriter.WriteAsync(_settingsPath, json);
         OnSettingsChanged?.Invoke(settings);
         _changeNotifier.NotifyChanged();
+        _logger.LogDebug("Settings saved to {Path}", _settingsPath);
     }
 }

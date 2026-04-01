@@ -148,12 +148,22 @@ public class GitService : IGitService
             Directory.CreateDirectory(parentDir);
 
         // Check if branch already exists
+        GitResult result;
         if (await BranchExistsAsync(repoDir, branchName))
         {
-            return await RunGitAsync(repoDir, ct, "worktree", "add", worktreePath, branchName);
+            result = await RunGitAsync(repoDir, ct, "worktree", "add", worktreePath, branchName);
+        }
+        else
+        {
+            result = await RunGitAsync(repoDir, ct, "worktree", "add", "-b", branchName, worktreePath, baseBranch);
         }
 
-        return await RunGitAsync(repoDir, ct, "worktree", "add", "-b", branchName, worktreePath, baseBranch);
+        if (result.Success)
+            _logger.LogInformation("Worktree added at {WorktreePath} on branch {BranchName}", worktreePath, branchName);
+        else
+            _logger.LogWarning("Failed to add worktree at {WorktreePath}: {Error}", worktreePath, result.Error);
+
+        return result;
     }
 
     public async Task<GitResult> RemoveWorktreeAsync(string repoDir, string worktreePath, CancellationToken ct = default)
@@ -169,6 +179,9 @@ public class GitService : IGitService
 
         // Prune stale worktree entries
         await RunGitAsync(repoDir, ct, "worktree", "prune");
+
+        if (result.Success)
+            _logger.LogInformation("Worktree removed: {WorktreePath}", worktreePath);
 
         return result;
     }
@@ -210,6 +223,7 @@ public class GitService : IGitService
         // Last resort: get current branch
         var current = await GetCurrentBranchAsync(repoDir);
         _defaultBranchCache[key] = (current, DateTime.UtcNow);
+        _logger.LogDebug("Default branch for {RepoDir}: {Branch}", repoDir, current);
         return current;
     }
 
@@ -297,25 +311,43 @@ public class GitService : IGitService
 
     public async Task<GitResult> RenameBranchAsync(string workingDir, string oldName, string newName, CancellationToken ct = default)
     {
-        return await RunGitAsync(workingDir, ct, "branch", "-m", oldName, newName);
+        var result = await RunGitAsync(workingDir, ct, "branch", "-m", oldName, newName);
+        if (result.Success)
+            _logger.LogInformation("Branch renamed: {OldName} -> {NewName}", oldName, newName);
+        else
+            _logger.LogWarning("Branch rename failed: {OldName} -> {NewName}: {Error}", oldName, newName, result.Error);
+        return result;
     }
 
     public async Task<GitResult> DeleteBranchAsync(string repoDir, string branchName, CancellationToken ct = default)
     {
-        return await RunGitAsync(repoDir, ct, "branch", "-D", branchName);
+        var result = await RunGitAsync(repoDir, ct, "branch", "-D", branchName);
+        if (result.Success)
+            _logger.LogInformation("Branch deleted: {BranchName}", branchName);
+        else
+            _logger.LogWarning("Branch delete failed: {BranchName}: {Error}", branchName, result.Error);
+        return result;
     }
 
     public async Task<GitResult> FetchAsync(string repoDir, CancellationToken ct = default)
     {
         var result = await RunGitAsync(repoDir, ct, "fetch", "origin");
-        if (result.Success) InvalidateBranchCaches(repoDir);
+        if (result.Success)
+        {
+            InvalidateBranchCaches(repoDir);
+            _logger.LogDebug("Fetch completed for {RepoDir}", repoDir);
+        }
         return result;
     }
 
     public async Task<GitResult> FetchAllAsync(string repoDir, CancellationToken ct = default)
     {
         var result = await RunGitAsync(repoDir, ct, "fetch", "--all", "--prune");
-        if (result.Success) InvalidateBranchCaches(repoDir);
+        if (result.Success)
+        {
+            InvalidateBranchCaches(repoDir);
+            _logger.LogDebug("Fetch all completed for {RepoDir}", repoDir);
+        }
         return result;
     }
 
@@ -655,12 +687,18 @@ public class GitService : IGitService
 
     public async Task<GitResult> StageAllAsync(string workingDir, CancellationToken ct = default)
     {
-        return await RunGitAsync(workingDir, ct, "add", "-A");
+        var result = await RunGitAsync(workingDir, ct, "add", "-A");
+        if (result.Success)
+            _logger.LogDebug("Staged all changes in {WorkingDir}", workingDir);
+        return result;
     }
 
     public async Task<GitResult> CommitAsync(string workingDir, string message, CancellationToken ct = default)
     {
-        return await RunGitAsync(workingDir, ct, "commit", "-m", message);
+        var result = await RunGitAsync(workingDir, ct, "commit", "-m", message);
+        if (result.Success)
+            _logger.LogInformation("Committed in {WorkingDir}: {Message}", workingDir, message.Length > 80 ? message[..80] + "..." : message);
+        return result;
     }
 
     public async Task<(int Ahead, int Behind)> GetAheadBehindAsync(string workingDir, CancellationToken ct = default)

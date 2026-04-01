@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
@@ -10,6 +11,13 @@ namespace Cominomi.Shared.Services;
 /// </summary>
 public class StatsCacheService : IStatsCacheService
 {
+    private readonly ILogger<StatsCacheService> _logger;
+
+    public StatsCacheService(ILogger<StatsCacheService> logger)
+    {
+        _logger = logger;
+    }
+
     private static readonly string StatsCachePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".claude", "stats-cache.json");
@@ -37,7 +45,7 @@ public class StatsCacheService : IStatsCacheService
         if (cache == null)
             return new UsageStats();
 
-        return BuildStats(cache, days);
+        return BuildStatsCore(cache, days);
     }
 
     public async Task<bool> RefreshIfStaleAsync()
@@ -189,7 +197,7 @@ public class StatsCacheService : IStatsCacheService
                     catch { /* skip unparseable lines */ }
                 }
             }
-            catch { /* skip inaccessible files */ }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to read stats session file: {File}", file); }
         }
 
         // Safety: don't overwrite existing data with empty results
@@ -212,7 +220,7 @@ public class StatsCacheService : IStatsCacheService
             var json = JsonSerializer.Serialize(updated, WriteOptions);
             await File.WriteAllTextAsync(StatsCachePath, json);
         }
-        catch { /* write failure is non-fatal */ }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to write stats cache to disk"); }
     }
 
     private static readonly string HistoryPath = Path.Combine(
@@ -281,7 +289,7 @@ public class StatsCacheService : IStatsCacheService
                     catch { /* skip unparseable lines */ }
                 }
             }
-            catch { return null; }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to compute live activity stats"); return null; }
 
             // Build daily activity sorted by date
             var dates = messagesByDate.Keys.OrderBy(d => d).ToList();
@@ -315,7 +323,7 @@ public class StatsCacheService : IStatsCacheService
         });
     }
 
-    private static async Task<StatsCache?> ReadStatsCacheAsync()
+    private async Task<StatsCache?> ReadStatsCacheAsync()
     {
         try
         {
@@ -325,13 +333,14 @@ public class StatsCacheService : IStatsCacheService
             var json = await File.ReadAllTextAsync(StatsCachePath);
             return JsonSerializer.Deserialize<StatsCache>(json, JsonOptions);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Failed to read stats cache file");
             return null;
         }
     }
 
-    private static UsageStats BuildStats(StatsCache cache, int? days)
+    private static UsageStats BuildStatsCore(StatsCache cache, int? days)
     {
         var cutoff = days.HasValue
             ? DateTime.UtcNow.Date.AddDays(-(days.Value - 1)).ToString("yyyy-MM-dd")

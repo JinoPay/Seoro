@@ -117,6 +117,7 @@ public partial class SessionService : ISessionService
         }
 
         _cacheInitialized = true;
+        _logger.LogDebug("Session metadata cache initialized: {Count} sessions loaded", _metadataCache.Count);
     }
 
     public async Task<Session> CreateSessionAsync(string model, string workspaceId, string baseBranch)
@@ -333,7 +334,10 @@ public partial class SessionService : ISessionService
 
         var path = Path.Combine(_sessionsDir, $"{sessionId}.json");
         if (!File.Exists(path))
+        {
+            _logger.LogDebug("Session file not found: {SessionId}", sessionId);
             return null;
+        }
 
         var json = await File.ReadAllTextAsync(path);
         var needsMigration = NeedsSchemaUpgrade(json);
@@ -368,6 +372,7 @@ public partial class SessionService : ISessionService
 
         _sessionCache[sessionId] = (session, DateTime.UtcNow);
         EnforceSessionCacheCapacity();
+        _logger.LogDebug("Loaded session {SessionId}: {Title}", sessionId, session.Title);
         return session;
     }
 
@@ -417,6 +422,7 @@ public partial class SessionService : ISessionService
         await semaphore.WaitAsync();
         try
         {
+            _logger.LogDebug("Saving session {SessionId} ({Title})", session.Id, session.Title);
             session.UpdatedAt = DateTime.UtcNow;
 
             // Fallback title: only if title is still the initial city name (Haiku summary not yet applied)
@@ -459,6 +465,13 @@ public partial class SessionService : ISessionService
                 var messagesPath = Path.Combine(_sessionsDir, $"{session.Id}.messages.json");
                 await AtomicFileWriter.WriteAsync(messagesPath, messagesJson);
             }
+
+            _logger.LogDebug("Session {SessionId} saved: {MessageCount} messages", session.Id, messages.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save session {SessionId}", session.Id);
+            throw;
         }
         finally
         {
@@ -523,6 +536,11 @@ public partial class SessionService : ISessionService
         {
             session.Git.BranchName = newBranchName;
             await SaveSessionAsync(session);
+            _logger.LogInformation("Session {SessionId} branch renamed: {OldBranch} -> {NewBranch}", sessionId, oldBranch, newBranchName);
+        }
+        else
+        {
+            _logger.LogWarning("Failed to rename branch for session {SessionId}: {OldBranch} -> {NewBranch}: {Error}", sessionId, oldBranch, newBranchName, result.Error);
         }
     }
 

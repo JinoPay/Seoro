@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services.Migration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Services;
@@ -10,6 +11,13 @@ namespace Cominomi.Shared.Services;
 /// </summary>
 public class AppSettingsFactory : IOptionsFactory<AppSettings>
 {
+    private readonly ILogger<AppSettingsFactory> _logger;
+
+    public AppSettingsFactory(ILogger<AppSettingsFactory> logger)
+    {
+        _logger = logger;
+    }
+
     public AppSettings Create(string name)
     {
         var path = AppPaths.SettingsFile;
@@ -26,8 +34,9 @@ public class AppSettingsFactory : IOptionsFactory<AppSettings>
                 AtomicFileWriter.WriteAsync(path, migratedJson).GetAwaiter().GetResult();
             return result;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Failed to load settings from {Path}, using defaults", path);
             return new AppSettings();
         }
     }

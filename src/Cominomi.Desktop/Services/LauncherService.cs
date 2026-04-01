@@ -96,9 +96,9 @@ public class LauncherService : ILauncherService
                 if (path != null)
                     result.Add(new IdeInfo(name, command, icon));
             }
-            catch
+            catch (Exception ex)
             {
-                // skip
+                _logger.LogDebug(ex, "IDE detection skipped: {Command}", command);
             }
         }
 

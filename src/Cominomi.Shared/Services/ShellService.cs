@@ -421,7 +421,7 @@ public class ShellService : IShellService
             if (result.Success && !string.IsNullOrWhiteSpace(firstLine))
                 return firstLine;
         }
-        catch { /* ignore */ }
+        catch (Exception ex) { _logger.LogDebug(ex, "PowerShell detection via where.exe failed"); }
 
         // Fallback to Windows PowerShell 5.1
         var winPwsh = Path.Combine(

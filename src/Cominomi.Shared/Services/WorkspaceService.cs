@@ -80,13 +80,17 @@ public partial class WorkspaceService : IWorkspaceService
     {
         var path = Path.Combine(_workspacesDir, $"{workspaceId}.json");
         if (!File.Exists(path))
+        {
+            _logger.LogDebug("Workspace file not found: {WorkspaceId}", workspaceId);
             return null;
+        }
 
         var json = await File.ReadAllTextAsync(path);
         var (workspace, migrated, migratedJson) = MigratingJsonReader.Read<Workspace>(json, JsonDefaults.Options);
         workspace?.MigratePreferences();
         if (migrated && migratedJson != null)
             await AtomicFileWriter.WriteAsync(path, migratedJson);
+        _logger.LogDebug("Loaded workspace {WorkspaceId}: {Name}", workspace?.Id, workspace?.Name);
         return workspace;
     }
 
@@ -100,13 +104,17 @@ public partial class WorkspaceService : IWorkspaceService
         var json = MigratingJsonWriter.Write(workspace, JsonDefaults.Options);
         await AtomicFileWriter.WriteAsync(path, json);
         OnWorkspaceSaved?.Invoke(workspace);
+        _logger.LogDebug("Workspace {WorkspaceId} saved: {Name}", workspace.Id, workspace.Name);
     }
 
     public async Task DeleteWorkspaceAsync(string workspaceId)
     {
         var path = Path.Combine(_workspacesDir, $"{workspaceId}.json");
         if (File.Exists(path))
+        {
             File.Delete(path);
+            _logger.LogInformation("Workspace {WorkspaceId} deleted", workspaceId);
+        }
         await Task.CompletedTask;
     }
 

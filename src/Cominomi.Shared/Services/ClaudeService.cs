@@ -317,8 +317,9 @@ public class ClaudeService : IClaudeService, IDisposable
             var caps = await DetectCapabilitiesAsync(fileName, baseArgs);
             return string.IsNullOrEmpty(caps.Version) ? null : caps.Version;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogDebug(ex, "Claude CLI version detection failed");
             return null;
         }
     }

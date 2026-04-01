@@ -48,7 +48,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
             {
                 string[] files;
                 try { files = Directory.GetFiles(projectDir, "*.jsonl"); }
-                catch { continue; }
+                catch (Exception ex) { logger.LogDebug(ex, "Cannot access project directory: {Dir}", projectDir); continue; }
 
                 foreach (var file in files)
                 {
@@ -646,14 +646,14 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
         _index ??= new SessionIndex();
     }
 
-    private static async Task SaveIndexAsync(SessionIndex index)
+    private async Task SaveIndexAsync(SessionIndex index)
     {
         try
         {
             var json = JsonSerializer.Serialize(index, IndexJsonOptions);
             await File.WriteAllTextAsync(IndexFilePath, json);
         }
-        catch { /* write failure is non-fatal */ }
+        catch (Exception ex) { logger.LogWarning(ex, "Failed to write session index file"); }
     }
 
     private static SessionReplaySummary IndexEntryToSummary(SessionIndexEntry e)

@@ -37,6 +37,8 @@ public class StreamEventProcessor : IStreamEventProcessor
             ctx.Session.TotalInputTokens += ctx.AccInputTokens;
             ctx.Session.TotalOutputTokens += ctx.AccOutputTokens;
             ctx.UsageRecorded = true;
+            _logger.LogDebug("Session {SessionId}: usage {InputTokens}in/{OutputTokens}out tokens",
+                ctx.Session.Id, ctx.AccInputTokens, ctx.AccOutputTokens);
         }
 
         // Detect plan completion
@@ -83,6 +85,8 @@ public class StreamEventProcessor : IStreamEventProcessor
                 ctx.Session.PlanCompleted = true;
                 ctx.Session.PlanFilePath = ctx.PlanFilePath;
                 ctx.PlanReviewVisible = true;
+                _logger.LogInformation("Plan completed for session {SessionId}, plan file: {PlanFile}",
+                    ctx.Session.Id, ctx.PlanFilePath);
                 ctx.QuickResponseVisible = false;
                 ctx.QuickResponseOptions = [];
             }
@@ -185,7 +189,7 @@ public class StreamEventProcessor : IStreamEventProcessor
     /// Scans the assistant message's tool calls for Write/Edit operations targeting .claude/plans/*.md
     /// to precisely identify which plan file belongs to this session.
     /// </summary>
-    private static void DetectPlanFileFromToolCalls(StreamProcessingContext ctx)
+    private void DetectPlanFileFromToolCalls(StreamProcessingContext ctx)
     {
         var writeEditNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { "Write", "write", "write_file", "Edit", "edit", "edit_file" };
@@ -211,16 +215,17 @@ public class StreamEventProcessor : IStreamEventProcessor
                         if (normalized.Contains(".claude/plans/") && normalized.EndsWith(".md"))
                         {
                             ctx.DetectedPlanFilePath = path;
+                            _logger.LogDebug("Plan file detected from tool call: {PlanFilePath}", path);
                             return;
                         }
                     }
                 }
             }
-            catch { /* ignore parse errors */ }
+            catch (JsonException ex) { _logger.LogDebug(ex, "Failed to parse tool call input for plan detection"); }
         }
     }
 
-    private static async Task DetectPlanFileAsync(StreamProcessingContext ctx)
+    private async Task DetectPlanFileAsync(StreamProcessingContext ctx)
     {
         ctx.PlanFilePath = null;
         ctx.PlanContent = null;
@@ -263,6 +268,7 @@ public class StreamEventProcessor : IStreamEventProcessor
         {
             ctx.PlanFilePath = planFile;
             ctx.PlanContent = await File.ReadAllTextAsync(planFile);
+            _logger.LogDebug("Plan file resolved from filesystem scan: {PlanFilePath}", planFile);
         }
     }
 

@@ -19,7 +19,7 @@ public class SessionInitializer : ISessionInitializer
     public async Task<(List<BranchGroup> Groups, string DefaultBranch)> LoadBranchesAsync(string repoLocalPath)
     {
         try { await _gitService.FetchAllAsync(repoLocalPath); }
-        catch { /* Continue with cached branches if offline */ }
+        catch (Exception ex) { _logger.LogDebug(ex, "Fetch failed for {RepoPath}, continuing with cached branches", repoLocalPath); }
 
         var branchGroupsTask = _gitService.ListAllBranchesGroupedAsync(repoLocalPath);
         var defaultBranchTask = _gitService.DetectDefaultBranchAsync(repoLocalPath);

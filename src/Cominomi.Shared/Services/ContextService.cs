@@ -1,6 +1,7 @@
 using System.Text;
 using Cominomi.Shared;
 using Cominomi.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
@@ -11,6 +12,13 @@ public class ContextService : IContextService
     private const string TodosFile = "todos.md";
     private const string PlansDir = "plans";
     private const string AttachmentsDir = "attachments";
+
+    private readonly ILogger<ContextService> _logger;
+
+    public ContextService(ILogger<ContextService> logger)
+    {
+        _logger = logger;
+    }
 
     public async Task<ContextInfo> LoadContextAsync(string worktreePath)
     {
@@ -38,6 +46,7 @@ public class ContextService : IContextService
         await EnsureContextDirectoryAsync(worktreePath);
         var path = Path.Combine(worktreePath, ContextDir, NotesFile);
         await AtomicFileWriter.WriteAsync(path, content);
+        _logger.LogDebug("Notes saved for {WorktreePath}", worktreePath);
     }
 
     public async Task SaveTodosAsync(string worktreePath, string content)
@@ -48,6 +57,7 @@ public class ContextService : IContextService
         await EnsureContextDirectoryAsync(worktreePath);
         var path = Path.Combine(worktreePath, ContextDir, TodosFile);
         await AtomicFileWriter.WriteAsync(path, content);
+        _logger.LogDebug("Todos saved for {WorktreePath}", worktreePath);
     }
 
     public async Task SavePlanAsync(string worktreePath, string planName, string content)
@@ -63,6 +73,7 @@ public class ContextService : IContextService
         var fileName = planName.EndsWith(".md") ? planName : $"{planName}.md";
         var path = Path.Combine(plansPath, fileName);
         await AtomicFileWriter.WriteAsync(path, content);
+        _logger.LogDebug("Plan saved: {PlanName} in {WorktreePath}", planName, worktreePath);
     }
 
     public Task DeletePlanAsync(string worktreePath, string planName)
@@ -70,7 +81,10 @@ public class ContextService : IContextService
         var fileName = planName.EndsWith(".md") ? planName : $"{planName}.md";
         var path = Path.Combine(worktreePath, ContextDir, PlansDir, fileName);
         if (File.Exists(path))
+        {
             File.Delete(path);
+            _logger.LogDebug("Plan deleted: {PlanName}", planName);
+        }
         return Task.CompletedTask;
     }
 
@@ -135,6 +149,7 @@ public class ContextService : IContextService
         Directory.CreateDirectory(destContext);
 
         await CopyDirectoryAsync(sourceContext, destContext);
+        _logger.LogInformation("Context archived from {WorktreePath} to {ArchivePath}", worktreePath, archivePath);
     }
 
     public string BuildContextPrompt(ContextInfo context)

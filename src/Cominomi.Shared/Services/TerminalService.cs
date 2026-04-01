@@ -141,6 +141,8 @@ public class TerminalService : ITerminalService
         var keys = _sessions.Keys.ToList();
         foreach (var key in keys)
             await StopAsync(key);
+        if (keys.Count > 0)
+            _logger.LogDebug("All terminal sessions disposed ({Count} sessions)", keys.Count);
     }
 
     private async Task ReadPtyOutputAsync(string sessionKey, IPtyConnection pty, CancellationToken ct)
