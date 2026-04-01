@@ -233,38 +233,49 @@ public class WorktreeSyncService : IWorktreeSyncService
 
     private async Task CopyWorktreeChangesAsync(SyncState state, CancellationToken ct = default)
     {
-        var worktreeRoot = state.WorktreePath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        // git diff로 후보 파일을 빠르게 추린 뒤, 실제 파일 비교로 검증
+        var changedFiles = await _gitService.GetChangedFilesAsync(state.WorktreePath, state.BaseBranch, ct);
         var copied = 0;
 
-        foreach (var srcPath in Directory.EnumerateFiles(state.WorktreePath, "*", SearchOption.AllDirectories))
+        foreach (var relativePath in changedFiles)
         {
             ct.ThrowIfCancellationRequested();
 
-            if (ShouldIgnorePath(srcPath))
-                continue;
-
-            var relativePath = srcPath[worktreeRoot.Length..].Replace(Path.DirectorySeparatorChar, '/');
-
-            var info = new FileInfo(srcPath);
-            if (info.Length > MaxFileSizeBytes)
-            {
-                _logger.LogWarning("Skipping large file during initial sync: {Path} ({Size} bytes)", relativePath, info.Length);
-                continue;
-            }
-
+            var srcPath = Path.Combine(state.WorktreePath, relativePath.Replace('/', Path.DirectorySeparatorChar));
             var destPath = Path.Combine(state.RepoLocalPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
 
-            if (File.Exists(destPath) && await FilesAreEqualAsync(srcPath, destPath))
-                continue;
+            if (File.Exists(srcPath))
+            {
+                var info = new FileInfo(srcPath);
+                if (info.Length > MaxFileSizeBytes)
+                {
+                    _logger.LogWarning("Skipping large file during initial sync: {Path} ({Size} bytes)", relativePath, info.Length);
+                    continue;
+                }
 
-            var destParent = Path.GetDirectoryName(destPath);
-            if (destParent != null)
-                Directory.CreateDirectory(destParent);
+                if (File.Exists(destPath) && await FilesAreEqualAsync(srcPath, destPath))
+                    continue;
 
-            await CopyFileWithRetryAsync(srcPath, destPath);
-            if (!state.CopiedFromWorktree.Contains(relativePath))
-                state.CopiedFromWorktree.Add(relativePath);
-            copied++;
+                var destParent = Path.GetDirectoryName(destPath);
+                if (destParent != null)
+                    Directory.CreateDirectory(destParent);
+
+                await CopyFileWithRetryAsync(srcPath, destPath);
+                if (!state.CopiedFromWorktree.Contains(relativePath))
+                    state.CopiedFromWorktree.Add(relativePath);
+                copied++;
+            }
+            else
+            {
+                // File was deleted in worktree
+                if (File.Exists(destPath))
+                {
+                    DeleteFileWithRetry(destPath);
+                    if (!state.CopiedFromWorktree.Contains(relativePath))
+                        state.CopiedFromWorktree.Add(relativePath);
+                    copied++;
+                }
+            }
         }
 
         _logger.LogDebug("Initial sync: copied {Count} files from worktree to local dir", copied);
