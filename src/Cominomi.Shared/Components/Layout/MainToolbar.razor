@@ -49,12 +49,12 @@
         <div class="toolbar-actions">
             @if (ShowSyncButton)
             {
-                <MudTooltip Text="@(IsSynced ? "로컬 동기화 해제" : "로컬 디렉터리에 동기화")" Placement="Placement.Bottom">
+                <MudTooltip Text="@SyncTooltip" Placement="Placement.Bottom">
                     <MudIconButton Icon="@(IsSynced ? Icons.Material.Filled.SyncDisabled : Icons.Material.Filled.Sync)"
                                    Color="@(IsSynced ? Color.Success : Color.Default)"
                                    Size="Size.Small"
                                    OnClick="ToggleSync"
-                                   Disabled="_syncBusy"
+                                   Disabled="_syncBusy || IsSyncBlockedByOther"
                                    Style="width: 28px; height: 28px;" />
                 </MudTooltip>
             }
@@ -102,6 +102,13 @@
     private IDisposable? _syncStopSub;
 
     private bool IsSynced => SyncService.IsSessionSynced(ChatState.CurrentSession?.Id ?? "");
+    private bool IsSyncBlockedByOther => SyncService.IsSyncActive && !IsSynced;
+
+    private string SyncTooltip => IsSynced
+        ? "로컬 동기화 해제"
+        : IsSyncBlockedByOther
+            ? "다른 세션이 동기화 중입니다"
+            : "로컬 디렉터리에 동기화";
 
     private bool ShowSyncButton
     {

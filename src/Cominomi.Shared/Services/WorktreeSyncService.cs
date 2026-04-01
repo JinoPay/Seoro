@@ -16,6 +16,7 @@ public class WorktreeSyncService : IWorktreeSyncService
     private readonly SemaphoreSlim _syncLock = new(1, 1);
     private readonly HashSet<string> _pendingPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _pendingLock = new();
+    private readonly HashSet<string> _copiedSet = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
 
     private const string StateFileName = "sync-state.json";
@@ -261,8 +262,7 @@ public class WorktreeSyncService : IWorktreeSyncService
                     Directory.CreateDirectory(destParent);
 
                 await CopyFileWithRetryAsync(srcPath, destPath);
-                if (!state.CopiedFromWorktree.Contains(relativePath))
-                    state.CopiedFromWorktree.Add(relativePath);
+                TrackCopied(state, relativePath);
                 copied++;
             }
             else
@@ -308,8 +308,7 @@ public class WorktreeSyncService : IWorktreeSyncService
                     Directory.CreateDirectory(destParent);
 
                 await CopyFileWithRetryAsync(srcPath, destPath);
-                if (!state.CopiedFromWorktree.Contains(relativePath))
-                    state.CopiedFromWorktree.Add(relativePath);
+                TrackCopied(state, relativePath);
                 synced++;
             }
             else
@@ -387,6 +386,12 @@ public class WorktreeSyncService : IWorktreeSyncService
         _watcher.Created += OnFsChange;
         _watcher.Deleted += OnFsChange;
         _watcher.Renamed += OnFsRename;
+        _watcher.Error += async (_, e) =>
+        {
+            _logger.LogWarning(e.GetException(), "FileSystemWatcher buffer overflow, triggering full re-sync");
+            try { await OnFullResyncAsync(); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Error during full re-sync fallback"); }
+        };
     }
 
     private void StopWatching()
@@ -403,6 +408,22 @@ public class WorktreeSyncService : IWorktreeSyncService
         lock (_pendingLock)
         {
             _pendingPaths.Clear();
+        }
+    }
+
+    private async Task OnFullResyncAsync()
+    {
+        await _syncLock.WaitAsync();
+        try
+        {
+            if (_state == null)
+                return;
+            await CopyWorktreeChangesAsync(_state);
+            await SaveStateAsync(_state);
+        }
+        finally
+        {
+            _syncLock.Release();
         }
     }
 
@@ -508,6 +529,7 @@ public class WorktreeSyncService : IWorktreeSyncService
         {
             // 3. Clean up state and backup dir
             _state = null;
+            _copiedSet.Clear();
 
             if (Directory.Exists(state.BackupDir))
             {
@@ -538,6 +560,12 @@ public class WorktreeSyncService : IWorktreeSyncService
     }
 
     // ────────────────────── Internal: File helpers ──────────────────────
+
+    private void TrackCopied(SyncState state, string relativePath)
+    {
+        if (_copiedSet.Add(relativePath))
+            state.CopiedFromWorktree.Add(relativePath);
+    }
 
     private static string? ToRelativePath(string fullPath, string worktreeRoot)
     {
