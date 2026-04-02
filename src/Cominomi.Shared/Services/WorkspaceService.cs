@@ -141,7 +141,7 @@ public partial class WorkspaceService(
             {
                 workspace.Status = WorkspaceStatus.Error;
                 workspace.Error = AppError.InvalidGitRepo("Not a valid git repository.");
-                await SaveWorkspaceAsync(workspace);
+                await DeleteWorkspaceAsync(workspace.Id);
                 return workspace;
             }
 
@@ -156,7 +156,7 @@ public partial class WorkspaceService(
             logger.LogError(ex, "Failed to create workspace from local path: {Path}", localPath);
             workspace.Status = WorkspaceStatus.Error;
             workspace.Error = AppError.FromException(ErrorCode.Unknown, ex);
-            await SaveWorkspaceAsync(workspace);
+            await DeleteWorkspaceAsync(workspace.Id);
             return workspace;
         }
     }
@@ -206,7 +206,7 @@ public partial class WorkspaceService(
                 {
                     workspace.Status = WorkspaceStatus.Error;
                     workspace.Error = AppError.CloneFailed(cloneResult.Error);
-                    await SaveWorkspaceAsync(workspace);
+                    await DeleteWorkspaceAsync(workspace.Id);
                     return workspace;
                 }
 
@@ -240,7 +240,7 @@ public partial class WorkspaceService(
             logger.LogError(ex, "Failed to create workspace from URL: {Url}", url);
             workspace.Status = WorkspaceStatus.Error;
             workspace.Error = AppError.FromException(ErrorCode.Unknown, ex);
-            await SaveWorkspaceAsync(workspace);
+            await DeleteWorkspaceAsync(workspace.Id);
             return workspace;
         }
     }
