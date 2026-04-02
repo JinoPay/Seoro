@@ -188,9 +188,9 @@
     {
         _currentModel = model;
 
-        // Auto-downgrade: clamp effort to the new model's ceiling
+        // Auto-adjust: clamp effort to the new model's ceiling
         var maxLevel = ModelDefinitions.GetMaxEffortLevel(model);
-        if (_currentEffortLevel == "max" && maxLevel != "max")
+        if (_currentEffortLevel != "auto" && _currentEffortLevel != maxLevel)
         {
             _currentEffortLevel = maxLevel;
             await EffortLevelChanged.InvokeAsync(maxLevel);
