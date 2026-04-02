@@ -144,11 +144,10 @@
             {
                 var session = ChatState.CurrentSession;
                 if (session == null) return;
-                if (!ModelDefinitions.SupportsMaxEffort(session.Model ?? ""))
-                    return;
-                var levels = new[] { "auto", "max" };
-                var idx = Array.IndexOf(levels, session.EffortLevel ?? "auto");
-                await HandleEffortLevelChanged(levels[(idx + 1) % levels.Length]);
+                var maxLevel = ModelDefinitions.GetMaxEffortLevel(session.Model ?? "");
+                var current = session.EffortLevel ?? "auto";
+                var next = current == "auto" ? maxLevel : "auto";
+                await HandleEffortLevelChanged(next);
             }));
     }
 

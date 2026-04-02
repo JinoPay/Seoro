@@ -51,6 +51,12 @@ public static class ModelDefinitions
         return normalized == "opus";
     }
 
+    public static string GetMaxEffortLevel(string modelId)
+    {
+        var normalized = NormalizeModelId(modelId);
+        return normalized == "opus" ? "max" : "high";
+    }
+
     public static ModelPricing? GetPricing(string modelId)
     {
         var normalized = NormalizeModelId(modelId);

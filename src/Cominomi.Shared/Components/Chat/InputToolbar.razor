@@ -13,7 +13,7 @@
                            Color="@GetEffortLevelColor()"
                            Size="Size.Small"
                            OnClick="CycleEffortLevel"
-                           Disabled="@(Disabled || IsStreaming || !ModelDefinitions.SupportsMaxEffort(Model))"/>
+                           Disabled="@(Disabled || IsStreaming)"/>
         </MudTooltip>
 
         <MudTooltip Text="파일 첨부">
@@ -96,7 +96,7 @@
     private bool _planViewerOpen;
 
     private static readonly string[] PermissionModes = ["bypassAll", "plan"];
-    private static readonly string[] EffortLevels = ["auto", "max"];
+    // EffortLevels removed — toggle targets are now model-dependent via GetMaxEffortLevel
 
     private string GetPermissionModeTooltip()
     {
@@ -134,12 +134,12 @@
 
     private string GetEffortLevelTooltip()
     {
-        if (!ModelDefinitions.SupportsMaxEffort(Model))
-            return "Effort: Max는 Opus 전용";
+        var maxLevel = ModelDefinitions.GetMaxEffortLevel(Model);
         return EffortLevel switch
         {
             "max" => "Effort: Max (Thinking)",
-            _ => "Effort: Auto"
+            "high" => "Effort: High",
+            _ => $"Effort: Auto (최대 {maxLevel})"
         };
     }
 
@@ -147,15 +147,15 @@
     {
         return EffortLevel switch
         {
-            "max" => Color.Secondary,
+            "max" or "high" => Color.Secondary,
             _ => Color.Default
         };
     }
 
     private async Task CycleEffortLevel()
     {
-        var idx = Array.IndexOf(EffortLevels, EffortLevel);
-        var next = EffortLevels[(idx + 1) % EffortLevels.Length];
+        var maxLevel = ModelDefinitions.GetMaxEffortLevel(Model);
+        var next = EffortLevel == "auto" ? maxLevel : "auto";
         await OnEffortLevelChanged.InvokeAsync(next);
     }
 

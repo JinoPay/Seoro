@@ -13,7 +13,7 @@
 
     <MudSelect T="string" @bind-Value="Settings.DefaultEffortLevel" Label="기본 Effort 레벨"
                Variant="Variant.Outlined" Margin="Margin.Dense"
-               HelperText="Cominomi에서 Claude CLI 실행 시 적용됩니다. auto: 모델 기본값, max: 확장 사고 모드 (Opus만 지원)">
+               HelperText="Cominomi에서 Claude CLI 실행 시 적용됩니다. auto: 모델 기본값, high: 높은 사고 수준, max: 확장 사고 모드 (Opus 전용)">
         <MudSelectItem T="string" Value="@("auto")">Auto</MudSelectItem>
         <MudSelectItem T="string" Value="@("low")">Low</MudSelectItem>
         <MudSelectItem T="string" Value="@("medium")">Medium</MudSelectItem>
