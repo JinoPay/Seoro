@@ -28,6 +28,13 @@ public class TerminalService : ITerminalService
         // Stop existing session if any
         await StopAsync(sessionKey);
 
+        // Validate working directory exists — fall back to current directory
+        if (!Directory.Exists(workingDirectory))
+        {
+            _logger.LogWarning("Terminal CWD does not exist: {Dir}, falling back to current directory", workingDirectory);
+            workingDirectory = Environment.CurrentDirectory;
+        }
+
         shell ??= await _shellService.GetTerminalShellAsync();
         _logger.LogInformation("Starting PTY terminal for session {Key} with {Shell} in {Dir}",
             sessionKey, shell.Type, workingDirectory);

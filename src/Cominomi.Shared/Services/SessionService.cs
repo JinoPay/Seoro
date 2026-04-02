@@ -95,6 +95,15 @@ public partial class SessionService : ISessionService
                 {
                     session.Model = ModelDefinitions.NormalizeModelId(session.Model);
                     session.Messages.Clear();
+                    // Clear stale worktree paths (crash recovery / external deletion)
+                    if (!string.IsNullOrEmpty(session.Git.WorktreePath)
+                        && !session.Git.IsLocalDir
+                        && !Directory.Exists(session.Git.WorktreePath))
+                    {
+                        _logger.LogWarning("Clearing stale WorktreePath for session {Id}: {Path}", session.Id, session.Git.WorktreePath);
+                        session.Git.WorktreePath = string.Empty;
+                        needsMigration = true;
+                    }
                     // Write back if schema was outdated (adds $schemaVersion)
                     if (needsMigration)
                     {
@@ -596,6 +605,7 @@ public partial class SessionService : ISessionService
                 try
                 {
                     await _gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, session.Git.WorktreePath);
+                    session.Git.WorktreePath = string.Empty;
                 }
                 catch (Exception ex) { _logger.LogWarning(ex, "Failed to remove worktree for session {SessionId}", sessionId); }
             }

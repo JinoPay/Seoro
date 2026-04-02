@@ -148,12 +148,18 @@
             catch { }
         }
 
-        var workDir = !string.IsNullOrEmpty(session.Git.WorktreePath)
-            ? session.Git.WorktreePath
-            : Environment.CurrentDirectory;
+        var workDir = ResolveWorkDir(session);
 
-        await TerminalService.StartAsync(key, workDir);
-        _isRunning = TerminalService.IsRunning(key);
+        try
+        {
+            await TerminalService.StartAsync(key, workDir);
+            _isRunning = TerminalService.IsRunning(key);
+        }
+        catch (Exception ex)
+        {
+            _isRunning = false;
+            await WriteTerminalError(ex.Message);
+        }
     }
 
     private async Task StartTerminal()
@@ -166,13 +172,18 @@
             catch { }
         }
 
-        var session = ChatState.CurrentSession;
-        var workDir = session != null && !string.IsNullOrEmpty(session.Git.WorktreePath)
-            ? session.Git.WorktreePath
-            : Environment.CurrentDirectory;
+        var workDir = ResolveWorkDir(ChatState.CurrentSession);
 
-        await TerminalService.StartAsync(_currentSessionKey, workDir);
-        _isRunning = TerminalService.IsRunning(_currentSessionKey);
+        try
+        {
+            await TerminalService.StartAsync(_currentSessionKey, workDir);
+            _isRunning = TerminalService.IsRunning(_currentSessionKey);
+        }
+        catch (Exception ex)
+        {
+            _isRunning = false;
+            await WriteTerminalError(ex.Message);
+        }
     }
 
     private async Task StartWithShell(ShellInfo shell)
@@ -187,13 +198,18 @@
             catch { }
         }
 
-        var session = ChatState.CurrentSession;
-        var workDir = session != null && !string.IsNullOrEmpty(session.Git.WorktreePath)
-            ? session.Git.WorktreePath
-            : Environment.CurrentDirectory;
+        var workDir = ResolveWorkDir(ChatState.CurrentSession);
 
-        await TerminalService.StartAsync(_currentSessionKey, workDir, shell);
-        _isRunning = TerminalService.IsRunning(_currentSessionKey);
+        try
+        {
+            await TerminalService.StartAsync(_currentSessionKey, workDir, shell);
+            _isRunning = TerminalService.IsRunning(_currentSessionKey);
+        }
+        catch (Exception ex)
+        {
+            _isRunning = false;
+            await WriteTerminalError(ex.Message);
+        }
     }
 
     private async Task RestartTerminal()
@@ -222,5 +238,21 @@
             catch { }
         }
         _dotNetRef?.Dispose();
+    }
+
+    private static string ResolveWorkDir(Session? session)
+    {
+        if (session != null
+            && !string.IsNullOrEmpty(session.Git.WorktreePath)
+            && Directory.Exists(session.Git.WorktreePath))
+            return session.Git.WorktreePath;
+        return Environment.CurrentDirectory;
+    }
+
+    private async Task WriteTerminalError(string message)
+    {
+        if (!_initialized) return;
+        try { await JS.InvokeVoidAsync("terminalWrite", _elementId, $"\x1b[31mTerminal failed: {message}\x1b[0m\r\n"); }
+        catch { }
     }
 }
