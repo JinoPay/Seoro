@@ -1,6 +1,6 @@
 [
   {
-    "version": "1.6.7f",
+    "version": "1.6.7",
     "date": "2026-04-02",
     "changes": [
       { "type": "feat", "description": "게이미피케이션 업적 42개 → 105개 대폭 확장" },
