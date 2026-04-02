@@ -208,16 +208,29 @@ public class GitService : IGitService
             }
         }
 
-        // Fallback: check if main or master exists
-        if (await BranchExistsAsync(repoDir, "main"))
+        // Fallback: check remote branches first, then local
+        var remoteMain = await RunGitAsync(repoDir, default, "show-ref", "--verify", "--quiet", "refs/remotes/origin/main");
+        if (remoteMain.Success)
         {
             _defaultBranchCache[key] = ("origin/main", DateTime.UtcNow);
             return "origin/main";
         }
-        if (await BranchExistsAsync(repoDir, "master"))
+        var remoteMaster = await RunGitAsync(repoDir, default, "show-ref", "--verify", "--quiet", "refs/remotes/origin/master");
+        if (remoteMaster.Success)
         {
             _defaultBranchCache[key] = ("origin/master", DateTime.UtcNow);
             return "origin/master";
+        }
+        // No remote — fall back to local branches
+        if (await BranchExistsAsync(repoDir, "main"))
+        {
+            _defaultBranchCache[key] = ("main", DateTime.UtcNow);
+            return "main";
+        }
+        if (await BranchExistsAsync(repoDir, "master"))
+        {
+            _defaultBranchCache[key] = ("master", DateTime.UtcNow);
+            return "master";
         }
 
         // Last resort: get current branch
@@ -495,6 +508,14 @@ public class GitService : IGitService
         {
             // 4b825dc... is git's well-known empty tree hash
             baseBranch = "4b825dc642cb6eb9a060e54bf899d69f82e20891";
+
+            // Verify the empty tree hash is usable (may fail in some environments)
+            var emptyTreeCheck = await RunGitAsync(workingDir, ct, "cat-file", "-e", baseBranch);
+            if (!emptyTreeCheck.Success)
+            {
+                _logger.LogDebug("Empty tree hash unavailable, returning untracked-only summary");
+                return await BuildUntrackedOnlySummaryAsync(workingDir, ct);
+            }
         }
 
         // Fetch name-status, untracked files, and stream diff in parallel
@@ -576,6 +597,47 @@ public class GitService : IGitService
                 var addCount = lines.Length;
 
                 // Build synthetic unified diff
+                var diffBuilder = new StringBuilder();
+                diffBuilder.AppendLine("--- /dev/null");
+                diffBuilder.AppendLine($"+++ b/{relPath}");
+                diffBuilder.AppendLine($"@@ -0,0 +1,{addCount} @@");
+                foreach (var line in lines)
+                    diffBuilder.AppendLine("+" + line);
+
+                summary.Files.Add(new FileDiff
+                {
+                    FilePath = relPath,
+                    ChangeType = FileChangeType.Untracked,
+                    UnifiedDiff = diffBuilder.ToString(),
+                    Additions = addCount,
+                    Deletions = 0
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to read untracked file: {Path}", relPath);
+            }
+        }
+
+        return summary;
+    }
+
+    private async Task<DiffSummary> BuildUntrackedOnlySummaryAsync(string workingDir, CancellationToken ct)
+    {
+        var summary = new DiffSummary();
+        var untrackedFiles = await GetUntrackedFilesAsync(workingDir, ct);
+
+        foreach (var relPath in untrackedFiles)
+        {
+            try
+            {
+                var fullPath = Path.Combine(workingDir, relPath.Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(fullPath)) continue;
+
+                var content = await File.ReadAllTextAsync(fullPath, ct);
+                var lines = content.Split('\n');
+                var addCount = lines.Length;
+
                 var diffBuilder = new StringBuilder();
                 diffBuilder.AppendLine("--- /dev/null");
                 diffBuilder.AppendLine($"+++ b/{relPath}");
