@@ -1853,7 +1853,7 @@ html *::after {
     border: 1px solid var(--border-default) !important;
     border-radius: var(--radius-md) !important;
     box-shadow: var(--shadow-md) !important;
-    min-width: 160px;
+    min-width: 320px;
 }
 
 .model-list.mud-list {
@@ -1864,7 +1864,8 @@ html *::after {
     font-size: var(--text-sm);
     color: var(--text-secondary);
     border-radius: var(--radius-sm);
-    min-height: 36px;
+    min-height: unset;
+    padding: 6px 10px;
 }
 
 .model-list .mud-list-item:hover {
@@ -1875,6 +1876,103 @@ html *::after {
 .model-list .model-item-active {
     background: var(--accent-dim);
     color: var(--accent) !important;
+}
+
+/* Model item rich layout */
+.model-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    width: 100%;
+}
+
+.model-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.model-item-name {
+    font-weight: 500;
+    color: inherit;
+}
+
+.model-item-price {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    font-family: var(--font-mono, monospace);
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.model-item-desc {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+
+.model-item-alias-badge {
+    font-size: 10px;
+    opacity: 0.5;
+    margin-left: 4px;
+}
+
+/* Speed indicator dots */
+.speed-dots {
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.speed-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--border-default);
+}
+
+.speed-dot-filled {
+    background: var(--accent);
+}
+
+/* Group headers in model popover */
+.model-group-header {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    padding: 8px 12px 2px;
+    opacity: 0.6;
+}
+
+.model-group-header:first-child {
+    padding-top: 4px;
+}
+
+/* Settings model select option */
+.model-select-option {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    align-items: baseline;
+}
+
+.model-select-name {
+    font-weight: 500;
+}
+
+.model-select-price {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono, monospace);
+}
+
+.model-select-desc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    width: 100%;
 }
 
 /* ===== Stop Button Glow ===== */

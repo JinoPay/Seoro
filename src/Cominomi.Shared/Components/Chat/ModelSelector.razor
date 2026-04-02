@@ -13,12 +13,42 @@
 <MudPopover Open="@_modelMenuOpen" AnchorOrigin="Origin.TopRight"
             TransformOrigin="Origin.BottomRight" Class="model-popover">
     <MudList T="string" Dense="true" Class="model-list">
-        @foreach (var model in ModelDefinitions.All)
+        @foreach (var group in ModelDefinitions.GetGroupedModels())
         {
-            <MudListItem T="string" OnClick="@(() => SelectModel(model.Id))"
-                         Class="@(IsModelActive(model.Id) ? "model-item-active" : "")">
-                @model.DisplayName
-            </MudListItem>
+            <div class="model-group-header">@GetCategoryLabel(group.Key)</div>
+            @foreach (var model in group)
+            {
+                <MudListItem T="string" OnClick="@(() => SelectModel(model.Id))"
+                             Class="@(IsModelActive(model.Id) ? "model-item-active" : "")">
+                    <div class="model-item-content">
+                        <div class="model-item-row">
+                            <span class="model-item-name">
+                                @model.DisplayName
+                                @if (model.IsAlias)
+                                {
+                                    <span class="model-item-alias-badge">alias</span>
+                                }
+                            </span>
+                            @if (model.Pricing != null)
+                            {
+                                <span class="model-item-price">$@model.Pricing.Input/$@model.Pricing.Output</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(model.Description))
+                        {
+                            <div class="model-item-row">
+                                <span class="model-item-desc">@model.Description</span>
+                                <span class="speed-dots">
+                                    @for (var i = 0; i < 3; i++)
+                                    {
+                                        <span class="speed-dot @(i < model.SpeedTier ? "speed-dot-filled" : "")"></span>
+                                    }
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </MudListItem>
+            }
         }
         <MudDivider/>
         <MudListItem T="string" OnClick="@(() => _customModelInput = true)"
@@ -170,6 +200,18 @@
         _pendingModel = modelId;
         await OnModelChanged.InvokeAsync(modelId);
         await OnMenuClosed.InvokeAsync();
+    }
+
+    private static string GetCategoryLabel(string? category)
+    {
+        return category switch
+        {
+            "standard" => "Standard",
+            "extended" => "Extended Context",
+            "hybrid" => "Hybrid",
+            "alias" => "Alias",
+            _ => "Other"
+        };
     }
 
 }

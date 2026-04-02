@@ -41,7 +41,7 @@ public static class ClaudeArgumentBuilder
             sb.Append("--verbose ");
         if (debugMode)
             sb.Append("--debug ");
-        sb.Append($"--model {model}");
+        sb.Append($"--model \"{model}\"");
 
         switch (permissionMode)
         {
