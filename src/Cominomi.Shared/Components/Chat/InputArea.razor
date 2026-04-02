@@ -113,7 +113,15 @@
             if (_trackedSessionId != null && !string.IsNullOrEmpty(_inputText))
                 ChatState.SetInputDraft(_trackedSessionId, _inputText);
 
+            if (_trackedSessionId != null)
+                ChatState.SetAttachmentDraft(_trackedSessionId, _pendingAttachments);
+
             _inputText = newSessionId != null ? ChatState.GetInputDraft(newSessionId) : string.Empty;
+
+            _pendingAttachments.Clear();
+            if (newSessionId != null)
+                _pendingAttachments.AddRange(ChatState.GetAttachmentDraft(newSessionId));
+
             _trackedSessionId = newSessionId;
 
             // 세션 변경 시 로컬 복사본을 부모 파라미터에서 무조건 동기화 (stale optimistic state 방지)
@@ -273,7 +281,7 @@
         var data = Convert.FromBase64String(base64Data);
         var attachment = new PendingAttachment
         {
-            FileName = fileName,
+            FileName = GetUniqueFileName(fileName),
             ContentType = contentType,
             Data = data
         };
@@ -297,6 +305,9 @@
             return;
         }
 
+        foreach (var file in files)
+            file.FileName = GetUniqueFileName(file.FileName);
+
         _pendingAttachments.AddRange(files);
         _forceRender = true;
         StateHasChanged();
@@ -308,6 +319,22 @@
         _pendingAttachments.Remove(attachment);
         _forceRender = true;
         await RefocusTextarea();
+    }
+
+    private string GetUniqueFileName(string fileName)
+    {
+        if (!_pendingAttachments.Any(a => a.FileName.Equals(fileName, StringComparison.OrdinalIgnoreCase)))
+            return fileName;
+
+        var ext = Path.GetExtension(fileName);
+        var baseName = Path.GetFileNameWithoutExtension(fileName);
+
+        for (var i = 2; ; i++)
+        {
+            var candidate = $"{baseName}{i}{ext}";
+            if (!_pendingAttachments.Any(a => a.FileName.Equals(candidate, StringComparison.OrdinalIgnoreCase)))
+                return candidate;
+        }
     }
 
     private string GetPlaceholder()
@@ -471,7 +498,10 @@
         _suppressInputUpdates = true; // Block oninput from reinserting newline
         _inputText = string.Empty;
         if (_trackedSessionId != null)
+        {
             ChatState.SetInputDraft(_trackedSessionId, string.Empty);
+            ChatState.SetAttachmentDraft(_trackedSessionId, []);
+        }
         _pendingAttachments.Clear();
         StateHasChanged();
         await OnSend.InvokeAsync(input);

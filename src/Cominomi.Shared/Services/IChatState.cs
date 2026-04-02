@@ -45,6 +45,7 @@ public interface IChatState : IDisposable
     Session? GetActiveSession(string sessionId);
     StreamingPhase GetSessionPhase(string sessionId);
     string GetInputDraft(string sessionId);
+    List<PendingAttachment> GetAttachmentDraft(string sessionId);
     string? ConsumePendingMessage();
     string? GetSessionToolName(string sessionId);
     string? PeekPendingMessage();
@@ -76,6 +77,7 @@ public interface IChatState : IDisposable
 
     // Input draft (per-session temporary storage)
     void SetInputDraft(string sessionId, string text);
+    void SetAttachmentDraft(string sessionId, List<PendingAttachment> attachments);
     void SetPendingMessage(string? message);
     void SetPhase(StreamingPhase phase, string? toolName = null, string? sessionId = null);
     void SetRightPanel(RightPanelMode mode);

@@ -16,6 +16,7 @@ public class ChatState : IChatState
 
     // Input draft storage (per-session, memory only)
     private readonly Dictionary<string, string> _inputDrafts = new();
+    private readonly Dictionary<string, List<PendingAttachment>> _attachmentDrafts = new();
 
     // Mediator: typed event bus
     private readonly IChatEventBus _eventBus;
@@ -121,6 +122,11 @@ public class ChatState : IChatState
     public string GetInputDraft(string sessionId)
     {
         return _inputDrafts.TryGetValue(sessionId, out var draft) ? draft : string.Empty;
+    }
+
+    public List<PendingAttachment> GetAttachmentDraft(string sessionId)
+    {
+        return _attachmentDrafts.TryGetValue(sessionId, out var draft) ? draft : [];
     }
 
     public string SettingsSection => Settings.SettingsSection;
@@ -288,6 +294,14 @@ public class ChatState : IChatState
             _inputDrafts.Remove(sessionId);
         else
             _inputDrafts[sessionId] = text;
+    }
+
+    public void SetAttachmentDraft(string sessionId, List<PendingAttachment> attachments)
+    {
+        if (attachments.Count == 0)
+            _attachmentDrafts.Remove(sessionId);
+        else
+            _attachmentDrafts[sessionId] = [..attachments];
     }
 
     public void SetPendingMessage(string? message)
