@@ -7,7 +7,23 @@
                HelperText="전역 기본값입니다. 워크스페이스별로 다른 모델을 지정할 수 있습니다.">
         @foreach (var model in ModelDefinitions.All)
         {
-            <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+            <MudSelectItem T="string" Value="@model.Id">
+                <div class="model-select-option">
+                    <span class="model-select-name">@model.DisplayName</span>
+                    @if (model.Pricing != null)
+                    {
+                        <span class="model-select-price">$@model.Pricing.Input/$@model.Pricing.Output</span>
+                    }
+                    else if (model.IsAlias)
+                    {
+                        <span class="model-select-price" style="opacity: 0.5;">alias</span>
+                    }
+                    @if (!string.IsNullOrEmpty(model.Description))
+                    {
+                        <span class="model-select-desc">@model.Description</span>
+                    }
+                </div>
+            </MudSelectItem>
         }
     </MudSelect>
 

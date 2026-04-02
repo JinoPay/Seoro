@@ -19,7 +19,7 @@ public class ClaudeArgumentBuilderTests
 
         Assert.Contains("--print", result);
         Assert.Contains("--output-format stream-json", result);
-        Assert.Contains("--model sonnet", result);
+        Assert.Contains("--model \"sonnet\"", result);
     }
 
     [Fact]
