@@ -291,11 +291,15 @@ html *::after {
     align-items: center;
     gap: 2px;
     opacity: 0;
-    transition: opacity var(--transition);
+    max-width: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: opacity var(--transition), max-width var(--transition);
 }
 
 .project-header:hover .project-actions {
     opacity: 1;
+    max-width: 4rem;
 }
 
 /* Expand/collapse chevron */
@@ -486,19 +490,19 @@ html *::after {
 }
 
 .tree-session-actions {
-    position: absolute;
-    right: var(--space-1);
-    top: 50%;
-    transform: translateY(-50%);
     display: flex;
     align-items: center;
     gap: 2px;
     opacity: 0;
-    transition: opacity var(--transition);
+    max-width: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: opacity var(--transition), max-width var(--transition);
 }
 
 .tree-session:hover .tree-session-actions {
     opacity: 1;
+    max-width: 2rem;
 }
 
 .tree-session .mud-menu {
