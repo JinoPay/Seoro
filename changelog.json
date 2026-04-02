@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.6.5",
+    "date": "2026-04-02",
+    "changes": [
+      { "type": "refactor", "description": "Grouping logic 리팩터링 및 보조 메서드 통합" },
+      { "type": "fix", "description": "empty tree hash diff 실패 및 로컬 전용 repo의 잘못된 default branch 수정" }
+    ]
+  },
+  {
     "version": "1.6.4",
     "date": "2026-04-02",
     "changes": [
