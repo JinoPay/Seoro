@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.6.6",
+    "date": "2026-04-02",
+    "changes": [
+      { "type": "feat", "description": "입력 툴바에 토큰 사용량 도넛 링 인디케이터 추가" },
+      { "type": "feat", "description": "effort 토글을 모델별 최대 지원 레벨로 전환" },
+      { "type": "fix", "description": "모델 전환 시 effort 레벨 양방향 자동 조정" },
+      { "type": "fix", "description": "설정 페이지 고배율 줌에서 하단 콘텐츠 잘림 수정" },
+      { "type": "style", "description": "입력 툴바 및 토큰 사용량 링의 CSS 디스플레이 속성 개선" }
+    ]
+  },
+  {
     "version": "1.6.5",
     "date": "2026-04-02",
     "changes": [
