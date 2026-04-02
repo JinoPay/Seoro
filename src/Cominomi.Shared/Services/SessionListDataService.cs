@@ -120,7 +120,7 @@ public class SessionListDataService : IDisposable
 
             try
             {
-                var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.BaseBranch);
+                var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.GetDiffBase());
                 if (stats.Additions > 0 || stats.Deletions > 0)
                 {
                     DiffStatsCache[session.Id] = stats;
@@ -163,7 +163,7 @@ public class SessionListDataService : IDisposable
 
         try
         {
-            var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.BaseBranch);
+            var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.GetDiffBase());
             DiffStatsCache[sessionId] = stats;
             OnDataChanged?.Invoke();
         }

@@ -316,6 +316,8 @@ public class SessionServiceTests : IDisposable
             => Task.FromResult<List<string>>([]);
         public Task<GitResult> CheckoutFilesAsync(string workingDir, IEnumerable<string> relativePaths, CancellationToken ct = default)
             => Task.FromResult(NextResult);
+        public Task<string?> ResolveCommitHashAsync(string repoDir, string refName, CancellationToken ct = default)
+            => Task.FromResult<string?>("abc123def456");
     }
 
     private class FakeWorkspaceService : IWorkspaceService

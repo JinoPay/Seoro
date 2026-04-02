@@ -123,7 +123,7 @@
         if (session == null) return;
 
         var worktreePath = session.Git.WorktreePath;
-        var baseBranch = !string.IsNullOrEmpty(session.Git.BaseBranch) ? session.Git.BaseBranch : "HEAD";
+        var baseBranch = session.Git.GetDiffBase();
 
         try
         {
