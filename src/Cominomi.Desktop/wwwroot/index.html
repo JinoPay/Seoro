@@ -224,46 +224,65 @@
                 e._cominomiHandled = true;
 
                 var items = e.clipboardData?.items;
-                var hasFileItem = false;
 
-                // Primary: extract files from clipboardData.items
+                // Grab text synchronously before any async ops (clipboardData is ephemeral)
+                var plainText = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
+
+                // Collect file items (sync)
+                var files = [];
                 if (items && items.length > 0) {
                     for (var i = 0; i < items.length; i++) {
-                        var item = items[i];
-                        if (item.kind === 'file') {
-                            hasFileItem = true;
-                            e.preventDefault();
-                            var file = item.getAsFile();
-                            if (!file) continue;
-                            try {
-                                var base64 = await window._fileToBase64(file);
-                                await dotNetRef.invokeMethodAsync('OnFilePasted',
-                                    file.name || 'pasted-image.png',
-                                    file.type || 'application/octet-stream',
-                                    base64);
-                            } catch (err) {
-                                console.error('[Cominomi:paste] file read error:', err);
-                            }
+                        if (items[i].kind === 'file') {
+                            var f = items[i].getAsFile();
+                            if (f) files.push(f);
                         }
                     }
                 }
 
+                // Primary: file items found in clipboardData
+                if (files.length > 0) {
+                    e.preventDefault();
+
+                    for (var i = 0; i < files.length; i++) {
+                        try {
+                            var base64 = await window._fileToBase64(files[i]);
+                            await dotNetRef.invokeMethodAsync('OnFilePasted',
+                                files[i].name || 'pasted-image.png',
+                                files[i].type || 'application/octet-stream',
+                                base64);
+                        } catch (err) {
+                            console.error('[Cominomi:paste] file read error:', err);
+                        }
+                    }
+
+                    // Also insert accompanying text (e.g. Notion rich paste with images + text)
+                    if (plainText && plainText.trim()) {
+                        window._insertTextAtCursor(inputEl, plainText);
+                    }
+                    return;
+                }
+
                 // Fallback: if no file items in clipboardData, try Clipboard API
-                if (!hasFileItem && navigator.clipboard && navigator.clipboard.read) {
+                if (navigator.clipboard && navigator.clipboard.read) {
                     try {
                         var clipboardItems = await navigator.clipboard.read();
+                        var foundImage = false;
                         for (var ci = 0; ci < clipboardItems.length; ci++) {
                             var types = clipboardItems[ci].types;
                             for (var ti = 0; ti < types.length; ti++) {
                                 var type = types[ti];
                                 if (type.startsWith('image/')) {
-                                    e.preventDefault();
+                                    if (!foundImage) { e.preventDefault(); foundImage = true; }
                                     var blob = await clipboardItems[ci].getType(type);
                                     var base64 = await window._fileToBase64(new File([blob], 'pasted-image.' + (type.split('/')[1] || 'png'), { type: type }));
                                     await dotNetRef.invokeMethodAsync('OnFilePasted',
                                         'pasted-image.' + (type.split('/')[1] || 'png'), type, base64);
                                 }
                             }
+                        }
+                        // Also insert accompanying text in fallback path
+                        if (foundImage && plainText && plainText.trim()) {
+                            window._insertTextAtCursor(inputEl, plainText);
                         }
                     } catch (_) {
                         // Permission denied or no image — let text paste proceed normally
@@ -290,6 +309,19 @@
         };
 
         // --- Public registration: uses MutationObserver to handle late/replaced elements ---
+        // Insert text at the current cursor position in an input/textarea element
+        window._insertTextAtCursor = function(inputEl, text) {
+            var start = inputEl.selectionStart || 0;
+            var end = inputEl.selectionEnd || 0;
+            var current = inputEl.value || '';
+            inputEl.value = current.substring(0, start) + text + current.substring(end);
+            inputEl.selectionStart = inputEl.selectionEnd = start + text.length;
+            inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+            inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+            inputEl.style.height = 'auto';
+            inputEl.style.height = inputEl.scrollHeight + 'px';
+        };
+
         // Convert a File/Blob to a base64 string (without the data-url prefix)
         window._fileToBase64 = function(file) {
             return new Promise(function(resolve, reject) {
