@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.6.7f",
+    "date": "2026-04-02",
+    "changes": [
+      { "type": "feat", "description": "게이미피케이션 업적 42개 → 105개 대폭 확장" },
+      { "type": "fix", "description": "첨부파일이 세션 간 공유되는 버그 수정 및 중복 파일명 넘버링" },
+      { "type": "fix", "description": "세션 삭제 버튼이 왼쪽에 표시되는 문제 수정" },
+      { "type": "fix", "description": "호버 시 액션 버튼이 텍스트 영역을 줄이지 않는 문제 수정" },
+      { "type": "fix", "description": "Ctrl 단축키 배지가 숨겨진 상태에서 레이아웃 공간 차지하는 문제 수정" },
+      { "type": "fix", "description": "Changes diff 기준을 워크트리 생성 시점 커밋으로 고정" },
+      { "type": "fix", "description": "워크스페이스 생성 실패 시 고스트 항목 남는 문제 수정" },
+      { "type": "style", "description": "드래그 앤 드롭 UI를 부드러운 보더 글로우로 개선" }
+    ]
+  },
+  {
     "version": "1.6.6",
     "date": "2026-04-02",
     "changes": [
