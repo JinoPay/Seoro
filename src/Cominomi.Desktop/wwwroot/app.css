@@ -44,7 +44,7 @@ html *::after {
     --sidebar-width: 260px;
     display: grid;
     grid-template-columns: var(--sidebar-width) auto 1fr;
-    height: 100vh;
+    height: 100%;
     overflow: hidden;
 }
 
@@ -3063,7 +3063,7 @@ html *::after {
 /* ===== Settings Page ===== */
 .settings-page {
     display: flex;
-    height: 100vh;
+    height: 100%;
     background: var(--mud-palette-background);
 }
 
@@ -3074,6 +3074,7 @@ html *::after {
     padding: var(--space-2) 0;
     display: flex;
     flex-direction: column;
+    min-height: 0;
     overflow-y: auto;
     background: var(--bg-sidebar);
 }
@@ -3144,6 +3145,7 @@ html *::after {
 
 .settings-page-content {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
 }
 
