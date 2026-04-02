@@ -326,16 +326,26 @@
             container._dotNetRef = dotNetRef;
 
             // Drop handlers on the container itself
+            container._dragCounter = 0;
+            container._dragEnterHandler = function(e) {
+                e.preventDefault();
+                container._dragCounter++;
+                container.classList.add('drop-active');
+            };
             container._dragOverHandler = function(e) {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'copy';
-                container.classList.add('drop-active');
             };
             container._dragLeaveHandler = function(e) {
-                container.classList.remove('drop-active');
+                container._dragCounter--;
+                if (container._dragCounter <= 0) {
+                    container._dragCounter = 0;
+                    container.classList.remove('drop-active');
+                }
             };
             container._dropHandler = async function(e) {
                 e.preventDefault();
+                container._dragCounter = 0;
                 container.classList.remove('drop-active');
                 var files = e.dataTransfer?.files;
                 if (!files || files.length === 0) return;
@@ -350,6 +360,7 @@
                     }
                 }
             };
+            container.addEventListener('dragenter', container._dragEnterHandler);
             container.addEventListener('dragover', container._dragOverHandler);
             container.addEventListener('dragleave', container._dragLeaveHandler);
             container.addEventListener('drop', container._dropHandler);
@@ -372,6 +383,7 @@
                 container._cominomiPasteHandler = null;
             }
             // Detach drop handlers
+            if (container._dragEnterHandler) container.removeEventListener('dragenter', container._dragEnterHandler);
             if (container._dragOverHandler) container.removeEventListener('dragover', container._dragOverHandler);
             if (container._dragLeaveHandler) container.removeEventListener('dragleave', container._dragLeaveHandler);
             if (container._dropHandler) container.removeEventListener('drop', container._dropHandler);

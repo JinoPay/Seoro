@@ -1472,7 +1472,7 @@ html *::after {
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-default);
     padding: var(--space-3) var(--space-4) var(--space-2);
-    transition: border-color var(--transition);
+    transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
 .input-area-float:focus-within {
@@ -2673,10 +2673,10 @@ html *::after {
 }
 
 /* ===== Drop Zone ===== */
-.drop-active {
-    outline: 2px dashed var(--accent) !important;
-    outline-offset: -2px;
-    background: var(--accent-subtle) !important;
+.drop-active .input-area-float {
+    border-color: var(--border-active);
+    box-shadow: var(--shadow-focus), inset 0 0 0 1px var(--accent-dim);
+    background: var(--accent-subtle);
 }
 
 /* ===== Attachment Preview ===== */
