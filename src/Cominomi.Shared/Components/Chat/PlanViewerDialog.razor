@@ -1,14 +1,13 @@
 @using Markdig
-
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
         <div style="display: flex; align-items: center; gap: 8px;">
-            <MudIcon Icon="@Icons.Material.Filled.Map" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.Map" Size="Size.Small"/>
             <span class="typo-h6">플랜 파일</span>
             @if (!string.IsNullOrEmpty(PlanFilePath))
             {
                 <span style="font-size: 12px; opacity: 0.5; font-family: var(--font-mono);">
-                    @System.IO.Path.GetFileName(PlanFilePath)
+                    @Path.GetFileName(PlanFilePath)
                 </span>
             }
         </div>
@@ -47,6 +46,7 @@
         MaxWidth = MaxWidth.Medium,
         FullWidth = true,
         CloseOnEscapeKey = true,
-        BackdropClick = true,
+        BackdropClick = true
     };
+
 }

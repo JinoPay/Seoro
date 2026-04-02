@@ -2,17 +2,9 @@ using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services.StreamEventHandlers;
 
-public class ContentBlockStartHandler : IStreamEventHandler
+public class ContentBlockStartHandler(IChatState chatState, IGitBranchWatcherService branchWatcher)
+    : IStreamEventHandler
 {
-    private readonly IChatState _chatState;
-    private readonly IGitBranchWatcherService _branchWatcher;
-
-    public ContentBlockStartHandler(IChatState chatState, IGitBranchWatcherService branchWatcher)
-    {
-        _chatState = chatState;
-        _branchWatcher = branchWatcher;
-    }
-
     public string EventType => "content_block_start";
 
     public Task HandleAsync(StreamEvent evt, StreamProcessingContext ctx)
@@ -23,11 +15,11 @@ public class ContentBlockStartHandler : IStreamEventHandler
         switch (evt.ContentBlock?.Type)
         {
             case "thinking":
-                _chatState.SetPhase(StreamingPhase.Thinking, sessionId: ctx.Session.Id);
+                chatState.SetPhase(StreamingPhase.Thinking, sessionId: ctx.Session.Id);
                 break;
 
             case "redacted_thinking":
-                _chatState.AppendThinking(ctx.AssistantMessage, "[사고 내용 생략됨]");
+                chatState.AppendThinking(ctx.AssistantMessage, "[사고 내용 생략됨]");
                 break;
 
             case "server_tool_use":
@@ -38,8 +30,8 @@ public class ContentBlockStartHandler : IStreamEventHandler
                     Name = evt.ContentBlock.Name ?? "",
                     ParentToolUseId = evt.ParentToolUseId
                 };
-                _chatState.AddToolCall(ctx.AssistantMessage, ctx.CurrentToolCall);
-                _chatState.SetPhase(StreamingPhase.UsingTool, evt.ContentBlock.Name, ctx.Session.Id);
+                chatState.AddToolCall(ctx.AssistantMessage, ctx.CurrentToolCall);
+                chatState.SetPhase(StreamingPhase.UsingTool, evt.ContentBlock.Name, ctx.Session.Id);
                 if (evt.ContentBlock.Name == "ExitPlanMode")
                     ctx.ExitPlanModeDetected = true;
                 break;
@@ -49,19 +41,22 @@ public class ContentBlockStartHandler : IStreamEventHandler
                 if (evt.Index.HasValue && !string.IsNullOrEmpty(evt.ContentBlock.ToolUseId))
                 {
                     ctx.ToolResultBlockMap[evt.Index.Value] = evt.ContentBlock.ToolUseId;
-                    var matchingTool = ctx.AssistantMessage.ToolCalls.FirstOrDefault(t => t.Id == evt.ContentBlock.ToolUseId);
+                    var matchingTool =
+                        ctx.AssistantMessage.ToolCalls.FirstOrDefault(t => t.Id == evt.ContentBlock.ToolUseId);
                     if (matchingTool != null)
                     {
                         matchingTool.IsError = evt.ContentBlock.IsError ?? false;
                         if (evt.ContentBlock.Content != null)
-                            matchingTool.Output = StreamEventUtils.ExtractToolResultContent(evt.ContentBlock.Content.Value);
-                        _chatState.NotifyStateChanged();
+                            matchingTool.Output =
+                                StreamEventUtils.ExtractToolResultContent(evt.ContentBlock.Content.Value);
+                        chatState.NotifyStateChanged();
 
                         // Refresh branch from HEAD file after Bash tool completes
                         if (matchingTool.Name is "Bash" or "execute_bash")
-                            _branchWatcher.RefreshBranchFromHeadFile(ctx.Session);
+                            branchWatcher.RefreshBranchFromHeadFile(ctx.Session);
                     }
                 }
+
                 break;
         }
 

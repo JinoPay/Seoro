@@ -1,29 +1,27 @@
 using System.Runtime.InteropServices;
-using Cominomi.Shared;
 using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
-public class ClaudeCliResolver
+public class ClaudeCliResolver(IShellService shellService, IProcessRunner processRunner, ILogger logger)
 {
-    private readonly IShellService _shellService;
-    private readonly IProcessRunner _processRunner;
-    private readonly ILogger _logger;
+    private readonly SemaphoreSlim _resolveLock = new(1, 1);
 
     private (string fileName, string argPrefix)? _resolvedCommand;
     private string? _resolvedCommandPath;
-    private readonly SemaphoreSlim _resolveLock = new(1, 1);
 
-    public ClaudeCliResolver(IShellService shellService, IProcessRunner processRunner, ILogger logger)
+    /// <summary>
+    ///     Returns the resolved Claude CLI command only if actually found on disk.
+    ///     Returns null when not found — no fallback guess.
+    /// </summary>
+    public async Task<(string fileName, string argPrefix)?> DetectAsync(string? configuredPath)
     {
-        _shellService = shellService;
-        _processRunner = processRunner;
-        _logger = logger;
+        return await FindClaudeCommandAsync(configuredPath);
     }
 
     /// <summary>
-    /// Returns a command to execute Claude CLI, falling back to a bare name if not found.
-    /// Use this when you intend to *run* Claude (best-effort).
+    ///     Returns a command to execute Claude CLI, falling back to a bare name if not found.
+    ///     Use this when you intend to *run* Claude (best-effort).
     /// </summary>
     public async Task<(string fileName, string argPrefix)> ResolveAsync(string? configuredPath)
     {
@@ -47,73 +45,40 @@ public class ClaudeCliResolver
         }
     }
 
-    /// <summary>
-    /// Returns the resolved Claude CLI command only if actually found on disk.
-    /// Returns null when not found — no fallback guess.
-    /// </summary>
-    public async Task<(string fileName, string argPrefix)?> DetectAsync(string? configuredPath)
+    public async Task<string?> RunSimpleCommandAsync(string fileName, string arguments)
     {
-        return await FindClaudeCommandAsync(configuredPath);
-    }
-
-    private async Task<(string fileName, string argPrefix)?> FindClaudeCommandAsync(string? configuredPath)
-    {
-        if (!string.IsNullOrWhiteSpace(configuredPath))
+        logger.LogDebug("Executing: {FileName} {Arguments}", fileName, arguments);
+        try
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return ResolveWindowsCommand(configuredPath);
-            return (configuredPath, "");
-        }
+            // arguments may contain a baseArgs prefix (e.g., '/c "claude.exe" ') followed by the flag.
+            // Split on whitespace while preserving quoted segments.
+            var args = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        var resolved = await _shellService.WhichAsync("claude");
-        if (resolved != null)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return ResolveWindowsCommand(resolved);
-            return (resolved, "");
-        }
+            var loginPath = await shellService.GetLoginShellPathAsync();
+            var envVars = new Dictionary<string, string>(CominomiConstants.Env.NoColorEnv);
+            if (loginPath != null)
+                envVars["PATH"] = loginPath;
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string[] windowsCandidates =
-            [
-                Path.Combine(appData, "npm", "claude.cmd"),
-            ];
-
-            foreach (var candidate in windowsCandidates)
+            var result = await processRunner.RunAsync(new ProcessRunOptions
             {
-                if (File.Exists(candidate))
-                    return ResolveWindowsCommand(candidate);
-            }
+                FileName = fileName,
+                Arguments = args,
+                EnvironmentVariables = envVars,
+                Timeout = TimeSpan.FromSeconds(10)
+            });
+            return result.Stdout;
         }
-        else
+        catch (Exception ex)
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string[] candidates =
-            [
-                Path.Combine(home, ".local", "bin", "claude"),                        // Anthropic installer, pip
-                Path.Combine(home, ".local", "share", "mise", "shims", "claude"),     // mise
-                Path.Combine(home, ".volta", "bin", "claude"),                        // volta
-                "/opt/homebrew/bin/claude",                                           // Apple Silicon Homebrew
-                "/usr/local/bin/claude",                                              // Intel Homebrew
-                Path.Combine(home, ".npm", "bin", "claude")                           // npm global
-            ];
-
-            foreach (var candidate in candidates)
-            {
-                if (File.Exists(candidate))
-                    return (candidate, "");
-            }
+            logger.LogWarning(ex, "Failed to run simple command: {FileName} {Args}", fileName, arguments);
+            return null;
         }
-
-        return null;
     }
 
     /// <summary>
-    /// Given a resolved path on Windows, return the correct (fileName, argPrefix) tuple.
-    /// Handles .exe (direct), .cmd/.bat (via cmd.exe /c), and bare scripts
-    /// (probe for .cmd sibling, else wrap with cmd.exe /c).
+    ///     Given a resolved path on Windows, return the correct (fileName, argPrefix) tuple.
+    ///     Handles .exe (direct), .cmd/.bat (via cmd.exe /c), and bare scripts
+    ///     (probe for .cmd sibling, else wrap with cmd.exe /c).
     /// </summary>
     private static (string fileName, string argPrefix) ResolveWindowsCommand(string resolvedPath)
     {
@@ -134,33 +99,53 @@ public class ClaudeCliResolver
         return ("cmd.exe", $"/c \"{resolvedPath}\" ");
     }
 
-    public async Task<string?> RunSimpleCommandAsync(string fileName, string arguments)
+    private async Task<(string fileName, string argPrefix)?> FindClaudeCommandAsync(string? configuredPath)
     {
-        _logger.LogDebug("Executing: {FileName} {Arguments}", fileName, arguments);
-        try
+        if (!string.IsNullOrWhiteSpace(configuredPath))
         {
-            // arguments may contain a baseArgs prefix (e.g., '/c "claude.exe" ') followed by the flag.
-            // Split on whitespace while preserving quoted segments.
-            var args = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-            var loginPath = await _shellService.GetLoginShellPathAsync();
-            var envVars = new Dictionary<string, string>(CominomiConstants.Env.NoColorEnv);
-            if (loginPath != null)
-                envVars["PATH"] = loginPath;
-
-            var result = await _processRunner.RunAsync(new ProcessRunOptions
-            {
-                FileName = fileName,
-                Arguments = args,
-                EnvironmentVariables = envVars,
-                Timeout = TimeSpan.FromSeconds(10)
-            });
-            return result.Stdout;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return ResolveWindowsCommand(configuredPath);
+            return (configuredPath, "");
         }
-        catch (Exception ex)
+
+        var resolved = await shellService.WhichAsync("claude");
+        if (resolved != null)
         {
-            _logger.LogWarning(ex, "Failed to run simple command: {FileName} {Args}", fileName, arguments);
-            return null;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return ResolveWindowsCommand(resolved);
+            return (resolved, "");
         }
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string[] windowsCandidates =
+            [
+                Path.Combine(appData, "npm", "claude.cmd")
+            ];
+
+            foreach (var candidate in windowsCandidates)
+                if (File.Exists(candidate))
+                    return ResolveWindowsCommand(candidate);
+        }
+        else
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string[] candidates =
+            [
+                Path.Combine(home, ".local", "bin", "claude"), // Anthropic installer, pip
+                Path.Combine(home, ".local", "share", "mise", "shims", "claude"), // mise
+                Path.Combine(home, ".volta", "bin", "claude"), // volta
+                "/opt/homebrew/bin/claude", // Apple Silicon Homebrew
+                "/usr/local/bin/claude", // Intel Homebrew
+                Path.Combine(home, ".npm", "bin", "claude") // npm global
+            ];
+
+            foreach (var candidate in candidates)
+                if (File.Exists(candidate))
+                    return (candidate, "");
+        }
+
+        return null;
     }
 }

@@ -1,11 +1,10 @@
 @using Markdig
-@using Cominomi.Shared.Models
 @inject IJSRuntime JS
 
 <div class="filediff-view">
     <div class="filediff-header">
         <MudIcon Icon="@Icons.Material.Filled.InsertDriveFile" Size="Size.Small"
-                 Style="width: 16px; height: 16px; opacity: 0.5;" />
+                 Style="width: 16px; height: 16px; opacity: 0.5;"/>
         <span class="filediff-path">@FilePath</span>
     </div>
 
@@ -13,7 +12,7 @@
     {
         <div class="filecontent-body">
             <div class="filediff-empty">
-                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Style="opacity: 0.3;" />
+                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Style="opacity: 0.3;"/>
                 <span>Empty file</span>
             </div>
         </div>
@@ -28,7 +27,7 @@
     {
         <div id="@_elementId" class="filecontent-code-container">
             <div class="filecontent-gutter" aria-hidden="true">
-                @for (int i = 1; i <= _lineCount; i++)
+                @for (var i = 1; i <= _lineCount; i++)
                 {
                     <div class="filecontent-gutter-line">@i</div>
                 }
@@ -42,7 +41,7 @@
             @{
                 var lines = Content.Split('\n');
             }
-            @for (int i = 0; i < lines.Length; i++)
+            @for (var i = 0; i < lines.Length; i++)
             {
                 var lineNum = i + 1;
                 var line = lines[i];
@@ -56,13 +55,16 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public string FilePath { get; set; } = "";
+    [Parameter][EditorRequired] public string FilePath { get; set; } = "";
 
-    [Parameter, EditorRequired]
-    public string Content { get; set; } = "";
+    [Parameter][EditorRequired] public string Content { get; set; } = "";
 
-    private enum FileViewMode { Code, Markdown, PlainText }
+    private enum FileViewMode
+    {
+        Code,
+        Markdown,
+        PlainText
+    }
 
     private FileViewMode _viewMode;
     private string _langClass = "";
@@ -173,4 +175,5 @@
             _ => ""
         };
     }
+
 }

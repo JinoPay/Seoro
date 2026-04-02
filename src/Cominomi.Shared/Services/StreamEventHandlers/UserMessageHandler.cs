@@ -3,12 +3,8 @@ using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services.StreamEventHandlers;
 
-public class UserMessageHandler : IStreamEventHandler
+public class UserMessageHandler(IChatState chatState) : IStreamEventHandler
 {
-    private readonly IChatState _chatState;
-
-    public UserMessageHandler(IChatState chatState) => _chatState = chatState;
-
     public string EventType => "user";
 
     public Task HandleAsync(StreamEvent evt, StreamProcessingContext ctx)
@@ -37,7 +33,6 @@ public class UserMessageHandler : IStreamEventHandler
         }
 
         foreach (var block in evt.Message.Content)
-        {
             if (block.Type is "tool_result" or "server_tool_result" && !string.IsNullOrEmpty(block.ToolUseId))
             {
                 var match = ctx.AssistantMessage.ToolCalls.FirstOrDefault(t => t.Id == block.ToolUseId);
@@ -49,9 +44,8 @@ public class UserMessageHandler : IStreamEventHandler
                     match.IsComplete = true;
                 }
             }
-        }
 
-        _chatState.NotifyStateChanged();
+        chatState.NotifyStateChanged();
 
         return Task.CompletedTask;
     }

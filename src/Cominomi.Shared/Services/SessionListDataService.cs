@@ -5,17 +5,10 @@ namespace Cominomi.Shared.Services;
 
 public class SessionListDataService : IDisposable
 {
-    private readonly ISessionService _sessionService;
     private readonly IGitService _gitService;
-    private readonly IWorkspaceService _workspaceService;
     private readonly ILogger<SessionListDataService> _logger;
-
-    public Dictionary<string, List<Session>> SessionCache { get; } = new();
-    public Dictionary<string, (int Additions, int Deletions)> DiffStatsCache { get; } = new();
-    public List<(Session Session, Workspace Workspace)> OrderedSessions { get; } = [];
-    public List<Workspace> Workspaces { get; private set; } = [];
-
-    public event Action? OnDataChanged;
+    private readonly ISessionService _sessionService;
+    private readonly IWorkspaceService _workspaceService;
 
     public SessionListDataService(
         ISessionService sessionService,
@@ -30,130 +23,30 @@ public class SessionListDataService : IDisposable
         _workspaceService.OnWorkspaceSaved += HandleWorkspaceSaved;
     }
 
-    public async Task LoadWorkspacesAsync()
+    public Dictionary<string, (int Additions, int Deletions)> DiffStatsCache { get; } = new();
+
+    public Dictionary<string, List<Session>> SessionCache { get; } = new();
+    public List<(Session Session, Workspace Workspace)> OrderedSessions { get; } = [];
+    public List<Workspace> Workspaces { get; private set; } = [];
+
+    public event Action? OnDataChanged;
+
+    public void Dispose()
     {
-        Workspaces = await _workspaceService.GetWorkspacesAsync();
+        _workspaceService.OnWorkspaceSaved -= HandleWorkspaceSaved;
+        OnDataChanged = null;
     }
 
-    public async Task RefreshWorkspacesAsync()
+    public static IEnumerable<Session> FilterSessions(List<Session> sessions, string? filterText)
     {
-        Workspaces = await _workspaceService.GetWorkspacesAsync();
-        var validIds = new HashSet<string>(Workspaces.Select(w => w.Id));
-        var staleKeys = SessionCache.Keys.Where(k => !validIds.Contains(k)).ToList();
-        foreach (var key in staleKeys) SessionCache.Remove(key);
-        RebuildOrderedSessions();
-        OnDataChanged?.Invoke();
-    }
+        if (string.IsNullOrWhiteSpace(filterText))
+            return sessions;
 
-    public async Task ReloadWorkspacesAsync(IEnumerable<string> expandedProjects)
-    {
-        Workspaces = await _workspaceService.GetWorkspacesAsync();
-        foreach (var projectName in expandedProjects)
-        {
-            var workspacesInGroup = Workspaces.Where(w => GetProjectName(w) == projectName);
-            foreach (var ws in workspacesInGroup)
-            {
-                var sessions = await _sessionService.GetSessionsByWorkspaceAsync(ws.Id);
-                SessionCache[ws.Id] = sessions;
-            }
-        }
-        RebuildOrderedSessions();
-    }
-
-    public async Task LoadSessionsForProjectAsync(string projectName)
-    {
-        var workspacesInGroup = Workspaces.Where(w => GetProjectName(w) == projectName);
-        foreach (var ws in workspacesInGroup)
-        {
-            if (!SessionCache.ContainsKey(ws.Id))
-            {
-                var sessions = await _sessionService.GetSessionsByWorkspaceAsync(ws.Id);
-                SessionCache[ws.Id] = sessions;
-                _ = LoadDiffStatsForWorkspaceAsync(ws, sessions);
-            }
-        }
-        RebuildOrderedSessions();
-    }
-
-    public async Task LoadDiffStatsForWorkspaceAsync(Workspace ws, List<Session> sessions)
-    {
-        foreach (var session in sessions)
-        {
-            if (session.Status == SessionStatus.Pending || session.Git.IsLocalDir
-                || string.IsNullOrEmpty(session.Git.WorktreePath) || string.IsNullOrEmpty(session.Git.BaseBranch))
-                continue;
-
-            try
-            {
-                var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.BaseBranch);
-                if (stats.Additions > 0 || stats.Deletions > 0)
-                {
-                    DiffStatsCache[session.Id] = stats;
-                    OnDataChanged?.Invoke();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Failed to load diff stats for session {SessionId}", session.Id);
-            }
-        }
-    }
-
-    public async Task RefreshDiffStatsAsync(string sessionId)
-    {
-        var session = OrderedSessions.FirstOrDefault(o => o.Session.Id == sessionId).Session;
-        if (session == null || session.Git.IsLocalDir
-            || string.IsNullOrEmpty(session.Git.WorktreePath) || string.IsNullOrEmpty(session.Git.BaseBranch))
-            return;
-
-        try
-        {
-            var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.BaseBranch);
-            DiffStatsCache[sessionId] = stats;
-            OnDataChanged?.Invoke();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Failed to refresh diff stats for session {SessionId}", sessionId);
-        }
-    }
-
-    public async Task LoadAllSessionCountsAsync()
-    {
-        foreach (var ws in Workspaces)
-        {
-            if (!SessionCache.ContainsKey(ws.Id))
-            {
-                try
-                {
-                    var sessions = await _sessionService.GetSessionsByWorkspaceAsync(ws.Id);
-                    SessionCache[ws.Id] = sessions;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogDebug(ex, "Failed to pre-load sessions for workspace {WorkspaceId}", ws.Id);
-                }
-            }
-        }
-        RebuildOrderedSessions();
-        OnDataChanged?.Invoke();
-    }
-
-    public void RebuildOrderedSessions()
-    {
-        OrderedSessions.Clear();
-        foreach (var group in Workspaces.GroupBy(GetProjectName))
-        {
-            var workspacesInGroup = group.OrderByDescending(w => w.UpdatedAt).ToList();
-            foreach (var ws in workspacesInGroup)
-            {
-                if (SessionCache.TryGetValue(ws.Id, out var sessions))
-                {
-                    foreach (var s in sessions)
-                        OrderedSessions.Add((s, ws));
-                }
-            }
-        }
+        var filter = filterText.Trim();
+        return sessions.Where(s =>
+            s.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || s.Git.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || s.CityName.Contains(filter, StringComparison.OrdinalIgnoreCase));
     }
 
     public static string GetProjectName(Workspace ws)
@@ -192,22 +85,131 @@ public class SessionListDataService : IDisposable
                 return true;
             if (SessionCache.TryGetValue(w.Id, out var sessions))
                 return sessions.Any(s => s.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)
-                    || s.Git.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
-                    || s.CityName.Contains(filter, StringComparison.OrdinalIgnoreCase));
+                                         || s.Git.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                                         || s.CityName.Contains(filter, StringComparison.OrdinalIgnoreCase));
             return false;
         });
     }
 
-    public static IEnumerable<Session> FilterSessions(List<Session> sessions, string? filterText)
+    public async Task LoadAllSessionCountsAsync()
     {
-        if (string.IsNullOrWhiteSpace(filterText))
-            return sessions;
+        foreach (var ws in Workspaces)
+            if (!SessionCache.ContainsKey(ws.Id))
+                try
+                {
+                    var sessions = await _sessionService.GetSessionsByWorkspaceAsync(ws.Id);
+                    SessionCache[ws.Id] = sessions;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Failed to pre-load sessions for workspace {WorkspaceId}", ws.Id);
+                }
 
-        var filter = filterText.Trim();
-        return sessions.Where(s =>
-            s.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)
-            || s.Git.BranchName.Contains(filter, StringComparison.OrdinalIgnoreCase)
-            || s.CityName.Contains(filter, StringComparison.OrdinalIgnoreCase));
+        RebuildOrderedSessions();
+        OnDataChanged?.Invoke();
+    }
+
+    public async Task LoadDiffStatsForWorkspaceAsync(Workspace ws, List<Session> sessions)
+    {
+        foreach (var session in sessions)
+        {
+            if (session.Status == SessionStatus.Pending || session.Git.IsLocalDir
+                                                        || string.IsNullOrEmpty(session.Git.WorktreePath) ||
+                                                        string.IsNullOrEmpty(session.Git.BaseBranch))
+                continue;
+
+            try
+            {
+                var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.BaseBranch);
+                if (stats.Additions > 0 || stats.Deletions > 0)
+                {
+                    DiffStatsCache[session.Id] = stats;
+                    OnDataChanged?.Invoke();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to load diff stats for session {SessionId}", session.Id);
+            }
+        }
+    }
+
+    public async Task LoadSessionsForProjectAsync(string projectName)
+    {
+        var workspacesInGroup = Workspaces.Where(w => GetProjectName(w) == projectName);
+        foreach (var ws in workspacesInGroup)
+            if (!SessionCache.ContainsKey(ws.Id))
+            {
+                var sessions = await _sessionService.GetSessionsByWorkspaceAsync(ws.Id);
+                SessionCache[ws.Id] = sessions;
+                _ = LoadDiffStatsForWorkspaceAsync(ws, sessions);
+            }
+
+        RebuildOrderedSessions();
+    }
+
+    public async Task LoadWorkspacesAsync()
+    {
+        Workspaces = await _workspaceService.GetWorkspacesAsync();
+    }
+
+    public async Task RefreshDiffStatsAsync(string sessionId)
+    {
+        var session = OrderedSessions.FirstOrDefault(o => o.Session.Id == sessionId).Session;
+        if (session == null || session.Git.IsLocalDir
+                            || string.IsNullOrEmpty(session.Git.WorktreePath) ||
+                            string.IsNullOrEmpty(session.Git.BaseBranch))
+            return;
+
+        try
+        {
+            var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.BaseBranch);
+            DiffStatsCache[sessionId] = stats;
+            OnDataChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to refresh diff stats for session {SessionId}", sessionId);
+        }
+    }
+
+    public async Task RefreshWorkspacesAsync()
+    {
+        Workspaces = await _workspaceService.GetWorkspacesAsync();
+        var validIds = new HashSet<string>(Workspaces.Select(w => w.Id));
+        var staleKeys = SessionCache.Keys.Where(k => !validIds.Contains(k)).ToList();
+        foreach (var key in staleKeys) SessionCache.Remove(key);
+        RebuildOrderedSessions();
+        OnDataChanged?.Invoke();
+    }
+
+    public async Task ReloadWorkspacesAsync(IEnumerable<string> expandedProjects)
+    {
+        Workspaces = await _workspaceService.GetWorkspacesAsync();
+        foreach (var projectName in expandedProjects)
+        {
+            var workspacesInGroup = Workspaces.Where(w => GetProjectName(w) == projectName);
+            foreach (var ws in workspacesInGroup)
+            {
+                var sessions = await _sessionService.GetSessionsByWorkspaceAsync(ws.Id);
+                SessionCache[ws.Id] = sessions;
+            }
+        }
+
+        RebuildOrderedSessions();
+    }
+
+    public void RebuildOrderedSessions()
+    {
+        OrderedSessions.Clear();
+        foreach (var group in Workspaces.GroupBy(GetProjectName))
+        {
+            var workspacesInGroup = group.OrderByDescending(w => w.UpdatedAt).ToList();
+            foreach (var ws in workspacesInGroup)
+                if (SessionCache.TryGetValue(ws.Id, out var sessions))
+                    foreach (var s in sessions)
+                        OrderedSessions.Add((s, ws));
+        }
     }
 
     private void HandleWorkspaceSaved(Workspace updated)
@@ -219,11 +221,5 @@ public class SessionListDataService : IDisposable
             RebuildOrderedSessions();
             OnDataChanged?.Invoke();
         }
-    }
-
-    public void Dispose()
-    {
-        _workspaceService.OnWorkspaceSaved -= HandleWorkspaceSaved;
-        OnDataChanged = null;
     }
 }

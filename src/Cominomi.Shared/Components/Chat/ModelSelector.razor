@@ -1,5 +1,3 @@
-@using Cominomi.Shared.Models
-@using Cominomi.Shared.Services
 @inject IChatState ChatState
 @implements IDisposable
 
@@ -8,7 +6,7 @@
             @onclick="ToggleModelMenu"
             disabled="@(Disabled || IsStreaming)">
         <span class="model-selector-label">@GetModelDisplayName()</span>
-        <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" />
+        <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small"/>
     </button>
 </MudTooltip>
 
@@ -22,7 +20,7 @@
                 @model.DisplayName
             </MudListItem>
         }
-        <MudDivider />
+        <MudDivider/>
         <MudListItem T="string" OnClick="@(() => _customModelInput = true)"
                      Class="@(_isCustomModel ? "model-item-active" : "")">
             @if (_customModelInput)
@@ -32,7 +30,7 @@
                               Variant="Variant.Text" Margin="Margin.Dense"
                               Immediate="true" AutoFocus="true"
                               OnKeyDown="HandleCustomModelKeyDown"
-                              Style="font-size: 0.8rem;" />
+                              Style="font-size: 0.8rem;"/>
             }
             else
             {
@@ -45,7 +43,7 @@
 @if (_modelMenuOpen)
 {
     <MudOverlay Visible="true" OnClick="CloseModelMenu"
-                DarkBackground="false" ZIndex="1" />
+                DarkBackground="false" ZIndex="1"/>
 }
 
 @code {
@@ -58,7 +56,9 @@
 
     private bool _modelMenuOpen;
     private bool _customModelInput;
+
     private string _customModelId = "";
+
     // Optimistic model — set only during user selection, before parent confirms.
     // Cleared as soon as parent delivers the matching Model parameter.
     private string? _pendingModel;
@@ -66,8 +66,8 @@
     private string EffectiveModel => _pendingModel ?? ChatState.CurrentSession?.Model ?? Model;
 
     private bool _isCustomModel => !string.IsNullOrEmpty(EffectiveModel)
-        && !ModelDefinitions.All.Any(m => m.Id == EffectiveModel)
-        && ModelDefinitions.NormalizeModelId(EffectiveModel) == EffectiveModel;
+                                   && !ModelDefinitions.All.Any(m => m.Id == EffectiveModel)
+                                   && ModelDefinitions.NormalizeModelId(EffectiveModel) == EffectiveModel;
 
     protected override void OnInitialized()
     {
@@ -171,4 +171,5 @@
         await OnModelChanged.InvokeAsync(modelId);
         await OnMenuClosed.InvokeAsync();
     }
+
 }

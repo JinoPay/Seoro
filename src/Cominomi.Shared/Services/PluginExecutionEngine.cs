@@ -5,134 +5,143 @@ using Microsoft.Extensions.Logging;
 namespace Cominomi.Shared.Services;
 
 /// <summary>
-/// Plugin execution result containing stdout, stderr, exit code, and parsed structured data.
+///     Plugin execution result containing stdout, stderr, exit code, and parsed structured data.
 /// </summary>
 public record PluginExecutionResult(bool Success, string Output, string Error, int ExitCode)
 {
     /// <summary>
-    /// Structured data parsed from the plugin's JSON stdout response.
-    /// Null when the plugin does not emit a valid JSON response.
+    ///     Structured data parsed from the plugin's JSON stdout response.
+    ///     Null when the plugin does not emit a valid JSON response.
     /// </summary>
     public PluginResponse? Data { get; init; }
 }
 
 /// <summary>
-/// JSON request envelope written to the plugin's stdin.
+///     JSON request envelope written to the plugin's stdin.
 /// </summary>
 public record PluginRequest
 {
-    public string PluginId { get; init; } = "";
-    public string Action { get; init; } = "run";
     public Dictionary<string, object?> Parameters { get; init; } = [];
+    public string Action { get; init; } = "run";
+    public string PluginId { get; init; } = "";
 }
 
 /// <summary>
-/// JSON response envelope read from the plugin's stdout.
-/// Plugins may emit a single JSON object to stdout to return structured data.
-/// If stdout is not valid JSON, the raw text is still available via <see cref="PluginExecutionResult.Output"/>.
+///     JSON response envelope read from the plugin's stdout.
+///     Plugins may emit a single JSON object to stdout to return structured data.
+///     If stdout is not valid JSON, the raw text is still available via <see cref="PluginExecutionResult.Output" />.
 /// </summary>
 public record PluginResponse
 {
     public bool Success { get; init; } = true;
-    public string? Message { get; init; }
     public JsonElement? Data { get; init; }
+    public string? Message { get; init; }
 }
 
 /// <summary>
-/// Context passed to plugin entry points via stdin JSON and environment variables.
+///     Context passed to plugin entry points via stdin JSON and environment variables.
 /// </summary>
 public record PluginExecutionContext
 {
-    public string Action { get; init; } = "run";
     public Dictionary<string, string> Parameters { get; init; } = [];
+    public string Action { get; init; } = "run";
 }
 
 public interface IPluginExecutionEngine
 {
     /// <summary>
-    /// Load and activate a valid, enabled plugin. Registers its declared hooks and skills.
+    ///     Get IDs of currently loaded plugins.
     /// </summary>
-    Task<bool> LoadPluginAsync(PluginInfo plugin);
+    IReadOnlySet<string> LoadedPluginIds { get; }
 
     /// <summary>
-    /// Unload a plugin, removing its hooks and skills.
-    /// </summary>
-    Task UnloadPluginAsync(string pluginId);
-
-    /// <summary>
-    /// Execute a plugin's entry point with the given context.
-    /// </summary>
-    Task<PluginExecutionResult> ExecuteAsync(string pluginId, PluginExecutionContext? context = null,
-        CancellationToken ct = default);
-
-    /// <summary>
-    /// Load all enabled, valid plugins on startup.
+    ///     Load all enabled, valid plugins on startup.
     /// </summary>
     Task LoadAllAsync();
 
     /// <summary>
-    /// Get IDs of currently loaded plugins.
+    ///     Unload a plugin, removing its hooks and skills.
     /// </summary>
-    IReadOnlySet<string> LoadedPluginIds { get; }
+    Task UnloadPluginAsync(string pluginId);
+
+    /// <summary>
+    ///     Load and activate a valid, enabled plugin. Registers its declared hooks and skills.
+    /// </summary>
+    Task<bool> LoadPluginAsync(PluginInfo plugin);
+
+    /// <summary>
+    ///     Execute a plugin's entry point with the given context.
+    /// </summary>
+    Task<PluginExecutionResult> ExecuteAsync(string pluginId, PluginExecutionContext? context = null,
+        CancellationToken ct = default);
 }
 
-public class PluginExecutionEngine : IPluginExecutionEngine
+public class PluginExecutionEngine(
+    IPluginService pluginService,
+    IProcessRunner processRunner,
+    IShellService shellService,
+    IHooksEngine hooksEngine,
+    ISkillRegistry skillRegistry,
+    ILogger<PluginExecutionEngine> logger)
+    : IPluginExecutionEngine
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+        PropertyNameCaseInsensitive = true
+    };
+
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
-    private readonly IPluginService _pluginService;
-    private readonly IProcessRunner _processRunner;
-    private readonly IShellService _shellService;
-    private readonly IHooksEngine _hooksEngine;
-    private readonly ISkillRegistry _skillRegistry;
-    private readonly ILogger<PluginExecutionEngine> _logger;
-
-    private readonly Dictionary<string, PluginInfo> _loaded = [];
     // Track hooks/skills registered by each plugin so we can unregister them
     private readonly Dictionary<string, List<(HookEvent evt, string cmd)>> _pluginHooks = [];
     private readonly Dictionary<string, List<string>> _pluginSkills = [];
 
-    public IReadOnlySet<string> LoadedPluginIds => _loaded.Keys.ToHashSet();
+    private readonly Dictionary<string, PluginInfo> _loaded = [];
 
-    public PluginExecutionEngine(
-        IPluginService pluginService,
-        IProcessRunner processRunner,
-        IShellService shellService,
-        IHooksEngine hooksEngine,
-        ISkillRegistry skillRegistry,
-        ILogger<PluginExecutionEngine> logger)
-    {
-        _pluginService = pluginService;
-        _processRunner = processRunner;
-        _shellService = shellService;
-        _hooksEngine = hooksEngine;
-        _skillRegistry = skillRegistry;
-        _logger = logger;
-    }
+    public IReadOnlySet<string> LoadedPluginIds => _loaded.Keys.ToHashSet();
 
     public async Task LoadAllAsync()
     {
-        var plugins = await _pluginService.GetInstalledPluginsAsync();
+        var plugins = await pluginService.GetInstalledPluginsAsync();
 
         foreach (var plugin in plugins.Where(p => p.IsEnabled && p.Status == PluginStatus.Valid))
-        {
             await LoadPluginAsync(plugin);
-        }
 
-        _logger.LogInformation("Plugin engine loaded {Count} plugin(s)", _loaded.Count);
+        logger.LogInformation("Plugin engine loaded {Count} plugin(s)", _loaded.Count);
+    }
+
+    public async Task UnloadPluginAsync(string pluginId)
+    {
+        if (!_loaded.Remove(pluginId, out var plugin))
+            return;
+
+        // Remove hooks registered by this plugin
+        if (_pluginHooks.Remove(pluginId, out var hooks))
+            foreach (var (evt, cmd) in hooks)
+                await hooksEngine.RemoveHookAsync(evt, cmd);
+
+        // Remove skills registered by this plugin
+        if (_pluginSkills.Remove(pluginId, out var skills))
+            foreach (var skillName in skills)
+                await skillRegistry.DeleteCommandAsync(skillName, "plugin", null);
+
+        plugin.Status = PluginStatus.Valid;
+        logger.LogInformation("Plugin '{Id}' unloaded", pluginId);
     }
 
     public async Task<bool> LoadPluginAsync(PluginInfo plugin)
     {
         if (_loaded.ContainsKey(plugin.Id))
         {
-            _logger.LogDebug("Plugin '{Id}' is already loaded", plugin.Id);
+            logger.LogDebug("Plugin '{Id}' is already loaded", plugin.Id);
             return true;
         }
 
         if (plugin.Status != PluginStatus.Valid)
         {
-            _logger.LogWarning("Cannot load plugin '{Id}': status is {Status}", plugin.Id, plugin.Status);
+            logger.LogWarning("Cannot load plugin '{Id}': status is {Status}", plugin.Id, plugin.Status);
             return false;
         }
 
@@ -149,12 +158,12 @@ public class PluginExecutionEngine : IPluginExecutionEngine
                 {
                     if (!Enum.TryParse<HookEvent>(hook.Event, out var hookEvent))
                     {
-                        _logger.LogWarning("Plugin '{Id}': unknown hook event '{Event}'", plugin.Id, hook.Event);
+                        logger.LogWarning("Plugin '{Id}': unknown hook event '{Event}'", plugin.Id, hook.Event);
                         continue;
                     }
 
                     var command = ResolveCommand(plugin, hook.Command);
-                    await _hooksEngine.AddHookAsync(new HookDefinition
+                    await hooksEngine.AddHookAsync(new HookDefinition
                     {
                         Event = hookEvent,
                         Type = HookType.Command,
@@ -164,6 +173,7 @@ public class PluginExecutionEngine : IPluginExecutionEngine
                     });
                     registered.Add((hookEvent, command));
                 }
+
                 _pluginHooks[plugin.Id] = registered;
             }
 
@@ -174,7 +184,7 @@ public class PluginExecutionEngine : IPluginExecutionEngine
                 foreach (var skill in manifest.Skills)
                 {
                     var command = ResolveCommand(plugin, skill.Command);
-                    _skillRegistry.Register(new SkillDefinition
+                    skillRegistry.Register(new SkillDefinition
                     {
                         Name = skill.Name,
                         Description = skill.Description ?? $"플러그인 '{plugin.Name}' 스킬",
@@ -186,13 +196,14 @@ public class PluginExecutionEngine : IPluginExecutionEngine
                     });
                     registered.Add(skill.Name);
                 }
+
                 _pluginSkills[plugin.Id] = registered;
             }
 
             plugin.Status = PluginStatus.Loaded;
             _loaded[plugin.Id] = plugin;
 
-            _logger.LogInformation("Plugin '{Id}' loaded (hooks: {Hooks}, skills: {Skills})",
+            logger.LogInformation("Plugin '{Id}' loaded (hooks: {Hooks}, skills: {Skills})",
                 plugin.Id,
                 _pluginHooks.GetValueOrDefault(plugin.Id)?.Count ?? 0,
                 _pluginSkills.GetValueOrDefault(plugin.Id)?.Count ?? 0);
@@ -203,40 +214,10 @@ public class PluginExecutionEngine : IPluginExecutionEngine
         {
             plugin.Status = PluginStatus.Error;
             plugin.Error = $"로드 실패: {ex.Message}";
-            _logger.LogError(ex, "Failed to load plugin '{Id}'", plugin.Id);
+            logger.LogError(ex, "Failed to load plugin '{Id}'", plugin.Id);
             return false;
         }
     }
-
-    public async Task UnloadPluginAsync(string pluginId)
-    {
-        if (!_loaded.Remove(pluginId, out var plugin))
-            return;
-
-        // Remove hooks registered by this plugin
-        if (_pluginHooks.Remove(pluginId, out var hooks))
-        {
-            foreach (var (evt, cmd) in hooks)
-                await _hooksEngine.RemoveHookAsync(evt, cmd);
-        }
-
-        // Remove skills registered by this plugin
-        if (_pluginSkills.Remove(pluginId, out var skills))
-        {
-            foreach (var skillName in skills)
-                await _skillRegistry.DeleteCommandAsync(skillName, "plugin", null);
-        }
-
-        plugin.Status = PluginStatus.Valid;
-        _logger.LogInformation("Plugin '{Id}' unloaded", pluginId);
-    }
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false,
-        PropertyNameCaseInsensitive = true
-    };
 
     public async Task<PluginExecutionResult> ExecuteAsync(string pluginId,
         PluginExecutionContext? context = null, CancellationToken ct = default)
@@ -249,7 +230,7 @@ public class PluginExecutionEngine : IPluginExecutionEngine
 
         try
         {
-            var shell = await _shellService.GetShellAsync();
+            var shell = await shellService.GetShellAsync();
             var entryPath = Path.Combine(plugin.Path, plugin.EntryPoint);
             var command = BuildEntryPointCommand(entryPath, plugin.EntryPoint);
 
@@ -263,10 +244,8 @@ public class PluginExecutionEngine : IPluginExecutionEngine
             };
 
             if (context?.Parameters is { Count: > 0 })
-            {
                 foreach (var (key, value) in context.Parameters)
                     env[$"COMINOMI_PARAM_{key.ToUpperInvariant()}"] = value;
-            }
 
             // Build JSON request for stdin
             var request = new PluginRequest
@@ -279,7 +258,7 @@ public class PluginExecutionEngine : IPluginExecutionEngine
             var stdinJson = JsonSerializer.Serialize(request, JsonOptions);
 
             var escapedCommand = EscapeShellCommand(command, shell.Type);
-            var result = await _processRunner.RunAsync(new ProcessRunOptions
+            var result = await processRunner.RunAsync(new ProcessRunOptions
             {
                 FileName = shell.FileName,
                 Arguments = shell.Type == ShellType.Cmd
@@ -301,37 +280,13 @@ public class PluginExecutionEngine : IPluginExecutionEngine
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Plugin '{Id}' execution failed", pluginId);
+            logger.LogError(ex, "Plugin '{Id}' execution failed", pluginId);
             return new PluginExecutionResult(false, "", ex.Message, -1);
         }
     }
 
     /// <summary>
-    /// Try to parse a <see cref="PluginResponse"/> from the plugin's stdout.
-    /// Returns null if the output is not valid JSON or cannot be deserialized.
-    /// </summary>
-    private PluginResponse? TryParseResponse(string stdout)
-    {
-        if (string.IsNullOrWhiteSpace(stdout))
-            return null;
-
-        var trimmed = stdout.Trim();
-        if (!trimmed.StartsWith('{'))
-            return null;
-
-        try
-        {
-            return JsonSerializer.Deserialize<PluginResponse>(trimmed, JsonOptions);
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogDebug(ex, "Plugin stdout is not valid JSON, treating as plain text");
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Build the shell command to execute a plugin entry point based on its file extension.
+    ///     Build the shell command to execute a plugin entry point based on its file extension.
     /// </summary>
     private static string BuildEntryPointCommand(string entryPath, string entryPoint)
     {
@@ -349,7 +304,7 @@ public class PluginExecutionEngine : IPluginExecutionEngine
     }
 
     /// <summary>
-    /// Resolve a command string from the manifest, replacing {entryPoint} with the actual path.
+    ///     Resolve a command string from the manifest, replacing {entryPoint} with the actual path.
     /// </summary>
     private static string ResolveCommand(PluginInfo plugin, string command)
     {
@@ -359,7 +314,31 @@ public class PluginExecutionEngine : IPluginExecutionEngine
     }
 
     /// <summary>
-    /// Read extended manifest fields (hooks, skills) from manifest.json.
+    ///     Try to parse a <see cref="PluginResponse" /> from the plugin's stdout.
+    ///     Returns null if the output is not valid JSON or cannot be deserialized.
+    /// </summary>
+    private PluginResponse? TryParseResponse(string stdout)
+    {
+        if (string.IsNullOrWhiteSpace(stdout))
+            return null;
+
+        var trimmed = stdout.Trim();
+        if (!trimmed.StartsWith('{'))
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<PluginResponse>(trimmed, JsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogDebug(ex, "Plugin stdout is not valid JSON, treating as plain text");
+            return null;
+        }
+    }
+
+    /// <summary>
+    ///     Read extended manifest fields (hooks, skills) from manifest.json.
     /// </summary>
     private async Task<ExtendedManifest> ReadExtendedManifestAsync(string pluginDir)
     {
@@ -376,7 +355,6 @@ public class PluginExecutionEngine : IPluginExecutionEngine
             var manifest = new ExtendedManifest();
 
             if (root.TryGetProperty("hooks", out var hooks) && hooks.ValueKind == JsonValueKind.Array)
-            {
                 foreach (var hook in hooks.EnumerateArray())
                 {
                     var evt = hook.TryGetProperty("event", out var e) ? e.GetString() : null;
@@ -384,58 +362,53 @@ public class PluginExecutionEngine : IPluginExecutionEngine
                     if (evt != null && cmd != null)
                         manifest.Hooks.Add(new ManifestHook { Event = evt, Command = cmd });
                 }
-            }
 
             if (root.TryGetProperty("skills", out var skills) && skills.ValueKind == JsonValueKind.Array)
-            {
                 foreach (var skill in skills.EnumerateArray())
                 {
                     var name = skill.TryGetProperty("name", out var n) ? n.GetString() : null;
                     var cmd = skill.TryGetProperty("command", out var c) ? c.GetString() : null;
                     if (name != null && cmd != null)
-                    {
                         manifest.Skills.Add(new ManifestSkill
                         {
                             Name = name,
                             Command = cmd,
                             Description = skill.TryGetProperty("description", out var d) ? d.GetString() : null
                         });
-                    }
                 }
-            }
 
             return manifest;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to read extended manifest from {Path}", manifestPath);
+            logger.LogWarning(ex, "Failed to read extended manifest from {Path}", manifestPath);
             return new ExtendedManifest();
         }
     }
 
     private class ExtendedManifest
     {
-        public List<ManifestHook> Hooks { get; set; } = [];
-        public List<ManifestSkill> Skills { get; set; } = [];
+        public List<ManifestHook> Hooks { get; } = [];
+        public List<ManifestSkill> Skills { get; } = [];
     }
 
     private class ManifestHook
     {
-        public string Event { get; set; } = "";
         public string Command { get; set; } = "";
+        public string Event { get; set; } = "";
     }
 
     private class ManifestSkill
     {
-        public string Name { get; set; } = "";
         public string Command { get; set; } = "";
+        public string Name { get; set; } = "";
         public string? Description { get; set; }
     }
 
     /// <summary>
-    /// Escape a command string for safe shell execution.
-    /// For cmd.exe: escapes &amp;, |, &gt;, &lt;, ^, %, and double-quotes.
-    /// For bash/zsh: escapes backslashes, double-quotes, backticks, $, and !.
+    ///     Escape a command string for safe shell execution.
+    ///     For cmd.exe: escapes &amp;, |, &gt;, &lt;, ^, %, and double-quotes.
+    ///     For bash/zsh: escapes backslashes, double-quotes, backticks, $, and !.
     /// </summary>
     internal static string EscapeShellCommand(string command, ShellType shellType)
     {
@@ -443,7 +416,6 @@ public class PluginExecutionEngine : IPluginExecutionEngine
             return command;
 
         if (shellType == ShellType.Cmd)
-        {
             // cmd.exe uses ^ as escape character for special characters
             return command
                 .Replace("^", "^^")
@@ -452,7 +424,6 @@ public class PluginExecutionEngine : IPluginExecutionEngine
                 .Replace("<", "^<")
                 .Replace(">", "^>")
                 .Replace("%", "%%");
-        }
 
         // POSIX shells (bash, zsh) — escape within double-quoted context
         return command

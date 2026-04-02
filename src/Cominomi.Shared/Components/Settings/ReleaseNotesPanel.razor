@@ -1,9 +1,10 @@
+@using System.Reflection
 @inject IReleaseNotesService ReleaseNotesService
 
 <div class="release-notes-panel">
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary"/>
     }
     else if (_releases.Count > 0)
     {
@@ -47,19 +48,22 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _currentVersion = System.Reflection.Assembly.GetEntryAssembly()
+        _currentVersion = Assembly.GetEntryAssembly()
             ?.GetName().Version?.ToString(3) ?? "";
         _releases = await ReleaseNotesService.GetReleaseNotesAsync();
         _loading = false;
     }
 
-    private static string GetTypeLabel(string type) => type switch
+    private static string GetTypeLabel(string type)
     {
-        "feat" => "기능",
-        "fix" => "수정",
-        "refactor" => "개선",
-        _ => type
-    };
+        return type switch
+        {
+            "feat" => "기능",
+            "fix" => "수정",
+            "refactor" => "개선",
+            _ => type
+        };
+    }
 
     private string FormatDate(string dateStr)
     {
@@ -81,4 +85,5 @@
         var formatted = $"{date.Year}년 {date.Month}월 {date.Day}일";
         return relative is not null ? $"{formatted} ({relative})" : formatted;
     }
+
 }

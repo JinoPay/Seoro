@@ -1,4 +1,3 @@
-@using Cominomi.Shared.Models
 @inject IChatState ChatState
 @inject IJSRuntime JS
 @implements IAsyncDisposable
@@ -21,26 +20,26 @@
 
         <div class="embedded-diff-content">
             <div style="@(_activeTab == DiffPanelTab.Explorer
-                ? "flex:1;min-height:0;display:flex;flex-direction:column"
-                : "display:none;height:0;overflow:hidden")">
-                <SidebarExplorer />
+                            ? "flex:1;min-height:0;display:flex;flex-direction:column"
+                            : "display:none;height:0;overflow:hidden")">
+                <SidebarExplorer/>
             </div>
 
             <div style="@(_activeTab == DiffPanelTab.Changes
-                ? "flex:1;min-height:0;display:flex;flex-direction:column"
-                : "display:none;height:0;overflow:hidden")">
-                <SidebarChanges OnChangesDetected="HandleChangesDetected" />
+                            ? "flex:1;min-height:0;display:flex;flex-direction:column"
+                            : "display:none;height:0;overflow:hidden")">
+                <SidebarChanges OnChangesDetected="HandleChangesDetected"/>
             </div>
         </div>
     </div>
 
     @* === Vertical Resizer === *@
     <VerticalPanelResizer CurrentSize="_topPanelHeight ?? 0" MinSize="120" MaxSize="800"
-                          OnResize="HandleVerticalResize" />
+                          OnResize="HandleVerticalResize"/>
 
     @* === Bottom Section: Terminal === *@
     <div class="right-panel-bottom">
-        <TerminalPanel @ref="_terminalPanel" />
+        <TerminalPanel @ref="_terminalPanel"/>
     </div>
 </div>
 
@@ -69,6 +68,7 @@
                 _hasAutoSwitched = false;
                 _activeTab = DiffPanelTab.Explorer;
             }
+
             StateHasChanged();
         });
     }
@@ -101,5 +101,10 @@
         }
     }
 
-    private enum DiffPanelTab { Changes, Explorer }
+    private enum DiffPanelTab
+    {
+        Changes,
+        Explorer
+    }
+
 }

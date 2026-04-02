@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cominomi.Shared.Models;
@@ -7,17 +8,12 @@ namespace Cominomi.Shared.Services;
 
 public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessionReplayService
 {
-    private static readonly string ClaudeProjectsDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "projects");
-
-    private static readonly string TagsFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "cominomi-session-tags.json");
-
-    private static readonly string IndexFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "cominomi-session-index.json");
-
     private static readonly HashSet<string> NoiseEventTypes =
         ["file-history-snapshot", "progress", "last-prompt", "queue-operation"];
+
+    // ===== Quick Scan (reads first N lines, estimates the rest from file size) =====
+
+    private const int SampleLineCount = 30;
 
     private static readonly JsonSerializerOptions IndexJsonOptions = new()
     {
@@ -25,8 +21,18 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
         WriteIndented = false
     };
 
-    private volatile SessionIndex? _index;
+    private static readonly string ClaudeProjectsDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "projects");
+
+    private static readonly string IndexFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "cominomi-session-index.json");
+
+    private static readonly string TagsFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "cominomi-session-tags.json");
+
     private readonly SemaphoreSlim _indexLock = new(1, 1);
+
+    private volatile SessionIndex? _index;
 
     // ===== Session Index Management =====
 
@@ -47,11 +53,17 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
             foreach (var projectDir in Directory.GetDirectories(ClaudeProjectsDir))
             {
                 string[] files;
-                try { files = Directory.GetFiles(projectDir, "*.jsonl"); }
-                catch (Exception ex) { logger.LogDebug(ex, "Cannot access project directory: {Dir}", projectDir); continue; }
+                try
+                {
+                    files = Directory.GetFiles(projectDir, "*.jsonl");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogDebug(ex, "Cannot access project directory: {Dir}", projectDir);
+                    continue;
+                }
 
                 foreach (var file in files)
-                {
                     try
                     {
                         var fi = new FileInfo(file);
@@ -60,24 +72,24 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
 
                         // Skip unchanged files unless force
                         if (!force && index.Entries.TryGetValue(file, out var existing)
-                            && existing.FileSizeBytes == fi.Length
-                            && existing.FileLastWriteUtc == fi.LastWriteTimeUtc)
+                                   && existing.FileSizeBytes == fi.Length
+                                   && existing.FileLastWriteUtc == fi.LastWriteTimeUtc)
                             continue;
 
                         var entry = QuickScan(file, fi);
                         if (entry != null)
                             index.Entries[file] = entry;
                     }
-                    catch { /* skip inaccessible files */ }
-                }
+                    catch
+                    {
+                        /* skip inaccessible files */
+                    }
             }
 
             // Remove entries for deleted files
             foreach (var path in existingPaths)
-            {
                 if (!currentPaths.Contains(path))
                     index.Entries.Remove(path);
-            }
 
             index.LastComputedDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
             await SaveIndexAsync(index);
@@ -86,6 +98,78 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
         {
             _indexLock.Release();
         }
+    }
+
+    public async Task SetTagAsync(string sessionId, List<string> tags, string? note = null)
+    {
+        var data = await GetTagsAsync();
+
+        if (tags.Count > 0)
+            data.Tags[sessionId] = tags;
+        else
+            data.Tags.Remove(sessionId);
+
+        if (note != null)
+        {
+            if (!string.IsNullOrEmpty(note))
+                data.Notes[sessionId] = note;
+            else
+                data.Notes.Remove(sessionId);
+        }
+
+        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(TagsFilePath, json);
+    }
+
+    // ===== Live Detection =====
+
+    public Task<List<LiveSessionInfo>> DetectLiveSessionsAsync()
+    {
+        return Task.Run(() =>
+        {
+            var live = new List<LiveSessionInfo>();
+            if (!Directory.Exists(ClaudeProjectsDir))
+                return live;
+
+            var now = DateTimeOffset.UtcNow;
+
+            foreach (var projectDir in Directory.GetDirectories(ClaudeProjectsDir))
+            {
+                var projectHash = Path.GetFileName(projectDir);
+                var projectPath = ProjectHashToPath(projectHash);
+
+                string[] files;
+                try
+                {
+                    files = Directory.GetFiles(projectDir, "*.jsonl");
+                }
+                catch
+                {
+                    continue;
+                }
+
+                foreach (var file in files)
+                    try
+                    {
+                        var fi = new FileInfo(file);
+                        var ago = (long)(now - fi.LastWriteTimeUtc).TotalSeconds;
+                        if (ago < 300) // 5 minutes
+                            live.Add(new LiveSessionInfo
+                            {
+                                FilePath = file,
+                                ProjectPath = projectPath,
+                                ModifiedSecondsAgo = ago
+                            });
+                    }
+                    catch
+                    {
+                        /* skip */
+                    }
+            }
+
+            live.Sort((a, b) => a.ModifiedSecondsAgo.CompareTo(b.ModifiedSecondsAgo));
+            return live;
+        });
     }
 
     public async Task<List<SessionReplaySummary>> SearchIndexAsync(string query, int maxResults = 20)
@@ -101,7 +185,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
 
         foreach (var entry in index.Entries.Values)
         {
-            int score = 0;
+            var score = 0;
             foreach (var token in tokens)
             {
                 if (entry.FirstMessage?.Contains(token, StringComparison.OrdinalIgnoreCase) == true)
@@ -111,6 +195,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                 if (entry.Id.Contains(token, StringComparison.OrdinalIgnoreCase))
                     score += 1;
             }
+
             if (score > 0)
                 scored.Add((entry, score));
         }
@@ -121,6 +206,159 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
             .Take(maxResults)
             .Select(x => IndexEntryToSummary(x.entry))
             .ToList();
+    }
+
+    // ===== Search =====
+
+    public Task<List<SessionSearchResult>> SearchAsync(string query, int maxResults = 20)
+    {
+        return Task.Run(() =>
+        {
+            var results = new List<SessionSearchResult>();
+            if (!Directory.Exists(ClaudeProjectsDir) || string.IsNullOrWhiteSpace(query))
+                return results;
+
+            var q = query.ToLowerInvariant();
+
+            foreach (var projectDir in Directory.GetDirectories(ClaudeProjectsDir))
+            {
+                if (results.Count >= maxResults) break;
+
+                var projectHash = Path.GetFileName(projectDir);
+                var projectPath = ProjectHashToPath(projectHash);
+
+                string[] files;
+                try
+                {
+                    files = Directory.GetFiles(projectDir, "*.jsonl");
+                }
+                catch
+                {
+                    continue;
+                }
+
+                foreach (var file in files)
+                {
+                    if (results.Count >= maxResults) break;
+
+                    var sessionId = Path.GetFileNameWithoutExtension(file);
+
+                    try
+                    {
+                        using var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                        using var reader = new StreamReader(fs);
+
+                        string? line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            if (string.IsNullOrWhiteSpace(line)) continue;
+                            if (!line.Contains(query, StringComparison.OrdinalIgnoreCase)) continue;
+
+                            JsonNode? node;
+                            try
+                            {
+                                node = JsonNode.Parse(line);
+                            }
+                            catch
+                            {
+                                continue;
+                            }
+
+                            if (node == null) continue;
+
+                            var type = node["type"]?.GetValue<string>() ?? "";
+                            if (NoiseEventTypes.Contains(type)) continue;
+
+                            var snippet = ExtractTextSnippet(node, q);
+                            if (string.IsNullOrEmpty(snippet)) continue;
+
+                            DateTime? ts = null;
+                            var tsStr = node["timestamp"]?.GetValue<string>();
+                            if (tsStr != null && DateTime.TryParse(tsStr, out var dt)) ts = dt;
+
+                            results.Add(new SessionSearchResult
+                            {
+                                SessionId = sessionId,
+                                ProjectPath = projectPath,
+                                FilePath = file,
+                                Snippet = snippet,
+                                Timestamp = ts,
+                                EventType = type
+                            });
+
+                            if (results.Count >= maxResults) break;
+                        }
+                    }
+                    catch
+                    {
+                        /* skip unreadable files */
+                    }
+                }
+            }
+
+            return results;
+        });
+    }
+
+    // ===== Aggregated Index Stats (lightweight, no list allocation) =====
+
+    public async Task<SessionIndexStats> GetIndexStatsAsync()
+    {
+        await EnsureIndexLoadedAsync();
+        var index = _index!;
+
+        var dailyMap = new Dictionary<string, DailyActivityEntry>();
+        var projectPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hourCounts = new int[24];
+        int nightSessions = 0, morningSessions = 0;
+        long longestMs = 0;
+
+        foreach (var e in index.Entries.Values)
+        {
+            var dateKey = e.FirstTimestamp?.ToLocalTime().ToString("yyyy-MM-dd") ?? "";
+            if (string.IsNullOrEmpty(dateKey)) continue;
+
+            if (!dailyMap.TryGetValue(dateKey, out var entry))
+            {
+                entry = new DailyActivityEntry { Date = dateKey };
+                dailyMap[dateKey] = entry;
+            }
+
+            entry.MessageCount += e.UserMessageCount;
+            entry.SessionCount++;
+            entry.ToolCallCount += e.ToolCallCount;
+
+            if (!string.IsNullOrEmpty(e.ProjectPath))
+                projectPaths.Add(e.ProjectPath);
+
+            if (e.FirstTimestamp.HasValue)
+            {
+                var hour = e.FirstTimestamp.Value.ToLocalTime().Hour;
+                hourCounts[hour]++;
+                if (hour >= 22 || hour < 4) nightSessions++;
+                if (hour >= 5 && hour < 9) morningSessions++;
+            }
+
+            if (e.FirstTimestamp.HasValue && e.LastTimestamp.HasValue)
+            {
+                var ms = (long)(e.LastTimestamp.Value - e.FirstTimestamp.Value).TotalMilliseconds;
+                if (ms > longestMs) longestMs = ms;
+            }
+        }
+
+        var dailyActivity = dailyMap.Values.OrderBy(d => d.Date).ToList();
+
+        return new SessionIndexStats(
+            index.Entries.Count,
+            index.Entries.Values.Sum(e => e.UserMessageCount),
+            index.Entries.Values.Sum(e => e.ToolCallCount),
+            dailyMap.Count,
+            projectPaths.Count,
+            dailyActivity,
+            hourCounts,
+            nightSessions,
+            morningSessions,
+            longestMs);
     }
 
     // ===== List Sessions (paginated, sorted by session timestamp) =====
@@ -159,7 +397,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                 return new SessionLoadResult();
 
             var events = new List<SessionReplayEvent>();
-            int total = 0;
+            var total = 0;
 
             try
             {
@@ -172,8 +410,15 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
                     JsonNode? node;
-                    try { node = JsonNode.Parse(line); }
-                    catch { continue; }
+                    try
+                    {
+                        node = JsonNode.Parse(line);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
                     if (node == null) continue;
 
                     var type = node["type"]?.GetValue<string>() ?? "unknown";
@@ -182,10 +427,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                     // Skip user messages that are just tool_result wrappers
                     if (type == "user" && IsToolResultOnlyUser(node)) continue;
 
-                    if (total >= offset && events.Count < limit)
-                    {
-                        events.Add(ParseEvent(node, type));
-                    }
+                    if (total >= offset && events.Count < limit) events.Add(ParseEvent(node, type));
                     total++;
                 }
             }
@@ -200,128 +442,6 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                 Total = total,
                 HasMore = offset + limit < total
             };
-        });
-    }
-
-    // ===== Search =====
-
-    public Task<List<SessionSearchResult>> SearchAsync(string query, int maxResults = 20)
-    {
-        return Task.Run(() =>
-        {
-            var results = new List<SessionSearchResult>();
-            if (!Directory.Exists(ClaudeProjectsDir) || string.IsNullOrWhiteSpace(query))
-                return results;
-
-            var q = query.ToLowerInvariant();
-
-            foreach (var projectDir in Directory.GetDirectories(ClaudeProjectsDir))
-            {
-                if (results.Count >= maxResults) break;
-
-                var projectHash = Path.GetFileName(projectDir);
-                var projectPath = ProjectHashToPath(projectHash);
-
-                string[] files;
-                try { files = Directory.GetFiles(projectDir, "*.jsonl"); }
-                catch { continue; }
-
-                foreach (var file in files)
-                {
-                    if (results.Count >= maxResults) break;
-
-                    var sessionId = Path.GetFileNameWithoutExtension(file);
-
-                    try
-                    {
-                        using var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                        using var reader = new StreamReader(fs);
-
-                        string? line;
-                        while ((line = reader.ReadLine()) != null)
-                        {
-                            if (string.IsNullOrWhiteSpace(line)) continue;
-                            if (!line.Contains(query, StringComparison.OrdinalIgnoreCase)) continue;
-
-                            JsonNode? node;
-                            try { node = JsonNode.Parse(line); }
-                            catch { continue; }
-                            if (node == null) continue;
-
-                            var type = node["type"]?.GetValue<string>() ?? "";
-                            if (NoiseEventTypes.Contains(type)) continue;
-
-                            var snippet = ExtractTextSnippet(node, q);
-                            if (string.IsNullOrEmpty(snippet)) continue;
-
-                            DateTime? ts = null;
-                            var tsStr = node["timestamp"]?.GetValue<string>();
-                            if (tsStr != null && DateTime.TryParse(tsStr, out var dt)) ts = dt;
-
-                            results.Add(new SessionSearchResult
-                            {
-                                SessionId = sessionId,
-                                ProjectPath = projectPath,
-                                FilePath = file,
-                                Snippet = snippet,
-                                Timestamp = ts,
-                                EventType = type
-                            });
-
-                            if (results.Count >= maxResults) break;
-                        }
-                    }
-                    catch { /* skip unreadable files */ }
-                }
-            }
-
-            return results;
-        });
-    }
-
-    // ===== Live Detection =====
-
-    public Task<List<LiveSessionInfo>> DetectLiveSessionsAsync()
-    {
-        return Task.Run(() =>
-        {
-            var live = new List<LiveSessionInfo>();
-            if (!Directory.Exists(ClaudeProjectsDir))
-                return live;
-
-            var now = DateTimeOffset.UtcNow;
-
-            foreach (var projectDir in Directory.GetDirectories(ClaudeProjectsDir))
-            {
-                var projectHash = Path.GetFileName(projectDir);
-                var projectPath = ProjectHashToPath(projectHash);
-
-                string[] files;
-                try { files = Directory.GetFiles(projectDir, "*.jsonl"); }
-                catch { continue; }
-
-                foreach (var file in files)
-                {
-                    try
-                    {
-                        var fi = new FileInfo(file);
-                        var ago = (long)(now - fi.LastWriteTimeUtc).TotalSeconds;
-                        if (ago < 300) // 5 minutes
-                        {
-                            live.Add(new LiveSessionInfo
-                            {
-                                FilePath = file,
-                                ProjectPath = projectPath,
-                                ModifiedSecondsAgo = ago
-                            });
-                        }
-                    }
-                    catch { /* skip */ }
-                }
-            }
-
-            live.Sort((a, b) => a.ModifiedSecondsAgo.CompareTo(b.ModifiedSecondsAgo));
-            return live;
         });
     }
 
@@ -346,27 +466,6 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
         });
     }
 
-    public async Task SetTagAsync(string sessionId, List<string> tags, string? note = null)
-    {
-        var data = await GetTagsAsync();
-
-        if (tags.Count > 0)
-            data.Tags[sessionId] = tags;
-        else
-            data.Tags.Remove(sessionId);
-
-        if (note != null)
-        {
-            if (!string.IsNullOrEmpty(note))
-                data.Notes[sessionId] = note;
-            else
-                data.Notes.Remove(sessionId);
-        }
-
-        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(TagsFilePath, json);
-    }
-
     // ===== Export to Markdown =====
 
     public Task<string> ExportToMarkdownAsync(string filePath)
@@ -387,8 +486,15 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
                     JsonNode? node;
-                    try { node = JsonNode.Parse(line); }
-                    catch { continue; }
+                    try
+                    {
+                        node = JsonNode.Parse(line);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
                     if (node == null) continue;
 
                     var type = node["type"]?.GetValue<string>() ?? "";
@@ -407,7 +513,6 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                     else if (type == "assistant")
                     {
                         if (content is JsonArray arr)
-                        {
                             foreach (var item in arr)
                             {
                                 var itemType = item?["type"]?.GetValue<string>() ?? "";
@@ -424,7 +529,6 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                                     md += $"**Tool: {name}**\n\n";
                                 }
                             }
-                        }
                     }
                 }
             }
@@ -438,9 +542,15 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
         });
     }
 
-    // ===== Quick Scan (reads first N lines, estimates the rest from file size) =====
+    // ===== Helpers =====
 
-    private const int SampleLineCount = 30;
+    private static bool IsToolResultOnlyUser(JsonNode node)
+    {
+        var msg = node["message"];
+        var content = msg?["content"];
+        if (content is not JsonArray arr) return false;
+        return !arr.Any(item => item?["type"]?.GetValue<string>() == "text");
+    }
 
     private static SessionIndexEntry? QuickScan(string filePath, FileInfo fi)
     {
@@ -460,11 +570,18 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
 
-                totalBytesRead += System.Text.Encoding.UTF8.GetByteCount(line) + 1; // +1 for newline
+                totalBytesRead += Encoding.UTF8.GetByteCount(line) + 1; // +1 for newline
 
                 JsonNode? node;
-                try { node = JsonNode.Parse(line); }
-                catch { continue; }
+                try
+                {
+                    node = JsonNode.Parse(line);
+                }
+                catch
+                {
+                    continue;
+                }
+
                 if (node == null) continue;
 
                 var type = node["type"]?.GetValue<string>() ?? "";
@@ -497,13 +614,9 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                     var msg = node["message"];
                     var content = msg?["content"];
                     if (content is JsonArray arr)
-                    {
                         foreach (var item in arr)
-                        {
                             if (item?["type"]?.GetValue<string>() == "tool_use")
                                 toolCount++;
-                        }
-                    }
                 }
 
                 // After SampleLineCount parsed entries, estimate the rest from file size
@@ -555,7 +668,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                 FirstMessage = firstMessage,
                 FileSizeBytes = fi.Length,
                 FileLastWriteUtc = fi.LastWriteTimeUtc,
-                IsEstimated = parsedCount >= SampleLineCount && !reader.EndOfStream,
+                IsEstimated = parsedCount >= SampleLineCount && !reader.EndOfStream
             };
         }
         catch
@@ -564,64 +677,166 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
         }
     }
 
-    // ===== Aggregated Index Stats (lightweight, no list allocation) =====
+    // ===== Event Parsing =====
 
-    public async Task<SessionIndexStats> GetIndexStatsAsync()
+    private static SessionReplayEvent ParseEvent(JsonNode node, string type)
     {
-        await EnsureIndexLoadedAsync();
-        var index = _index!;
+        DateTime? ts = null;
+        var tsStr = node["timestamp"]?.GetValue<string>();
+        if (tsStr != null && DateTime.TryParse(tsStr, out var dt)) ts = dt;
 
-        var dailyMap = new Dictionary<string, DailyActivityEntry>();
-        var projectPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var hourCounts = new int[24];
-        int nightSessions = 0, morningSessions = 0;
-        long longestMs = 0;
+        var msg = node["message"] ?? node;
+        var content = msg["content"];
 
-        foreach (var e in index.Entries.Values)
+        string displayContent;
+        List<ToolCallInfo>? toolCalls = null;
+        string? toolName = null;
+        var isError = false;
+
+        switch (type)
         {
-            var dateKey = e.FirstTimestamp?.ToLocalTime().ToString("yyyy-MM-dd") ?? "";
-            if (string.IsNullOrEmpty(dateKey)) continue;
+            case "human" or "user":
+                displayContent = ExtractTextContent(content) ?? "";
+                break;
 
-            if (!dailyMap.TryGetValue(dateKey, out var entry))
+            case "assistant":
+                var textParts = new List<string>();
+                toolCalls = [];
+
+                if (content is JsonArray arr)
+                    foreach (var item in arr)
+                    {
+                        var itemType = item?["type"]?.GetValue<string>() ?? "";
+                        if (itemType == "text")
+                        {
+                            var text = item?["text"]?.GetValue<string>() ?? "";
+                            if (!string.IsNullOrEmpty(text))
+                                textParts.Add(text);
+                        }
+                        else if (itemType == "tool_use")
+                        {
+                            var name = item?["name"]?.GetValue<string>() ?? "tool";
+                            var input = item?["input"]?.ToJsonString() ?? "{}";
+                            toolCalls.Add(new ToolCallInfo
+                            {
+                                Name = name,
+                                InputPreview = input.Length > 200 ? input[..200] : input
+                            });
+                        }
+                    }
+
+                displayContent = string.Join("\n\n", textParts);
+                if (toolCalls.Count == 0) toolCalls = null;
+                break;
+
+            case "tool_result":
+                displayContent = ExtractTextContent(content) ?? "";
+                if (displayContent.Length > 500)
+                    displayContent = displayContent[..500] + "...";
+                isError = node["is_error"]?.GetValue<bool>() == true ||
+                          msg["is_error"]?.GetValue<bool>() == true;
+                break;
+
+            default:
+                displayContent = "";
+                break;
+        }
+
+        return new SessionReplayEvent
+        {
+            Type = type,
+            Timestamp = ts,
+            Content = displayContent,
+            ToolName = toolName,
+            ToolCalls = toolCalls,
+            IsError = isError
+        };
+    }
+
+    private static SessionReplaySummary IndexEntryToSummary(SessionIndexEntry e)
+    {
+        return new SessionReplaySummary
+        {
+            Id = e.Id,
+            FilePath = e.FilePath,
+            ProjectHash = e.ProjectHash,
+            ProjectPath = e.ProjectPath,
+            EntryCount = e.EntryCount,
+            MessageCount = e.UserMessageCount,
+            ToolCallCount = e.ToolCallCount,
+            FirstTimestamp = e.FirstTimestamp,
+            LastTimestamp = e.LastTimestamp,
+            FirstMessage = e.FirstMessage,
+            ModifiedAtUnix = e.FileLastWriteUtc.Subtract(DateTime.UnixEpoch).TotalSeconds
+        };
+    }
+
+    private static string ExtractTextSnippet(JsonNode node, string query)
+    {
+        var msg = node["message"] ?? node;
+        var content = msg["content"];
+        var text = ExtractTextContent(content);
+
+        if (string.IsNullOrEmpty(text)) return "";
+
+        var lower = text.ToLowerInvariant();
+        var pos = lower.IndexOf(query, StringComparison.Ordinal);
+        if (pos >= 0)
+        {
+            var start = Math.Max(0, pos - 40);
+            var end = Math.Min(text.Length, pos + query.Length + 40);
+            var snippet = text[start..end];
+            if (start > 0) snippet = "..." + snippet;
+            if (end < text.Length) snippet += "...";
+            return snippet;
+        }
+
+        return text.Length > 80 ? text[..80] : text;
+    }
+
+    private static string? ExtractTextContent(JsonNode? content)
+    {
+        if (content == null) return null;
+
+        // String content
+        if (content.GetValueKind() == JsonValueKind.String)
+            return content.GetValue<string>();
+
+        // Array content — extract text items
+        if (content is JsonArray arr)
+        {
+            var texts = arr
+                .Where(item => item?["type"]?.GetValue<string>() == "text")
+                .Select(item => item?["text"]?.GetValue<string>())
+                .Where(t => t != null)
+                .ToList();
+            return texts.Count > 0 ? string.Join("\n", texts) : null;
+        }
+
+        return content.ToString();
+    }
+
+    private static string? ResolveSegments(string[] segments, int idx, string current)
+    {
+        if (idx >= segments.Length)
+            return Directory.Exists(current) ? current : null;
+
+        // Try joining segments with '-' (longer matches first to prefer real dir names)
+        for (var end = segments.Length; end > idx; end--)
+        {
+            var joined = string.Join("-", segments[idx..end]);
+            var candidate = current == "/"
+                ? $"/{joined}"
+                : $"{current}/{joined}";
+
+            if (Directory.Exists(candidate))
             {
-                entry = new DailyActivityEntry { Date = dateKey };
-                dailyMap[dateKey] = entry;
-            }
-            entry.MessageCount += e.UserMessageCount;
-            entry.SessionCount++;
-            entry.ToolCallCount += e.ToolCallCount;
-
-            if (!string.IsNullOrEmpty(e.ProjectPath))
-                projectPaths.Add(e.ProjectPath);
-
-            if (e.FirstTimestamp.HasValue)
-            {
-                var hour = e.FirstTimestamp.Value.ToLocalTime().Hour;
-                hourCounts[hour]++;
-                if (hour >= 22 || hour < 4) nightSessions++;
-                if (hour >= 5 && hour < 9) morningSessions++;
-            }
-
-            if (e.FirstTimestamp.HasValue && e.LastTimestamp.HasValue)
-            {
-                var ms = (long)(e.LastTimestamp.Value - e.FirstTimestamp.Value).TotalMilliseconds;
-                if (ms > longestMs) longestMs = ms;
+                var result = ResolveSegments(segments, end, candidate);
+                if (result != null) return result;
             }
         }
 
-        var dailyActivity = dailyMap.Values.OrderBy(d => d.Date).ToList();
-
-        return new SessionIndexStats(
-            TotalSessions: index.Entries.Count,
-            TotalMessages: index.Entries.Values.Sum(e => e.UserMessageCount),
-            TotalToolCalls: index.Entries.Values.Sum(e => e.ToolCallCount),
-            DaysActive: dailyMap.Count,
-            TotalProjects: projectPaths.Count,
-            DailyActivity: dailyActivity,
-            HourCounts: hourCounts,
-            NightSessions: nightSessions,
-            MorningSessions: morningSessions,
-            LongestSessionMs: longestMs);
+        return null;
     }
 
     // ===== Index Persistence =====
@@ -653,158 +868,10 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
             var json = JsonSerializer.Serialize(index, IndexJsonOptions);
             await File.WriteAllTextAsync(IndexFilePath, json);
         }
-        catch (Exception ex) { logger.LogWarning(ex, "Failed to write session index file"); }
-    }
-
-    private static SessionReplaySummary IndexEntryToSummary(SessionIndexEntry e)
-    {
-        return new SessionReplaySummary
+        catch (Exception ex)
         {
-            Id = e.Id,
-            FilePath = e.FilePath,
-            ProjectHash = e.ProjectHash,
-            ProjectPath = e.ProjectPath,
-            EntryCount = e.EntryCount,
-            MessageCount = e.UserMessageCount,
-            ToolCallCount = e.ToolCallCount,
-            FirstTimestamp = e.FirstTimestamp,
-            LastTimestamp = e.LastTimestamp,
-            FirstMessage = e.FirstMessage,
-            ModifiedAtUnix = e.FileLastWriteUtc.Subtract(DateTime.UnixEpoch).TotalSeconds,
-        };
-    }
-
-    // ===== Event Parsing =====
-
-    private static SessionReplayEvent ParseEvent(JsonNode node, string type)
-    {
-        DateTime? ts = null;
-        var tsStr = node["timestamp"]?.GetValue<string>();
-        if (tsStr != null && DateTime.TryParse(tsStr, out var dt)) ts = dt;
-
-        var msg = node["message"] ?? node;
-        var content = msg["content"];
-
-        string displayContent;
-        List<ToolCallInfo>? toolCalls = null;
-        string? toolName = null;
-        bool isError = false;
-
-        switch (type)
-        {
-            case "human" or "user":
-                displayContent = ExtractTextContent(content) ?? "";
-                break;
-
-            case "assistant":
-                var textParts = new List<string>();
-                toolCalls = [];
-
-                if (content is JsonArray arr)
-                {
-                    foreach (var item in arr)
-                    {
-                        var itemType = item?["type"]?.GetValue<string>() ?? "";
-                        if (itemType == "text")
-                        {
-                            var text = item?["text"]?.GetValue<string>() ?? "";
-                            if (!string.IsNullOrEmpty(text))
-                                textParts.Add(text);
-                        }
-                        else if (itemType == "tool_use")
-                        {
-                            var name = item?["name"]?.GetValue<string>() ?? "tool";
-                            var input = item?["input"]?.ToJsonString() ?? "{}";
-                            toolCalls.Add(new ToolCallInfo
-                            {
-                                Name = name,
-                                InputPreview = input.Length > 200 ? input[..200] : input
-                            });
-                        }
-                    }
-                }
-
-                displayContent = string.Join("\n\n", textParts);
-                if (toolCalls.Count == 0) toolCalls = null;
-                break;
-
-            case "tool_result":
-                displayContent = ExtractTextContent(content) ?? "";
-                if (displayContent.Length > 500)
-                    displayContent = displayContent[..500] + "...";
-                isError = node["is_error"]?.GetValue<bool>() == true ||
-                          msg["is_error"]?.GetValue<bool>() == true;
-                break;
-
-            default:
-                displayContent = "";
-                break;
+            logger.LogWarning(ex, "Failed to write session index file");
         }
-
-        return new SessionReplayEvent
-        {
-            Type = type,
-            Timestamp = ts,
-            Content = displayContent,
-            ToolName = toolName,
-            ToolCalls = toolCalls,
-            IsError = isError
-        };
-    }
-
-    // ===== Helpers =====
-
-    private static bool IsToolResultOnlyUser(JsonNode node)
-    {
-        var msg = node["message"];
-        var content = msg?["content"];
-        if (content is not JsonArray arr) return false;
-        return !arr.Any(item => item?["type"]?.GetValue<string>() == "text");
-    }
-
-    private static string? ExtractTextContent(JsonNode? content)
-    {
-        if (content == null) return null;
-
-        // String content
-        if (content.GetValueKind() == JsonValueKind.String)
-            return content.GetValue<string>();
-
-        // Array content — extract text items
-        if (content is JsonArray arr)
-        {
-            var texts = arr
-                .Where(item => item?["type"]?.GetValue<string>() == "text")
-                .Select(item => item?["text"]?.GetValue<string>())
-                .Where(t => t != null)
-                .ToList();
-            return texts.Count > 0 ? string.Join("\n", texts) : null;
-        }
-
-        return content.ToString();
-    }
-
-    private static string ExtractTextSnippet(JsonNode node, string query)
-    {
-        var msg = node["message"] ?? node;
-        var content = msg["content"];
-        var text = ExtractTextContent(content);
-
-        if (string.IsNullOrEmpty(text)) return "";
-
-        var lower = text.ToLowerInvariant();
-        var pos = lower.IndexOf(query, StringComparison.Ordinal);
-        if (pos >= 0)
-        {
-            var start = Math.Max(0, pos - 40);
-            var end = Math.Min(text.Length, pos + query.Length + 40);
-            var snippet = text[start..end];
-            if (start > 0) snippet = "..." + snippet;
-            if (end < text.Length) snippet += "...";
-            return snippet;
-        }
-
-        return text.Length > 80 ? text[..80] : text;
     }
 
     // ===== Project Hash → Path Decoding =====
@@ -820,28 +887,5 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
         var segments = hash.Split('-', StringSplitOptions.RemoveEmptyEntries);
         var resolved = ResolveSegments(segments, 0, "/");
         return resolved ?? naive;
-    }
-
-    private static string? ResolveSegments(string[] segments, int idx, string current)
-    {
-        if (idx >= segments.Length)
-            return Directory.Exists(current) ? current : null;
-
-        // Try joining segments with '-' (longer matches first to prefer real dir names)
-        for (int end = segments.Length; end > idx; end--)
-        {
-            var joined = string.Join("-", segments[idx..end]);
-            var candidate = current == "/"
-                ? $"/{joined}"
-                : $"{current}/{joined}";
-
-            if (Directory.Exists(candidate))
-            {
-                var result = ResolveSegments(segments, end, candidate);
-                if (result != null) return result;
-            }
-        }
-
-        return null;
     }
 }

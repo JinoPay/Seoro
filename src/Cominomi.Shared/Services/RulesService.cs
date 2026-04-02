@@ -4,13 +4,39 @@ using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
-public partial class RulesService : IRulesService
+public partial class RulesService(ILogger<RulesService> logger) : IRulesService
 {
-    private readonly ILogger<RulesService> _logger;
-
-    public RulesService(ILogger<RulesService> logger)
+    public string GetRulesDirectory(ClaudeSettingsScope scope, string? projectPath = null)
     {
-        _logger = logger;
+        return scope switch
+        {
+            ClaudeSettingsScope.Global => Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "rules"),
+            ClaudeSettingsScope.Project or ClaudeSettingsScope.Local =>
+                Path.Combine(projectPath ?? throw new ArgumentException("projectPath required"), ".claude", "rules"),
+            _ => throw new ArgumentOutOfRangeException(nameof(scope))
+        };
+    }
+
+    public Task DeleteAsync(string filePath)
+    {
+        if (File.Exists(filePath))
+        {
+            File.Delete(filePath);
+            logger.LogDebug("Deleted rule file: {Path}", filePath);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public async Task SaveAsync(RuleFile rule)
+    {
+        var dir = Path.GetDirectoryName(rule.FilePath);
+        if (dir != null)
+            Directory.CreateDirectory(dir);
+
+        await AtomicFileWriter.WriteAsync(rule.FilePath, rule.Content);
+        logger.LogDebug("Saved rule file: {Path}", rule.FilePath);
     }
 
     public Task<List<RuleFile>> ListAsync(ClaudeSettingsScope scope, string? projectPath = null)
@@ -22,7 +48,6 @@ public partial class RulesService : IRulesService
             return Task.FromResult(rules);
 
         foreach (var file in Directory.GetFiles(dir, "*.md"))
-        {
             try
             {
                 var content = File.ReadAllText(file);
@@ -39,9 +64,8 @@ public partial class RulesService : IRulesService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to read rule file: {Path}", file);
+                logger.LogWarning(ex, "Failed to read rule file: {Path}", file);
             }
-        }
 
         return Task.FromResult(rules);
     }
@@ -67,41 +91,9 @@ public partial class RulesService : IRulesService
         });
     }
 
-    public async Task SaveAsync(RuleFile rule)
-    {
-        var dir = Path.GetDirectoryName(rule.FilePath);
-        if (dir != null)
-            Directory.CreateDirectory(dir);
-
-        await AtomicFileWriter.WriteAsync(rule.FilePath, rule.Content);
-        _logger.LogDebug("Saved rule file: {Path}", rule.FilePath);
-    }
-
-    public Task DeleteAsync(string filePath)
-    {
-        if (File.Exists(filePath))
-        {
-            File.Delete(filePath);
-            _logger.LogDebug("Deleted rule file: {Path}", filePath);
-        }
-        return Task.CompletedTask;
-    }
-
-    public string GetRulesDirectory(ClaudeSettingsScope scope, string? projectPath = null)
-    {
-        return scope switch
-        {
-            ClaudeSettingsScope.Global => Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "rules"),
-            ClaudeSettingsScope.Project or ClaudeSettingsScope.Local =>
-                Path.Combine(projectPath ?? throw new ArgumentException("projectPath required"), ".claude", "rules"),
-            _ => throw new ArgumentOutOfRangeException(nameof(scope))
-        };
-    }
-
     /// <summary>
-    /// Extracts path filter patterns from frontmatter-like comments at the top of rule files.
-    /// Looks for lines like: globs: src/**/*.ts, **/*.test.*
+    ///     Extracts path filter patterns from frontmatter-like comments at the top of rule files.
+    ///     Looks for lines like: globs: src/**/*.ts, **/*.test.*
     /// </summary>
     private static List<string> ExtractPathFilters(string content)
     {

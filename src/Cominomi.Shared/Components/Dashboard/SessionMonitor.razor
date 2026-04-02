@@ -1,4 +1,3 @@
-@using Cominomi.Shared.Models
 @inject ISessionReplayService ReplayService
 @inject IChatState ChatState
 @implements IDisposable
@@ -6,12 +5,12 @@
 <div class="session-monitor-card">
     <div class="session-monitor-header">
         <div class="session-monitor-title">
-            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small"/>
             최근 세션
         </div>
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                        Class="@(_loading ? "session-monitor-spin" : "")"
-                       OnClick="LoadRecent" />
+                       OnClick="LoadRecent"/>
     </div>
     <div class="session-monitor-list">
         @foreach (var session in _sessions)
@@ -26,9 +25,12 @@
                     <div class="session-monitor-message">"@Truncate(session.FirstMessage, 60)"</div>
                 }
                 <div class="session-monitor-meta">
-                    <span><MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" Style="font-size: 0.6rem;" /> @session.MessageCount</span>
-                    <span><MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Style="font-size: 0.6rem;" /> @session.ToolCallCount</span>
-                    <span title="추정 비용 (엔트리 수 기반)"><MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" Style="font-size: 0.6rem;" /> ~$@EstimateCost(session.EntryCount)</span>
+                    <span><MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small"
+                                   Style="font-size: 0.6rem;"/> @session.MessageCount</span>
+                    <span><MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small"
+                                   Style="font-size: 0.6rem;"/> @session.ToolCallCount</span>
+                    <span title="추정 비용 (엔트리 수 기반)"><MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small"
+                                                            Style="font-size: 0.6rem;"/> ~$@EstimateCost(session.EntryCount)</span>
                 </div>
             </button>
         }
@@ -56,7 +58,7 @@
         _loading = true;
         try
         {
-            var result = await ReplayService.ListSessionsAsync(limit: 5, offset: 0);
+            var result = await ReplayService.ListSessionsAsync(5, 0);
             _sessions = result.Sessions;
         }
         catch
@@ -86,15 +88,27 @@
     }
 
     private static string Truncate(string s, int max)
-        => s.Length <= max ? s : s[..max] + "…";
+    {
+        return s.Length <= max ? s : s[..max] + "…";
+    }
 
     private const decimal CostPerEntry = 0.01m;
+
     private static string EstimateCost(int entryCount)
-        => (entryCount * CostPerEntry).ToString("F2");
+    {
+        return (entryCount * CostPerEntry).ToString("F2");
+    }
 
-    private void GoToSessions() => ChatState.SetSettingsSection("session-replay");
+    private void GoToSessions()
+    {
+        ChatState.SetSettingsSection("session-replay");
+    }
 
-    public void Dispose() => _timer?.Dispose();
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+
 }
 
 <style>
@@ -188,8 +202,12 @@
     }
 
     @@keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
     }
 
     .session-monitor-spin {

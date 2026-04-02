@@ -1,7 +1,7 @@
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
         <div class="stack-row items-center gap-2">
-            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small"/>
             <span class="typo-h6">Cominomi 시작하기</span>
         </div>
     </TitleContent>
@@ -9,18 +9,20 @@
         <div class="onboarding-dialog">
             @* Step indicator *@
             <div class="onboarding-steps">
-                @for (int i = 0; i < TotalSteps; i++)
+                @for (var i = 0; i < TotalSteps; i++)
                 {
                     var step = i;
                     @if (i > 0)
                     {
                         <div class="onboarding-step-line @(step <= _currentStep ? "completed" : "")"></div>
                     }
-                    <button class="onboarding-step @(step == _currentStep ? "active" : "") @(step < _currentStep ? "completed" : "")"
-                            @onclick="@(() => _currentStep = step)">
+
+                    <button
+                        class="onboarding-step @(step == _currentStep ? "active" : "") @(step < _currentStep ? "completed" : "")"
+                        @onclick="@(() => _currentStep = step)">
                         @if (step < _currentStep)
                         {
-                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" />
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small"/>
                         }
                         else
                         {
@@ -36,7 +38,8 @@
                 {
                     case 0:
                         <div class="onboarding-icon-wrap">
-                            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="font-size: 32px; color: var(--mud-palette-primary);" />
+                            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome"
+                                     Style="font-size: 32px; color: var(--mud-palette-primary);"/>
                         </div>
                         <div class="typo-h6" style="margin-top: 16px;">Cominomi에 오신 것을 환영합니다</div>
                         <p class="typo-body2 text-secondary" style="margin-top: 8px; line-height: 1.6;">
@@ -45,15 +48,17 @@
                         </p>
                         <div class="onboarding-highlights">
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Color="Color.Primary"/>
                                 <span class="typo-body2">AI 기반 코드 작성 및 수정</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">Git 브랜치 기반 안전한 작업</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">내장 터미널 및 파일 관리</span>
                             </div>
                         </div>
@@ -61,7 +66,8 @@
 
                     case 1:
                         <div class="onboarding-icon-wrap">
-                            <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Style="font-size: 32px; color: var(--mud-palette-primary);" />
+                            <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder"
+                                     Style="font-size: 32px; color: var(--mud-palette-primary);"/>
                         </div>
                         <div class="typo-h6" style="margin-top: 16px;">워크스페이스로 시작하기</div>
                         <p class="typo-body2 text-secondary" style="margin-top: 8px; line-height: 1.6;">
@@ -70,15 +76,16 @@
                         </p>
                         <div class="onboarding-highlights">
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary"/>
                                 <span class="typo-body2">사이드바 하단의 <strong>+</strong> 버튼으로 새 워크스페이스 생성</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.CloudDownload" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.CloudDownload" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">GitHub URL을 입력하면 자동으로 클론</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Color="Color.Primary"/>
                                 <span class="typo-body2">이미 있는 로컬 저장소도 바로 연결 가능</span>
                             </div>
                         </div>
@@ -86,7 +93,8 @@
 
                     case 2:
                         <div class="onboarding-icon-wrap">
-                            <MudIcon Icon="@Icons.Material.Filled.Chat" Style="font-size: 32px; color: var(--mud-palette-primary);" />
+                            <MudIcon Icon="@Icons.Material.Filled.Chat"
+                                     Style="font-size: 32px; color: var(--mud-palette-primary);"/>
                         </div>
                         <div class="typo-h6" style="margin-top: 16px;">AI 코딩 세션</div>
                         <p class="typo-body2 text-secondary" style="margin-top: 8px; line-height: 1.6;">
@@ -95,15 +103,18 @@
                         </p>
                         <div class="onboarding-highlights">
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.CallSplit" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.CallSplit" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">세션마다 별도 브랜치 — 메인 코드에 영향 없음</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.PlaylistAdd" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.PlaylistAdd" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">하나의 워크스페이스에서 여러 세션 동시 진행</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.Difference" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.Difference" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">AI가 변경한 코드를 diff로 실시간 확인</span>
                             </div>
                         </div>
@@ -111,7 +122,8 @@
 
                     case 3:
                         <div class="onboarding-icon-wrap">
-                            <MudIcon Icon="@Icons.Material.Filled.Dashboard" Style="font-size: 32px; color: var(--mud-palette-primary);" />
+                            <MudIcon Icon="@Icons.Material.Filled.Dashboard"
+                                     Style="font-size: 32px; color: var(--mud-palette-primary);"/>
                         </div>
                         <div class="typo-h6" style="margin-top: 16px;">화면 구성 알아보기</div>
                         <p class="typo-body2 text-secondary" style="margin-top: 8px; line-height: 1.6;">
@@ -119,19 +131,23 @@
                         </p>
                         <div class="onboarding-highlights">
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.ViewSidebar" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.ViewSidebar" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2"><strong>좌측 사이드바</strong> — 워크스페이스와 세션 목록</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.ChatBubble" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.ChatBubble" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2"><strong>중앙 채팅</strong> — AI와 대화하며 코드 작업</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.Difference" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.Difference" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2"><strong>우측 패널</strong> — 파일 변경사항 실시간 확인</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Color="Color.Primary" />
+                                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2"><strong>설정</strong> — 테마, AI 모델, 단축키 등 커스터마이징</span>
                             </div>
                         </div>
@@ -225,4 +241,5 @@
         await IsOpenChanged.InvokeAsync(false);
         await OnCompleted.InvokeAsync();
     }
+
 }

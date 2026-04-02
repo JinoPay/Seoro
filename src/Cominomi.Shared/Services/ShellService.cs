@@ -3,25 +3,44 @@ using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
-public class ShellService : IShellService
+public class ShellService(ILogger<ShellService> logger, IProcessRunner processRunner, ISettingsService settingsService)
+    : IShellService
 {
-    private readonly ILogger<ShellService> _logger;
-    private readonly IProcessRunner _processRunner;
-    private readonly ISettingsService _settingsService;
     private readonly SemaphoreSlim _lock = new(1, 1);
-    private ShellInfo? _cached;
+    private readonly SemaphoreSlim _pathLock = new(1, 1);
     private DateTime _cachedAt;
+    private DateTime _loginPathCachedAt;
     private List<ShellInfo>? _availableShellsCache;
+    private ShellInfo? _cached;
 
     private string? _cachedLoginPath;
-    private DateTime _loginPathCachedAt;
-    private readonly SemaphoreSlim _pathLock = new(1, 1);
 
-    public ShellService(ILogger<ShellService> logger, IProcessRunner processRunner, ISettingsService settingsService)
+    public async Task<List<ShellInfo>> GetAvailableShellsAsync()
     {
-        _logger = logger;
-        _processRunner = processRunner;
-        _settingsService = settingsService;
+        if (_availableShellsCache != null)
+            return _availableShellsCache;
+
+        var shells = new List<ShellInfo>();
+
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            if (File.Exists("/bin/zsh")) shells.Add(new ShellInfo("/bin/zsh", "-c ", ShellType.Zsh));
+            if (File.Exists("/bin/bash")) shells.Add(new ShellInfo("/bin/bash", "-c ", ShellType.Bash));
+            if (File.Exists("/bin/sh")) shells.Add(new ShellInfo("/bin/sh", "-c ", ShellType.Sh));
+        }
+        else
+        {
+            var bashPath = await FindGitBashAsync();
+            if (bashPath != null) shells.Add(new ShellInfo(bashPath, "-c ", ShellType.Bash));
+            shells.Add(new ShellInfo("cmd.exe", "/c ", ShellType.Cmd));
+
+            // PowerShell 7+ (pwsh) or Windows PowerShell 5.1
+            var pwshPath = await FindPowerShellAsync();
+            if (pwshPath != null) shells.Add(new ShellInfo(pwshPath, "-Command ", ShellType.PowerShell));
+        }
+
+        _availableShellsCache = shells;
+        return shells;
     }
 
     public async Task<ShellInfo> GetShellAsync()
@@ -37,7 +56,7 @@ public class ShellService : IShellService
 
             _cached = await ResolveShellAsync();
             _cachedAt = DateTime.UtcNow;
-            _logger.LogInformation("Resolved shell: {Type} at {Path}", _cached.Type, _cached.FileName);
+            logger.LogInformation("Resolved shell: {Type} at {Path}", _cached.Type, _cached.FileName);
             return _cached;
         }
         finally
@@ -48,48 +67,13 @@ public class ShellService : IShellService
 
     public async Task<ShellInfo> GetTerminalShellAsync()
     {
-        var settings = await _settingsService.LoadAsync();
+        var settings = await settingsService.LoadAsync();
         if (string.IsNullOrEmpty(settings.TerminalShell))
             return await GetShellAsync();
 
         var available = await GetAvailableShellsAsync();
         var match = available.FirstOrDefault(s => ShellTypeToKey(s.Type) == settings.TerminalShell);
         return match ?? await GetShellAsync();
-    }
-
-    public async Task<List<ShellInfo>> GetAvailableShellsAsync()
-    {
-        if (_availableShellsCache != null)
-            return _availableShellsCache;
-
-        var shells = new List<ShellInfo>();
-
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            if (File.Exists("/bin/zsh")) shells.Add(new("/bin/zsh", "-c ", ShellType.Zsh));
-            if (File.Exists("/bin/bash")) shells.Add(new("/bin/bash", "-c ", ShellType.Bash));
-            if (File.Exists("/bin/sh")) shells.Add(new("/bin/sh", "-c ", ShellType.Sh));
-        }
-        else
-        {
-            var bashPath = await FindGitBashAsync();
-            if (bashPath != null) shells.Add(new(bashPath, "-c ", ShellType.Bash));
-            shells.Add(new("cmd.exe", "/c ", ShellType.Cmd));
-
-            // PowerShell 7+ (pwsh) or Windows PowerShell 5.1
-            var pwshPath = await FindPowerShellAsync();
-            if (pwshPath != null) shells.Add(new(pwshPath, "-Command ", ShellType.PowerShell));
-        }
-
-        _availableShellsCache = shells;
-        return shells;
-    }
-
-    public void InvalidateCache()
-    {
-        _cached = null;
-        _availableShellsCache = null;
-        _cachedLoginPath = null;
     }
 
     public async Task<string?> GetLoginShellPathAsync()
@@ -110,9 +94,9 @@ public class ShellService : IShellService
             _loginPathCachedAt = DateTime.UtcNow;
 
             if (_cachedLoginPath != null)
-                _logger.LogInformation("Captured login shell PATH ({Length} chars)", _cachedLoginPath.Length);
+                logger.LogInformation("Captured login shell PATH ({Length} chars)", _cachedLoginPath.Length);
             else
-                _logger.LogWarning("Failed to capture login shell PATH, falling back to process PATH");
+                logger.LogWarning("Failed to capture login shell PATH, falling back to process PATH");
 
             return _cachedLoginPath;
         }
@@ -122,62 +106,13 @@ public class ShellService : IShellService
         }
     }
 
-    private async Task<string?> CaptureLoginShellPathAsync()
-    {
-        var shell = ResolveUnixShell();
-        var sentinel = CominomiConstants.PathCaptureSentinel;
-
-        // Source the user's rc file explicitly so PATH includes tool version managers
-        // (mise, nvm, volta, fnm, etc.). The -l flag sources .zprofile/.bash_profile,
-        // and the explicit source covers .zshrc/.bashrc where most activations live.
-        var rcFile = shell.Type == ShellType.Bash ? "~/.bashrc" : "~/.zshrc";
-        var command = $"source {rcFile} 2>/dev/null; echo {sentinel}; echo $PATH";
-
-        try
-        {
-            var result = await _processRunner.RunAsync(new ProcessRunOptions
-            {
-                FileName = shell.FileName,
-                Arguments = ["-l", "-c", command],
-                Timeout = CominomiConstants.WhichTimeout
-            });
-
-            if (!result.Success)
-                return null;
-
-            // Parse PATH from output: find sentinel marker, take the next line
-            var lines = result.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            for (var i = 0; i < lines.Length - 1; i++)
-            {
-                if (lines[i].Trim() == sentinel)
-                {
-                    var path = lines[i + 1].Trim();
-                    if (!string.IsNullOrEmpty(path))
-                        return path;
-                }
-            }
-
-            _logger.LogDebug("PATH capture: sentinel not found in shell output");
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogWarning("Login shell PATH capture timed out");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Login shell PATH capture failed");
-        }
-
-        return null;
-    }
-
     public async Task<string?> WhichAsync(string executableName)
     {
         var shell = await GetShellAsync();
 
         if (!IsValidExecutableName(executableName))
         {
-            _logger.LogWarning("Invalid executable name rejected: {Name}", executableName);
+            logger.LogWarning("Invalid executable name rejected: {Name}", executableName);
             return null;
         }
 
@@ -222,7 +157,7 @@ public class ShellService : IShellService
                     break;
             }
 
-            var result = await _processRunner.RunAsync(options);
+            var result = await processRunner.RunAsync(options);
             var firstLine = result.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim();
 
             if (result.Success && !string.IsNullOrWhiteSpace(firstLine))
@@ -230,11 +165,12 @@ public class ShellService : IShellService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("WhichAsync timed out for: {Name} (timeout={Timeout}s)", executableName, CominomiConstants.WhichTimeout.TotalSeconds);
+            logger.LogWarning("WhichAsync timed out for: {Name} (timeout={Timeout}s)", executableName,
+                CominomiConstants.WhichTimeout.TotalSeconds);
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "WhichAsync failed for: {Name}", executableName);
+            logger.LogDebug(ex, "WhichAsync failed for: {Name}", executableName);
         }
 
         // Fallback for macOS: GUI apps launched from Launchpad/Finder inherit a minimal
@@ -244,61 +180,66 @@ public class ShellService : IShellService
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string[] wellKnownPaths =
             [
-                Path.Combine(home, ".local", "bin", executableName),                        // Anthropic installer, pip
-                Path.Combine(home, ".local", "share", "mise", "shims", executableName),     // mise
-                Path.Combine(home, ".volta", "bin", executableName),                        // volta
-                $"/opt/homebrew/bin/{executableName}",                                      // Apple Silicon Homebrew
-                $"/usr/local/bin/{executableName}",                                         // Intel Homebrew
-                Path.Combine(home, ".npm", "bin", executableName),                          // npm global
+                Path.Combine(home, ".local", "bin", executableName), // Anthropic installer, pip
+                Path.Combine(home, ".local", "share", "mise", "shims", executableName), // mise
+                Path.Combine(home, ".volta", "bin", executableName), // volta
+                $"/opt/homebrew/bin/{executableName}", // Apple Silicon Homebrew
+                $"/usr/local/bin/{executableName}", // Intel Homebrew
+                Path.Combine(home, ".npm", "bin", executableName), // npm global
                 Path.Combine(home, "Library", "Application Support", "JetBrains",
-                    "Toolbox", "scripts", executableName),                                  // JetBrains Toolbox
+                    "Toolbox", "scripts", executableName) // JetBrains Toolbox
             ];
 
             foreach (var candidate in wellKnownPaths)
-            {
                 if (File.Exists(candidate))
                 {
-                    _logger.LogDebug("WhichAsync: found {Name} via well-known path fallback: {Path}",
+                    logger.LogDebug("WhichAsync: found {Name} via well-known path fallback: {Path}",
                         executableName, candidate);
                     return candidate;
                 }
-            }
         }
 
         return null;
     }
 
-    public static string ShellTypeToKey(ShellType type) => type switch
+    public void InvalidateCache()
     {
-        ShellType.Zsh => "zsh",
-        ShellType.Bash when !RuntimeInformation.IsOSPlatform(OSPlatform.Windows) => "bash",
-        ShellType.Bash => "gitbash",
-        ShellType.Sh => "sh",
-        ShellType.Cmd => "cmd",
-        ShellType.PowerShell => "powershell",
-        _ => "sh"
-    };
+        _cached = null;
+        _availableShellsCache = null;
+        _cachedLoginPath = null;
+    }
 
-    public static string GetShellDisplayName(ShellInfo shell) => shell.Type switch
+    public static string GetShellDisplayName(ShellInfo shell)
     {
-        ShellType.Zsh => "zsh",
-        ShellType.Bash when RuntimeInformation.IsOSPlatform(OSPlatform.Windows) => "Git Bash",
-        ShellType.Bash => "bash",
-        ShellType.Sh => "sh",
-        ShellType.Cmd => "cmd",
-        ShellType.PowerShell => "PowerShell",
-        _ => shell.FileName
-    };
+        return shell.Type switch
+        {
+            ShellType.Zsh => "zsh",
+            ShellType.Bash when RuntimeInformation.IsOSPlatform(OSPlatform.Windows) => "Git Bash",
+            ShellType.Bash => "bash",
+            ShellType.Sh => "sh",
+            ShellType.Cmd => "cmd",
+            ShellType.PowerShell => "PowerShell",
+            _ => shell.FileName
+        };
+    }
+
+    public static string ShellTypeToKey(ShellType type)
+    {
+        return type switch
+        {
+            ShellType.Zsh => "zsh",
+            ShellType.Bash when !RuntimeInformation.IsOSPlatform(OSPlatform.Windows) => "bash",
+            ShellType.Bash => "gitbash",
+            ShellType.Sh => "sh",
+            ShellType.Cmd => "cmd",
+            ShellType.PowerShell => "powershell",
+            _ => "sh"
+        };
+    }
 
     private static bool IsValidExecutableName(string name)
-        => !string.IsNullOrEmpty(name) && name.All(c => char.IsLetterOrDigit(c) || c is '-' or '_' or '.');
-
-    private Task<ShellInfo> ResolveShellAsync()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return Task.FromResult(ResolveUnixShell());
-
-        return ResolveWindowsShellAsync();
+        return !string.IsNullOrEmpty(name) && name.All(c => char.IsLetterOrDigit(c) || c is '-' or '_' or '.');
     }
 
     private ShellInfo ResolveUnixShell()
@@ -322,6 +263,14 @@ public class ShellService : IShellService
         return new ShellInfo("/bin/sh", "-c ", ShellType.Sh);
     }
 
+    private Task<ShellInfo> ResolveShellAsync()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return Task.FromResult(ResolveUnixShell());
+
+        return ResolveWindowsShellAsync();
+    }
+
     private async Task<ShellInfo> ResolveWindowsShellAsync()
     {
         // Try to find Git Bash via git installation
@@ -333,12 +282,59 @@ public class ShellService : IShellService
         return new ShellInfo("cmd.exe", "/c ", ShellType.Cmd);
     }
 
+    private async Task<string?> CaptureLoginShellPathAsync()
+    {
+        var shell = ResolveUnixShell();
+        var sentinel = CominomiConstants.PathCaptureSentinel;
+
+        // Source the user's rc file explicitly so PATH includes tool version managers
+        // (mise, nvm, volta, fnm, etc.). The -l flag sources .zprofile/.bash_profile,
+        // and the explicit source covers .zshrc/.bashrc where most activations live.
+        var rcFile = shell.Type == ShellType.Bash ? "~/.bashrc" : "~/.zshrc";
+        var command = $"source {rcFile} 2>/dev/null; echo {sentinel}; echo $PATH";
+
+        try
+        {
+            var result = await processRunner.RunAsync(new ProcessRunOptions
+            {
+                FileName = shell.FileName,
+                Arguments = ["-l", "-c", command],
+                Timeout = CominomiConstants.WhichTimeout
+            });
+
+            if (!result.Success)
+                return null;
+
+            // Parse PATH from output: find sentinel marker, take the next line
+            var lines = result.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            for (var i = 0; i < lines.Length - 1; i++)
+                if (lines[i].Trim() == sentinel)
+                {
+                    var path = lines[i + 1].Trim();
+                    if (!string.IsNullOrEmpty(path))
+                        return path;
+                }
+
+            logger.LogDebug("PATH capture: sentinel not found in shell output");
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogWarning("Login shell PATH capture timed out");
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Login shell PATH capture failed");
+        }
+
+        return null;
+    }
+
     private async Task<string?> FindGitBashAsync()
     {
         // Strategy 1: Find git via where.exe, then resolve bash.exe relative to it
         try
         {
-            var result = await _processRunner.RunAsync(new ProcessRunOptions
+            var result = await processRunner.RunAsync(new ProcessRunOptions
             {
                 FileName = "where.exe",
                 Arguments = ["git"],
@@ -359,7 +355,7 @@ public class ShellService : IShellService
                         var bashCandidate = Path.Combine(gitRoot, "bin", "bash.exe");
                         if (File.Exists(bashCandidate))
                         {
-                            _logger.LogDebug("Found Git Bash via git path: {Path}", bashCandidate);
+                            logger.LogDebug("Found Git Bash via git path: {Path}", bashCandidate);
                             return bashCandidate;
                         }
                     }
@@ -368,7 +364,7 @@ public class ShellService : IShellService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to find git via where.exe");
+            logger.LogDebug(ex, "Failed to find git via where.exe");
         }
 
         // Strategy 2: Check well-known installation paths
@@ -382,15 +378,13 @@ public class ShellService : IShellService
         ];
 
         foreach (var path in wellKnownPaths)
-        {
             if (File.Exists(path))
             {
-                _logger.LogDebug("Found Git Bash at well-known path: {Path}", path);
+                logger.LogDebug("Found Git Bash at well-known path: {Path}", path);
                 return path;
             }
-        }
 
-        _logger.LogDebug("Git Bash not found, will fall back to cmd.exe");
+        logger.LogDebug("Git Bash not found, will fall back to cmd.exe");
         return null;
     }
 
@@ -404,15 +398,13 @@ public class ShellService : IShellService
         ];
 
         foreach (var path in pwshPaths)
-        {
             if (File.Exists(path))
                 return path;
-        }
 
         // Try via where.exe
         try
         {
-            var result = await _processRunner.RunAsync(new ProcessRunOptions
+            var result = await processRunner.RunAsync(new ProcessRunOptions
             {
                 FileName = "where.exe",
                 Arguments = ["pwsh"],
@@ -423,7 +415,10 @@ public class ShellService : IShellService
             if (result.Success && !string.IsNullOrWhiteSpace(firstLine))
                 return firstLine;
         }
-        catch (Exception ex) { _logger.LogDebug(ex, "PowerShell detection via where.exe failed"); }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "PowerShell detection via where.exe failed");
+        }
 
         // Fallback to Windows PowerShell 5.1
         var winPwsh = Path.Combine(

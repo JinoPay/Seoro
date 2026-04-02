@@ -1,5 +1,3 @@
-@using Cominomi.Shared.Models
-@using Cominomi.Shared.Services
 @inject IFilePickerService FilePickerService
 @inject ISkillRegistry SkillRegistry
 @inject IJSRuntime JSRuntime
@@ -15,9 +13,13 @@
                            SelectedIndex="_slashSelectedIndex"
                            OnCommandSelected="SelectSlashCommand"
                            OnDismiss="DismissSlashPopup"
-                           OnHover="@(i => { _slashSelectedIndex = i; StateHasChanged(); })" />
+                           OnHover="@(i =>
+                                    {
+                                        _slashSelectedIndex = i;
+                                        StateHasChanged();
+                                    })"/>
 
-        <AttachmentChips Attachments="_pendingAttachments" OnRemove="RemoveAttachment" />
+        <AttachmentChips Attachments="_pendingAttachments" OnRemove="RemoveAttachment"/>
 
         <MudTextField T="string" Value="@_inputText" ValueChanged="@HandleInputValueChanged"
                       Placeholder="@GetPlaceholder()"
@@ -29,7 +31,7 @@
                       Disabled="Disabled"
                       ReadOnly="IsStreaming"
                       Class="input-textarea-full"
-                      Style="font-size: var(--text-base);" />
+                      Style="font-size: var(--text-base);"/>
 
         <InputToolbar PermissionMode="@_currentPermissionMode"
                       OnPermissionModeChanged="HandlePermissionModeChangedLocal"
@@ -47,7 +49,7 @@
                       OnPickFiles="PickFiles"
                       OnModelMenuClosed="RefocusTextarea"
                       PlanFilePath="@PlanFilePath"
-                      PlanContent="@PlanContent" />
+                      PlanContent="@PlanContent"/>
     </div>
 </div>
 
@@ -69,7 +71,7 @@
     [Parameter] public bool IsPlanReviewVisible { get; set; }
 
     private string _inputText = string.Empty;
-    private List<PendingAttachment> _pendingAttachments = [];
+    private readonly List<PendingAttachment> _pendingAttachments = [];
     private DotNetObjectReference<InputArea>? _dotNetRef;
     private bool _handlersRegistered;
     private bool _suppressInputUpdates;
@@ -154,8 +156,13 @@
 
     private async Task RefocusTextarea()
     {
-        try { await JSRuntime.InvokeVoidAsync("focusInputArea", "input-area"); }
-        catch (JSDisconnectedException) { }
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("focusInputArea", "input-area");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
     }
 
     private async Task HandlePermissionModeChangedLocal(string mode)
@@ -200,6 +207,7 @@
             _forceRender = false;
             return true;
         }
+
         return false;
     }
 
@@ -223,7 +231,10 @@
     }
 
     [JSInvokable]
-    public void OnCompositionStart() => _isComposing = true;
+    public void OnCompositionStart()
+    {
+        _isComposing = true;
+    }
 
     [JSInvokable]
     public void OnCompositionEnd()
@@ -455,7 +466,7 @@
             PendingChain = pendingChain
         };
 
-        _suppressInputUpdates = true;   // Block oninput from reinserting newline
+        _suppressInputUpdates = true; // Block oninput from reinserting newline
         _inputText = string.Empty;
         if (_trackedSessionId != null)
             ChatState.SetInputDraft(_trackedSessionId, string.Empty);
@@ -464,19 +475,33 @@
         await OnSend.InvokeAsync(input);
 
         // JS safety net: clear textarea DOM directly
-        try { await JSRuntime.InvokeVoidAsync("clearInputArea", "input-area"); }
-        catch (JSDisconnectedException) { /* expected during circuit disposal */ }
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("clearInputArea", "input-area");
+        }
+        catch (JSDisconnectedException)
+        {
+            /* expected during circuit disposal */
+        }
 
-        _suppressInputUpdates = false;  // Unblock
+        _suppressInputUpdates = false; // Unblock
     }
 
     public async ValueTask DisposeAsync()
     {
         if (_handlersRegistered)
         {
-            try { await JSRuntime.InvokeVoidAsync("unregisterInputHandlers", "input-area"); }
-            catch (JSDisconnectedException) { /* expected during circuit disposal */ }
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("unregisterInputHandlers", "input-area");
+            }
+            catch (JSDisconnectedException)
+            {
+                /* expected during circuit disposal */
+            }
         }
+
         _dotNetRef?.Dispose();
     }
+
 }

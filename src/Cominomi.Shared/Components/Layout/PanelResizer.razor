@@ -6,7 +6,7 @@
      aria-orientation="vertical"
      aria-valuenow="@CurrentSize"
      tabindex="0"
-     @onkeydown="HandleKeyDown" />
+     @onkeydown="HandleKeyDown"/>
 
 @code {
     [Parameter] public string PanelId { get; set; } = "";
@@ -65,7 +65,12 @@
         {
             await JS.InvokeVoidAsync("unregisterPanelResizer", _element);
         }
-        catch { /* Component may already be disposed */ }
+        catch
+        {
+            /* Component may already be disposed */
+        }
+
         _dotNetRef?.Dispose();
     }
+
 }

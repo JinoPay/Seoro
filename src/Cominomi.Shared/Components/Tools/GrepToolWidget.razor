@@ -1,9 +1,8 @@
 @using System.Text.Json
-
 <div class="tool-widget tool-widget-grep">
     <div class="tool-widget-header">
         <MudIcon Icon="@Icons.Material.Filled.FindInPage" Size="Size.Small"
-                 Style="width: 14px; height: 14px; opacity: 0.6;" />
+                 Style="width: 14px; height: 14px; opacity: 0.6;"/>
         <span class="tool-widget-pattern">/@_pattern/</span>
         @if (!string.IsNullOrEmpty(_path))
         {
@@ -33,7 +32,8 @@
         </div>
         @if (_fileGroups.Count > 5 || _fileGroups.Values.Any(v => v.Count > 3))
         {
-            <div class="tool-widget-toggle" @onclick="@(() => _collapsed = !_collapsed)" @onclick:stopPropagation="true">
+            <div class="tool-widget-toggle" @onclick="@(() => _collapsed = !_collapsed)"
+                 @onclick:stopPropagation="true">
                 @(_collapsed ? $"전체 보기 ({_totalResults}개 결과)" : "접기")
             </div>
         }
@@ -41,12 +41,11 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public ToolCall Tool { get; set; } = default!;
+    [Parameter][EditorRequired] public ToolCall Tool { get; set; } = default!;
 
     private string _pattern = "";
     private string _path = "";
-    private Dictionary<string, List<GrepLine>> _fileGroups = new();
+    private readonly Dictionary<string, List<GrepLine>> _fileGroups = new();
     private int _totalResults;
     private bool _collapsed = true;
     private string? _lastInput;
@@ -80,7 +79,10 @@
             if (doc.RootElement.TryGetProperty("path", out var path))
                 _path = ShortenPath(path.GetString() ?? "");
         }
-        catch (JsonException) { /* malformed tool input — render empty */ }
+        catch (JsonException)
+        {
+            /* malformed tool input — render empty */
+        }
     }
 
     private void ParseOutput()
@@ -106,7 +108,7 @@
                 {
                     currentFile = potentialFile;
                     if (!_fileGroups.ContainsKey(currentFile))
-                        _fileGroups[currentFile] = new();
+                        _fileGroups[currentFile] = new List<GrepLine>();
                     _fileGroups[currentFile].Add(new GrepLine(rest[..secondColon], rest[(secondColon + 1)..]));
                     _totalResults++;
                     continue;
@@ -118,7 +120,7 @@
             {
                 currentFile = line.Trim();
                 if (!_fileGroups.ContainsKey(currentFile))
-                    _fileGroups[currentFile] = new();
+                    _fileGroups[currentFile] = new List<GrepLine>();
                 _totalResults++;
             }
             else if (!string.IsNullOrEmpty(currentFile))
@@ -135,4 +137,5 @@
         var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         return parts.Length <= 3 ? normalized : string.Join("/", parts[^3..]);
     }
+
 }

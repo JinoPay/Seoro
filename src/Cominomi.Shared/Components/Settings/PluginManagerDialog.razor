@@ -1,3 +1,4 @@
+@using System.Diagnostics
 @inject IPluginService PluginService
 @inject IPluginExecutionEngine PluginEngine
 @inject ISnackbar Snackbar
@@ -5,7 +6,7 @@
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
         <div class="typo-h6">
-            <MudIcon Icon="@Icons.Material.Filled.Extension" Class="mr-2" />
+            <MudIcon Icon="@Icons.Material.Filled.Extension" Class="mr-2"/>
             플러그인 관리
         </div>
     </TitleContent>
@@ -16,7 +17,7 @@
                 @if (_loading)
                 {
                     <div style="display: flex; justify-content: center; padding: 24px;">
-                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
                     </div>
                 }
                 else if (_plugins.Count == 0)
@@ -35,78 +36,81 @@
                 {
                     <MudSimpleTable Dense="true" Hover="true" Class="plugin-table">
                         <thead>
-                            <tr>
-                                <th>플러그인</th>
-                                <th>버전</th>
-                                <th>상태</th>
-                                <th style="width: 120px;"></th>
-                            </tr>
+                        <tr>
+                            <th>플러그인</th>
+                            <th>버전</th>
+                            <th>상태</th>
+                            <th style="width: 120px;"></th>
+                        </tr>
                         </thead>
                         <tbody>
-                            @foreach (var plugin in _plugins)
-                            {
-                                <tr>
-                                    <td>
-                                        <div>
-                                            <span class="typo-body2" style="font-weight: 500;">@plugin.Name</span>
-                                            @if (!string.IsNullOrEmpty(plugin.Description))
-                                            {
-                                                <small class="typo-caption text-secondary">@plugin.Description</small>
-                                            }
-                                            @if (!string.IsNullOrEmpty(plugin.Author))
-                                            {
-                                                <small class="typo-caption text-secondary">by @plugin.Author</small>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="typo-body2">@(plugin.Version ?? "-")</span>
-                                    </td>
-                                    <td>
-                                        @{
-                                            var (icon, color, label) = GetStatusDisplay(plugin);
-                                        }
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@color">
-                                            <MudIcon Icon="@icon" Size="Size.Small" Style="width: 14px; height: 14px; margin-right: 4px;" />
-                                            @label
-                                        </MudChip>
-                                        @if (!string.IsNullOrEmpty(plugin.Error))
+                        @foreach (var plugin in _plugins)
+                        {
+                            <tr>
+                                <td>
+                                    <div>
+                                        <span class="typo-body2" style="font-weight: 500;">@plugin.Name</span>
+                                        @if (!string.IsNullOrEmpty(plugin.Description))
                                         {
-                                            <MudTooltip Text="@plugin.Error">
-                                                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small"
-                                                         Color="Color.Warning" Style="width: 14px; height: 14px; margin-left: 4px; cursor: help;" />
-                                            </MudTooltip>
+                                            <small class="typo-caption text-secondary">@plugin.Description</small>
                                         }
-                                    </td>
-                                    <td>
-                                        <MudSwitch T="bool" Value="@plugin.IsEnabled"
-                                                   ValueChanged="@(v => TogglePlugin(plugin, v))"
-                                                   Color="Color.Primary" Size="Size.Small"
-                                                   Disabled="@(plugin.Status == PluginStatus.Invalid || plugin.Status == PluginStatus.Error)" />
-                                        @if (plugin.IsEnabled && plugin.Status == PluginStatus.Valid)
+                                        @if (!string.IsNullOrEmpty(plugin.Author))
                                         {
-                                            <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small"
-                                                           Color="Color.Primary" title="로드"
-                                                           OnClick="@(() => LoadPlugin(plugin))" />
+                                            <small class="typo-caption text-secondary">by @plugin.Author</small>
                                         }
-                                        @if (plugin.Status == PluginStatus.Loaded)
-                                        {
-                                            <MudIconButton Icon="@Icons.Material.Filled.Stop" Size="Size.Small"
-                                                           Color="Color.Warning" title="언로드"
-                                                           OnClick="@(() => UnloadPlugin(plugin))" />
-                                        }
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                                       Color="Color.Error"
-                                                       OnClick="@(() => RemovePlugin(plugin))" />
-                                    </td>
-                                </tr>
-                            }
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="typo-body2">@(plugin.Version ?? "-")</span>
+                                </td>
+                                <td>
+                                    @{
+                                        var (icon, color, label) = GetStatusDisplay(plugin);
+                                    }
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@color">
+                                        <MudIcon Icon="@icon" Size="Size.Small"
+                                                 Style="width: 14px; height: 14px; margin-right: 4px;"/>
+                                        @label
+                                    </MudChip>
+                                    @if (!string.IsNullOrEmpty(plugin.Error))
+                                    {
+                                        <MudTooltip Text="@plugin.Error">
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small"
+                                                     Color="Color.Warning"
+                                                     Style="width: 14px; height: 14px; margin-left: 4px; cursor: help;"/>
+                                        </MudTooltip>
+                                    }
+                                </td>
+                                <td>
+                                    <MudSwitch T="bool" Value="@plugin.IsEnabled"
+                                               ValueChanged="@(v => TogglePlugin(plugin, v))"
+                                               Color="Color.Primary" Size="Size.Small"
+                                               Disabled="@(plugin.Status == PluginStatus.Invalid || plugin.Status == PluginStatus.Error)"/>
+                                    @if (plugin.IsEnabled && plugin.Status == PluginStatus.Valid)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small"
+                                                       Color="Color.Primary" title="로드"
+                                                       OnClick="@(() => LoadPlugin(plugin))"/>
+                                    }
+                                    @if (plugin.Status == PluginStatus.Loaded)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Stop" Size="Size.Small"
+                                                       Color="Color.Warning" title="언로드"
+                                                       OnClick="@(() => UnloadPlugin(plugin))"/>
+                                    }
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => RemovePlugin(plugin))"/>
+                                </td>
+                            </tr>
+                        }
                         </tbody>
                     </MudSimpleTable>
                 }
                 <div style="padding: 8px;">
                     <MudButton StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                               Variant="Variant.Text" OnClick="RefreshPlugins">새로고침</MudButton>
+                               Variant="Variant.Text" OnClick="RefreshPlugins">새로고침
+                    </MudButton>
                 </div>
             </MudTabPanel>
 
@@ -120,7 +124,8 @@
                     </p>
 
                     <div class="typo-subtitle2 mt-2">manifest.json 예시</div>
-                    <pre style="background: var(--mud-palette-background-grey); padding: 12px; border-radius: 4px; font-size: 12px; overflow-x: auto;">
+                    <pre
+                        style="background: var(--mud-palette-background-grey); padding: 12px; border-radius: 4px; font-size: 12px; overflow-x: auto;">
 {
   "name": "My Plugin",
   "description": "플러그인 설명",
@@ -139,17 +144,53 @@
                     <div class="typo-subtitle2 mt-2">필드 설명</div>
                     <MudSimpleTable Dense="true">
                         <thead>
-                            <tr><th>필드</th><th>필수</th><th>설명</th></tr>
+                        <tr>
+                            <th>필드</th>
+                            <th>필수</th>
+                            <th>설명</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            <tr><td><code>name</code></td><td>권장</td><td>플러그인 표시 이름</td></tr>
-                            <tr><td><code>description</code></td><td>선택</td><td>플러그인 설명</td></tr>
-                            <tr><td><code>version</code></td><td>선택</td><td>시맨틱 버전</td></tr>
-                            <tr><td><code>author</code></td><td>선택</td><td>작성자</td></tr>
-                            <tr><td><code>entryPoint</code></td><td>선택</td><td>실행 파일 경로 (.js, .py, .sh 등)</td></tr>
-                            <tr><td><code>permissions</code></td><td>선택</td><td>요청 권한 목록</td></tr>
-                            <tr><td><code>hooks</code></td><td>선택</td><td>이벤트 훅 배열 (event, command)</td></tr>
-                            <tr><td><code>skills</code></td><td>선택</td><td>슬래시 커맨드 배열 (name, command, description)</td></tr>
+                        <tr>
+                            <td><code>name</code></td>
+                            <td>권장</td>
+                            <td>플러그인 표시 이름</td>
+                        </tr>
+                        <tr>
+                            <td><code>description</code></td>
+                            <td>선택</td>
+                            <td>플러그인 설명</td>
+                        </tr>
+                        <tr>
+                            <td><code>version</code></td>
+                            <td>선택</td>
+                            <td>시맨틱 버전</td>
+                        </tr>
+                        <tr>
+                            <td><code>author</code></td>
+                            <td>선택</td>
+                            <td>작성자</td>
+                        </tr>
+                        <tr>
+                            <td><code>entryPoint</code></td>
+                            <td>선택</td>
+                            <td>실행 파일 경로 (.js, .py, .sh 등)</td>
+                        </tr>
+                        <tr>
+                            <td><code>permissions</code></td>
+                            <td>선택</td>
+                            <td>요청 권한 목록</td>
+                        </tr>
+                        <tr>
+                            <td><code>hooks</code></td>
+                            <td>선택</td>
+                            <td>이벤트 훅 배열 (event, command)</td>
+                        </tr>
+                        <tr>
+                            <td><code>skills</code></td>
+                            <td>선택</td>
+                            <td>슬래시 커맨드 배열 (name, command, description)</td>
+                        </tr>
                         </tbody>
                     </MudSimpleTable>
 
@@ -227,6 +268,7 @@
         {
             Snackbar.Add($"'{plugin.Name}' 플러그인 로드에 실패했습니다.", Severity.Error);
         }
+
         StateHasChanged();
     }
 
@@ -257,7 +299,7 @@
         await PluginService.EnsurePluginsDirectoryAsync();
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            Process.Start(new ProcessStartInfo
             {
                 FileName = PluginService.PluginsDirectory,
                 UseShellExecute = true
@@ -280,7 +322,7 @@
             PluginStatus.Loaded => (Icons.Material.Filled.CheckCircle, Color.Success, "로드됨"),
             PluginStatus.Invalid => (Icons.Material.Filled.Error, Color.Error, "오류"),
             PluginStatus.Error => (Icons.Material.Filled.Error, Color.Error, "오류"),
-            _ => (Icons.Material.Filled.RadioButtonUnchecked, Color.Default, "확인 중"),
+            _ => (Icons.Material.Filled.RadioButtonUnchecked, Color.Default, "확인 중")
         };
     }
 
@@ -298,4 +340,5 @@
         IsOpen = false;
         await IsOpenChanged.InvokeAsync(false);
     }
+
 }

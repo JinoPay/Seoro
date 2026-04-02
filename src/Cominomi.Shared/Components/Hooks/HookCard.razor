@@ -1,9 +1,7 @@
-@using Cominomi.Shared.Models
-
 <MudPaper Class="@($"hook-card {(_expanded ? "expanded" : "")}")" Outlined="true">
     <div class="hook-card-header" @onclick="Toggle">
         <div class="d-flex align-center gap-2" style="flex: 1; min-width: 0;">
-            <MudIcon Icon="@GetTypeIcon()" Size="Size.Small" Color="@GetTypeColor()" />
+            <MudIcon Icon="@GetTypeIcon()" Size="Size.Small" Color="@GetTypeColor()"/>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@GetTypeColor()">
                 @Hook.Type
             </MudChip>
@@ -13,64 +11,78 @@
                     @Matcher
                 </MudChip>
             }
-            <span class="typo-caption text-secondary" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <span class="typo-caption text-secondary"
+                  style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                 @GetSummary()
             </span>
         </div>
         <div class="d-flex align-center gap-1">
             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                           OnClick="@(async () => await OnDelete.InvokeAsync())" />
+                           OnClick="@(async () => await OnDelete.InvokeAsync())"/>
             <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                     Size="Size.Small" />
+                     Size="Size.Small"/>
         </div>
     </div>
 
     @if (_expanded)
     {
         <div class="hook-card-body">
-            <HookHandlerForm Hook="Hook" HookChanged="@(async h => await OnChanged.InvokeAsync(h))" />
+            <HookHandlerForm Hook="Hook" HookChanged="@(async h => await OnChanged.InvokeAsync(h))"/>
         </div>
     }
 </MudPaper>
 
 @code {
-    [Parameter, EditorRequired] public ClaudeHookHandler Hook { get; set; } = default!;
+    [Parameter][EditorRequired] public ClaudeHookHandler Hook { get; set; } = default!;
     [Parameter] public string? Matcher { get; set; }
     [Parameter] public EventCallback<ClaudeHookHandler> OnChanged { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
 
     private bool _expanded;
 
-    private void Toggle() => _expanded = !_expanded;
-
-    private string GetTypeIcon() => Hook.Type switch
+    private void Toggle()
     {
-        ClaudeHookHandlerType.Command => Icons.Material.Filled.Terminal,
-        ClaudeHookHandlerType.Http => Icons.Material.Filled.Http,
-        ClaudeHookHandlerType.Prompt => Icons.Material.Filled.Psychology,
-        ClaudeHookHandlerType.Agent => Icons.Material.Filled.SmartToy,
-        _ => Icons.Material.Filled.Code
-    };
+        _expanded = !_expanded;
+    }
 
-    private Color GetTypeColor() => Hook.Type switch
+    private string GetTypeIcon()
     {
-        ClaudeHookHandlerType.Command => Color.Success,
-        ClaudeHookHandlerType.Http => Color.Info,
-        ClaudeHookHandlerType.Prompt => Color.Warning,
-        ClaudeHookHandlerType.Agent => Color.Secondary,
-        _ => Color.Default
-    };
+        return Hook.Type switch
+        {
+            ClaudeHookHandlerType.Command => Icons.Material.Filled.Terminal,
+            ClaudeHookHandlerType.Http => Icons.Material.Filled.Http,
+            ClaudeHookHandlerType.Prompt => Icons.Material.Filled.Psychology,
+            ClaudeHookHandlerType.Agent => Icons.Material.Filled.SmartToy,
+            _ => Icons.Material.Filled.Code
+        };
+    }
 
-    private string GetSummary() => Hook.Type switch
+    private Color GetTypeColor()
     {
-        ClaudeHookHandlerType.Command => Hook.Command ?? "(no command)",
-        ClaudeHookHandlerType.Http => Hook.Url ?? "(no URL)",
-        ClaudeHookHandlerType.Prompt => Hook.Prompt?.Length > 50
-            ? Hook.Prompt[..50] + "..."
-            : Hook.Prompt ?? "(no prompt)",
-        ClaudeHookHandlerType.Agent => Hook.Model ?? "default model",
-        _ => ""
-    };
+        return Hook.Type switch
+        {
+            ClaudeHookHandlerType.Command => Color.Success,
+            ClaudeHookHandlerType.Http => Color.Info,
+            ClaudeHookHandlerType.Prompt => Color.Warning,
+            ClaudeHookHandlerType.Agent => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+
+    private string GetSummary()
+    {
+        return Hook.Type switch
+        {
+            ClaudeHookHandlerType.Command => Hook.Command ?? "(no command)",
+            ClaudeHookHandlerType.Http => Hook.Url ?? "(no URL)",
+            ClaudeHookHandlerType.Prompt => Hook.Prompt?.Length > 50
+                ? Hook.Prompt[..50] + "..."
+                : Hook.Prompt ?? "(no prompt)",
+            ClaudeHookHandlerType.Agent => Hook.Model ?? "default model",
+            _ => ""
+        };
+    }
+
 }
 
 <style>

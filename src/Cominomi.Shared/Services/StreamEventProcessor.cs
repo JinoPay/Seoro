@@ -21,14 +21,6 @@ public class StreamEventProcessor : IStreamEventProcessor
         _logger = logger;
     }
 
-    public async Task ProcessEventAsync(StreamEvent evt, StreamProcessingContext ctx)
-    {
-        if (evt.Type != null && _handlers.TryGetValue(evt.Type, out var handler))
-            await handler.HandleAsync(evt, ctx);
-        else
-            _logger.LogDebug("Unhandled Claude event type: {Type}", evt.Type);
-    }
-
     public async Task FinalizeAsync(StreamProcessingContext ctx)
     {
         // Final fallback: accumulate session-level token counts
@@ -54,7 +46,7 @@ public class StreamEventProcessor : IStreamEventProcessor
 
             // Restore from session if this turn didn't detect (Write and ExitPlanMode in different turns)
             if (ctx.DetectedPlanFilePath == null && ctx.Session.PlanFilePath != null
-                && File.Exists(ctx.Session.PlanFilePath))
+                                                 && File.Exists(ctx.Session.PlanFilePath))
                 ctx.DetectedPlanFilePath = ctx.Session.PlanFilePath;
 
             // Layer 2: text-based detection
@@ -129,44 +121,12 @@ public class StreamEventProcessor : IStreamEventProcessor
             ExtractAndApplyTitleMarker(ctx);
     }
 
-    private void ExtractAndApplyTitleMarker(StreamProcessingContext ctx)
+    public async Task ProcessEventAsync(StreamEvent evt, StreamProcessingContext ctx)
     {
-        var text = ctx.AssistantMessage.Text;
-        if (string.IsNullOrEmpty(text))
-            return;
-
-        var startIdx = text.IndexOf(CominomiConstants.TitleMarkerPrefix, StringComparison.Ordinal);
-        if (startIdx < 0)
-            return;
-
-        var titleStart = startIdx + CominomiConstants.TitleMarkerPrefix.Length;
-        var endIdx = text.IndexOf(CominomiConstants.TitleMarkerSuffix, titleStart, StringComparison.Ordinal);
-        if (endIdx < 0)
-            return;
-
-        var title = text[titleStart..endIdx].Trim();
-        if (string.IsNullOrEmpty(title))
-            return;
-
-        if (title.Length > 30)
-            title = title[..30];
-
-        if (!ctx.Session.TitleLocked)
-        {
-            ctx.Session.Title = title;
-            ctx.Session.TitleLocked = true;
-            _chatState.Tabs.UpdateChatTabTitle(title);
-        }
-
-        // Strip the marker from message text and parts
-        var marker = text[startIdx..(endIdx + CominomiConstants.TitleMarkerSuffix.Length)];
-        ctx.AssistantMessage.Text = text.Replace(marker, "").TrimStart();
-
-        foreach (var part in ctx.AssistantMessage.Parts)
-        {
-            if (part.Type == ContentPartType.Text && part.Text != null)
-                part.Text = part.Text.Replace(marker, "").TrimStart();
-        }
+        if (evt.Type != null && _handlers.TryGetValue(evt.Type, out var handler))
+            await handler.HandleAsync(evt, ctx);
+        else
+            _logger.LogDebug("Unhandled Claude event type: {Type}", evt.Type);
     }
 
     private static bool HasAskUserQuestionToolCall(StreamProcessingContext ctx)
@@ -182,47 +142,8 @@ public class StreamEventProcessor : IStreamEventProcessor
                 return true;
             }
         }
+
         return false;
-    }
-
-    /// <summary>
-    /// Scans the assistant message's tool calls for Write/Edit operations targeting .claude/plans/*.md
-    /// to precisely identify which plan file belongs to this session.
-    /// </summary>
-    private void DetectPlanFileFromToolCalls(StreamProcessingContext ctx)
-    {
-        var writeEditNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            { "Write", "write", "write_file", "Edit", "edit", "edit_file" };
-
-        foreach (var part in ctx.AssistantMessage.Parts)
-        {
-            if (part.Type != ContentPartType.ToolCall || part.ToolCall == null)
-                continue;
-            if (!writeEditNames.Contains(part.ToolCall.Name))
-                continue;
-            if (string.IsNullOrEmpty(part.ToolCall.Input))
-                continue;
-
-            try
-            {
-                using var doc = JsonDocument.Parse(part.ToolCall.Input);
-                if (doc.RootElement.TryGetProperty("file_path", out var fp))
-                {
-                    var path = fp.GetString();
-                    if (path != null)
-                    {
-                        var normalized = path.Replace('\\', '/');
-                        if (normalized.Contains(".claude/plans/") && normalized.EndsWith(".md"))
-                        {
-                            ctx.DetectedPlanFilePath = path;
-                            _logger.LogDebug("Plan file detected from tool call: {PlanFilePath}", path);
-                            return;
-                        }
-                    }
-                }
-            }
-            catch (JsonException ex) { _logger.LogDebug(ex, "Failed to parse tool call input for plan detection"); }
-        }
     }
 
     private async Task DetectPlanFileAsync(StreamProcessingContext ctx)
@@ -273,9 +194,92 @@ public class StreamEventProcessor : IStreamEventProcessor
     }
 
     /// <summary>
-    /// Kept for backward compatibility with existing tests.
-    /// Delegates to <see cref="StreamEventUtils.ExtractToolResultContent"/>.
+    ///     Scans the assistant message's tool calls for Write/Edit operations targeting .claude/plans/*.md
+    ///     to precisely identify which plan file belongs to this session.
     /// </summary>
-    internal static string ExtractToolResultContent(System.Text.Json.JsonElement content)
-        => StreamEventUtils.ExtractToolResultContent(content);
+    private void DetectPlanFileFromToolCalls(StreamProcessingContext ctx)
+    {
+        var writeEditNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "Write", "write", "write_file", "Edit", "edit", "edit_file" };
+
+        foreach (var part in ctx.AssistantMessage.Parts)
+        {
+            if (part.Type != ContentPartType.ToolCall || part.ToolCall == null)
+                continue;
+            if (!writeEditNames.Contains(part.ToolCall.Name))
+                continue;
+            if (string.IsNullOrEmpty(part.ToolCall.Input))
+                continue;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(part.ToolCall.Input);
+                if (doc.RootElement.TryGetProperty("file_path", out var fp))
+                {
+                    var path = fp.GetString();
+                    if (path != null)
+                    {
+                        var normalized = path.Replace('\\', '/');
+                        if (normalized.Contains(".claude/plans/") && normalized.EndsWith(".md"))
+                        {
+                            ctx.DetectedPlanFilePath = path;
+                            _logger.LogDebug("Plan file detected from tool call: {PlanFilePath}", path);
+                            return;
+                        }
+                    }
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogDebug(ex, "Failed to parse tool call input for plan detection");
+            }
+        }
+    }
+
+    private void ExtractAndApplyTitleMarker(StreamProcessingContext ctx)
+    {
+        var text = ctx.AssistantMessage.Text;
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        var startIdx = text.IndexOf(CominomiConstants.TitleMarkerPrefix, StringComparison.Ordinal);
+        if (startIdx < 0)
+            return;
+
+        var titleStart = startIdx + CominomiConstants.TitleMarkerPrefix.Length;
+        var endIdx = text.IndexOf(CominomiConstants.TitleMarkerSuffix, titleStart, StringComparison.Ordinal);
+        if (endIdx < 0)
+            return;
+
+        var title = text[titleStart..endIdx].Trim();
+        if (string.IsNullOrEmpty(title))
+            return;
+
+        if (title.Length > 30)
+            title = title[..30];
+
+        if (!ctx.Session.TitleLocked)
+        {
+            ctx.Session.Title = title;
+            ctx.Session.TitleLocked = true;
+            _chatState.Tabs.UpdateChatTabTitle(title);
+        }
+
+        // Strip the marker from message text and parts
+        var marker = text[startIdx..(endIdx + CominomiConstants.TitleMarkerSuffix.Length)];
+        ctx.AssistantMessage.Text = text.Replace(marker, "").TrimStart();
+
+        foreach (var part in ctx.AssistantMessage.Parts)
+            if (part.Type == ContentPartType.Text && part.Text != null)
+                part.Text = part.Text.Replace(marker, "").TrimStart();
+    }
+
+    /// <summary>
+    ///     Kept for backward compatibility with existing tests.
+    ///     Delegates to <see cref="StreamEventUtils.ExtractToolResultContent" />.
+    /// </summary>
+    internal static string ExtractToolResultContent(JsonElement content)
+    {
+        return StreamEventUtils.ExtractToolResultContent(content);
+    }
 }

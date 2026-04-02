@@ -4,13 +4,13 @@ namespace Cominomi.Shared.Services;
 
 public interface INotificationHistoryService
 {
-    IReadOnlyList<NotificationRecord> Entries { get; }
     int UnreadCount { get; }
-
-    void Record(string title, string body, NotificationType type, string? sessionId = null, bool isRead = false);
-    void MarkAsRead(string id);
-    void MarkAllAsRead();
-    void MarkSessionAsRead(string sessionId);
+    IReadOnlyList<NotificationRecord> Entries { get; }
 
     event Action? OnChange;
+    void MarkAllAsRead();
+    void MarkAsRead(string id);
+    void MarkSessionAsRead(string sessionId);
+
+    void Record(string title, string body, NotificationType type, string? sessionId = null, bool isRead = false);
 }

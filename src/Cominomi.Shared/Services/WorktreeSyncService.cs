@@ -1,32 +1,30 @@
 using System.Text.Json;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
+using Timer = System.Timers.Timer;
 
 namespace Cominomi.Shared.Services;
 
 public class WorktreeSyncService : IWorktreeSyncService
 {
-    private readonly IGitService _gitService;
-    private readonly IChatEventBus _eventBus;
-    private readonly ILogger<WorktreeSyncService> _logger;
-
-    private SyncState? _state;
-    private FileSystemWatcher? _watcher;
-    private System.Timers.Timer? _debounceTimer;
-    private readonly SemaphoreSlim _syncLock = new(1, 1);
-    private readonly HashSet<string> _pendingPaths = new(StringComparer.OrdinalIgnoreCase);
-    private readonly object _pendingLock = new();
-    private readonly HashSet<string> _copiedSet = new(StringComparer.OrdinalIgnoreCase);
-    private bool _disposed;
-
-    private const string StateFileName = "sync-state.json";
+    private const int DebounceMs = 500;
     private const int FileRetryCount = 3;
     private const int FileRetryDelayMs = 200;
-    private const int DebounceMs = 500;
     private const long MaxFileSizeBytes = 50 * 1024 * 1024; // 50 MB
 
-    public bool IsSyncActive => _state != null;
-    public string? SyncedSessionId => _state?.SessionId;
+    private const string StateFileName = "sync-state.json";
+    private readonly HashSet<string> _copiedSet = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _pendingPaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly IChatEventBus _eventBus;
+    private readonly IGitService _gitService;
+    private readonly ILogger<WorktreeSyncService> _logger;
+    private readonly Lock _pendingLock = new();
+    private readonly SemaphoreSlim _syncLock = new(1, 1);
+    private bool _disposed;
+    private FileSystemWatcher? _watcher;
+
+    private SyncState? _state;
+    private Timer? _debounceTimer;
 
     public WorktreeSyncService(IGitService gitService, IChatEventBus eventBus, ILogger<WorktreeSyncService> logger)
     {
@@ -35,8 +33,88 @@ public class WorktreeSyncService : IWorktreeSyncService
         _logger = logger;
     }
 
+    // ────────────────────── Dispose ──────────────────────
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        // Stop sync synchronously on dispose (app closing)
+        if (_state != null)
+            try
+            {
+                RestoreAndCleanupAsync().GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to restore during dispose");
+            }
+
+        StopWatching();
+        _syncLock.Dispose();
+    }
+
     public bool IsSessionSynced(string sessionId)
-        => _state?.SessionId == sessionId;
+    {
+        return _state?.SessionId == sessionId;
+    }
+
+    public bool IsSyncActive => _state != null;
+    public string? SyncedSessionId => _state?.SessionId;
+
+    public async Task RecoverFromCrashAsync()
+    {
+        if (!Directory.Exists(AppPaths.SyncBackups))
+            return;
+
+        foreach (var workspaceDir in Directory.GetDirectories(AppPaths.SyncBackups))
+        foreach (var sessionDir in Directory.GetDirectories(workspaceDir))
+        {
+            var stateFile = Path.Combine(sessionDir, StateFileName);
+            if (!File.Exists(stateFile))
+                continue;
+
+            _logger.LogWarning("Found orphaned sync state at {Path}, recovering...", stateFile);
+            try
+            {
+                var json = await File.ReadAllTextAsync(stateFile);
+                var state = JsonSerializer.Deserialize<SyncState>(json);
+                if (state != null)
+                {
+                    _state = state;
+                    await RestoreAndCleanupAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to recover sync state from {Path}", stateFile);
+                // Best effort: delete the orphaned state
+                try
+                {
+                    Directory.Delete(sessionDir, true);
+                }
+                catch
+                {
+                    /* ignore */
+                }
+            }
+        }
+    }
+
+    public async Task StopSyncAsync(CancellationToken ct = default)
+    {
+        await _syncLock.WaitAsync(ct);
+        try
+        {
+            await RestoreAndCleanupAsync(ct);
+        }
+        finally
+        {
+            _syncLock.Release();
+        }
+    }
 
     public async Task<bool> StartSyncAsync(Session session, Workspace workspace, CancellationToken ct = default)
     {
@@ -74,7 +152,7 @@ public class WorktreeSyncService : IWorktreeSyncService
                 RepoLocalPath = repoLocal,
                 WorktreePath = session.Git.WorktreePath,
                 BaseBranch = session.Git.BaseBranch,
-                BackupDir = backupDir,
+                BackupDir = backupDir
             };
 
             // 1. Backup local dir's dirty files
@@ -104,8 +182,15 @@ public class WorktreeSyncService : IWorktreeSyncService
         {
             _logger.LogError(ex, "Failed to start sync for session {SessionId}", session.Id);
             // Attempt to restore on failure
-            try { await RestoreAndCleanupAsync(ct); }
-            catch (Exception restoreEx) { _logger.LogError(restoreEx, "Failed to restore after sync start failure"); }
+            try
+            {
+                await RestoreAndCleanupAsync(ct);
+            }
+            catch (Exception restoreEx)
+            {
+                _logger.LogError(restoreEx, "Failed to restore after sync start failure");
+            }
+
             return false;
         }
         finally
@@ -114,51 +199,66 @@ public class WorktreeSyncService : IWorktreeSyncService
         }
     }
 
-    public async Task StopSyncAsync(CancellationToken ct = default)
+    private static bool ShouldIgnorePath(string fullPath)
     {
-        await _syncLock.WaitAsync(ct);
-        try
-        {
-            await RestoreAndCleanupAsync(ct);
-        }
-        finally
-        {
-            _syncLock.Release();
-        }
+        var sep = Path.DirectorySeparatorChar;
+        return fullPath.Contains($"{sep}.git{sep}") || fullPath.EndsWith($"{sep}.git") ||
+               fullPath.Contains($"{sep}.context{sep}") || fullPath.EndsWith($"{sep}.context");
     }
 
-    public async Task RecoverFromCrashAsync()
+    private static string? ToRelativePath(string fullPath, string worktreeRoot)
     {
-        if (!Directory.Exists(AppPaths.SyncBackups))
-            return;
+        if (!fullPath.StartsWith(worktreeRoot, StringComparison.OrdinalIgnoreCase))
+            return null;
+        var rel = fullPath[worktreeRoot.Length..].TrimStart(Path.DirectorySeparatorChar);
+        return rel.Length > 0 ? rel.Replace(Path.DirectorySeparatorChar, '/') : null;
+    }
 
-        foreach (var workspaceDir in Directory.GetDirectories(AppPaths.SyncBackups))
+    // ────────────────────── Internal: State persistence ──────────────────────
+
+    private static async Task SaveStateAsync(SyncState state)
+    {
+        var stateFile = Path.Combine(state.BackupDir, StateFileName);
+        var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(stateFile, json);
+    }
+
+    private static async Task<bool> FilesAreEqualAsync(string pathA, string pathB)
+    {
+        var infoA = new FileInfo(pathA);
+        var infoB = new FileInfo(pathB);
+
+        if (!infoA.Exists || !infoB.Exists)
+            return false;
+
+        if (infoA.Length != infoB.Length)
+            return false;
+
+        if (infoA.Length == 0)
+            return true;
+
+        const int bufferSize = 8192;
+        var bufferA = new byte[bufferSize];
+        var bufferB = new byte[bufferSize];
+
+        await using var streamA =
+            new FileStream(pathA, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, bufferSize);
+        await using var streamB =
+            new FileStream(pathB, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, bufferSize);
+
+        while (true)
         {
-            foreach (var sessionDir in Directory.GetDirectories(workspaceDir))
-            {
-                var stateFile = Path.Combine(sessionDir, StateFileName);
-                if (!File.Exists(stateFile))
-                    continue;
+            var readA = await streamA.ReadAsync(bufferA);
+            var readB = await streamB.ReadAsync(bufferB);
 
-                _logger.LogWarning("Found orphaned sync state at {Path}, recovering...", stateFile);
-                try
-                {
-                    var json = await File.ReadAllTextAsync(stateFile);
-                    var state = JsonSerializer.Deserialize<SyncState>(json);
-                    if (state != null)
-                    {
-                        _state = state;
-                        await RestoreAndCleanupAsync();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to recover sync state from {Path}", stateFile);
-                    // Best effort: delete the orphaned state
-                    try { Directory.Delete(sessionDir, recursive: true); }
-                    catch { /* ignore */ }
-                }
-            }
+            if (readA != readB)
+                return false;
+
+            if (readA == 0)
+                return true;
+
+            if (!bufferA.AsSpan(0, readA).SequenceEqual(bufferB.AsSpan(0, readB)))
+                return false;
         }
     }
 
@@ -202,7 +302,7 @@ public class WorktreeSyncService : IWorktreeSyncService
             state.BackedUpFiles.Add(new SyncBackupEntry
             {
                 RelativePath = filePath,
-                WasUntracked = isUntracked,
+                WasUntracked = isUntracked
             });
         }
 
@@ -225,9 +325,33 @@ public class WorktreeSyncService : IWorktreeSyncService
         // Delete backed-up untracked files
         foreach (var entry in state.BackedUpFiles.Where(e => e.WasUntracked))
         {
-            var fullPath = Path.Combine(state.RepoLocalPath, entry.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+            var fullPath = Path.Combine(state.RepoLocalPath,
+                entry.RelativePath.Replace('/', Path.DirectorySeparatorChar));
             DeleteFileWithRetry(fullPath);
         }
+    }
+
+    private async Task CopyFileWithRetryAsync(string source, string destination)
+    {
+        for (var i = 0; i < FileRetryCount; i++)
+            try
+            {
+                // Use FileStream for binary-safe copy
+                await using var srcStream = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                await using var destStream =
+                    new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None);
+                await srcStream.CopyToAsync(destStream);
+                return;
+            }
+            catch (IOException) when (i < FileRetryCount - 1)
+            {
+                await Task.Delay(FileRetryDelayMs);
+            }
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "Failed to copy file after {Retries} retries: {Source} → {Dest}", FileRetryCount,
+                    source, destination);
+            }
     }
 
     // ────────────────────── Internal: Copy worktree → local ──────────────────────
@@ -250,7 +374,8 @@ public class WorktreeSyncService : IWorktreeSyncService
                 var info = new FileInfo(srcPath);
                 if (info.Length > MaxFileSizeBytes)
                 {
-                    _logger.LogWarning("Skipping large file during initial sync: {Path} ({Size} bytes)", relativePath, info.Length);
+                    _logger.LogWarning("Skipping large file during initial sync: {Path} ({Size} bytes)", relativePath,
+                        info.Length);
                     continue;
                 }
 
@@ -279,136 +404,6 @@ public class WorktreeSyncService : IWorktreeSyncService
         }
 
         _logger.LogDebug("Initial sync: copied {Count} files from worktree to local dir", copied);
-    }
-
-    // ────────────────────── Internal: Live sync (specific files) ──────────────────────
-
-    private async Task SyncSpecificFilesAsync(SyncState state, List<string> relativePaths)
-    {
-        var synced = 0;
-        foreach (var relativePath in relativePaths)
-        {
-            var srcPath = Path.Combine(state.WorktreePath, relativePath.Replace('/', Path.DirectorySeparatorChar));
-            var destPath = Path.Combine(state.RepoLocalPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
-
-            if (File.Exists(srcPath))
-            {
-                var info = new FileInfo(srcPath);
-                if (info.Length > MaxFileSizeBytes)
-                {
-                    _logger.LogWarning("Skipping large file during live sync: {Path} ({Size} bytes)", relativePath, info.Length);
-                    continue;
-                }
-
-                if (File.Exists(destPath) && await FilesAreEqualAsync(srcPath, destPath))
-                    continue;
-
-                var destParent = Path.GetDirectoryName(destPath);
-                if (destParent != null)
-                    Directory.CreateDirectory(destParent);
-
-                await CopyFileWithRetryAsync(srcPath, destPath);
-                TrackCopied(state, relativePath);
-                synced++;
-            }
-            else
-            {
-                if (File.Exists(destPath))
-                {
-                    DeleteFileWithRetry(destPath);
-                    if (!state.CopiedFromWorktree.Contains(relativePath))
-                        state.CopiedFromWorktree.Add(relativePath);
-                    synced++;
-                }
-            }
-        }
-
-        if (synced > 0)
-            _logger.LogDebug("Live-synced {Count} files from worktree to local dir", synced);
-    }
-
-    // ────────────────────── Internal: Live sync watcher ──────────────────────
-
-    private void StartWatching(SyncState state)
-    {
-        StopWatching();
-
-        if (!Directory.Exists(state.WorktreePath))
-            return;
-
-        var worktreeRoot = state.WorktreePath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-
-        _watcher = new FileSystemWatcher(state.WorktreePath)
-        {
-            IncludeSubdirectories = true,
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
-            EnableRaisingEvents = true,
-        };
-
-        _debounceTimer = new System.Timers.Timer(DebounceMs) { AutoReset = false };
-        _debounceTimer.Elapsed += async (_, _) =>
-        {
-            try { await OnWorktreeChangedAsync(); }
-            catch (Exception ex) { _logger.LogWarning(ex, "Error during live sync"); }
-        };
-
-        void OnFsChange(object sender, FileSystemEventArgs e)
-        {
-            if (ShouldIgnorePath(e.FullPath))
-                return;
-
-            var rel = ToRelativePath(e.FullPath, worktreeRoot);
-            if (rel == null) return;
-
-            lock (_pendingLock)
-            {
-                _pendingPaths.Add(rel);
-            }
-
-            _debounceTimer.Stop();
-            _debounceTimer.Start();
-        }
-
-        void OnFsRename(object sender, RenamedEventArgs e)
-        {
-            if (!ShouldIgnorePath(e.OldFullPath))
-            {
-                var oldRel = ToRelativePath(e.OldFullPath, worktreeRoot);
-                if (oldRel != null)
-                {
-                    lock (_pendingLock) { _pendingPaths.Add(oldRel); }
-                }
-            }
-            OnFsChange(sender, e);
-        }
-
-        _watcher.Changed += OnFsChange;
-        _watcher.Created += OnFsChange;
-        _watcher.Deleted += OnFsChange;
-        _watcher.Renamed += OnFsRename;
-        _watcher.Error += async (_, e) =>
-        {
-            _logger.LogWarning(e.GetException(), "FileSystemWatcher buffer overflow, triggering full re-sync");
-            try { await OnFullResyncAsync(); }
-            catch (Exception ex) { _logger.LogWarning(ex, "Error during full re-sync fallback"); }
-        };
-    }
-
-    private void StopWatching()
-    {
-        if (_watcher != null)
-        {
-            _watcher.EnableRaisingEvents = false;
-            _watcher.Dispose();
-            _watcher = null;
-        }
-        _debounceTimer?.Dispose();
-        _debounceTimer = null;
-
-        lock (_pendingLock)
-        {
-            _pendingPaths.Clear();
-        }
     }
 
     private async Task OnFullResyncAsync()
@@ -455,13 +450,6 @@ public class WorktreeSyncService : IWorktreeSyncService
         }
     }
 
-    private static bool ShouldIgnorePath(string fullPath)
-    {
-        var sep = Path.DirectorySeparatorChar;
-        return fullPath.Contains($"{sep}.git{sep}") || fullPath.EndsWith($"{sep}.git") ||
-               fullPath.Contains($"{sep}.context{sep}") || fullPath.EndsWith($"{sep}.context");
-    }
-
     // ────────────────────── Internal: Restore ──────────────────────
 
     private async Task RestoreAndCleanupAsync(CancellationToken ct = default)
@@ -482,7 +470,8 @@ public class WorktreeSyncService : IWorktreeSyncService
             // 1. Revert each file copied from worktree individually
             foreach (var relativePath in state.CopiedFromWorktree)
             {
-                var fullPath = Path.Combine(state.RepoLocalPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+                var fullPath = Path.Combine(state.RepoLocalPath,
+                    relativePath.Replace('/', Path.DirectorySeparatorChar));
 
                 // If this file has a backup, it will be restored in step 2 — just need to
                 // revert the worktree version first so the backup can overwrite cleanly.
@@ -500,18 +489,18 @@ public class WorktreeSyncService : IWorktreeSyncService
                 {
                     var result = await _gitService.CheckoutFilesAsync(state.RepoLocalPath, [relativePath], ct);
                     if (!result.Success)
-                    {
                         // File doesn't exist in HEAD → it was a new file from the worktree. Delete it.
                         DeleteFileWithRetry(fullPath);
-                    }
                 }
             }
 
             // 2. Restore backed-up files (original local dir state)
             foreach (var entry in state.BackedUpFiles)
             {
-                var backupPath = Path.Combine(state.BackupDir, entry.RelativePath.Replace('/', Path.DirectorySeparatorChar));
-                var restorePath = Path.Combine(state.RepoLocalPath, entry.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+                var backupPath = Path.Combine(state.BackupDir,
+                    entry.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+                var restorePath = Path.Combine(state.RepoLocalPath,
+                    entry.RelativePath.Replace('/', Path.DirectorySeparatorChar));
 
                 if (!File.Exists(backupPath))
                     continue;
@@ -532,107 +521,77 @@ public class WorktreeSyncService : IWorktreeSyncService
             _copiedSet.Clear();
 
             if (Directory.Exists(state.BackupDir))
-            {
-                try { Directory.Delete(state.BackupDir, recursive: true); }
-                catch (Exception ex) { _logger.LogWarning(ex, "Failed to clean up backup dir: {Path}", state.BackupDir); }
-            }
+                try
+                {
+                    Directory.Delete(state.BackupDir, true);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to clean up backup dir: {Path}", state.BackupDir);
+                }
 
             // Clean up empty parent directories
             var workspaceBackupDir = Path.GetDirectoryName(state.BackupDir);
             if (workspaceBackupDir != null && Directory.Exists(workspaceBackupDir) &&
                 !Directory.EnumerateFileSystemEntries(workspaceBackupDir).Any())
-            {
-                try { Directory.Delete(workspaceBackupDir); }
-                catch { /* ignore */ }
-            }
+                try
+                {
+                    Directory.Delete(workspaceBackupDir);
+                }
+                catch
+                {
+                    /* ignore */
+                }
 
             _eventBus.Publish(new WorktreeSyncStoppedEvent(sessionId, workspaceId));
         }
     }
 
-    // ────────────────────── Internal: State persistence ──────────────────────
+    // ────────────────────── Internal: Live sync (specific files) ──────────────────────
 
-    private static async Task SaveStateAsync(SyncState state)
+    private async Task SyncSpecificFilesAsync(SyncState state, List<string> relativePaths)
     {
-        var stateFile = Path.Combine(state.BackupDir, StateFileName);
-        var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(stateFile, json);
-    }
-
-    // ────────────────────── Internal: File helpers ──────────────────────
-
-    private void TrackCopied(SyncState state, string relativePath)
-    {
-        if (_copiedSet.Add(relativePath))
-            state.CopiedFromWorktree.Add(relativePath);
-    }
-
-    private static string? ToRelativePath(string fullPath, string worktreeRoot)
-    {
-        if (!fullPath.StartsWith(worktreeRoot, StringComparison.OrdinalIgnoreCase))
-            return null;
-        var rel = fullPath[worktreeRoot.Length..].TrimStart(Path.DirectorySeparatorChar);
-        return rel.Length > 0 ? rel.Replace(Path.DirectorySeparatorChar, '/') : null;
-    }
-
-    private static async Task<bool> FilesAreEqualAsync(string pathA, string pathB)
-    {
-        var infoA = new FileInfo(pathA);
-        var infoB = new FileInfo(pathB);
-
-        if (!infoA.Exists || !infoB.Exists)
-            return false;
-
-        if (infoA.Length != infoB.Length)
-            return false;
-
-        if (infoA.Length == 0)
-            return true;
-
-        const int bufferSize = 8192;
-        var bufferA = new byte[bufferSize];
-        var bufferB = new byte[bufferSize];
-
-        await using var streamA = new FileStream(pathA, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, bufferSize);
-        await using var streamB = new FileStream(pathB, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, bufferSize);
-
-        while (true)
+        var synced = 0;
+        foreach (var relativePath in relativePaths)
         {
-            var readA = await streamA.ReadAsync(bufferA);
-            var readB = await streamB.ReadAsync(bufferB);
+            var srcPath = Path.Combine(state.WorktreePath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            var destPath = Path.Combine(state.RepoLocalPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
 
-            if (readA != readB)
-                return false;
-
-            if (readA == 0)
-                return true;
-
-            if (!bufferA.AsSpan(0, readA).SequenceEqual(bufferB.AsSpan(0, readB)))
-                return false;
-        }
-    }
-
-    private async Task CopyFileWithRetryAsync(string source, string destination)
-    {
-        for (var i = 0; i < FileRetryCount; i++)
-        {
-            try
+            if (File.Exists(srcPath))
             {
-                // Use FileStream for binary-safe copy
-                await using var srcStream = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                await using var destStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None);
-                await srcStream.CopyToAsync(destStream);
-                return;
+                var info = new FileInfo(srcPath);
+                if (info.Length > MaxFileSizeBytes)
+                {
+                    _logger.LogWarning("Skipping large file during live sync: {Path} ({Size} bytes)", relativePath,
+                        info.Length);
+                    continue;
+                }
+
+                if (File.Exists(destPath) && await FilesAreEqualAsync(srcPath, destPath))
+                    continue;
+
+                var destParent = Path.GetDirectoryName(destPath);
+                if (destParent != null)
+                    Directory.CreateDirectory(destParent);
+
+                await CopyFileWithRetryAsync(srcPath, destPath);
+                TrackCopied(state, relativePath);
+                synced++;
             }
-            catch (IOException) when (i < FileRetryCount - 1)
+            else
             {
-                await Task.Delay(FileRetryDelayMs);
-            }
-            catch (IOException ex)
-            {
-                _logger.LogWarning(ex, "Failed to copy file after {Retries} retries: {Source} → {Dest}", FileRetryCount, source, destination);
+                if (File.Exists(destPath))
+                {
+                    DeleteFileWithRetry(destPath);
+                    if (!state.CopiedFromWorktree.Contains(relativePath))
+                        state.CopiedFromWorktree.Add(relativePath);
+                    synced++;
+                }
             }
         }
+
+        if (synced > 0)
+            _logger.LogDebug("Live-synced {Count} files from worktree to local dir", synced);
     }
 
     private void DeleteFileWithRetry(string path)
@@ -641,7 +600,6 @@ public class WorktreeSyncService : IWorktreeSyncService
             return;
 
         for (var i = 0; i < FileRetryCount; i++)
-        {
             try
             {
                 File.Delete(path);
@@ -655,25 +613,112 @@ public class WorktreeSyncService : IWorktreeSyncService
             {
                 _logger.LogWarning(ex, "Failed to delete file after {Retries} retries: {Path}", FileRetryCount, path);
             }
+    }
+
+    // ────────────────────── Internal: Live sync watcher ──────────────────────
+
+    private void StartWatching(SyncState state)
+    {
+        StopWatching();
+
+        if (!Directory.Exists(state.WorktreePath))
+            return;
+
+        var worktreeRoot = state.WorktreePath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        _watcher = new FileSystemWatcher(state.WorktreePath)
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+            EnableRaisingEvents = true
+        };
+
+        _debounceTimer = new Timer(DebounceMs) { AutoReset = false };
+        _debounceTimer.Elapsed += async (_, _) =>
+        {
+            try
+            {
+                await OnWorktreeChangedAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error during live sync");
+            }
+        };
+
+        void OnFsChange(object sender, FileSystemEventArgs e)
+        {
+            if (ShouldIgnorePath(e.FullPath))
+                return;
+
+            var rel = ToRelativePath(e.FullPath, worktreeRoot);
+            if (rel == null) return;
+
+            lock (_pendingLock)
+            {
+                _pendingPaths.Add(rel);
+            }
+
+            _debounceTimer.Stop();
+            _debounceTimer.Start();
+        }
+
+        void OnFsRename(object sender, RenamedEventArgs e)
+        {
+            if (!ShouldIgnorePath(e.OldFullPath))
+            {
+                var oldRel = ToRelativePath(e.OldFullPath, worktreeRoot);
+                if (oldRel != null)
+                    lock (_pendingLock)
+                    {
+                        _pendingPaths.Add(oldRel);
+                    }
+            }
+
+            OnFsChange(sender, e);
+        }
+
+        _watcher.Changed += OnFsChange;
+        _watcher.Created += OnFsChange;
+        _watcher.Deleted += OnFsChange;
+        _watcher.Renamed += OnFsRename;
+        _watcher.Error += async (_, e) =>
+        {
+            _logger.LogWarning(e.GetException(), "FileSystemWatcher buffer overflow, triggering full re-sync");
+            try
+            {
+                await OnFullResyncAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error during full re-sync fallback");
+            }
+        };
+    }
+
+    private void StopWatching()
+    {
+        if (_watcher != null)
+        {
+            _watcher.EnableRaisingEvents = false;
+            _watcher.Dispose();
+            _watcher = null;
+        }
+
+        _debounceTimer?.Dispose();
+        _debounceTimer = null;
+
+        lock (_pendingLock)
+        {
+            _pendingPaths.Clear();
         }
     }
 
-    // ────────────────────── Dispose ──────────────────────
+    // ────────────────────── Internal: File helpers ──────────────────────
 
-    public void Dispose()
+    private void TrackCopied(SyncState state, string relativePath)
     {
-        if (_disposed)
-            return;
-        _disposed = true;
-
-        // Stop sync synchronously on dispose (app closing)
-        if (_state != null)
-        {
-            try { RestoreAndCleanupAsync().GetAwaiter().GetResult(); }
-            catch (Exception ex) { _logger.LogError(ex, "Failed to restore during dispose"); }
-        }
-
-        StopWatching();
-        _syncLock.Dispose();
+        if (_copiedSet.Add(relativePath))
+            state.CopiedFromWorktree.Add(relativePath);
     }
 }

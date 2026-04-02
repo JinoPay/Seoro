@@ -1,13 +1,10 @@
 @using System.Text.Json
 @using System.Text.RegularExpressions
 @using Markdig
-@using Cominomi.Shared.Models
-@using Cominomi.Shared.Services
-
 <div class="tool-widget tool-widget-agent">
     <div class="tool-widget-header">
         <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small"
-                 Style="width: 14px; height: 14px; opacity: 0.6;" />
+                 Style="width: 14px; height: 14px; opacity: 0.6;"/>
         @if (!string.IsNullOrEmpty(_subagentType))
         {
             <span class="agent-type-badge">@_subagentType</span>
@@ -40,7 +37,7 @@
         <div class="agent-children">
             @foreach (var child in _childTools)
             {
-                <ToolCallCard Tool="child" />
+                <ToolCallCard Tool="child"/>
             }
         </div>
     }
@@ -52,7 +49,7 @@
                  @onclick:stopPropagation="true">
                 <span>프롬프트</span>
                 <MudIcon Icon="@(_promptExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                         Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;" />
+                         Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;"/>
             </div>
             @if (_promptExpanded)
             {
@@ -82,15 +79,14 @@
     {
         <div class="agent-running-indicator">
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 14px; height: 14px;" Color="Color.Warning" />
+                                 Style="width: 14px; height: 14px;" Color="Color.Warning"/>
             <span>에이전트 실행 중...</span>
         </div>
     }
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public ToolCall Tool { get; set; } = default!;
+    [Parameter][EditorRequired] public ToolCall Tool { get; set; } = default!;
 
     [CascadingParameter(Name = "MessageParts")]
     public List<ContentPart>? MessageParts { get; set; }
@@ -148,7 +144,7 @@
 
         _childTools = MessageParts
             .Where(p => p.Type == ContentPartType.ToolCall
-                     && p.ToolCall?.ParentToolUseId == Tool.Id)
+                        && p.ToolCall?.ParentToolUseId == Tool.Id)
             .Select(p => p.ToolCall!)
             .ToList();
 
@@ -186,7 +182,10 @@
             if (root.TryGetProperty("prompt", out var prompt))
                 _prompt = prompt.GetString() ?? "";
         }
-        catch (JsonException) { /* malformed input — keep defaults */ }
+        catch (JsonException)
+        {
+            /* malformed input — keep defaults */
+        }
     }
 
     private void ParseOutput()
@@ -228,4 +227,5 @@
         if (sec < 60) return $"{sec}초";
         return $"{sec / 60}분 {sec % 60}초";
     }
+
 }

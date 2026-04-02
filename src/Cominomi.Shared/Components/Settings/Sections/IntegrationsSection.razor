@@ -11,13 +11,13 @@
         @if (_claudeCliChecking)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 18px; height: 18px;" />
+                                 Style="width: 18px; height: 18px;"/>
             <span class="status-text">감지 중...</span>
         }
         else if (_claudeCliFound)
         {
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
-                     Class="status-ok" />
+                     Class="status-ok"/>
             <span class="status-text">감지됨</span>
             @if (!string.IsNullOrEmpty(_claudeCliResolvedPath))
             {
@@ -27,11 +27,11 @@
         else
         {
             <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
-                     Class="status-warn" />
+                     Class="status-warn"/>
             <span class="status-text">감지되지 않음</span>
         }
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="CheckClaudeCli" title="다시 확인" />
+                       OnClick="CheckClaudeCli" title="다시 확인"/>
     </div>
 
     @if (_claudeCliFound && !string.IsNullOrEmpty(_claudeCliVersion))
@@ -59,7 +59,7 @@
                           Class="mt-2" Dense="true">
                     <div class="stack gap-1">
                         <span class="typo-body2">업데이트 방법:</span>
-                        @foreach (var method in (_isMac ? ClaudeInstallMethods.Mac : ClaudeInstallMethods.Windows))
+                        @foreach (var method in _isMac ? ClaudeInstallMethods.Mac : ClaudeInstallMethods.Windows)
                         {
                             <div class="stack-row items-center gap-2">
                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
@@ -78,7 +78,7 @@
     <MudTextField @bind-Value="Settings.ClaudePath" Label="Claude CLI 경로"
                   Variant="Variant.Outlined" Margin="Margin.Dense"
                   Placeholder="자동 감지" Class="mt-3"
-                  HelperText="비워두면 자동으로 감지합니다" />
+                  HelperText="비워두면 자동으로 감지합니다"/>
 </div>
 
 <div class="settings-group">
@@ -87,13 +87,13 @@
         @if (_gitChecking)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 18px; height: 18px;" />
+                                 Style="width: 18px; height: 18px;"/>
             <span class="status-text">감지 중...</span>
         }
         else if (_gitFound)
         {
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
-                     Class="status-ok" />
+                     Class="status-ok"/>
             <span class="status-text">감지됨</span>
             @if (!string.IsNullOrEmpty(_gitResolvedPath))
             {
@@ -103,11 +103,11 @@
         else
         {
             <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
-                     Class="status-warn" />
+                     Class="status-warn"/>
             <span class="status-text">감지되지 않음</span>
         }
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="CheckGit" title="다시 확인" />
+                       OnClick="CheckGit" title="다시 확인"/>
     </div>
 
     @if (_gitFound && !string.IsNullOrEmpty(_gitVersion))
@@ -144,7 +144,7 @@
     <MudTextField @bind-Value="Settings.GitPath" Label="Git 경로"
                   Variant="Variant.Outlined" Margin="Margin.Dense"
                   Placeholder="자동 감지" Class="mt-3"
-                  HelperText="비워두면 자동으로 감지합니다" />
+                  HelperText="비워두면 자동으로 감지합니다"/>
 </div>
 
 <div class="settings-group">
@@ -153,13 +153,13 @@
         @if (_ghChecking)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 18px; height: 18px;" />
+                                 Style="width: 18px; height: 18px;"/>
             <span class="status-text">감지 중...</span>
         }
         else if (_ghFound)
         {
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
-                     Class="status-ok" />
+                     Class="status-ok"/>
             <span class="status-text">감지됨</span>
             @if (!string.IsNullOrEmpty(_ghResolvedPath))
             {
@@ -169,11 +169,11 @@
         else
         {
             <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
-                     Class="status-warn" />
+                     Class="status-warn"/>
             <span class="status-text">감지되지 않음</span>
         }
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="CheckGh" title="다시 확인" />
+                       OnClick="CheckGh" title="다시 확인"/>
     </div>
 
     @if (_ghFound && !string.IsNullOrEmpty(_ghVersion))
@@ -210,11 +210,11 @@
     <MudTextField @bind-Value="Settings.GhPath" Label="GitHub CLI 경로"
                   Variant="Variant.Outlined" Margin="Margin.Dense"
                   Placeholder="자동 감지" Class="mt-3"
-                  HelperText="비워두면 자동으로 감지합니다" />
+                  HelperText="비워두면 자동으로 감지합니다"/>
 </div>
 
 @code {
-    [Parameter, EditorRequired] public AppSettings Settings { get; set; } = null!;
+    [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
 
     private bool _claudeCliChecking;
     private bool _claudeCliFound;
@@ -229,7 +229,7 @@
     private bool _ghFound;
     private string? _ghResolvedPath;
     private string? _ghVersion;
-    private bool _isMac = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    private readonly bool _isMac = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
     protected override async Task OnInitializedAsync()
     {
@@ -314,4 +314,5 @@
         _claudeCliChecking = false;
         StateHasChanged();
     }
+
 }

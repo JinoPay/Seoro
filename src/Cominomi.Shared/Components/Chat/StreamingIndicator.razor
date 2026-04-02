@@ -1,4 +1,3 @@
-@using Cominomi.Shared.Services
 @implements IDisposable
 
 <div class="streaming-indicator @PhaseClass">
@@ -16,7 +15,7 @@
     @if (Phase == StreamingPhase.UsingTool && !string.IsNullOrEmpty(ActiveToolName))
     {
         <MudIcon Icon="@ToolDisplayHelper.GetToolIcon(ActiveToolName)" Size="Size.Small"
-                 Style="width: 15px; height: 15px; opacity: 0.8;" />
+                 Style="width: 15px; height: 15px; opacity: 0.8;"/>
         <span class="indicator-label">@ToolDisplayHelper.GetStreamingLabel(ActiveToolName)</span>
     }
     else if (Phase != StreamingPhase.WritingText)
@@ -80,4 +79,5 @@
         _timer?.Dispose();
         _timer = null;
     }
+
 }

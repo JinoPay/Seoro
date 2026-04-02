@@ -2,12 +2,8 @@ using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services.StreamEventHandlers;
 
-public class ContentBlockDeltaHandler : IStreamEventHandler
+public class ContentBlockDeltaHandler(IChatState chatState) : IStreamEventHandler
 {
-    private readonly IChatState _chatState;
-
-    public ContentBlockDeltaHandler(IChatState chatState) => _chatState = chatState;
-
     public string EventType => "content_block_delta";
 
     public Task HandleAsync(StreamEvent evt, StreamProcessingContext ctx)
@@ -18,18 +14,18 @@ public class ContentBlockDeltaHandler : IStreamEventHandler
             if (tool != null && evt.Delta?.Text != null)
             {
                 tool.Output += evt.Delta.Text;
-                _chatState.NotifyStateChanged();
+                chatState.NotifyStateChanged();
             }
         }
         else if (evt.Delta?.Type == "text_delta" && evt.Delta.Text != null)
         {
-            _chatState.AppendText(ctx.AssistantMessage, evt.Delta.Text);
-            _chatState.SetPhase(StreamingPhase.WritingText, sessionId: ctx.Session.Id);
+            chatState.AppendText(ctx.AssistantMessage, evt.Delta.Text);
+            chatState.SetPhase(StreamingPhase.WritingText, sessionId: ctx.Session.Id);
         }
         else if (evt.Delta?.Type == "thinking_delta" && evt.Delta.Thinking != null)
         {
-            _chatState.AppendThinking(ctx.AssistantMessage, evt.Delta.Thinking);
-            _chatState.SetPhase(StreamingPhase.Thinking, sessionId: ctx.Session.Id);
+            chatState.AppendThinking(ctx.AssistantMessage, evt.Delta.Thinking);
+            chatState.SetPhase(StreamingPhase.Thinking, sessionId: ctx.Session.Id);
         }
         else if (evt.Delta?.Type == "input_json_delta" && evt.Delta.PartialJson != null && ctx.CurrentToolCall != null)
         {

@@ -22,7 +22,7 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public AppSettings Settings { get; set; } = null!;
+    [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
     [Parameter] public EventCallback OnSave { get; set; }
 
     private List<ShellInfo> _availableShells = [];
@@ -40,4 +40,5 @@
         Settings.TerminalShell = value;
         await OnSave.InvokeAsync();
     }
+
 }

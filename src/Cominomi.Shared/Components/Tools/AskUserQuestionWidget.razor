@@ -1,11 +1,10 @@
 @using System.Text.Json
-
 <div class="tool-widget tool-widget-askuser">
     @if (_questions.Count == 0 && !Tool.IsComplete)
     {
         <div class="askuser-loading">
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 14px; height: 14px;" Color="Color.Warning" />
+                                 Style="width: 14px; height: 14px;" Color="Color.Warning"/>
             <span style="opacity: 0.5; font-size: var(--text-xs);">질문 수신 중…</span>
         </div>
     }
@@ -26,10 +25,10 @@
                         <div class="askuser-option readonly">
                             <span class="askuser-option-label">
                                 <MudIcon Icon="@(q.MultiSelect
-                                    ? Icons.Material.Filled.CheckBoxOutlineBlank
-                                    : Icons.Material.Outlined.RadioButtonUnchecked)"
-                                    Size="Size.Small"
-                                    Style="width: 12px; height: 12px; opacity: 0.35;" />
+                                                   ? Icons.Material.Filled.CheckBoxOutlineBlank
+                                                   : Icons.Material.Outlined.RadioButtonUnchecked)"
+                                         Size="Size.Small"
+                                         Style="width: 12px; height: 12px; opacity: 0.35;"/>
                                 @opt.Label
                             </span>
                             @if (!string.IsNullOrEmpty(opt.Description))
@@ -45,10 +44,10 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public ToolCall Tool { get; set; } = default!;
+    [Parameter][EditorRequired] public ToolCall Tool { get; set; } = default!;
 
     private record AskUserOption(string Label, string? Description);
+
     private record AskUserQuestionItem(string? Header, string Question, List<AskUserOption> Options, bool MultiSelect);
 
     private List<AskUserQuestionItem> _questions = [];
@@ -83,7 +82,7 @@
                 var question = q.TryGetProperty("question", out var qProp) ? qProp.GetString() ?? "" : "";
                 var header = q.TryGetProperty("header", out var hProp) ? hProp.GetString() : null;
                 var multiSelect = q.TryGetProperty("multiSelect", out var msProp)
-                    && msProp.ValueKind == JsonValueKind.True;
+                                  && msProp.ValueKind == JsonValueKind.True;
 
                 var options = new List<AskUserOption>();
                 if (q.TryGetProperty("options", out var optsArr) && optsArr.ValueKind == JsonValueKind.Array)
@@ -108,4 +107,5 @@
             return [];
         }
     }
+
 }

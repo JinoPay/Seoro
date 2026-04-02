@@ -1,6 +1,4 @@
 @using System.Text
-@using Cominomi.Shared.Models
-@using Cominomi.Shared.Services
 @inject LightboxService Lightbox
 @inject FilePreviewService FilePreview
 
@@ -19,7 +17,7 @@
                     <img src="@attachment.PreviewDataUrl" alt="@attachment.FileName"
                          @onclick="@(() => Lightbox.Open(attachment.PreviewDataUrl!, attachment.FileName))"
                          @onclick:stopPropagation="true"
-                         style="max-height: 48px; max-width: 80px; border-radius: 4px; margin-right: 4px; vertical-align: middle; cursor: pointer;" />
+                         style="max-height: 48px; max-width: 80px; border-radius: 4px; margin-right: 4px; vertical-align: middle; cursor: pointer;"/>
                 }
                 @TruncateFileName(attachment.FileName)
             </MudChip>
@@ -73,4 +71,5 @@
     {
         return name.Length > 20 ? string.Concat(name.AsSpan(0, 17), "...") : name;
     }
+
 }

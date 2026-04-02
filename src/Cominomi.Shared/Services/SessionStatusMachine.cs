@@ -10,7 +10,7 @@ public static class SessionStatusMachine
         [SessionStatus.Pending] = [SessionStatus.Initializing, SessionStatus.Ready, SessionStatus.Error],
         [SessionStatus.Ready] = [SessionStatus.Error, SessionStatus.Archived],
         [SessionStatus.Error] = [SessionStatus.Ready, SessionStatus.Initializing, SessionStatus.Archived],
-        [SessionStatus.Archived] = [],
+        [SessionStatus.Archived] = []
     };
 
     public static bool IsValidTransition(SessionStatus from, SessionStatus to)

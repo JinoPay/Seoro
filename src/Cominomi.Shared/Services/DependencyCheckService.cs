@@ -56,11 +56,11 @@ public class DependencyCheckService(
         var path = await FindExecutableAsync(command);
         if (path == null)
             return new DependencyResult(command, description, false, null, null, installUrl,
-                windowsHint, macHint, WindowsMethods: [], MacMethods: [], isRequired);
+                windowsHint, macHint, [], [], isRequired);
 
         var version = await GetVersionAsync(path);
         return new DependencyResult(command, description, true, version, path, installUrl,
-            windowsHint, macHint, WindowsMethods: [], MacMethods: [], isRequired);
+            windowsHint, macHint, [], [], isRequired);
     }
 
     private async Task<string?> FindExecutableAsync(string command)

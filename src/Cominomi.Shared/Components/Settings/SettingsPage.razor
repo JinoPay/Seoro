@@ -6,19 +6,19 @@
 <div class="settings-page">
     <div class="settings-page-nav">
         <button class="settings-back-btn" @onclick="GoBack">
-            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"/>
             앱으로 돌아가기
         </button>
 
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("dashboard")"
                     @onclick="@(() => SetSection("dashboard"))">
-                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small"/>
                 대시보드
             </button>
             <button class="settings-nav-item @ActiveClass("usage")"
                     @onclick="@(() => SetSection("usage"))">
-                <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Small"/>
                 사용량
             </button>
         </div>
@@ -27,27 +27,27 @@
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("general")"
                     @onclick="@(() => SetSection("general"))">
-                <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small"/>
                 일반
             </button>
             <button class="settings-nav-item @ActiveClass("ai")"
                     @onclick="@(() => SetSection("ai"))">
-                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"/>
                 AI 모델
             </button>
             <button class="settings-nav-item @ActiveClass("notifications")"
                     @onclick="@(() => SetSection("notifications"))">
-                <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small"/>
                 알림
             </button>
             <button class="settings-nav-item @ActiveClass("terminal")"
                     @onclick="@(() => SetSection("terminal"))">
-                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"/>
                 터미널
             </button>
             <button class="settings-nav-item @ActiveClass("shortcuts")"
                     @onclick="@(() => SetSection("shortcuts"))">
-                <MudIcon Icon="@Icons.Material.Filled.Keyboard" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Keyboard" Size="Size.Small"/>
                 단축키
             </button>
         </div>
@@ -56,12 +56,12 @@
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("integrations")"
                     @onclick="@(() => SetSection("integrations"))">
-                <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small"/>
                 연동
             </button>
             <button class="settings-nav-item @ActiveClass("extensions")"
                     @onclick="@(() => SetSection("extensions"))">
-                <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small"/>
                 확장
             </button>
         </div>
@@ -72,22 +72,22 @@
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("claude-settings")"
                     @onclick="@(() => SetSection("claude-settings"))">
-                <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small"/>
                 Claude 설정
             </button>
             <button class="settings-nav-item @ActiveClass("hooks")"
                     @onclick="@(() => SetSection("hooks"))">
-                <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small"/>
                 훅
             </button>
             <button class="settings-nav-item @ActiveClass("rules")"
                     @onclick="@(() => SetSection("rules"))">
-                <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small"/>
                 룰
             </button>
             <button class="settings-nav-item @ActiveClass("instructions")"
                     @onclick="@(() => SetSection("instructions"))">
-                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"/>
                 인스트럭션
             </button>
         </div>
@@ -96,12 +96,12 @@
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("session-replay")"
                     @onclick="@(() => SetSection("session-replay"))">
-                <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small"/>
                 세션 히스토리
             </button>
             <button class="settings-nav-item @ActiveClass("memory")"
                     @onclick="@(() => SetSection("memory"))">
-                <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small"/>
                 메모리
             </button>
         </div>
@@ -110,12 +110,12 @@
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("advanced")"
                     @onclick="@(() => SetSection("advanced"))">
-                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small"/>
                 고급
             </button>
             <button class="settings-nav-item @ActiveClass("updates")"
                     @onclick="@(() => SetSection("updates"))">
-                <MudIcon Icon="@Icons.Material.Filled.SystemUpdate" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.SystemUpdate" Size="Size.Small"/>
                 업데이트
             </button>
         </div>
@@ -138,35 +138,35 @@
         @if (ChatState.SettingsWorkspaceId != null)
         {
             <WorkspaceSettingsContent WorkspaceId="@ChatState.SettingsWorkspaceId"
-                                      OnWorkspaceDeleted="HandleWorkspaceDeleted" />
+                                      OnWorkspaceDeleted="HandleWorkspaceDeleted"/>
         }
         else if (ChatState.SettingsSection == "dashboard")
         {
-            <DashboardPage />
+            <DashboardPage/>
         }
         else if (ChatState.SettingsSection == "claude-settings")
         {
-            <ClaudeSettingsSection />
+            <ClaudeSettingsSection/>
         }
         else if (ChatState.SettingsSection == "hooks")
         {
-            <HooksPage />
+            <HooksPage/>
         }
         else if (ChatState.SettingsSection == "rules")
         {
-            <RulesPage />
+            <RulesPage/>
         }
         else if (ChatState.SettingsSection == "instructions")
         {
-            <InstructionsPage />
+            <InstructionsPage/>
         }
         else if (ChatState.SettingsSection == "session-replay")
         {
-            <SessionReplayPage />
+            <SessionReplayPage/>
         }
         else if (ChatState.SettingsSection == "memory")
         {
-            <MemoryBrowserPage />
+            <MemoryBrowserPage/>
         }
         else if (ChatState.SettingsSection == "usage")
         {
@@ -175,13 +175,13 @@
                     <span class="typo-h6">사용량</span>
                 </div>
                 <div class="settings-content-body">
-                    <UsageDashboard />
+                    <UsageDashboard/>
                 </div>
             </div>
         }
         else
         {
-            <AppSettingsContent Section="@ChatState.SettingsSection" />
+            <AppSettingsContent Section="@ChatState.SettingsSection"/>
         }
     </div>
 </div>
@@ -247,10 +247,14 @@
         return ws.Name;
     }
 
-    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+    private void HandleStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
 
     public void Dispose()
     {
         ChatState.OnChange -= HandleStateChanged;
     }
+
 }

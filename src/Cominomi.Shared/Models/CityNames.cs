@@ -2,6 +2,8 @@ namespace Cominomi.Shared.Models;
 
 public static class CityNames
 {
+    private static int _counter;
+
     private static readonly string[] Names =
     [
         "tokyo", "delhi", "seoul", "cairo", "lima",
@@ -30,8 +32,6 @@ public static class CityNames
         "bilbao", "malaga", "cadiz", "vigo", "murcia",
         "genoa", "parma", "padua", "pisa", "bari"
     ];
-
-    private static int _counter;
 
     public static string GetNext()
     {

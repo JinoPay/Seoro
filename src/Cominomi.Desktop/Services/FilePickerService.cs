@@ -3,22 +3,15 @@ using Cominomi.Shared.Services;
 
 namespace Cominomi.Desktop.Services;
 
-public class FilePickerService : IFilePickerService
+public class FilePickerService(PhotinoWindowHolder windowHolder) : IFilePickerService
 {
-    private readonly PhotinoWindowHolder _windowHolder;
-
-    public FilePickerService(PhotinoWindowHolder windowHolder)
-    {
-        _windowHolder = windowHolder;
-    }
-
     public async Task<List<PendingAttachment>?> PickFilesAsync()
     {
-        var window = _windowHolder.Window;
+        var window = windowHolder.Window;
         if (window == null) return null;
 
         var filePaths = await window.ShowOpenFileAsync(
-            title: "파일 선택",
+            "파일 선택",
             multiSelect: true);
 
         if (filePaths == null || filePaths.Length == 0)
@@ -42,9 +35,7 @@ public class FilePickerService : IFilePickerService
             };
 
             if (attachment.IsImage)
-            {
                 attachment.PreviewDataUrl = $"data:{contentType};base64,{Convert.ToBase64String(data)}";
-            }
 
             results.Add(attachment);
         }

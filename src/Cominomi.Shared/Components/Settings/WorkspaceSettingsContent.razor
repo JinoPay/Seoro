@@ -19,11 +19,14 @@
 
         <div class="ws-settings-tabs">
             <button class="ws-settings-tab @(_tab == "general" ? "active" : "")"
-                    @onclick="@(() => _tab = "general")">일반</button>
+                    @onclick="@(() => _tab = "general")">일반
+            </button>
             <button class="ws-settings-tab @(_tab == "git" ? "active" : "")"
-                    @onclick="@(() => _tab = "git")">Git</button>
+                    @onclick="@(() => _tab = "git")">Git
+            </button>
             <button class="ws-settings-tab @(_tab == "prompts" ? "active" : "")"
-                    @onclick="@(() => _tab = "prompts")">프롬프트</button>
+                    @onclick="@(() => _tab = "prompts")">프롬프트
+            </button>
         </div>
 
         <div class="settings-content-body">
@@ -34,7 +37,7 @@
 
                 <div class="stack gap-3">
                     <MudTextField @bind-Value="_workspace.Name" Label="이름"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"/>
 
                     <MudSelect T="string" @bind-Value="_workspace.DefaultModel" Label="기본 모델"
                                Variant="Variant.Outlined" Margin="Margin.Dense"
@@ -50,19 +53,19 @@
                     @if (!string.IsNullOrEmpty(_workspace.RepoLocalPath))
                     {
                         <MudTextField Value="@ShortenPath(_workspace.RepoLocalPath)" Label="저장소 경로"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" ReadOnly="true" />
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" ReadOnly="true"/>
                     }
 
                     @if (!string.IsNullOrEmpty(_workspace.RepoUrl))
                     {
                         <MudTextField Value="@_workspace.RepoUrl" Label="저장소 URL"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" ReadOnly="true" />
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" ReadOnly="true"/>
                     }
 
                     <MudTextField @bind-Value="_workspace.SystemPrompt" Label="시스템 프롬프트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
                                   Placeholder="이 워크스페이스의 모든 세션에 추가될 시스템 프롬프트입니다."
-                                  HelperText="비워두면 기본 시스템 프롬프트만 사용합니다." />
+                                  HelperText="비워두면 기본 시스템 프롬프트만 사용합니다."/>
                 </div>
             }
             else if (_tab == "git")
@@ -90,12 +93,12 @@
                                       Label="기본 베이스 브랜치"
                                       Variant="Variant.Outlined" Margin="Margin.Dense"
                                       Placeholder="origin/main"
-                                      HelperText="비워두면 자동 감지합니다." />
+                                      HelperText="비워두면 자동 감지합니다."/>
                     }
 
                     <MudTextField @bind-Value="_workspace.DefaultRemote" Label="기본 리모트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                  Placeholder="origin" />
+                                  Placeholder="origin"/>
                 </div>
             }
             else if (_tab == "prompts")
@@ -107,12 +110,12 @@
                     <MudTextField @bind-Value="_workspace.Preferences.CodeReviewPrompt"
                                   Label="코드 리뷰 프롬프트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
-                                  Placeholder="코드 리뷰 시 에이전트에 전달할 지침입니다." />
+                                  Placeholder="코드 리뷰 시 에이전트에 전달할 지침입니다."/>
 
                     <MudTextField @bind-Value="_workspace.Preferences.GeneralPrompt"
                                   Label="일반 프롬프트"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
-                                  Placeholder="모든 새 대화 시작 시 에이전트에 전달할 지침입니다." />
+                                  Placeholder="모든 새 대화 시작 시 에이전트에 전달할 지침입니다."/>
                 </div>
             }
 
@@ -133,7 +136,7 @@
     else
     {
         <div style="padding: var(--space-6); text-align: center;">
-            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
         </div>
     }
 </div>
@@ -202,7 +205,7 @@
         var result = await DialogService.ShowMessageBoxAsync(
             "워크스페이스 삭제",
             $"'{_workspace.Name}' 워크스페이스와 모든 세션이 삭제됩니다. 계속하시겠습니까?",
-            yesText: "삭제", cancelText: "취소");
+            "삭제", cancelText: "취소");
 
         if (result != true) return;
 
@@ -237,4 +240,5 @@
             return "~" + path[home.Length..];
         return path;
     }
+
 }

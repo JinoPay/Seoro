@@ -1,9 +1,10 @@
+@using System.Reflection
 @inject IReleaseNotesService ReleaseNotesService
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
         <div class="stack-row items-center gap-2">
-            <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small"/>
             <span class="typo-h6">새로운 기능</span>
             <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
                 v@(_currentVersion)
@@ -14,7 +15,7 @@
         <div class="whatsnew-dialog">
             @if (_loading)
             {
-                <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary"/>
             }
             else if (_filteredReleases.Count > 0)
             {
@@ -78,7 +79,7 @@
 
     protected override void OnInitialized()
     {
-        _currentVersion = System.Reflection.Assembly.GetEntryAssembly()
+        _currentVersion = Assembly.GetEntryAssembly()
             ?.GetName().Version?.ToString(3) ?? "";
     }
 
@@ -132,13 +133,16 @@
         await IsOpenChanged.InvokeAsync(false);
     }
 
-    private static string GetTypeLabel(string type) => type switch
+    private static string GetTypeLabel(string type)
     {
-        "feat" => "기능",
-        "fix" => "수정",
-        "refactor" => "개선",
-        _ => type
-    };
+        return type switch
+        {
+            "feat" => "기능",
+            "fix" => "수정",
+            "refactor" => "개선",
+            _ => type
+        };
+    }
 
     private static string FormatDate(string dateStr)
     {
@@ -160,4 +164,5 @@
         var formatted = $"{date.Year}년 {date.Month}월 {date.Day}일";
         return relative is not null ? $"{formatted} ({relative})" : formatted;
     }
+
 }

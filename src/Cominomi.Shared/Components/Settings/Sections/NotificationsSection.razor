@@ -7,11 +7,11 @@
 
 <div class="stack gap-3">
     <MudSwitch T="bool" @bind-Value="Settings.NotificationsEnabled" Label="데스크톱 알림"
-               Color="Color.Primary" UncheckedColor="Color.Default" />
+               Color="Color.Primary" UncheckedColor="Color.Default"/>
 
     <MudSwitch T="bool" @bind-Value="Settings.NotificationSound" Label="알림 사운드"
                Color="Color.Primary" UncheckedColor="Color.Default"
-               Disabled="@(!Settings.NotificationsEnabled)" />
+               Disabled="@(!Settings.NotificationsEnabled)"/>
 
     @if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
     {
@@ -52,7 +52,7 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public AppSettings Settings { get; set; } = null!;
+    [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
     [Parameter] public EventCallback OnSave { get; set; }
 
     private async Task SendTestNotification()
@@ -61,4 +61,5 @@
         await NotificationService.SendAsync("Cominomi", "테스트 알림입니다!", NotificationType.Info);
         Snackbar.Add("테스트 알림을 발송했습니다.", Severity.Success);
     }
+
 }

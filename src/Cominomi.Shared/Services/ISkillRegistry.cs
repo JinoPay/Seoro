@@ -4,13 +4,13 @@ namespace Cominomi.Shared.Services;
 
 public interface ISkillRegistry
 {
+    bool TryParseSkillChain(string input, Session session, out List<SkillChainStep> steps);
     IReadOnlyList<SkillDefinition> GetAll();
     SkillDefinition? Find(string name);
-    string? TryParseSkillCommand(string input, out string? args);
     string ExpandSkill(SkillDefinition skill, string? args, Session session);
-    bool TryParseSkillChain(string input, Session session, out List<SkillChainStep> steps);
-    void Register(SkillDefinition skill);
+    string? TryParseSkillCommand(string input, out string? args);
+    Task DeleteCommandAsync(string name, string scope, string? projectPath);
     Task LoadCustomCommandsAsync(string? projectPath);
     Task SaveCommandAsync(SkillDefinition command);
-    Task DeleteCommandAsync(string name, string scope, string? projectPath);
+    void Register(SkillDefinition skill);
 }

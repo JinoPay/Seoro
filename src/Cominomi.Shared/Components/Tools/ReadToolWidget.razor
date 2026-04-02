@@ -1,9 +1,8 @@
 @using System.Text.Json
-
 <div class="tool-widget tool-widget-read">
     <div class="tool-widget-header">
         <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"
-                 Style="width: 14px; height: 14px; opacity: 0.6;" />
+                 Style="width: 14px; height: 14px; opacity: 0.6;"/>
         <span class="tool-widget-filepath">@_filePath</span>
         @if (_lineCount > 0)
         {
@@ -17,7 +16,8 @@
         </div>
         @if (_lineCount > 20)
         {
-            <div class="tool-widget-toggle" @onclick="@(() => _collapsed = !_collapsed)" @onclick:stopPropagation="true">
+            <div class="tool-widget-toggle" @onclick="@(() => _collapsed = !_collapsed)"
+                 @onclick:stopPropagation="true">
                 @(_collapsed ? $"전체 보기 ({_lineCount}줄)" : "접기")
             </div>
         }
@@ -25,8 +25,7 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public ToolCall Tool { get; set; } = default!;
+    [Parameter][EditorRequired] public ToolCall Tool { get; set; } = default!;
 
     private string _filePath = "";
     private int _lineCount;
@@ -81,7 +80,11 @@
             if (doc.RootElement.TryGetProperty("path", out var p))
                 return ShortenPath(p.GetString() ?? "");
         }
-        catch (JsonException) { /* malformed tool input — return empty */ }
+        catch (JsonException)
+        {
+            /* malformed tool input — return empty */
+        }
+
         return "";
     }
 
@@ -91,4 +94,5 @@
         var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         return parts.Length <= 3 ? normalized : string.Join("/", parts[^3..]);
     }
+
 }

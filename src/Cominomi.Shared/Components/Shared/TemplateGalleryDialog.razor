@@ -1,9 +1,7 @@
-@using Cominomi.Shared.Models
-
 <MudDialog @bind-Visible="IsOpen" Options="_dialogOptions" Class="template-gallery-dialog">
     <TitleContent>
         <div class="d-flex align-center gap-2">
-            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" />
+            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome"/>
             <span class="typo-h6">템플릿 갤러리</span>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">
                 @_filtered.Count
@@ -44,7 +42,7 @@
             <MudTextField T="string" @bind-Value="_search" Placeholder="템플릿 검색..."
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                           Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense"
-                          TextChanged="OnSearchChanged" />
+                          TextChanged="OnSearchChanged"/>
         </div>
 
         @* Template grid *@
@@ -58,10 +56,11 @@
                             @GetCategoryLabel(template.Category)
                         </MudChip>
                         <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small"
-                                 Class="template-add-icon" Color="Color.Primary" />
+                                 Class="template-add-icon" Color="Color.Primary"/>
                     </div>
                     <div class="typo-subtitle2">@template.Name</div>
-                    <div class="typo-caption text-secondary mt-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                    <div class="typo-caption text-secondary mt-1"
+                         style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                         @template.Description
                     </div>
                 </MudPaper>
@@ -87,10 +86,12 @@
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
 
     /// <summary>Filter to a specific category on open. Null = show all.</summary>
-    [Parameter] public TemplateCategory? DefaultCategory { get; set; }
+    [Parameter]
+    public TemplateCategory? DefaultCategory { get; set; }
 
     /// <summary>Raised when a template is selected.</summary>
-    [Parameter] public EventCallback<TemplateDefinition> OnTemplateSelected { get; set; }
+    [Parameter]
+    public EventCallback<TemplateDefinition> OnTemplateSelected { get; set; }
 
     private static readonly DialogOptions _dialogOptions = new()
     {
@@ -137,7 +138,7 @@
             {
                 var q = _search.Trim();
                 return t.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
-                    || t.Description.Contains(q, StringComparison.OrdinalIgnoreCase);
+                       || t.Description.Contains(q, StringComparison.OrdinalIgnoreCase);
             }
 
             return true;
@@ -157,27 +158,36 @@
     }
 
     private static int CountByCategory(TemplateCategory category)
-        => BuiltInTemplates.All.Count(t => t.Category == category);
-
-    private static Color GetCategoryColor(TemplateCategory category) => category switch
     {
-        TemplateCategory.Skill => Color.Warning,
-        TemplateCategory.Agent => Color.Secondary,
-        TemplateCategory.Rule => Color.Info,
-        TemplateCategory.Hook => Color.Success,
-        TemplateCategory.Mcp => Color.Error,
-        _ => Color.Default
-    };
+        return BuiltInTemplates.All.Count(t => t.Category == category);
+    }
 
-    private static string GetCategoryLabel(TemplateCategory category) => category switch
+    private static Color GetCategoryColor(TemplateCategory category)
     {
-        TemplateCategory.Skill => "스킬",
-        TemplateCategory.Agent => "에이전트",
-        TemplateCategory.Rule => "룰",
-        TemplateCategory.Hook => "훅",
-        TemplateCategory.Mcp => "MCP",
-        _ => category.ToString()
-    };
+        return category switch
+        {
+            TemplateCategory.Skill => Color.Warning,
+            TemplateCategory.Agent => Color.Secondary,
+            TemplateCategory.Rule => Color.Info,
+            TemplateCategory.Hook => Color.Success,
+            TemplateCategory.Mcp => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private static string GetCategoryLabel(TemplateCategory category)
+    {
+        return category switch
+        {
+            TemplateCategory.Skill => "스킬",
+            TemplateCategory.Agent => "에이전트",
+            TemplateCategory.Rule => "룰",
+            TemplateCategory.Hook => "훅",
+            TemplateCategory.Mcp => "MCP",
+            _ => category.ToString()
+        };
+    }
+
 }
 
 <style>

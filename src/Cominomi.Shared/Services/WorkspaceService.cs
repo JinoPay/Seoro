@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services.Migration;
@@ -7,91 +6,27 @@ using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Services;
 
-public partial class WorkspaceService : IWorkspaceService
+public partial class WorkspaceService(
+    IGitService gitService,
+    IOptionsMonitor<AppSettings> appSettings,
+    ILogger<WorkspaceService> logger)
+    : IWorkspaceService
 {
+    private readonly string _repoInfoDir = AppPaths.Repos;
+    private readonly string _workspacesDir = AppPaths.Workspaces;
+
     public event Action<Workspace>? OnWorkspaceSaved;
 
-    private readonly IGitService _gitService;
-    private readonly IOptionsMonitor<AppSettings> _appSettings;
-    private readonly ILogger<WorkspaceService> _logger;
-    private readonly string _workspacesDir = AppPaths.Workspaces;
-    private readonly string _repoInfoDir = AppPaths.Repos;
-
-    public WorkspaceService(IGitService gitService, IOptionsMonitor<AppSettings> appSettings, ILogger<WorkspaceService> logger)
-    {
-        _gitService = gitService;
-        _appSettings = appSettings;
-        _logger = logger;
-    }
-
-    private Task<string> GetBaseDirAsync()
-    {
-        var settings = _appSettings.CurrentValue;
-        var baseDir = !string.IsNullOrWhiteSpace(settings.DefaultCloneDirectory)
-            ? settings.DefaultCloneDirectory
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Cominomi");
-        return Task.FromResult(baseDir);
-    }
-
-    private async Task<string> GetReposDirAsync()
-    {
-        var dir = Path.Combine(await GetBaseDirAsync(), "repos");
-        Directory.CreateDirectory(dir);
-        return dir;
-    }
-
-    public async Task<string> GetWorktreesDirAsync()
-    {
-        var dir = Path.Combine(await GetBaseDirAsync(), "worktrees");
-        Directory.CreateDirectory(dir);
-        return dir;
-    }
-
-    public async Task<List<Workspace>> GetWorkspacesAsync()
-    {
-        var workspaces = new List<Workspace>();
-        if (!Directory.Exists(_workspacesDir))
-            return workspaces;
-
-        foreach (var file in Directory.GetFiles(_workspacesDir, "*.json"))
-        {
-            try
-            {
-                var json = await File.ReadAllTextAsync(file);
-                var (workspace, migrated, migratedJson) = MigratingJsonReader.Read<Workspace>(json, JsonDefaults.Options);
-                if (workspace != null)
-                {
-                    workspace.MigratePreferences();
-                    workspaces.Add(workspace);
-                    if (migrated && migratedJson != null)
-                        await AtomicFileWriter.WriteAsync(file, migratedJson);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Skipping corrupted workspace file: {File}", file);
-            }
-        }
-
-        return workspaces.OrderByDescending(w => w.UpdatedAt).ToList();
-    }
-
-    public async Task<Workspace?> LoadWorkspaceAsync(string workspaceId)
+    public async Task DeleteWorkspaceAsync(string workspaceId)
     {
         var path = Path.Combine(_workspacesDir, $"{workspaceId}.json");
-        if (!File.Exists(path))
+        if (File.Exists(path))
         {
-            _logger.LogDebug("Workspace file not found: {WorkspaceId}", workspaceId);
-            return null;
+            File.Delete(path);
+            logger.LogInformation("Workspace {WorkspaceId} deleted", workspaceId);
         }
 
-        var json = await File.ReadAllTextAsync(path);
-        var (workspace, migrated, migratedJson) = MigratingJsonReader.Read<Workspace>(json, JsonDefaults.Options);
-        workspace?.MigratePreferences();
-        if (migrated && migratedJson != null)
-            await AtomicFileWriter.WriteAsync(path, migratedJson);
-        _logger.LogDebug("Loaded workspace {WorkspaceId}: {Name}", workspace?.Id, workspace?.Name);
-        return workspace;
+        await Task.CompletedTask;
     }
 
     public async Task SaveWorkspaceAsync(Workspace workspace)
@@ -104,21 +39,130 @@ public partial class WorkspaceService : IWorkspaceService
         var json = MigratingJsonWriter.Write(workspace, JsonDefaults.Options);
         await AtomicFileWriter.WriteAsync(path, json);
         OnWorkspaceSaved?.Invoke(workspace);
-        _logger.LogDebug("Workspace {WorkspaceId} saved: {Name}", workspace.Id, workspace.Name);
+        logger.LogDebug("Workspace {WorkspaceId} saved: {Name}", workspace.Id, workspace.Name);
     }
 
-    public async Task DeleteWorkspaceAsync(string workspaceId)
+    public async Task<GitRepoInfo?> FindExistingRepoAsync(string remoteUrl)
+    {
+        var normalizedUrl = NormalizeUrl(remoteUrl);
+
+        if (!Directory.Exists(_repoInfoDir))
+            return null;
+
+        foreach (var file in Directory.GetFiles(_repoInfoDir, "*.json"))
+            try
+            {
+                var json = await File.ReadAllTextAsync(file);
+                var (info, migrated, migratedJson) = MigratingJsonReader.Read<GitRepoInfo>(json, JsonDefaults.Options);
+                if (info != null && NormalizeUrl(info.RemoteUrl) == normalizedUrl && Directory.Exists(info.LocalPath))
+                {
+                    if (migrated && migratedJson != null)
+                        await AtomicFileWriter.WriteAsync(file, migratedJson);
+                    return info;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to read repo info file: {File}", file);
+            }
+
+        return null;
+    }
+
+    public async Task<List<Workspace>> GetWorkspacesAsync()
+    {
+        var workspaces = new List<Workspace>();
+        if (!Directory.Exists(_workspacesDir))
+            return workspaces;
+
+        foreach (var file in Directory.GetFiles(_workspacesDir, "*.json"))
+            try
+            {
+                var json = await File.ReadAllTextAsync(file);
+                var (workspace, migrated, migratedJson) =
+                    MigratingJsonReader.Read<Workspace>(json, JsonDefaults.Options);
+                if (workspace != null)
+                {
+                    workspace.MigratePreferences();
+                    workspaces.Add(workspace);
+                    if (migrated && migratedJson != null)
+                        await AtomicFileWriter.WriteAsync(file, migratedJson);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Skipping corrupted workspace file: {File}", file);
+            }
+
+        return workspaces.OrderByDescending(w => w.UpdatedAt).ToList();
+    }
+
+    public async Task<string> GetWorktreesDirAsync()
+    {
+        var dir = Path.Combine(await GetBaseDirAsync(), "worktrees");
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
+
+    public async Task<Workspace?> LoadWorkspaceAsync(string workspaceId)
     {
         var path = Path.Combine(_workspacesDir, $"{workspaceId}.json");
-        if (File.Exists(path))
+        if (!File.Exists(path))
         {
-            File.Delete(path);
-            _logger.LogInformation("Workspace {WorkspaceId} deleted", workspaceId);
+            logger.LogDebug("Workspace file not found: {WorkspaceId}", workspaceId);
+            return null;
         }
-        await Task.CompletedTask;
+
+        var json = await File.ReadAllTextAsync(path);
+        var (workspace, migrated, migratedJson) = MigratingJsonReader.Read<Workspace>(json, JsonDefaults.Options);
+        workspace?.MigratePreferences();
+        if (migrated && migratedJson != null)
+            await AtomicFileWriter.WriteAsync(path, migratedJson);
+        logger.LogDebug("Loaded workspace {WorkspaceId}: {Name}", workspace?.Id, workspace?.Name);
+        return workspace;
     }
 
-    public async Task<Workspace> CreateFromUrlAsync(string url, string name, string model, IProgress<string>? progress = null, CancellationToken ct = default)
+    public async Task<Workspace> CreateFromLocalAsync(string localPath, string name, string model,
+        CancellationToken ct = default)
+    {
+        var workspace = new Workspace
+        {
+            Name = name,
+            RepoLocalPath = localPath,
+            DefaultModel = model,
+            Status = WorkspaceStatus.Initializing
+        };
+
+        await SaveWorkspaceAsync(workspace);
+
+        try
+        {
+            if (!await gitService.IsGitRepoAsync(localPath))
+            {
+                workspace.Status = WorkspaceStatus.Error;
+                workspace.Error = AppError.InvalidGitRepo("Not a valid git repository.");
+                await SaveWorkspaceAsync(workspace);
+                return workspace;
+            }
+
+            workspace.Status = WorkspaceStatus.Ready;
+            workspace.Error = null;
+            await SaveWorkspaceAsync(workspace);
+            logger.LogInformation("Workspace {Name} created from local path {Path}", name, localPath);
+            return workspace;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create workspace from local path: {Path}", localPath);
+            workspace.Status = WorkspaceStatus.Error;
+            workspace.Error = AppError.FromException(ErrorCode.Unknown, ex);
+            await SaveWorkspaceAsync(workspace);
+            return workspace;
+        }
+    }
+
+    public async Task<Workspace> CreateFromUrlAsync(string url, string name, string model,
+        IProgress<string>? progress = null, CancellationToken ct = default)
     {
         var workspace = new Workspace
         {
@@ -143,7 +187,7 @@ public partial class WorkspaceService : IWorkspaceService
 
                 // Fetch latest
                 progress?.Report("Fetching latest changes...");
-                await _gitService.FetchAsync(repoDir, ct);
+                await gitService.FetchAsync(repoDir, ct);
             }
             else
             {
@@ -154,13 +198,10 @@ public partial class WorkspaceService : IWorkspaceService
                 // Avoid directory name collision
                 var counter = 1;
                 var originalDir = repoDir;
-                while (Directory.Exists(repoDir))
-                {
-                    repoDir = $"{originalDir}-{counter++}";
-                }
+                while (Directory.Exists(repoDir)) repoDir = $"{originalDir}-{counter++}";
 
                 progress?.Report("Cloning repository...");
-                var cloneResult = await _gitService.CloneAsync(url, repoDir, progress, ct);
+                var cloneResult = await gitService.CloneAsync(url, repoDir, progress, ct);
                 if (!cloneResult.Success)
                 {
                     workspace.Status = WorkspaceStatus.Error;
@@ -170,7 +211,7 @@ public partial class WorkspaceService : IWorkspaceService
                 }
 
                 // Save repo info
-                var defaultBranch = await _gitService.DetectDefaultBranchAsync(repoDir) ?? "main";
+                var defaultBranch = await gitService.DetectDefaultBranchAsync(repoDir) ?? "main";
                 repoInfo = new GitRepoInfo
                 {
                     RemoteUrl = NormalizeUrl(url),
@@ -186,7 +227,7 @@ public partial class WorkspaceService : IWorkspaceService
             workspace.Error = null;
             await SaveWorkspaceAsync(workspace);
             progress?.Report("Workspace ready!");
-            _logger.LogInformation("Workspace {Name} created from {Url}", name, url);
+            logger.LogInformation("Workspace {Name} created from {Url}", name, url);
             return workspace;
         }
         catch (OperationCanceledException)
@@ -196,7 +237,7 @@ public partial class WorkspaceService : IWorkspaceService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create workspace from URL: {Url}", url);
+            logger.LogError(ex, "Failed to create workspace from URL: {Url}", url);
             workspace.Status = WorkspaceStatus.Error;
             workspace.Error = AppError.FromException(ErrorCode.Unknown, ex);
             await SaveWorkspaceAsync(workspace);
@@ -204,76 +245,8 @@ public partial class WorkspaceService : IWorkspaceService
         }
     }
 
-    public async Task<Workspace> CreateFromLocalAsync(string localPath, string name, string model, CancellationToken ct = default)
-    {
-        var workspace = new Workspace
-        {
-            Name = name,
-            RepoLocalPath = localPath,
-            DefaultModel = model,
-            Status = WorkspaceStatus.Initializing
-        };
-
-        await SaveWorkspaceAsync(workspace);
-
-        try
-        {
-            if (!await _gitService.IsGitRepoAsync(localPath))
-            {
-                workspace.Status = WorkspaceStatus.Error;
-                workspace.Error = AppError.InvalidGitRepo("Not a valid git repository.");
-                await SaveWorkspaceAsync(workspace);
-                return workspace;
-            }
-
-            workspace.Status = WorkspaceStatus.Ready;
-            workspace.Error = null;
-            await SaveWorkspaceAsync(workspace);
-            _logger.LogInformation("Workspace {Name} created from local path {Path}", name, localPath);
-            return workspace;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create workspace from local path: {Path}", localPath);
-            workspace.Status = WorkspaceStatus.Error;
-            workspace.Error = AppError.FromException(ErrorCode.Unknown, ex);
-            await SaveWorkspaceAsync(workspace);
-            return workspace;
-        }
-    }
-
-    public async Task<GitRepoInfo?> FindExistingRepoAsync(string remoteUrl)
-    {
-        var normalizedUrl = NormalizeUrl(remoteUrl);
-
-        if (!Directory.Exists(_repoInfoDir))
-            return null;
-
-        foreach (var file in Directory.GetFiles(_repoInfoDir, "*.json"))
-        {
-            try
-            {
-                var json = await File.ReadAllTextAsync(file);
-                var (info, migrated, migratedJson) = MigratingJsonReader.Read<GitRepoInfo>(json, JsonDefaults.Options);
-                if (info != null && NormalizeUrl(info.RemoteUrl) == normalizedUrl && Directory.Exists(info.LocalPath))
-                {
-                    if (migrated && migratedJson != null)
-                        await AtomicFileWriter.WriteAsync(file, migratedJson);
-                    return info;
-                }
-            }
-            catch (Exception ex) { _logger.LogWarning(ex, "Failed to read repo info file: {File}", file); }
-        }
-
-        return null;
-    }
-
-    private async Task SaveRepoInfoAsync(GitRepoInfo repoInfo)
-    {
-        var path = Path.Combine(_repoInfoDir, $"{repoInfo.Id}.json");
-        var json = MigratingJsonWriter.Write(repoInfo, JsonDefaults.Options);
-        await AtomicFileWriter.WriteAsync(path, json);
-    }
+    [GeneratedRegex(@"[^a-zA-Z0-9\-_.]")]
+    private static partial Regex SlugRegex();
 
     private static string ExtractRepoSlug(string url)
     {
@@ -295,6 +268,26 @@ public partial class WorkspaceService : IWorkspaceService
         return normalized.ToLowerInvariant();
     }
 
-    [GeneratedRegex(@"[^a-zA-Z0-9\-_.]")]
-    private static partial Regex SlugRegex();
+    private async Task SaveRepoInfoAsync(GitRepoInfo repoInfo)
+    {
+        var path = Path.Combine(_repoInfoDir, $"{repoInfo.Id}.json");
+        var json = MigratingJsonWriter.Write(repoInfo, JsonDefaults.Options);
+        await AtomicFileWriter.WriteAsync(path, json);
+    }
+
+    private Task<string> GetBaseDirAsync()
+    {
+        var settings = appSettings.CurrentValue;
+        var baseDir = !string.IsNullOrWhiteSpace(settings.DefaultCloneDirectory)
+            ? settings.DefaultCloneDirectory
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Cominomi");
+        return Task.FromResult(baseDir);
+    }
+
+    private async Task<string> GetReposDirAsync()
+    {
+        var dir = Path.Combine(await GetBaseDirAsync(), "repos");
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
 }

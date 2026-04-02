@@ -2,10 +2,10 @@ namespace Cominomi.Shared.Models.ViewModels;
 
 public class ActivitySummaryInfo
 {
-    public int TotalToolCalls { get; set; }
+    public bool HasErrors { get; set; }
     public int TextSegments { get; set; }
     public int ThinkingBlocks { get; set; }
-    public bool HasErrors { get; set; }
+    public int TotalToolCalls { get; set; }
     public List<FileChangeInfo> FileChanges { get; set; } = [];
 
     public string SummaryText
@@ -22,7 +22,7 @@ public class ActivitySummaryInfo
 
 public class FileChangeInfo
 {
-    public string FilePath { get; set; } = "";
     public string FileName => Path.GetFileName(FilePath);
+    public string FilePath { get; set; } = "";
     public string ToolAction { get; set; } = "";
 }

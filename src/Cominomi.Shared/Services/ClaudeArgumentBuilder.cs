@@ -1,5 +1,4 @@
 using System.Text;
-using Cominomi.Shared;
 using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
@@ -7,8 +6,8 @@ namespace Cominomi.Shared.Services;
 public static class ClaudeArgumentBuilder
 {
     /// <summary>
-    /// Tools that require explicit --allowedTools to be usable,
-    /// even when --dangerously-skip-permissions is set.
+    ///     Tools that require explicit --allowedTools to be usable,
+    ///     even when --dangerously-skip-permissions is set.
     /// </summary>
     private static readonly string[] DefaultAllowedTools =
     [
@@ -77,7 +76,9 @@ public static class ClaudeArgumentBuilder
                 sb.Append(" --fork-session");
         }
         else if (continueMode)
+        {
             sb.Append(" --continue");
+        }
 
         // Turn and budget limits
         if (maxTurns.HasValue)
@@ -96,24 +97,18 @@ public static class ClaudeArgumentBuilder
 
         // Additional directories
         if (additionalDirs is { Count: > 0 })
-        {
             foreach (var dir in additionalDirs)
                 sb.Append($" --add-dir \"{dir}\"");
-        }
 
         // Tool restrictions: always include default allowed tools, then caller-specified ones
         foreach (var tool in DefaultAllowedTools)
             sb.Append($" --allowedTools \"{tool}\"");
         if (allowedTools is { Count: > 0 })
-        {
             foreach (var tool in allowedTools)
                 sb.Append($" --allowedTools \"{tool}\"");
-        }
         if (disallowedTools is { Count: > 0 })
-        {
             foreach (var tool in disallowedTools)
                 sb.Append($" --disallowedTools \"{tool}\"");
-        }
 
         // System prompt — escape all characters that could break argument parsing
         if (!string.IsNullOrEmpty(systemPrompt))

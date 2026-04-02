@@ -1,5 +1,3 @@
-@using Cominomi.Shared.Models
-
 <div class="achievement-card">
     <div class="achievement-header">
         <span class="achievement-title">
@@ -29,10 +27,12 @@
     <div class="achievement-grid">
         @foreach (var a in FilteredAchievements)
         {
-            <div class="achievement-item @(a.Unlocked ? "unlocked" : "locked") rarity-border-@a.Rarity.ToString().ToLower()"
-                 title="@a.Description">
-                <div class="achievement-icon-box @(a.Unlocked ? $"unlocked rarity-bg-{a.Rarity.ToString().ToLower()}" : "")">
-                    <MudIcon Icon="@GetIcon(a.Icon)" Size="Size.Small" />
+            <div
+                class="achievement-item @(a.Unlocked ? "unlocked" : "locked") rarity-border-@a.Rarity.ToString().ToLower()"
+                title="@a.Description">
+                <div
+                    class="achievement-icon-box @(a.Unlocked ? $"unlocked rarity-bg-{a.Rarity.ToString().ToLower()}" : "")">
+                    <MudIcon Icon="@GetIcon(a.Icon)" Size="Size.Small"/>
                 </div>
                 <div class="achievement-text">
                     <div class="achievement-name-row">
@@ -64,57 +64,61 @@
         ["Mastery"] = "숙련",
         ["Explorer"] = "탐험",
         ["Efficiency"] = "효율",
-        ["Time"] = "시간",
+        ["Time"] = "시간"
     };
 
     private List<Achievement> FilteredAchievements => _selectedCategory == "all"
         ? Achievements
         : Achievements.Where(a => a.Category.ToString() == _selectedCategory).ToList();
 
-    private static string GetIcon(string icon) => icon switch
+    private static string GetIcon(string icon)
     {
-        "tune" => Icons.Material.Filled.Tune,
-        "bolt" => Icons.Material.Filled.Bolt,
-        "hub" => Icons.Material.Filled.Hub,
-        "device_hub" => Icons.Material.Filled.DeviceHub,
-        "cloud" => Icons.Material.Filled.Cloud,
-        "security" => Icons.Material.Filled.Security,
-        "terminal" => Icons.Material.Filled.Terminal,
-        "verified" => Icons.Material.Filled.Verified,
-        "waving_hand" => Icons.Material.Filled.WavingHand,
-        "chat" => Icons.Material.Filled.Chat,
-        "forum" => Icons.Material.Filled.Forum,
-        "whatshot" => Icons.Material.Filled.Whatshot,
-        "rocket_launch" => Icons.Material.Filled.RocketLaunch,
-        "collections" => Icons.Material.Filled.Collections,
-        "layers" => Icons.Material.Filled.Layers,
-        "workspace_premium" => Icons.Material.Filled.WorkspacePremium,
-        "handyman" => Icons.Material.Filled.Handyman,
-        "build" => Icons.Material.Filled.Build,
-        "local_fire_department" => Icons.Material.Filled.LocalFireDepartment,
-        "military_tech" => Icons.Material.Filled.MilitaryTech,
-        "shield" => Icons.Material.Filled.Shield,
-        "emoji_events" => Icons.Material.Filled.EmojiEvents,
-        "diamond" => Icons.Material.Filled.Diamond,
-        "crown" => Icons.Material.Filled.WorkspacePremium,
-        "auto_awesome" => Icons.Material.Filled.AutoAwesome,
-        "favorite" => Icons.Material.Filled.Favorite,
-        "star" => Icons.Material.Filled.Star,
-        "cake" => Icons.Material.Filled.Cake,
-        "settings" => Icons.Material.Filled.Settings,
-        "explore" => Icons.Material.Filled.Explore,
-        "account_tree" => Icons.Material.Filled.AccountTree,
-        "public" => Icons.Material.Filled.Public,
-        "travel_explore" => Icons.Material.Filled.TravelExplore,
-        "speed" => Icons.Material.Filled.Speed,
-        "savings" => Icons.Material.Filled.Savings,
-        "dark_mode" => Icons.Material.Filled.DarkMode,
-        "wb_sunny" => Icons.Material.Filled.WbSunny,
-        "timer" => Icons.Material.Filled.Timer,
-        "hourglass_top" => Icons.Material.Filled.HourglassTop,
-        "nightlight" => Icons.Material.Filled.Nightlight,
-        _ => Icons.Material.Filled.EmojiEvents
-    };
+        return icon switch
+        {
+            "tune" => Icons.Material.Filled.Tune,
+            "bolt" => Icons.Material.Filled.Bolt,
+            "hub" => Icons.Material.Filled.Hub,
+            "device_hub" => Icons.Material.Filled.DeviceHub,
+            "cloud" => Icons.Material.Filled.Cloud,
+            "security" => Icons.Material.Filled.Security,
+            "terminal" => Icons.Material.Filled.Terminal,
+            "verified" => Icons.Material.Filled.Verified,
+            "waving_hand" => Icons.Material.Filled.WavingHand,
+            "chat" => Icons.Material.Filled.Chat,
+            "forum" => Icons.Material.Filled.Forum,
+            "whatshot" => Icons.Material.Filled.Whatshot,
+            "rocket_launch" => Icons.Material.Filled.RocketLaunch,
+            "collections" => Icons.Material.Filled.Collections,
+            "layers" => Icons.Material.Filled.Layers,
+            "workspace_premium" => Icons.Material.Filled.WorkspacePremium,
+            "handyman" => Icons.Material.Filled.Handyman,
+            "build" => Icons.Material.Filled.Build,
+            "local_fire_department" => Icons.Material.Filled.LocalFireDepartment,
+            "military_tech" => Icons.Material.Filled.MilitaryTech,
+            "shield" => Icons.Material.Filled.Shield,
+            "emoji_events" => Icons.Material.Filled.EmojiEvents,
+            "diamond" => Icons.Material.Filled.Diamond,
+            "crown" => Icons.Material.Filled.WorkspacePremium,
+            "auto_awesome" => Icons.Material.Filled.AutoAwesome,
+            "favorite" => Icons.Material.Filled.Favorite,
+            "star" => Icons.Material.Filled.Star,
+            "cake" => Icons.Material.Filled.Cake,
+            "settings" => Icons.Material.Filled.Settings,
+            "explore" => Icons.Material.Filled.Explore,
+            "account_tree" => Icons.Material.Filled.AccountTree,
+            "public" => Icons.Material.Filled.Public,
+            "travel_explore" => Icons.Material.Filled.TravelExplore,
+            "speed" => Icons.Material.Filled.Speed,
+            "savings" => Icons.Material.Filled.Savings,
+            "dark_mode" => Icons.Material.Filled.DarkMode,
+            "wb_sunny" => Icons.Material.Filled.WbSunny,
+            "timer" => Icons.Material.Filled.Timer,
+            "hourglass_top" => Icons.Material.Filled.HourglassTop,
+            "nightlight" => Icons.Material.Filled.Nightlight,
+            _ => Icons.Material.Filled.EmojiEvents
+        };
+    }
+
 }
 
 <style>
@@ -156,10 +160,25 @@
         font-weight: 500;
     }
 
-    .rarity-badge.rarity-common { background: var(--mud-palette-action-default-hover); color: var(--mud-palette-text-secondary); }
-    .rarity-badge.rarity-rare { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-    .rarity-badge.rarity-epic { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
-    .rarity-badge.rarity-legendary { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .rarity-badge.rarity-common {
+        background: var(--mud-palette-action-default-hover);
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .rarity-badge.rarity-rare {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+    }
+
+    .rarity-badge.rarity-epic {
+        background: rgba(168, 85, 247, 0.15);
+        color: #a855f7;
+    }
+
+    .rarity-badge.rarity-legendary {
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
+    }
 
     .achievement-grid {
         display: grid;
@@ -181,7 +200,7 @@
 
     .achievement-item.unlocked:hover {
         transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .achievement-item.unlocked {
@@ -265,9 +284,17 @@
         flex-shrink: 0;
     }
 
-    .rarity-dot.rarity-rare { background: #3b82f6; }
-    .rarity-dot.rarity-epic { background: #a855f7; }
-    .rarity-dot.rarity-legendary { background: #f59e0b; }
+    .rarity-dot.rarity-rare {
+        background: #3b82f6;
+    }
+
+    .rarity-dot.rarity-epic {
+        background: #a855f7;
+    }
+
+    .rarity-dot.rarity-legendary {
+        background: #f59e0b;
+    }
 
     .achievement-desc {
         font-size: 0.6rem;

@@ -3,12 +3,12 @@ using System.Text.Json;
 namespace Cominomi.Shared.Services.Migration;
 
 /// <summary>
-/// Serializes objects to JSON with $schemaVersion stamped automatically.
+///     Serializes objects to JSON with $schemaVersion stamped automatically.
 /// </summary>
 public static class MigratingJsonWriter
 {
     /// <summary>
-    /// Serialize an object to JSON with $schemaVersion injected.
+    ///     Serialize an object to JSON with $schemaVersion injected.
     /// </summary>
     public static string Write<T>(T obj, JsonSerializerOptions options) where T : class
     {

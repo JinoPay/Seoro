@@ -11,21 +11,48 @@ using MudBlazor;
 using MudBlazor.Services;
 using Photino.Blazor;
 using Serilog;
-
+using Serilog.Events;
+using Velopack;
 using NotificationService = Cominomi.Desktop.Services.NotificationService;
 
 namespace Cominomi.Desktop;
 
 public static class Program
 {
+    private static string GetIconPath()
+    {
+        var baseDir = AppContext.BaseDirectory;
+        var iconFile = OperatingSystem.IsWindows() ? "icon.ico" : "icon.png";
+        return Path.Combine(baseDir, iconFile);
+    }
+
+    private static void CleanUp(IServiceProvider services)
+    {
+        try
+        {
+            services.GetService<IWorktreeSyncService>()?.Dispose();
+            services.GetService<IClaudeService>()?.Dispose();
+            services.GetService<IGitBranchWatcherService>()?.Dispose();
+            (services.GetService<ChatState>() as IDisposable)?.Dispose();
+            (services.GetService<SessionListDataService>() as IDisposable)?.Dispose();
+
+            if (services.GetService<ITerminalService>() is IAsyncDisposable termDisposable)
+                termDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Error during service cleanup");
+        }
+    }
+
     [STAThread]
-    static void Main(string[] args)
+    private static void Main(string[] args)
     {
         // Velopack auto-update hook (must run before anything else)
-        Velopack.VelopackApp.Build().Run();
+        VelopackApp.Build().Run();
 
         // Single instance guard
-        using var mutex = new Mutex(true, "CominomiSingleInstance", out bool isNew);
+        using var mutex = new Mutex(true, "CominomiSingleInstance", out var isNew);
         if (!isNew) return;
 
         // Serilog
@@ -36,14 +63,16 @@ public static class Program
             .MinimumLevel.Debug()
             .WriteTo.Debug()
 #endif
-            .MinimumLevel.Override("Microsoft.AspNetCore.Components", Serilog.Events.LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.AspNetCore.Components", LogEventLevel.Warning)
             .WriteTo.Console(
-                outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+                outputTemplate:
+                "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
             .WriteTo.File(
                 logPath,
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 14,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+                outputTemplate:
+                "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
 
         try
@@ -226,10 +255,7 @@ public static class Program
                 Log.Fatal("AppDomain unhandled exception: {Error}", e.ExceptionObject);
         };
 
-        TaskScheduler.UnobservedTaskException += (_, e) =>
-        {
-            Log.Error(e.Exception, "Unobserved task exception");
-        };
+        TaskScheduler.UnobservedTaskException += (_, e) => { Log.Error(e.Exception, "Unobserved task exception"); };
 
         // Plugin initialization
         try
@@ -246,8 +272,14 @@ public static class Program
         }
 
         // Recover from any orphaned sync state (crash recovery)
-        try { app.Services.GetRequiredService<IWorktreeSyncService>().RecoverFromCrashAsync().GetAwaiter().GetResult(); }
-        catch (Exception ex) { Log.Warning(ex, "Worktree sync crash recovery failed"); }
+        try
+        {
+            app.Services.GetRequiredService<IWorktreeSyncService>().RecoverFromCrashAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Worktree sync crash recovery failed");
+        }
 
         app.Run();
 
@@ -256,31 +288,5 @@ public static class Program
 
         // Force exit — Photino may leave native threads alive on macOS
         Environment.Exit(0);
-    }
-
-    private static string GetIconPath()
-    {
-        var baseDir = AppContext.BaseDirectory;
-        var iconFile = OperatingSystem.IsWindows() ? "icon.ico" : "icon.png";
-        return Path.Combine(baseDir, iconFile);
-    }
-
-    private static void CleanUp(IServiceProvider services)
-    {
-        try
-        {
-            services.GetService<IWorktreeSyncService>()?.Dispose();
-            services.GetService<IClaudeService>()?.Dispose();
-            services.GetService<IGitBranchWatcherService>()?.Dispose();
-            (services.GetService<ChatState>() as IDisposable)?.Dispose();
-            (services.GetService<SessionListDataService>() as IDisposable)?.Dispose();
-
-            if (services.GetService<ITerminalService>() is IAsyncDisposable termDisposable)
-                termDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Error during service cleanup");
-        }
     }
 }

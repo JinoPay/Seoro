@@ -7,7 +7,7 @@
     <TitleContent>
         <div class="create-ws-header">
             <div class="create-ws-icon-badge">
-                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size: 18px;" />
+                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size: 18px;"/>
             </div>
             <div class="stack gap-1">
                 <span class="create-ws-title">새 워크스페이스</span>
@@ -21,7 +21,7 @@
             {
                 <div class="create-ws-progress-overlay">
                     <div class="create-ws-progress-spinner">
-                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Medium" />
+                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Medium"/>
                     </div>
                     <p class="typo-body2 text-secondary">@_progressMessage</p>
                 </div>
@@ -30,12 +30,12 @@
             <div class="create-ws-segmented">
                 <button type="button" class="create-ws-segment @(_activeTab == 0 ? "active" : "")"
                         @onclick="@(() => _activeTab = 0)">
-                    <MudIcon Icon="@Icons.Material.Filled.Cloud" Style="font-size: 16px;" />
+                    <MudIcon Icon="@Icons.Material.Filled.Cloud" Style="font-size: 16px;"/>
                     URL에서 클론
                 </button>
                 <button type="button" class="create-ws-segment @(_activeTab == 1 ? "active" : "")"
                         @onclick="@(() => _activeTab = 1)">
-                    <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size: 16px;" />
+                    <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size: 16px;"/>
                     로컬 저장소
                 </button>
             </div>
@@ -50,12 +50,12 @@
                                           Margin="Margin.Dense" Placeholder="https://github.com/org/repo"
                                           Immediate="true" TextChanged="OnUrlChanged"
                                           Adornment="Adornment.Start"
-                                          AdornmentIcon="@Icons.Material.Filled.Link" />
+                                          AdornmentIcon="@Icons.Material.Filled.Link"/>
                         </div>
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">워크스페이스 이름</label>
                             <MudTextField @bind-Value="_editName" Variant="Variant.Outlined"
-                                          Margin="Margin.Dense" />
+                                          Margin="Margin.Dense"/>
                         </div>
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">기본 모델</label>
@@ -79,18 +79,19 @@
                             <div class="create-ws-path-input">
                                 <MudTextField @bind-Value="_localPath" Variant="Variant.Outlined"
                                               Margin="Margin.Dense" Placeholder="/경로/저장소"
-                                              Style="flex: 1;" />
+                                              Style="flex: 1;"/>
                                 <button type="button" class="create-ws-browse-btn"
                                         @onclick="BrowseLocalFolder" title="찾아보기...">
-                                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Style="font-size: 18px;" />
+                                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Style="font-size: 18px;"/>
                                 </button>
                             </div>
                         </div>
                         @if (_localPathValidation != null)
                         {
                             <div class="create-ws-validation @(_isLocalPathGitRepo ? "success" : "warning")">
-                                <MudIcon Icon="@(_isLocalPathGitRepo ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)"
-                                         Style="font-size: 16px;" />
+                                <MudIcon
+                                    Icon="@(_isLocalPathGitRepo ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)"
+                                    Style="font-size: 16px;"/>
                                 <span>@_localPathValidation</span>
                                 @if (!_isLocalPathGitRepo)
                                 {
@@ -100,7 +101,7 @@
                                         @if (_isInitializingGit)
                                         {
                                             <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                                 Style="width: 14px; height: 14px;" />
+                                                                 Style="width: 14px; height: 14px;"/>
                                         }
                                         Git 초기화
                                     </button>
@@ -110,7 +111,7 @@
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">워크스페이스 이름</label>
                             <MudTextField @bind-Value="_editName" Variant="Variant.Outlined"
-                                          Margin="Margin.Dense" />
+                                          Margin="Margin.Dense"/>
                         </div>
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">기본 모델</label>
@@ -131,7 +132,7 @@
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
                 <div class="create-ws-error">
-                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Style="font-size: 16px;" />
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Style="font-size: 16px;"/>
                     <span>@_errorMessage</span>
                 </div>
             }
@@ -146,7 +147,7 @@
                 @if (_isCreating)
                 {
                     <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                         Style="width: 16px; height: 16px;" />
+                                         Style="width: 16px; height: 16px;"/>
                 }
                 만들기
                 @if (!_isCreating)
@@ -186,7 +187,7 @@
     {
         0 => !string.IsNullOrWhiteSpace(_repoUrl) && !string.IsNullOrWhiteSpace(_editName),
         1 => !string.IsNullOrWhiteSpace(_localPath) && !string.IsNullOrWhiteSpace(_editName)
-             && (_localPathValidation == null || _isLocalPathGitRepo),
+                                                    && (_localPathValidation == null || _isLocalPathGitRepo),
         _ => false
     };
 
@@ -407,4 +408,5 @@
         var lastSlash = cleaned.LastIndexOfAny(['/', ':']);
         return lastSlash >= 0 ? cleaned[(lastSlash + 1)..] : cleaned;
     }
+
 }

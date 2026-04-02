@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services.Migration;
 using Microsoft.Extensions.Logging;
@@ -7,17 +6,10 @@ using Microsoft.Extensions.Options;
 namespace Cominomi.Shared.Services;
 
 /// <summary>
-/// Loads AppSettings from the JSON settings file each time IOptionsMonitor needs a fresh instance.
+///     Loads AppSettings from the JSON settings file each time IOptionsMonitor needs a fresh instance.
 /// </summary>
-public class AppSettingsFactory : IOptionsFactory<AppSettings>
+public class AppSettingsFactory(ILogger<AppSettingsFactory> logger) : IOptionsFactory<AppSettings>
 {
-    private readonly ILogger<AppSettingsFactory> _logger;
-
-    public AppSettingsFactory(ILogger<AppSettingsFactory> logger)
-    {
-        _logger = logger;
-    }
-
     public AppSettings Create(string name)
     {
         var path = AppPaths.SettingsFile;
@@ -36,7 +28,7 @@ public class AppSettingsFactory : IOptionsFactory<AppSettings>
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to load settings from {Path}, using defaults", path);
+            logger.LogWarning(ex, "Failed to load settings from {Path}, using defaults", path);
             return new AppSettings();
         }
     }

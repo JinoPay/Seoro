@@ -4,7 +4,7 @@
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
         <div class="typo-h6">
-            <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
+            <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2"/>
             초기 설정
         </div>
     </TitleContent>
@@ -16,7 +16,7 @@
 
             @if (_loading)
             {
-                <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary"/>
             }
             else if (_results != null)
             {
@@ -26,11 +26,11 @@
                         <div class="stack-row items-center gap-2">
                             @if (dep.IsInstalled)
                             {
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success"/>
                             }
                             else
                             {
-                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning"/>
                             }
                             <div class="stack flex-1">
                                 <div class="typo-subtitle2">@dep.Name</div>
@@ -46,7 +46,7 @@
 
                         @if (!dep.IsInstalled)
                         {
-                            <MudDivider Class="my-2" />
+                            <MudDivider Class="my-2"/>
                             <div class="stack gap-1">
                                 <small class="typo-caption text-secondary">설치 방법:</small>
                                 @{
@@ -106,7 +106,7 @@
     private List<DependencyResult>? _results;
     private bool _loading;
     private bool _allInstalled;
-    private bool _isMac = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    private readonly bool _isMac = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
     private readonly DialogOptions _dialogOptions = new()
     {
@@ -158,4 +158,5 @@
         IsOpen = false;
         await IsOpenChanged.InvokeAsync(false);
     }
+
 }

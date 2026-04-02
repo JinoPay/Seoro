@@ -16,31 +16,31 @@
         @switch (Section)
         {
             case "general":
-                <GeneralSection Settings="_settings" />
+                <GeneralSection Settings="_settings"/>
                 break;
             case "notifications":
-                <NotificationsSection Settings="_settings" OnSave="Save" />
+                <NotificationsSection Settings="_settings" OnSave="Save"/>
                 break;
             case "terminal":
-                <TerminalSection Settings="_settings" OnSave="Save" />
+                <TerminalSection Settings="_settings" OnSave="Save"/>
                 break;
             case "shortcuts":
-                <ShortcutsSection />
+                <ShortcutsSection/>
                 break;
             case "ai":
-                <AiModelSection Settings="_settings" />
+                <AiModelSection Settings="_settings"/>
                 break;
             case "integrations":
-                <IntegrationsSection Settings="_settings" />
+                <IntegrationsSection Settings="_settings"/>
                 break;
             case "extensions":
-                <ExtensionsSection />
+                <ExtensionsSection/>
                 break;
             case "advanced":
-                <AdvancedSection Settings="_settings" />
+                <AdvancedSection Settings="_settings"/>
                 break;
             case "updates":
-                <UpdatesSection Settings="_settings" />
+                <UpdatesSection Settings="_settings"/>
                 break;
         }
     </div>
@@ -61,4 +61,5 @@
         await SettingsService.SaveAsync(_settings);
         Snackbar.SettingsSaved();
     }
+
 }

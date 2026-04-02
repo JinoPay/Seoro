@@ -1,7 +1,4 @@
 @using Markdig
-@using Cominomi.Shared.Models
-@using Cominomi.Shared.Services
-@using Cominomi.Shared.Components.Tools
 @inject IChatState ChatState
 @inject LightboxService Lightbox
 @inject FilePreviewService FilePreview
@@ -12,7 +9,7 @@
     <div class="system-message">
         <div class="system-message-content">
             <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small"
-                     Style="width: 14px; height: 14px; opacity: 0.5;" />
+                     Style="width: 14px; height: 14px; opacity: 0.5;"/>
             <span>@Message.Text</span>
             <span class="message-time">@Message.Timestamp.ToLocalTime().ToString("HH:mm")</span>
         </div>
@@ -27,14 +24,14 @@
             {
                 <MudAvatar Color="Color.Primary" Variant="Variant.Filled"
                            Style="width: 22px; height: 22px; font-size: 12px; background: rgba(167, 139, 250, 0.2); color: var(--accent);">
-                    <MudIcon Icon="@Icons.Material.Filled.Person" Style="width: 13px; height: 13px;" />
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Style="width: 13px; height: 13px;"/>
                 </MudAvatar>
             }
             else
             {
                 <MudAvatar Variant="Variant.Filled"
                            Style="width: 22px; height: 22px; font-size: 12px; background: var(--color-info-bg); color: var(--color-info);">
-                    <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="width: 13px; height: 13px;" />
+                    <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="width: 13px; height: 13px;"/>
                 </MudAvatar>
             }
         </div>
@@ -59,8 +56,9 @@
                                  @onclick="@(() => Lightbox.Open(GetImageSrc(attachment), attachment.OriginalFileName))">
                                 <img src="@GetImageSrc(attachment)"
                                      alt="@attachment.OriginalFileName"
-                                     style="max-width: 300px; max-height: 200px; border-radius: 8px; object-fit: contain;" />
-                                <div style="font-size: 0.7rem; opacity: 0.4; margin-top: 2px;">@attachment.OriginalFileName</div>
+                                     style="max-width: 300px; max-height: 200px; border-radius: 8px; object-fit: contain;"/>
+                                <div
+                                    style="font-size: 0.7rem; opacity: 0.4; margin-top: 2px;">@attachment.OriginalFileName</div>
                             </div>
                         }
                         else if (IsPreviewableFile(attachment) && attachment.SizeBytes <= 100_000)
@@ -70,17 +68,21 @@
                             {
                                 var isExpanded = _expandedFiles.Contains(attachment.Id);
                                 <div class="file-attachment-card">
-                                    <div class="file-attachment-card-header" @onclick="@(() => ToggleFileExpand(attachment.Id))">
+                                    <div class="file-attachment-card-header"
+                                         @onclick="@(() => ToggleFileExpand(attachment.Id))">
                                         <MudIcon Icon="@GetAttachmentIcon(attachment)" Size="Size.Small"
-                                                 Style="width: 14px; height: 14px; opacity: 0.6; flex-shrink: 0;" />
+                                                 Style="width: 14px; height: 14px; opacity: 0.6; flex-shrink: 0;"/>
                                         <span class="file-attachment-card-name">@attachment.OriginalFileName</span>
-                                        <span class="file-attachment-card-size">@FormatFileSize(attachment.SizeBytes)</span>
+                                        <span
+                                            class="file-attachment-card-size">@FormatFileSize(attachment.SizeBytes)</span>
                                         <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small"
                                                        Style="width: 22px; height: 22px; padding: 0;"
                                                        OnClick="@(() => OpenFilePreviewDialog(attachment, content))"
-                                                       title="전체 보기" />
-                                        <MudIcon Icon="@(isExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                                                 Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px; flex-shrink: 0;" />
+                                                       title="전체 보기"/>
+                                        <MudIcon
+                                            Icon="@(isExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                            Size="Size.Small"
+                                            Style="opacity: 0.4; width: 14px; height: 14px; flex-shrink: 0;"/>
                                     </div>
                                     @if (isExpanded)
                                     {
@@ -95,7 +97,8 @@
                                             else if (viewMode == FileViewMode.Code)
                                             {
                                                 <div class="filecontent-code-container">
-                                                    <pre class="filecontent-pre"><code class="@GetFileLanguageClass(attachment.OriginalFileName)">@content</code></pre>
+                                                    <pre class="filecontent-pre"><code
+                                                            class="@GetFileLanguageClass(attachment.OriginalFileName)">@content</code></pre>
                                                 </div>
                                             }
                                             else
@@ -105,7 +108,7 @@
                                                         var lines = content.Split('\n');
                                                         var displayLines = lines.Length > 50 ? lines.Take(50).ToArray() : lines;
                                                     }
-                                                    @for (int i = 0; i < displayLines.Length; i++)
+                                                    @for (var i = 0; i < displayLines.Length; i++)
                                                     {
                                                         <div class="filecontent-line">
                                                             <span class="filecontent-linenum">@(i + 1)</span>
@@ -114,7 +117,8 @@
                                                     }
                                                     @if (lines.Length > 50)
                                                     {
-                                                        <div style="padding: 4px 12px; opacity: 0.4; font-size: 0.7rem;">
+                                                        <div
+                                                            style="padding: 4px 12px; opacity: 0.4; font-size: 0.7rem;">
                                                             ... @(lines.Length - 50)줄 더
                                                         </div>
                                                     }
@@ -152,99 +156,103 @@
                 var groups = ContentGrouper.Group(Message.Parts, Message.IsStreaming);
                 <CascadingValue Value="Message.Parts" Name="MessageParts">
 
-                @if (Message.IsStreaming)
-                {
-                    @* === STREAMING: show live updates === *@
-                    var lastToolGroupIndex = groups.FindLastIndex(g => g.Type == ContentGroupType.ToolGroup);
-
-                    @foreach (var (group, idx) in groups.Select((g, i) => (g, i)))
+                    @if (Message.IsStreaming)
                     {
-                        @if (group.Type == ContentGroupType.Thinking)
-                        {
-                            var thinkingText = group.Parts[0].Text ?? "";
+                        @* === STREAMING: show live updates === *@
+                        var lastToolGroupIndex = groups.FindLastIndex(g => g.Type == ContentGroupType.ToolGroup);
 
-                            <div class="thinking-block @(_thinkingExpanded.Contains(idx) ? "expanded" : "") streaming"
-                                 @onclick="@(() => ToggleThinkingBlock(idx))">
-                                <div class="thinking-header">
-                                    <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
-                                             Style="width: 14px; height: 14px; opacity: 0.6; flex-shrink: 0;" />
-                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">@GetThinkingHeaderText(thinkingText, _thinkingExpanded.Contains(idx))</span>
-                                    <MudIcon Icon="@(_thinkingExpanded.Contains(idx) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                                             Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px; margin-left: auto; flex-shrink: 0;" />
-                                </div>
-                                @if (_thinkingExpanded.Contains(idx))
-                                {
-                                    <div class="thinking-content">
-                                        @((MarkupString)Markdown.ToHtml(thinkingText, _pipeline))
-                                    </div>
-                                }
-                            </div>
-                        }
-                        else if (group.Type == ContentGroupType.ToolGroup)
+                        @foreach (var (group, idx) in groups.Select((g, i) => (g, i)))
                         {
-                            bool isLastToolGroup = idx == lastToolGroupIndex;
-                            <ToolGroupCard Group="group" IsActive="@isLastToolGroup" />
-                        }
-                        else if (group.Type == ContentGroupType.FinalText)
-                        {
-                            var text = group.Parts[0].Text ?? "";
-                            <div class="markdown-body">
-                                @((MarkupString)Markdown.ToHtml(text, _pipeline))
-                            </div>
-                        }
-                        else if (group.Type == ContentGroupType.Text)
-                        {
-                            var text = group.Parts[0].Text ?? "";
-                            @if (group.IsIntermediate)
+                            @if (group.Type == ContentGroupType.Thinking)
                             {
-                                <div class="intermediate-text">
-                                    @((MarkupString)Markdown.ToHtml(text, _pipeline))
+                                var thinkingText = group.Parts[0].Text ?? "";
+
+                                <div
+                                    class="thinking-block @(_thinkingExpanded.Contains(idx) ? "expanded" : "") streaming"
+                                    @onclick="@(() => ToggleThinkingBlock(idx))">
+                                    <div class="thinking-header">
+                                        <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
+                                                 Style="width: 14px; height: 14px; opacity: 0.6; flex-shrink: 0;"/>
+                                        <span
+                                            style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">@GetThinkingHeaderText(thinkingText, _thinkingExpanded.Contains(idx))</span>
+                                        <MudIcon
+                                            Icon="@(_thinkingExpanded.Contains(idx) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                            Size="Size.Small"
+                                            Style="opacity: 0.4; width: 14px; height: 14px; margin-left: auto; flex-shrink: 0;"/>
+                                    </div>
+                                    @if (_thinkingExpanded.Contains(idx))
+                                    {
+                                        <div class="thinking-content">
+                                            @((MarkupString)Markdown.ToHtml(thinkingText, _pipeline))
+                                        </div>
+                                    }
                                 </div>
                             }
-                            else
+                            else if (group.Type == ContentGroupType.ToolGroup)
                             {
+                                var isLastToolGroup = idx == lastToolGroupIndex;
+                                <ToolGroupCard Group="group" IsActive="@isLastToolGroup"/>
+                            }
+                            else if (group.Type == ContentGroupType.FinalText)
+                            {
+                                var text = group.Parts[0].Text ?? "";
                                 <div class="markdown-body">
                                     @((MarkupString)Markdown.ToHtml(text, _pipeline))
                                 </div>
                             }
+                            else if (group.Type == ContentGroupType.Text)
+                            {
+                                var text = group.Parts[0].Text ?? "";
+                                @if (group.IsIntermediate)
+                                {
+                                    <div class="intermediate-text">
+                                        @((MarkupString)Markdown.ToHtml(text, _pipeline))
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="markdown-body">
+                                        @((MarkupString)Markdown.ToHtml(text, _pipeline))
+                                    </div>
+                                }
+                            }
                         }
                     }
-                }
-                else
-                {
-                    @* === COMPLETED: collapsed activity summary + final text === *@
-                    var activityGroups = groups.Where(g => g.Type != ContentGroupType.FinalText).ToList();
-                    var finalText = groups.FirstOrDefault(g => g.Type == ContentGroupType.FinalText);
-
-                    @* Safeguard: if no FinalText exists, promote the last text group *@
-                    if (finalText == null)
+                    else
                     {
-                        var lastTextInActivity = activityGroups.LastOrDefault(g => g.Type == ContentGroupType.Text);
-                        if (lastTextInActivity != null)
+                        @* === COMPLETED: collapsed activity summary + final text === *@
+                        var activityGroups = groups.Where(g => g.Type != ContentGroupType.FinalText).ToList();
+                        var finalText = groups.FirstOrDefault(g => g.Type == ContentGroupType.FinalText);
+
+                        @* Safeguard: if no FinalText exists, promote the last text group *@
+                        if (finalText == null)
                         {
-                            lastTextInActivity.Type = ContentGroupType.FinalText;
-                            lastTextInActivity.IsIntermediate = false;
-                            activityGroups.Remove(lastTextInActivity);
-                            finalText = lastTextInActivity;
+                            var lastTextInActivity = activityGroups.LastOrDefault(g => g.Type == ContentGroupType.Text);
+                            if (lastTextInActivity != null)
+                            {
+                                lastTextInActivity.Type = ContentGroupType.FinalText;
+                                lastTextInActivity.IsIntermediate = false;
+                                activityGroups.Remove(lastTextInActivity);
+                                finalText = lastTextInActivity;
+                            }
+                        }
+
+                        @if (activityGroups.Count > 0 && activityGroups.Any(g => g.Type == ContentGroupType.ToolGroup))
+                        {
+                            var summaryInfo = ContentGrouper.BuildActivitySummary(activityGroups);
+                            <ActivitySummary ActivityGroups="activityGroups"
+                                             SummaryInfo="summaryInfo"
+                                             Duration="Message.Duration"/>
+                        }
+
+                        @if (finalText != null)
+                        {
+                            var text = finalText.Parts[0].Text ?? "";
+                            <div class="markdown-body">
+                                @((MarkupString)Markdown.ToHtml(text, _pipeline))
+                            </div>
                         }
                     }
-
-                    @if (activityGroups.Count > 0 && activityGroups.Any(g => g.Type == ContentGroupType.ToolGroup))
-                    {
-                        var summaryInfo = ContentGrouper.BuildActivitySummary(activityGroups);
-                        <ActivitySummary ActivityGroups="activityGroups"
-                                         SummaryInfo="summaryInfo"
-                                         Duration="Message.Duration" />
-                    }
-
-                    @if (finalText != null)
-                    {
-                        var text = finalText.Parts[0].Text ?? "";
-                        <div class="markdown-body">
-                            @((MarkupString)Markdown.ToHtml(text, _pipeline))
-                        </div>
-                    }
-                }
                 </CascadingValue>
             }
             else
@@ -254,9 +262,10 @@
                 {
                     @foreach (var tool in Message.ToolCalls)
                     {
-                        <ToolCallCard Tool="tool" />
+                        <ToolCallCard Tool="tool"/>
                     }
                 }
+
                 @if (!string.IsNullOrEmpty(Message.Text))
                 {
                     <div class="markdown-body">
@@ -268,15 +277,14 @@
             @if (Message.IsStreaming)
             {
                 <StreamingIndicator Phase="ChatState.Phase" ActiveToolName="@ChatState.ActiveToolName"
-                                    StartedAt="Message.StreamingStartedAt" />
+                                    StartedAt="Message.StreamingStartedAt"/>
             }
         </div>
     </div>
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public ChatMessage Message { get; set; } = default!;
+    [Parameter][EditorRequired] public ChatMessage Message { get; set; } = default!;
 
     private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
@@ -288,7 +296,12 @@
         .UseAdvancedExtensions()
         .Build();
 
-    private enum FileViewMode { Code, Markdown, PlainText }
+    private enum FileViewMode
+    {
+        Code,
+        Markdown,
+        PlainText
+    }
 
     private readonly Dictionary<string, string> _imageCache = new();
     private readonly Dictionary<string, string?> _fileContentCache = new();
@@ -310,6 +323,7 @@
                 if (!att.IsImage && IsPreviewableFile(att) && att.SizeBytes <= 100_000)
                     _expandedFiles.Add(att.Id);
             }
+
             if (_expandedFiles.Count > 0)
                 _needsFileHighlight = true;
         }
@@ -417,11 +431,16 @@
             foreach (var attachment in Message.Attachments)
             {
                 if (!attachment.IsImage && IsPreviewableFile(attachment)
-                    && _expandedFiles.Contains(attachment.Id)
-                    && GetFileViewMode(attachment.OriginalFileName) == FileViewMode.Code)
+                                        && _expandedFiles.Contains(attachment.Id)
+                                        && GetFileViewMode(attachment.OriginalFileName) == FileViewMode.Code)
                 {
-                    try { await JS.InvokeVoidAsync("highlightCodeBlock", GetFileBlockId(attachment)); }
-                    catch { }
+                    try
+                    {
+                        await JS.InvokeVoidAsync("highlightCodeBlock", GetFileBlockId(attachment));
+                    }
+                    catch
+                    {
+                    }
                 }
             }
         }
@@ -482,7 +501,9 @@
     }
 
     private static string GetFileBlockId(FileAttachment attachment)
-        => $"fa-hljs-{attachment.Id[..8]}";
+    {
+        return $"fa-hljs-{attachment.Id[..8]}";
+    }
 
     private static string GetAttachmentIcon(FileAttachment attachment)
     {
@@ -564,4 +585,5 @@
             return $"{sizeBytes / 1024.0:F1} KB";
         return $"{sizeBytes} B";
     }
+
 }

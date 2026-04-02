@@ -1,4 +1,3 @@
-@using Cominomi.Shared.Models
 @inject ITerminalService TerminalService
 @inject IShellService ShellSvc
 @inject IChatState ChatState
@@ -26,14 +25,14 @@
         @if (_isRunning)
         {
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                           OnClick="RestartTerminal" title="Restart" Class="terminal-btn" />
+                           OnClick="RestartTerminal" title="Restart" Class="terminal-btn"/>
             <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                           OnClick="StopTerminal" title="Kill" Class="terminal-btn" />
+                           OnClick="StopTerminal" title="Kill" Class="terminal-btn"/>
         }
         else
         {
             <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small"
-                           OnClick="StartTerminal" title="Start" Class="terminal-btn" />
+                           OnClick="StartTerminal" title="Start" Class="terminal-btn"/>
         }
     </div>
     <div id="@_elementId" class="terminal-container"></div>
@@ -86,8 +85,14 @@
     {
         if (_initialized)
         {
-            try { await JS.InvokeVoidAsync("terminalFit", _elementId); }
-            catch { /* may be disposed */ }
+            try
+            {
+                await JS.InvokeVoidAsync("terminalFit", _elementId);
+            }
+            catch
+            {
+                /* may be disposed */
+            }
         }
     }
 
@@ -96,8 +101,14 @@
         if (sessionKey != _currentSessionKey) return;
         _ = InvokeAsync(async () =>
         {
-            try { await JS.InvokeVoidAsync("terminalWrite", _elementId, data); }
-            catch { /* component may be disposed */ }
+            try
+            {
+                await JS.InvokeVoidAsync("terminalWrite", _elementId, data);
+            }
+            catch
+            {
+                /* component may be disposed */
+            }
         });
     }
 
@@ -144,8 +155,13 @@
         // Clear xterm display for the new session
         if (_initialized)
         {
-            try { await JS.InvokeVoidAsync("terminalClear", _elementId); }
-            catch { }
+            try
+            {
+                await JS.InvokeVoidAsync("terminalClear", _elementId);
+            }
+            catch
+            {
+            }
         }
 
         var workDir = ResolveWorkDir(session);
@@ -168,8 +184,13 @@
 
         if (_initialized)
         {
-            try { await JS.InvokeVoidAsync("terminalClear", _elementId); }
-            catch { }
+            try
+            {
+                await JS.InvokeVoidAsync("terminalClear", _elementId);
+            }
+            catch
+            {
+            }
         }
 
         var workDir = ResolveWorkDir(ChatState.CurrentSession);
@@ -194,8 +215,13 @@
 
         if (_initialized)
         {
-            try { await JS.InvokeVoidAsync("terminalClear", _elementId); }
-            catch { }
+            try
+            {
+                await JS.InvokeVoidAsync("terminalClear", _elementId);
+            }
+            catch
+            {
+            }
         }
 
         var workDir = ResolveWorkDir(ChatState.CurrentSession);
@@ -234,9 +260,15 @@
 
         if (_initialized)
         {
-            try { await JS.InvokeVoidAsync("disposeTerminal", _elementId); }
-            catch { }
+            try
+            {
+                await JS.InvokeVoidAsync("disposeTerminal", _elementId);
+            }
+            catch
+            {
+            }
         }
+
         _dotNetRef?.Dispose();
     }
 
@@ -252,7 +284,13 @@
     private async Task WriteTerminalError(string message)
     {
         if (!_initialized) return;
-        try { await JS.InvokeVoidAsync("terminalWrite", _elementId, $"\x1b[31mTerminal failed: {message}\x1b[0m\r\n"); }
-        catch { }
+        try
+        {
+            await JS.InvokeVoidAsync("terminalWrite", _elementId, $"\x1b[31mTerminal failed: {message}\x1b[0m\r\n");
+        }
+        catch
+        {
+        }
     }
+
 }

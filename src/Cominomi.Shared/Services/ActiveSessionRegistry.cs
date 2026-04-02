@@ -7,12 +7,18 @@ public class ActiveSessionRegistry : IActiveSessionRegistry
 {
     private readonly ConcurrentDictionary<string, Session> _sessions = new();
 
+    public Session? Get(string sessionId)
+    {
+        return _sessions.GetValueOrDefault(sessionId);
+    }
+
     public void Register(Session session)
-        => _sessions[session.Id] = session;
+    {
+        _sessions[session.Id] = session;
+    }
 
     public void Unregister(string sessionId)
-        => _sessions.TryRemove(sessionId, out _);
-
-    public Session? Get(string sessionId)
-        => _sessions.TryGetValue(sessionId, out var session) ? session : null;
+    {
+        _sessions.TryRemove(sessionId, out _);
+    }
 }

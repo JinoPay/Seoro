@@ -6,15 +6,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Desktop.Services;
 
-public class ReleaseNotesService : IReleaseNotesService
+public class ReleaseNotesService(ILogger<ReleaseNotesService> logger) : IReleaseNotesService
 {
-    private readonly ILogger<ReleaseNotesService> _logger;
     private IReadOnlyList<ReleaseNote>? _cached;
-
-    public ReleaseNotesService(ILogger<ReleaseNotesService> logger)
-    {
-        _logger = logger;
-    }
 
     public Task<IReadOnlyList<ReleaseNote>> GetReleaseNotesAsync()
     {
@@ -28,7 +22,7 @@ public class ReleaseNotesService : IReleaseNotesService
 
             if (stream == null)
             {
-                _logger.LogWarning("changelog.json embedded resource not found");
+                logger.LogWarning("changelog.json embedded resource not found");
                 _cached = [];
                 return Task.FromResult(_cached);
             }
@@ -38,7 +32,7 @@ public class ReleaseNotesService : IReleaseNotesService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to load release notes");
+            logger.LogWarning(ex, "Failed to load release notes");
             _cached = [];
         }
 

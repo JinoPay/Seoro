@@ -5,15 +5,18 @@ using Microsoft.Extensions.Primitives;
 namespace Cominomi.Shared.Services;
 
 /// <summary>
-/// Triggers IOptionsMonitor&lt;AppSettings&gt; reload when settings are saved.
+///     Triggers IOptionsMonitor&lt;AppSettings&gt; reload when settings are saved.
 /// </summary>
 public class AppSettingsChangeNotifier : IOptionsChangeTokenSource<AppSettings>
 {
     private CancellationTokenSource _cts = new();
 
-    public string Name => Options.DefaultName;
+    public IChangeToken GetChangeToken()
+    {
+        return new CancellationChangeToken(_cts.Token);
+    }
 
-    public IChangeToken GetChangeToken() => new CancellationChangeToken(_cts.Token);
+    public string Name => Options.DefaultName;
 
     public void NotifyChanged()
     {

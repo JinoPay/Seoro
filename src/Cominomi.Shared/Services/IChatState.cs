@@ -4,88 +4,88 @@ namespace Cominomi.Shared.Services;
 
 public interface IChatState : IDisposable
 {
+    // Current session streaming shortcuts
+    bool IsStreaming { get; }
+
+    // Overlay state (Notifications)
+    bool ShowNotifications { get; }
+
+    // Settings delegation
+    bool ShowSettings { get; }
+
     // Sub-managers
     MessageManager Messages { get; }
-    StreamingStateManager Streaming { get; }
+    RightPanelMode RightPanel { get; }
+    Session? CurrentSession { get; }
     SettingsStateManager Settings { get; }
+    StreamingPhase Phase { get; }
+    StreamingStateManager Streaming { get; }
+    string SettingsSection { get; }
+    string? ActiveToolName { get; }
+    string? PendingMessage { get; }
+    string? SettingsWorkspaceId { get; }
     TabManager Tabs { get; }
 
     // Navigation state
     Workspace? CurrentWorkspace { get; }
-    Session? CurrentSession { get; }
-    string? PendingMessage { get; }
-    RightPanelMode RightPanel { get; }
-
-    // Current session streaming shortcuts
-    bool IsStreaming { get; }
-    StreamingPhase Phase { get; }
-    string? ActiveToolName { get; }
-
-    // Streaming delegation
-    bool IsSessionStreaming(string sessionId);
-    StreamingPhase GetSessionPhase(string sessionId);
-    string? GetSessionToolName(string sessionId);
-    bool HasAnyStreaming();
-    IReadOnlyList<string> GetStreamingSessionIds();
-    void RegisterActiveSession(Session session);
-    void UnregisterActiveSession(string sessionId);
-    Session? GetActiveSession(string sessionId);
-    void SetStreaming(bool streaming, string? sessionId = null);
-    void SetPhase(StreamingPhase phase, string? toolName = null, string? sessionId = null);
-    bool IsSessionCompleted(string sessionId);
-    void ClearSessionCompleted(string sessionId);
-
-    // Message delegation
-    void AddUserMessage(string text);
-    void AddUserMessage(Session session, string text);
-    void AddUserMessage(string text, List<FileAttachment> attachments);
-    void AddUserMessage(Session session, string text, List<FileAttachment> attachments);
-    ChatMessage StartAssistantMessage();
-    ChatMessage StartAssistantMessage(Session session);
-    void AppendText(ChatMessage message, string text);
-    void AppendThinking(ChatMessage message, string text);
-    void AddToolCall(ChatMessage message, ToolCall toolCall);
-    void FinishMessage(ChatMessage message);
-    void AddSystemMessage(string text);
-    void AddSystemMessage(Session session, string text);
-
-    // Settings delegation
-    bool ShowSettings { get; }
-    string SettingsSection { get; }
-    string? SettingsWorkspaceId { get; }
-    void OpenSettings(string section = "general", string? workspaceId = null);
-    void CloseSettings();
-    void SetSettingsSection(string section);
-    void SetSettingsWorkspace(string? workspaceId);
-
-    // Overlay state (Notifications)
-    bool ShowNotifications { get; }
-    void OpenNotifications();
-    void CloseNotifications();
-
-    // Navigation & UI state
-    void SetWorkspace(Workspace workspace);
-    void SetSession(Session? session);
-    void RequestCreateWorkspace();
-    void SetPendingMessage(string? message);
-    string? ConsumePendingMessage();
-    string? PeekPendingMessage();
-    void SetRightPanel(RightPanelMode mode);
-    void ToggleRightPanel(RightPanelMode mode);
-
-    // Input draft (per-session temporary storage)
-    void SetInputDraft(string sessionId, string text);
-    string GetInputDraft(string sessionId);
-
-    // Notification
-    void NotifyStateChanged();
 
     // Events
     event Action? OnChange;
     event Action? OnRequestCreateWorkspace;
     event Action? OnRequestShowOnboarding;
     event Action? OnRequestShowWhatsNew;
+    bool HasAnyStreaming();
+    bool IsSessionCompleted(string sessionId);
+
+    // Streaming delegation
+    bool IsSessionStreaming(string sessionId);
+    ChatMessage StartAssistantMessage();
+    ChatMessage StartAssistantMessage(Session session);
+    IReadOnlyList<string> GetStreamingSessionIds();
+    Session? GetActiveSession(string sessionId);
+    StreamingPhase GetSessionPhase(string sessionId);
+    string GetInputDraft(string sessionId);
+    string? ConsumePendingMessage();
+    string? GetSessionToolName(string sessionId);
+    string? PeekPendingMessage();
+    void AddSystemMessage(string text);
+    void AddSystemMessage(Session session, string text);
+    void AddToolCall(ChatMessage message, ToolCall toolCall);
+
+    // Message delegation
+    void AddUserMessage(string text);
+    void AddUserMessage(Session session, string text);
+    void AddUserMessage(string text, List<FileAttachment> attachments);
+    void AddUserMessage(Session session, string text, List<FileAttachment> attachments);
+    void AppendText(ChatMessage message, string text);
+    void AppendThinking(ChatMessage message, string text);
+    void ClearSessionCompleted(string sessionId);
+    void CloseNotifications();
+    void CloseSettings();
+    void FinishMessage(ChatMessage message);
+
+    // Notification
+    void NotifyStateChanged();
+    void OpenNotifications();
+    void OpenSettings(string section = "general", string? workspaceId = null);
+    void RegisterActiveSession(Session session);
+    void RequestCreateWorkspace();
 
     void RequestShowOnboarding();
     void RequestShowWhatsNew();
+
+    // Input draft (per-session temporary storage)
+    void SetInputDraft(string sessionId, string text);
+    void SetPendingMessage(string? message);
+    void SetPhase(StreamingPhase phase, string? toolName = null, string? sessionId = null);
+    void SetRightPanel(RightPanelMode mode);
+    void SetSession(Session? session);
+    void SetSettingsSection(string section);
+    void SetSettingsWorkspace(string? workspaceId);
+    void SetStreaming(bool streaming, string? sessionId = null);
+
+    // Navigation & UI state
+    void SetWorkspace(Workspace workspace);
+    void ToggleRightPanel(RightPanelMode mode);
+    void UnregisterActiveSession(string sessionId);
 }

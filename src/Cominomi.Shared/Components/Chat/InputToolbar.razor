@@ -5,7 +5,7 @@
                            Color="@GetPermissionModeColor()"
                            Size="Size.Small"
                            OnClick="CyclePermissionMode"
-                           Disabled="Disabled || IsStreaming" />
+                           Disabled="Disabled || IsStreaming"/>
         </MudTooltip>
 
         <MudTooltip Text="@GetEffortLevelTooltip()">
@@ -13,7 +13,7 @@
                            Color="@GetEffortLevelColor()"
                            Size="Size.Small"
                            OnClick="CycleEffortLevel"
-                           Disabled="@(Disabled || IsStreaming || !ModelDefinitions.SupportsMaxEffort(Model))" />
+                           Disabled="@(Disabled || IsStreaming || !ModelDefinitions.SupportsMaxEffort(Model))"/>
         </MudTooltip>
 
         <MudTooltip Text="파일 첨부">
@@ -21,7 +21,7 @@
                            Color="Color.Default"
                            Size="Size.Small"
                            OnClick="@(() => OnPickFiles.InvokeAsync())"
-                           Disabled="Disabled || IsStreaming" />
+                           Disabled="Disabled || IsStreaming"/>
         </MudTooltip>
     </div>
 
@@ -32,14 +32,14 @@
                 <MudIconButton Icon="@Icons.Material.Filled.Map"
                                Color="Color.Warning"
                                Size="Size.Small"
-                               OnClick="@(() => _planViewerOpen = true)" />
+                               OnClick="@(() => _planViewerOpen = true)"/>
             </MudTooltip>
         }
 
         <ModelSelector Model="Model" ResolvedModel="ResolvedModel"
                        OnModelChanged="OnModelChanged"
                        OnMenuClosed="@(() => OnModelMenuClosed.InvokeAsync())"
-                       Disabled="Disabled" IsStreaming="IsStreaming" />
+                       Disabled="Disabled" IsStreaming="IsStreaming"/>
 
         @if (IsStreaming)
         {
@@ -61,7 +61,7 @@
                            OnClick="@(() => OnSend.InvokeAsync())"
                            Disabled="@(Disabled || (!HasInput && !HasAttachments))"
                            Size="Size.Small"
-                           Style="border-radius: 50%;" />
+                           Style="border-radius: 50%;"/>
         }
     </div>
 </div>
@@ -69,7 +69,7 @@
 <PlanViewerDialog IsOpen="_planViewerOpen"
                   OnVisibleChanged="@(v => _planViewerOpen = v)"
                   PlanContent="@PlanContent"
-                  PlanFilePath="@PlanFilePath" />
+                  PlanFilePath="@PlanFilePath"/>
 
 @code {
     [Parameter] public string PermissionMode { get; set; } = "bypassAll";
@@ -95,23 +95,32 @@
     private static readonly string[] PermissionModes = ["bypassAll", "plan"];
     private static readonly string[] EffortLevels = ["auto", "max"];
 
-    private string GetPermissionModeTooltip() => PermissionMode switch
+    private string GetPermissionModeTooltip()
     {
-        "plan" => "플랜 모드 (읽기 전용)",
-        _ => "일반 모드 (모든 권한 우회)"
-    };
+        return PermissionMode switch
+        {
+            "plan" => "플랜 모드 (읽기 전용)",
+            _ => "일반 모드 (모든 권한 우회)"
+        };
+    }
 
-    private string GetPermissionModeIcon() => PermissionMode switch
+    private string GetPermissionModeIcon()
     {
-        "plan" => Icons.Material.Filled.Description,
-        _ => Icons.Material.Filled.EditNote
-    };
+        return PermissionMode switch
+        {
+            "plan" => Icons.Material.Filled.Description,
+            _ => Icons.Material.Filled.EditNote
+        };
+    }
 
-    private Color GetPermissionModeColor() => PermissionMode switch
+    private Color GetPermissionModeColor()
     {
-        "plan" => Color.Warning,
-        _ => Color.Default
-    };
+        return PermissionMode switch
+        {
+            "plan" => Color.Warning,
+            _ => Color.Default
+        };
+    }
 
     private async Task CyclePermissionMode()
     {
@@ -131,11 +140,14 @@
         };
     }
 
-    private Color GetEffortLevelColor() => EffortLevel switch
+    private Color GetEffortLevelColor()
     {
-        "max" => Color.Secondary,
-        _ => Color.Default
-    };
+        return EffortLevel switch
+        {
+            "max" => Color.Secondary,
+            _ => Color.Default
+        };
+    }
 
     private async Task CycleEffortLevel()
     {
@@ -143,4 +155,5 @@
         var next = EffortLevels[(idx + 1) % EffortLevels.Length];
         await OnEffortLevelChanged.InvokeAsync(next);
     }
+
 }

@@ -1,5 +1,4 @@
 using System.Text;
-using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
@@ -7,20 +6,42 @@ namespace Cominomi.Shared.Services;
 
 public interface IAttachmentService
 {
-    Task<FileAttachment> CopyFileToWorktreeAsync(string sourceFilePath, string worktreePath);
-    Task<FileAttachment> SaveBytesToWorktreeAsync(byte[] data, string fileName, string contentType, string worktreePath);
-    string GetAttachmentPath(string worktreePath, string storedFileName);
     string BuildMessageWithAttachments(string userText, List<FileAttachment> attachments);
+    string GetAttachmentPath(string worktreePath, string storedFileName);
+    Task<FileAttachment> CopyFileToWorktreeAsync(string sourceFilePath, string worktreePath);
+
+    Task<FileAttachment>
+        SaveBytesToWorktreeAsync(byte[] data, string fileName, string contentType, string worktreePath);
 }
 
-public class AttachmentService : IAttachmentService
+public class AttachmentService(ILogger<AttachmentService> logger) : IAttachmentService
 {
     private const string AttachmentsDir = ".cominomi-attachments";
-    private readonly ILogger<AttachmentService> _logger;
 
-    public AttachmentService(ILogger<AttachmentService> logger)
+    public string BuildMessageWithAttachments(string userText, List<FileAttachment> attachments)
     {
-        _logger = logger;
+        if (attachments.Count == 0)
+            return userText;
+
+        var sb = new StringBuilder();
+        foreach (var a in attachments)
+        {
+            var label = a.IsImage ? "Attached image" : "Attached file";
+            sb.AppendLine($"[{label}: {AttachmentsDir}/{a.StoredFileName} (original: {a.OriginalFileName})]");
+        }
+
+        if (!string.IsNullOrWhiteSpace(userText))
+        {
+            sb.AppendLine();
+            sb.Append(userText);
+        }
+
+        return sb.ToString();
+    }
+
+    public string GetAttachmentPath(string worktreePath, string storedFileName)
+    {
+        return Path.Combine(worktreePath, AttachmentsDir, storedFileName);
     }
 
     public async Task<FileAttachment> CopyFileToWorktreeAsync(string sourceFilePath, string worktreePath)
@@ -42,12 +63,13 @@ public class AttachmentService : IAttachmentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to copy attachment: {SourcePath}", sourceFilePath);
+            logger.LogError(ex, "Failed to copy attachment: {SourcePath}", sourceFilePath);
             throw;
         }
 
         var fileInfo = new FileInfo(destPath);
-        _logger.LogDebug("Attachment copied: {OriginalName} -> {StoredName} ({SizeBytes} bytes)", originalName, storedName, fileInfo.Length);
+        logger.LogDebug("Attachment copied: {OriginalName} -> {StoredName} ({SizeBytes} bytes)", originalName,
+            storedName, fileInfo.Length);
         return new FileAttachment
         {
             OriginalFileName = originalName,
@@ -57,7 +79,8 @@ public class AttachmentService : IAttachmentService
         };
     }
 
-    public async Task<FileAttachment> SaveBytesToWorktreeAsync(byte[] data, string fileName, string contentType, string worktreePath)
+    public async Task<FileAttachment> SaveBytesToWorktreeAsync(byte[] data, string fileName, string contentType,
+        string worktreePath)
     {
         Guard.NotNull(data, nameof(data));
         Guard.NotNullOrWhiteSpace(fileName, nameof(fileName));
@@ -90,11 +113,11 @@ public class AttachmentService : IAttachmentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save attachment bytes: {FileName}", fileName);
+            logger.LogError(ex, "Failed to save attachment bytes: {FileName}", fileName);
             throw;
         }
 
-        _logger.LogDebug("Attachment saved: {FileName} ({Size} bytes)", fileName, data.Length);
+        logger.LogDebug("Attachment saved: {FileName} ({Size} bytes)", fileName, data.Length);
         return new FileAttachment
         {
             OriginalFileName = fileName,
@@ -104,38 +127,22 @@ public class AttachmentService : IAttachmentService
         };
     }
 
-    public string GetAttachmentPath(string worktreePath, string storedFileName)
+    private static string GetContentType(string extension)
     {
-        return Path.Combine(worktreePath, AttachmentsDir, storedFileName);
-    }
-
-    public string BuildMessageWithAttachments(string userText, List<FileAttachment> attachments)
-    {
-        if (attachments.Count == 0)
-            return userText;
-
-        var sb = new StringBuilder();
-        foreach (var a in attachments)
+        return extension.ToLowerInvariant() switch
         {
-            var label = a.IsImage ? "Attached image" : "Attached file";
-            sb.AppendLine($"[{label}: {AttachmentsDir}/{a.StoredFileName} (original: {a.OriginalFileName})]");
-        }
-
-        if (!string.IsNullOrWhiteSpace(userText))
-        {
-            sb.AppendLine();
-            sb.Append(userText);
-        }
-
-        return sb.ToString();
-    }
-
-    private async Task<string> EnsureAttachmentsDirAsync(string worktreePath)
-    {
-        var dir = Path.Combine(worktreePath, AttachmentsDir);
-        Directory.CreateDirectory(dir);
-        await EnsureGitignoreAsync(worktreePath);
-        return dir;
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".svg" => "image/svg+xml",
+            ".pdf" => "application/pdf",
+            ".txt" => "text/plain",
+            ".json" => "application/json",
+            ".csv" => "text/csv",
+            ".md" => "text/markdown",
+            _ => "application/octet-stream"
+        };
     }
 
     private static async Task EnsureGitignoreAsync(string worktreePath)
@@ -156,21 +163,11 @@ public class AttachmentService : IAttachmentService
         }
     }
 
-    private static string GetContentType(string extension)
+    private async Task<string> EnsureAttachmentsDirAsync(string worktreePath)
     {
-        return extension.ToLowerInvariant() switch
-        {
-            ".png" => "image/png",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".gif" => "image/gif",
-            ".webp" => "image/webp",
-            ".svg" => "image/svg+xml",
-            ".pdf" => "application/pdf",
-            ".txt" => "text/plain",
-            ".json" => "application/json",
-            ".csv" => "text/csv",
-            ".md" => "text/markdown",
-            _ => "application/octet-stream"
-        };
+        var dir = Path.Combine(worktreePath, AttachmentsDir);
+        Directory.CreateDirectory(dir);
+        await EnsureGitignoreAsync(worktreePath);
+        return dir;
     }
 }

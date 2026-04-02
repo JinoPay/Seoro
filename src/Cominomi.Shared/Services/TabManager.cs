@@ -6,48 +6,12 @@ namespace Cominomi.Shared.Services;
 public class TabManager
 {
     public const long MaxSingleFileSizeBytes = 10 * 1024 * 1024; // 10 MB
-    public const long MaxTotalContentBytes = 50 * 1024 * 1024;   // 50 MB
+    public const long MaxTotalContentBytes = 50 * 1024 * 1024; // 50 MB
 
-    public List<MainTab> OpenTabs { get; private set; } = new();
+    public List<MainTab> OpenTabs { get; } = [];
     public MainTab? ActiveTab { get; private set; }
 
     public event Action? OnTabChanged;
-
-    public void Reset(string? sessionTitle = null)
-    {
-        OpenTabs.Clear();
-        ActiveTab = null;
-        EnsureChatTab(sessionTitle);
-    }
-
-    public void EnsureChatTab(string? sessionTitle = null)
-    {
-        if (!OpenTabs.Any(t => t.Type == MainTabType.Chat))
-        {
-            var chatTab = new MainTab
-            {
-                Id = "chat",
-                Type = MainTabType.Chat,
-                Title = sessionTitle ?? "Chat"
-            };
-            OpenTabs.Insert(0, chatTab);
-        }
-        if (ActiveTab == null)
-        {
-            ActiveTab = OpenTabs.First(t => t.Type == MainTabType.Chat);
-        }
-    }
-
-    public void SetActiveTab(string tabId)
-    {
-        var tab = OpenTabs.FirstOrDefault(t => t.Id == tabId);
-        if (tab != null)
-        {
-            tab.LastAccessedAt = DateTime.UtcNow;
-            ActiveTab = tab;
-            OnTabChanged?.Invoke();
-        }
-    }
 
     public void CloseTab(string tabId)
     {
@@ -58,12 +22,26 @@ public class TabManager
         OpenTabs.Remove(tab);
 
         if (ActiveTab?.Id == tabId)
-        {
             ActiveTab = OpenTabs.ElementAtOrDefault(Math.Min(idx, OpenTabs.Count - 1))
                         ?? OpenTabs.FirstOrDefault();
-        }
         RecalculateDisambiguatedTitles();
         OnTabChanged?.Invoke();
+    }
+
+    public void EnsureChatTab(string? sessionTitle = null)
+    {
+        if (OpenTabs.All(t => t.Type != MainTabType.Chat))
+        {
+            var chatTab = new MainTab
+            {
+                Id = "chat",
+                Type = MainTabType.Chat,
+                Title = sessionTitle ?? "Chat"
+            };
+            OpenTabs.Insert(0, chatTab);
+        }
+
+        if (ActiveTab == null) ActiveTab = OpenTabs.First(t => t.Type == MainTabType.Chat);
     }
 
     public void OpenFileContentTab(string filePath, string content)
@@ -73,7 +51,8 @@ public class TabManager
         if (sizeBytes > MaxSingleFileSizeBytes)
         {
             var truncated = content[..(int)(MaxSingleFileSizeBytes / 2)];
-            content = truncated + $"\n\n--- File truncated (original: {sizeBytes / 1024 / 1024} MB, limit: {MaxSingleFileSizeBytes / 1024 / 1024} MB) ---";
+            content = truncated +
+                      $"\n\n--- File truncated (original: {sizeBytes / 1024 / 1024} MB, limit: {MaxSingleFileSizeBytes / 1024 / 1024} MB) ---";
             sizeBytes = (long)content.Length * 2;
         }
 
@@ -128,6 +107,7 @@ public class TabManager
             OpenTabs.Add(tab);
             ActiveTab = tab;
         }
+
         RecalculateDisambiguatedTitles();
         OnTabChanged?.Invoke();
     }
@@ -155,8 +135,27 @@ public class TabManager
             OpenTabs.Add(tab);
             ActiveTab = tab;
         }
+
         RecalculateDisambiguatedTitles();
         OnTabChanged?.Invoke();
+    }
+
+    public void Reset(string? sessionTitle = null)
+    {
+        OpenTabs.Clear();
+        ActiveTab = null;
+        EnsureChatTab(sessionTitle);
+    }
+
+    public void SetActiveTab(string tabId)
+    {
+        var tab = OpenTabs.FirstOrDefault(t => t.Id == tabId);
+        if (tab != null)
+        {
+            tab.LastAccessedAt = DateTime.UtcNow;
+            ActiveTab = tab;
+            OnTabChanged?.Invoke();
+        }
     }
 
     public void UpdateChatTabTitle(string title)
@@ -164,6 +163,30 @@ public class TabManager
         var chatTab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.Chat);
         if (chatTab != null) chatTab.Title = title;
         OnTabChanged?.Invoke();
+    }
+
+    private void EvictLruContent()
+    {
+        var totalBytes = OpenTabs
+            .Where(t => t.FileContent != null && !t.ContentEvicted)
+            .Sum(t => t.ContentSizeBytes);
+
+        if (totalBytes <= MaxTotalContentBytes) return;
+
+        var candidates = OpenTabs
+            .Where(t => t.Type == MainTabType.FileContent && t.FileContent != null && !t.ContentEvicted &&
+                        t.Id != ActiveTab?.Id)
+            .OrderBy(t => t.LastAccessedAt)
+            .ToList();
+
+        foreach (var tab in candidates)
+        {
+            if (totalBytes <= MaxTotalContentBytes) break;
+
+            totalBytes -= tab.ContentSizeBytes;
+            tab.FileContent = null;
+            tab.ContentEvicted = true;
+        }
     }
 
     private void RecalculateDisambiguatedTitles()
@@ -184,13 +207,9 @@ public class TabManager
             // First: if same path but different types (FileContent vs FileDiff), prefix diff with [diff]
             var byPath = tabs.GroupBy(t => t.FilePath).Where(g => g.Count() > 1);
             foreach (var pathGroup in byPath)
-            {
-                foreach (var tab in pathGroup)
-                {
-                    if (tab.Type == MainTabType.FileDiff)
-                        tab.DisambiguatedTitle = $"[diff] {tab.Title}";
-                }
-            }
+            foreach (var tab in pathGroup)
+                if (tab.Type == MainTabType.FileDiff)
+                    tab.DisambiguatedTitle = $"[diff] {tab.Title}";
 
             // Then: for tabs still colliding (same title, different paths), add parent dir
             var stillColliding = tabs
@@ -207,29 +226,6 @@ public class TabManager
                 if (!string.IsNullOrEmpty(lastDir))
                     tab.DisambiguatedTitle = $"{lastDir}/{tab.Title}";
             }
-        }
-    }
-
-    private void EvictLruContent()
-    {
-        var totalBytes = OpenTabs
-            .Where(t => t.FileContent != null && !t.ContentEvicted)
-            .Sum(t => t.ContentSizeBytes);
-
-        if (totalBytes <= MaxTotalContentBytes) return;
-
-        var candidates = OpenTabs
-            .Where(t => t.Type == MainTabType.FileContent && t.FileContent != null && !t.ContentEvicted && t.Id != ActiveTab?.Id)
-            .OrderBy(t => t.LastAccessedAt)
-            .ToList();
-
-        foreach (var tab in candidates)
-        {
-            if (totalBytes <= MaxTotalContentBytes) break;
-
-            totalBytes -= tab.ContentSizeBytes;
-            tab.FileContent = null;
-            tab.ContentEvicted = true;
         }
     }
 }

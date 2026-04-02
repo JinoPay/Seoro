@@ -1,5 +1,3 @@
-@using Cominomi.Shared.Models
-
 <div @key="Session.Id"
      class="tree-session @(IsActive ? "active" : "") @(IsStreaming ? "streaming" : "") @(Session.Status == SessionStatus.Archived ? "archived" : "")"
      @onclick="@OnClick"
@@ -10,7 +8,7 @@
         <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
                        Style="width: 20px; height: 20px; opacity: 0.4;"
                        OnClick="@OnDelete"
-                       ClickPropagation="false" />
+                       ClickPropagation="false"/>
     </div>
 
     @if (IsSynced)
@@ -78,7 +76,8 @@
         <div class="tree-session-shortcuts">
             @if (DeleteShortcutLabel != null)
             {
-                <span class="tree-session-shortcut delete @(ShowShortcuts ? "visible" : "")">× @DeleteShortcutLabel</span>
+                <span
+                    class="tree-session-shortcut delete @(ShowShortcuts ? "visible" : "")">× @DeleteShortcutLabel</span>
             }
             @if (ShortcutLabel != null)
             {
@@ -107,7 +106,7 @@
             </MudMenuItem>
         }
     }
-    <MudDivider />
+    <MudDivider/>
     <MudMenuItem OnClick="@(() => OnDelete.InvokeAsync())"
                  Icon="@Icons.Material.Filled.Close">
         삭제
@@ -115,7 +114,7 @@
 </MudMenu>
 
 @code {
-    [Parameter, EditorRequired] public Session Session { get; set; } = default!;
+    [Parameter][EditorRequired] public Session Session { get; set; } = default!;
     [Parameter] public bool IsActive { get; set; }
     [Parameter] public bool IsStreaming { get; set; }
     [Parameter] public bool IsCompleted { get; set; }
@@ -145,10 +144,14 @@
         await OnOpenFolder.InvokeAsync();
     }
 
-    private static string GetStatusLabel(SessionStatus status) => status switch
+    private static string GetStatusLabel(SessionStatus status)
     {
-        SessionStatus.Error => "오류",
-        SessionStatus.Archived => "보관",
-        _ => ""
-    };
+        return status switch
+        {
+            SessionStatus.Error => "오류",
+            SessionStatus.Archived => "보관",
+            _ => ""
+        };
+    }
+
 }

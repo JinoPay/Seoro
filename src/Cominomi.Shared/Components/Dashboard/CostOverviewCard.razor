@@ -1,8 +1,6 @@
-@using Cominomi.Shared.Models
-
 <div class="cost-card">
     <div class="cost-card-title">
-        <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" />
+        <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small"/>
         비용 개요
     </div>
     @if (Cost is not null)
@@ -11,7 +9,8 @@
             <div class="cost-card-row">
                 <div class="cost-card-row-header">
                     <span class="cost-card-label">오늘</span>
-                    <span class="cost-card-amount @(Cost.DailyExceeded ? "exceeded" : "")">$@Cost.Today.ToString("F2")</span>
+                    <span
+                        class="cost-card-amount @(Cost.DailyExceeded ? "exceeded" : "")">$@Cost.Today.ToString("F2")</span>
                 </div>
                 @if (Cost.DailyLimit.HasValue)
                 {
@@ -36,7 +35,7 @@
             </div>
             <div class="cost-card-row-header">
                 <span class="cost-card-label">
-                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Style="font-size: 0.7rem;" />
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Style="font-size: 0.7rem;"/>
                     추정
                 </span>
                 <span class="cost-card-projection">$@Cost.MonthlyProjection.ToString("F2")/월</span>
@@ -54,7 +53,11 @@
     [Parameter] public CostSummary? Cost { get; set; }
     [Parameter] public EventCallback OnNavigateToUsage { get; set; }
 
-    private async Task GoToAnalytics() => await OnNavigateToUsage.InvokeAsync();
+    private async Task GoToAnalytics()
+    {
+        await OnNavigateToUsage.InvokeAsync();
+    }
+
 }
 
 <style>

@@ -27,14 +27,8 @@ public static class ConventionalCommitTypes
         (ConventionalCommitType.Style, "style", "스타일"),
         (ConventionalCommitType.Perf, "perf", "성능"),
         (ConventionalCommitType.Ci, "ci", "CI/CD"),
-        (ConventionalCommitType.Build, "build", "빌드"),
+        (ConventionalCommitType.Build, "build", "빌드")
     ];
-
-    public static string GetPrefix(ConventionalCommitType type) =>
-        All.First(x => x.Type == type).Prefix;
-
-    public static string GetLabel(ConventionalCommitType type) =>
-        All.First(x => x.Type == type).Label;
 
     public static string FormatMessage(ConventionalCommitType type, string? scope, string description)
     {
@@ -42,5 +36,15 @@ public static class ConventionalCommitTypes
         return string.IsNullOrWhiteSpace(scope)
             ? $"{prefix}: {description}"
             : $"{prefix}({scope}): {description}";
+    }
+
+    public static string GetLabel(ConventionalCommitType type)
+    {
+        return All.First(x => x.Type == type).Label;
+    }
+
+    public static string GetPrefix(ConventionalCommitType type)
+    {
+        return All.First(x => x.Type == type).Prefix;
     }
 }

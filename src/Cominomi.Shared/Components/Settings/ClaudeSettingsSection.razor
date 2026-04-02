@@ -1,4 +1,3 @@
-@using Cominomi.Shared.Models
 @inject IClaudeSettingsService ClaudeSettingsService
 @inject IChatState ChatState
 @inject IMcpService McpService
@@ -7,20 +6,21 @@
 <div class="settings-content-area">
     <ClaudeSettingScopeHeader Scope="_scope" ScopeChanged="OnScopeChanged"
                               ProjectPath="@_projectPath" ProjectPathChanged="OnProjectPathChanged"
-                              Saving="_saving" OnSave="Save" />
+                              Saving="_saving" OnSave="Save"/>
 
     <div class="settings-content-body">
         @if (_loading)
         {
             <div style="display: flex; justify-content: center; padding: 40px;">
-                <MudProgressCircular Indeterminate="true" />
+                <MudProgressCircular Indeterminate="true"/>
             </div>
         }
         else
         {
             <div class="settings-section-title">Claude CLI 설정</div>
             <div class="settings-section-desc">
-                @(_scope switch {
+                @(_scope switch
+                {
                     ClaudeSettingsScope.Global => "~/.claude/settings.json — 모든 프로젝트에 적용되는 전역 설정입니다.",
                     ClaudeSettingsScope.Project => ".claude/settings.json — 이 프로젝트에만 적용되며 git으로 추적됩니다.",
                     ClaudeSettingsScope.Local => ".claude/settings.local.json — 이 프로젝트에만 적용되며 gitignore됩니다.",
@@ -32,7 +32,7 @@
                 @* ── Group 1: 모델 및 동작 ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                        <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"/>
                         모델 및 동작
                     </div>
 
@@ -40,7 +40,7 @@
                         <MudTextField T="string" @bind-Value="_settings.Model" Label="모델"
                                       Variant="Variant.Outlined" Margin="Margin.Dense"
                                       Placeholder="claude-sonnet-4-20250514"
-                                      HelperText="Cominomi 외부에서 CLI 직접 실행 시 사용됩니다." />
+                                      HelperText="Cominomi 외부에서 CLI 직접 실행 시 사용됩니다."/>
 
                         <MudSelect T="EffortLevel?" @bind-Value="_settings.EffortLevel" Label="Effort 레벨"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
@@ -53,11 +53,17 @@
                         <MudSelect T="ClaudeDefaultMode?" @bind-Value="_settings.DefaultMode" Label="기본 모드"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
                                    HelperText="Cominomi 외부에서 CLI 직접 실행 시 사용됩니다.">
-                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.Default)">Default</MudSelectItem>
+                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.Default)">Default
+                            </MudSelectItem>
                             <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.Plan)">Plan</MudSelectItem>
-                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.AcceptEdits)">Accept Edits</MudSelectItem>
-                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.DontAsk)">Don't Ask</MudSelectItem>
-                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.BypassPermissions)">Bypass Permissions</MudSelectItem>
+                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.AcceptEdits)">Accept
+                                Edits
+                            </MudSelectItem>
+                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.DontAsk)">Don't Ask
+                            </MudSelectItem>
+                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.BypassPermissions)">Bypass
+                                Permissions
+                            </MudSelectItem>
                         </MudSelect>
 
                         <div class="settings-toggle-row">
@@ -65,7 +71,7 @@
                                 <span class="typo-body2">Extended Thinking 항상 활성화</span>
                                 <div class="typo-caption text-secondary">모든 응답에서 확장 사고 모드를 사용합니다.</div>
                             </div>
-                            <MudSwitch T="bool?" @bind-Value="_settings.AlwaysThinkingEnabled" Color="Color.Primary" />
+                            <MudSwitch T="bool?" @bind-Value="_settings.AlwaysThinkingEnabled" Color="Color.Primary"/>
                         </div>
 
                         <div class="settings-toggle-row">
@@ -73,7 +79,7 @@
                                 <span class="typo-body2">Auto Memory 활성화</span>
                                 <div class="typo-caption text-secondary">대화 컨텍스트를 메모리에 자동 저장합니다.</div>
                             </div>
-                            <MudSwitch T="bool?" @bind-Value="_settings.AutoMemoryEnabled" Color="Color.Primary" />
+                            <MudSwitch T="bool?" @bind-Value="_settings.AutoMemoryEnabled" Color="Color.Primary"/>
                         </div>
                     </div>
                 </div>
@@ -81,40 +87,40 @@
                 @* ── Group 2: 권한 규칙 ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" />
+                        <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small"/>
                         권한 규칙
                     </div>
-                    <PermissionsEditor @bind-Permissions="_settings.Permissions" />
+                    <PermissionsEditor @bind-Permissions="_settings.Permissions"/>
                 </div>
 
                 @* ── Group 3: 환경변수 ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" />
+                        <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"/>
                         환경변수
                     </div>
                     <div class="typo-caption text-secondary mb-2">
                         CLI가 직접 실행될 때도 적용됩니다.
                     </div>
-                    <EnvVarsEditor @bind-EnvVars="_settings.Env" />
+                    <EnvVarsEditor @bind-EnvVars="_settings.Env"/>
                 </div>
 
                 @* ── Group 4: 추가 디렉토리 ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Size="Size.Small" />
+                        <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Size="Size.Small"/>
                         추가 디렉토리
                     </div>
                     <div class="typo-caption text-secondary mb-2">
                         Claude CLI가 프로젝트 루트 외에 추가로 접근할 디렉토리입니다.
                     </div>
-                    <AdditionalDirectoriesEditor @bind-Directories="_settings.AdditionalDirectories" />
+                    <AdditionalDirectoriesEditor @bind-Directories="_settings.AdditionalDirectories"/>
                 </div>
 
                 @* ── Group 5: MCP 서버 (요약) ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small" />
+                        <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small"/>
                         MCP 서버
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@_mcpServers.Count</MudChip>
                         <div style="flex: 1;"></div>
@@ -128,15 +134,17 @@
                         <div class="d-flex flex-wrap gap-2">
                             @foreach (var server in _mcpServers)
                             {
-                                <div class="d-flex align-center gap-2" style="border: 1px solid var(--mud-palette-lines-default); border-radius: 6px; padding: 4px 10px;">
+                                <div class="d-flex align-center gap-2"
+                                     style="border: 1px solid var(--mud-palette-lines-default); border-radius: 6px; padding: 4px 10px;">
                                     <div class="settings-icon-box">
-                                        <MudIcon Icon="@(server.Transport == "sse" ? Icons.Material.Filled.Cloud : Icons.Material.Filled.Terminal)"
-                                                 Size="Size.Small" Style="font-size: 14px;" />
+                                        <MudIcon
+                                            Icon="@(server.Transport == "sse" ? Icons.Material.Filled.Cloud : Icons.Material.Filled.Terminal)"
+                                            Size="Size.Small" Style="font-size: 14px;"/>
                                     </div>
                                     <span class="typo-body2">@server.Name</span>
                                     <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small"
                                              Style="font-size: 8px;"
-                                             Color="@(server.Status.Running ? Color.Success : Color.Default)" />
+                                             Color="@(server.Status.Running ? Color.Success : Color.Default)"/>
                                 </div>
                             }
                         </div>
@@ -150,7 +158,7 @@
                 @* ── Group 6: 훅 (요약) ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" />
+                        <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small"/>
                         훅
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@GetTotalHookCount()</MudChip>
                         <div style="flex: 1;"></div>
@@ -167,7 +175,8 @@
                                 var count = configs.Sum(c => c.Hooks.Count);
                                 @if (count > 0)
                                 {
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                             Color="Color.Primary">
                                         @evt (@count)
                                     </MudChip>
                                 }
@@ -184,7 +193,7 @@
     </div>
 </div>
 
-<McpManagerDialog @bind-IsOpen="_showMcpDialog" />
+<McpManagerDialog @bind-IsOpen="_showMcpDialog"/>
 
 @code {
     [Parameter] public string? ProjectPath { get; set; }
@@ -282,4 +291,5 @@
     {
         ChatState.SetSettingsSection("hooks");
     }
+
 }

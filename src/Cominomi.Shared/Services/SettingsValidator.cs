@@ -3,66 +3,23 @@ using Cominomi.Shared.Models;
 namespace Cominomi.Shared.Services;
 
 /// <summary>
-/// Validates and sanitizes AppSettings / Workspace values on load and save.
-/// Returns a list of validation issues; empty list means valid.
-/// Also provides Sanitize methods that clamp/fix invalid values to safe defaults.
+///     Validates and sanitizes AppSettings / Workspace values on load and save.
+///     Returns a list of validation issues; empty list means valid.
+///     Also provides Sanitize methods that clamp/fix invalid values to safe defaults.
 /// </summary>
 public static class SettingsValidator
 {
-    private static readonly HashSet<string> ValidThemes = ["dark", "light", "system"];
+    private static readonly HashSet<string> ValidEffortLevels = ["auto", "low", "medium", "high", "max"];
+
     private static readonly HashSet<string> ValidPermissionModes =
         ["default", "plan", "acceptEdits", "dontAsk", "bypassPermissions", "bypassAll"];
-    private static readonly HashSet<string> ValidEffortLevels = ["auto", "low", "medium", "high", "max"];
+
     private static readonly HashSet<string> ValidTerminalShells = ["zsh", "bash", "sh", "cmd", "gitbash", "powershell"];
-    public static List<string> Validate(AppSettings settings)
-    {
-        var issues = new List<string>();
-
-        // Theme
-        if (!ValidThemes.Contains(settings.Theme))
-            issues.Add($"Invalid theme '{settings.Theme}'. Must be one of: {string.Join(", ", ValidThemes)}");
-
-        // Permission mode
-        if (!ValidPermissionModes.Contains(settings.DefaultPermissionMode))
-            issues.Add($"Invalid permission mode '{settings.DefaultPermissionMode}'. Must be one of: {string.Join(", ", ValidPermissionModes)}");
-
-        // Effort level
-        if (!ValidEffortLevels.Contains(settings.DefaultEffortLevel))
-            issues.Add($"Invalid effort level '{settings.DefaultEffortLevel}'. Must be one of: {string.Join(", ", ValidEffortLevels)}");
-
-        // Timeouts — must be positive
-        if (settings.DefaultProcessTimeoutSeconds <= 0)
-            issues.Add($"DefaultProcessTimeoutSeconds must be positive, got {settings.DefaultProcessTimeoutSeconds}");
-        if (settings.HookTimeoutSeconds <= 0)
-            issues.Add($"HookTimeoutSeconds must be positive, got {settings.HookTimeoutSeconds}");
-        if (settings.VersionCheckTimeoutSeconds <= 0)
-            issues.Add($"VersionCheckTimeoutSeconds must be positive, got {settings.VersionCheckTimeoutSeconds}");
-        // Optional numeric constraints
-        if (settings.DefaultMaxTurns is < 1)
-            issues.Add($"DefaultMaxTurns must be >= 1, got {settings.DefaultMaxTurns}");
-        if (settings.DefaultMaxBudgetUsd is < 0)
-            issues.Add($"DefaultMaxBudgetUsd must be non-negative, got {settings.DefaultMaxBudgetUsd}");
-
-        // UI scale
-        if (settings.UiScale != 0 && (settings.UiScale < 0.5 || settings.UiScale > 2.0))
-            issues.Add($"UiScale must be 0 (auto) or between 0.5 and 2.0, got {settings.UiScale}");
-
-        // Terminal shell
-        if (settings.TerminalShell != null && !ValidTerminalShells.Contains(settings.TerminalShell))
-            issues.Add($"Invalid terminal shell '{settings.TerminalShell}'. Must be one of: {string.Join(", ", ValidTerminalShells)}");
-
-        // Path validation (only if set)
-        ValidatePath(settings.ClaudePath, "ClaudePath", issues);
-        ValidatePath(settings.GitPath, "GitPath", issues);
-        ValidatePath(settings.McpConfigPath, "McpConfigPath", issues);
-        ValidateDirectoryPath(settings.DefaultCloneDirectory, "DefaultCloneDirectory", issues);
-
-        return issues;
-    }
+    private static readonly HashSet<string> ValidThemes = ["dark", "light", "system"];
 
     /// <summary>
-    /// Sanitizes settings by clamping invalid values to safe defaults.
-    /// Returns the sanitized settings (same instance, mutated in place).
+    ///     Sanitizes settings by clamping invalid values to safe defaults.
+    ///     Returns the sanitized settings (same instance, mutated in place).
     /// </summary>
     public static AppSettings Sanitize(AppSettings settings)
     {
@@ -94,6 +51,55 @@ public static class SettingsValidator
             settings.DefaultMaxBudgetUsd = null;
 
         return settings;
+    }
+
+    public static List<string> Validate(AppSettings settings)
+    {
+        var issues = new List<string>();
+
+        // Theme
+        if (!ValidThemes.Contains(settings.Theme))
+            issues.Add($"Invalid theme '{settings.Theme}'. Must be one of: {string.Join(", ", ValidThemes)}");
+
+        // Permission mode
+        if (!ValidPermissionModes.Contains(settings.DefaultPermissionMode))
+            issues.Add(
+                $"Invalid permission mode '{settings.DefaultPermissionMode}'. Must be one of: {string.Join(", ", ValidPermissionModes)}");
+
+        // Effort level
+        if (!ValidEffortLevels.Contains(settings.DefaultEffortLevel))
+            issues.Add(
+                $"Invalid effort level '{settings.DefaultEffortLevel}'. Must be one of: {string.Join(", ", ValidEffortLevels)}");
+
+        // Timeouts — must be positive
+        if (settings.DefaultProcessTimeoutSeconds <= 0)
+            issues.Add($"DefaultProcessTimeoutSeconds must be positive, got {settings.DefaultProcessTimeoutSeconds}");
+        if (settings.HookTimeoutSeconds <= 0)
+            issues.Add($"HookTimeoutSeconds must be positive, got {settings.HookTimeoutSeconds}");
+        if (settings.VersionCheckTimeoutSeconds <= 0)
+            issues.Add($"VersionCheckTimeoutSeconds must be positive, got {settings.VersionCheckTimeoutSeconds}");
+        // Optional numeric constraints
+        if (settings.DefaultMaxTurns is < 1)
+            issues.Add($"DefaultMaxTurns must be >= 1, got {settings.DefaultMaxTurns}");
+        if (settings.DefaultMaxBudgetUsd is < 0)
+            issues.Add($"DefaultMaxBudgetUsd must be non-negative, got {settings.DefaultMaxBudgetUsd}");
+
+        // UI scale
+        if (settings.UiScale != 0 && (settings.UiScale < 0.5 || settings.UiScale > 2.0))
+            issues.Add($"UiScale must be 0 (auto) or between 0.5 and 2.0, got {settings.UiScale}");
+
+        // Terminal shell
+        if (settings.TerminalShell != null && !ValidTerminalShells.Contains(settings.TerminalShell))
+            issues.Add(
+                $"Invalid terminal shell '{settings.TerminalShell}'. Must be one of: {string.Join(", ", ValidTerminalShells)}");
+
+        // Path validation (only if set)
+        ValidatePath(settings.ClaudePath, "ClaudePath", issues);
+        ValidatePath(settings.GitPath, "GitPath", issues);
+        ValidatePath(settings.McpConfigPath, "McpConfigPath", issues);
+        ValidateDirectoryPath(settings.DefaultCloneDirectory, "DefaultCloneDirectory", issues);
+
+        return issues;
     }
 
     public static List<string> ValidateWorkspace(Workspace workspace)
@@ -132,14 +138,14 @@ public static class SettingsValidator
         return workspace;
     }
 
-    private static void ValidatePath(string? path, string fieldName, List<string> issues)
+    private static void ValidateDirectoryPath(string? path, string fieldName, List<string> issues)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
         if (path.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
             issues.Add($"{fieldName} contains invalid path characters: '{path}'");
     }
 
-    private static void ValidateDirectoryPath(string? path, string fieldName, List<string> issues)
+    private static void ValidatePath(string? path, string fieldName, List<string> issues)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
         if (path.IndexOfAny(Path.GetInvalidPathChars()) >= 0)

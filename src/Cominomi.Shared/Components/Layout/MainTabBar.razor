@@ -1,4 +1,3 @@
-@using Cominomi.Shared.Models
 @inject IChatState ChatState
 @implements IDisposable
 
@@ -7,12 +6,13 @@
     {
         <div class="main-tab @(ChatState.Tabs.ActiveTab?.Id == tab.Id ? "active" : "")"
              @onclick="@(() => ChatState.Tabs.SetActiveTab(tab.Id))">
-            <MudIcon Icon="@GetTabIcon(tab)" Size="Size.Small" Style="width: 14px; height: 14px;" />
+            <MudIcon Icon="@GetTabIcon(tab)" Size="Size.Small" Style="width: 14px; height: 14px;"/>
             <span class="main-tab-title">@(tab.DisambiguatedTitle ?? tab.Title)</span>
             @if (tab.Type != MainTabType.Chat)
             {
-                <button class="main-tab-close" @onclick="@(() => ChatState.Tabs.CloseTab(tab.Id))" @onclick:stopPropagation="true">
-                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" Style="width: 12px; height: 12px;" />
+                <button class="main-tab-close" @onclick="@(() => ChatState.Tabs.CloseTab(tab.Id))"
+                        @onclick:stopPropagation="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" Style="width: 12px; height: 12px;"/>
                 </button>
             }
         </div>
@@ -20,6 +20,7 @@
 </div>
 
 @code {
+
     protected override void OnInitialized()
     {
         ChatState.Tabs.OnTabChanged += HandleTabChanged;
@@ -30,16 +31,20 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private static string GetTabIcon(MainTab tab) => tab.Type switch
+    private static string GetTabIcon(MainTab tab)
     {
-        MainTabType.Chat => Icons.Material.Filled.Chat,
-        MainTabType.FileContent => Icons.Material.Filled.InsertDriveFile,
-        MainTabType.FileDiff => Icons.Material.Filled.Description,
-        _ => Icons.Material.Filled.Tab
-    };
+        return tab.Type switch
+        {
+            MainTabType.Chat => Icons.Material.Filled.Chat,
+            MainTabType.FileContent => Icons.Material.Filled.InsertDriveFile,
+            MainTabType.FileDiff => Icons.Material.Filled.Description,
+            _ => Icons.Material.Filled.Tab
+        };
+    }
 
     public void Dispose()
     {
         ChatState.Tabs.OnTabChanged -= HandleTabChanged;
     }
+
 }

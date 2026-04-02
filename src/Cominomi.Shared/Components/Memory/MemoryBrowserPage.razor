@@ -14,7 +14,7 @@
                 <MudTextField T="string" @bind-Value="_search" Placeholder="검색..."
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
-                              Class="mb-2" />
+                              Class="mb-2"/>
 
                 <MudSelect T="string" @bind-Value="_selectedWorkspace" Label="워크스페이스"
                            Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="mb-2">
@@ -30,15 +30,18 @@
                             Variant="Variant.Outlined" Class="mb-2" Style="flex-wrap: wrap;">
                     <MudChip T="MemoryType?" Value="@((MemoryType?)null)" Color="Color.Default">전체</MudChip>
                     <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.User)" Color="Color.Primary">사용자</MudChip>
-                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Feedback)" Color="Color.Warning">피드백</MudChip>
-                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Project)" Color="Color.Info">프로젝트</MudChip>
-                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Reference)" Color="Color.Secondary">참조</MudChip>
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Feedback)" Color="Color.Warning">피드백
+                    </MudChip>
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Project)" Color="Color.Info">프로젝트
+                    </MudChip>
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Reference)" Color="Color.Secondary">참조
+                    </MudChip>
                 </MudChipSet>
 
                 @if (_loading)
                 {
                     <div style="display: flex; justify-content: center; padding: 20px;">
-                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
                     </div>
                 }
                 else
@@ -52,11 +55,13 @@
                                          Style="min-width: 50px; text-align: center;">
                                     @GetTypeLabel(entry.Type)
                                 </MudChip>
-                                <span class="typo-subtitle2" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <span class="typo-subtitle2"
+                                      style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                     @entry.Name
                                 </span>
                             </div>
-                            <div class="typo-caption text-secondary" style="margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <div class="typo-caption text-secondary"
+                                 style="margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                 @entry.Description
                             </div>
                             <div class="typo-caption text-secondary" style="margin-top: 2px; opacity: 0.5;">
@@ -82,9 +87,9 @@
                         <span class="typo-h6">@_selected.Name</span>
                         <div style="margin-left: auto; display: flex; gap: 4px;">
                             <MudIconButton Icon="@(_editing ? Icons.Material.Filled.Close : Icons.Material.Filled.Edit)"
-                                           Size="Size.Small" OnClick="ToggleEdit" />
+                                           Size="Size.Small" OnClick="ToggleEdit"/>
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                           Color="Color.Error" OnClick="DeleteSelected" />
+                                           Color="Color.Error" OnClick="DeleteSelected"/>
                         </div>
                     </div>
 
@@ -92,9 +97,9 @@
                     {
                         <div class="stack gap-3 pa-3">
                             <MudTextField @bind-Value="_editName" Label="이름" Variant="Variant.Outlined"
-                                          Margin="Margin.Dense" />
+                                          Margin="Margin.Dense"/>
                             <MudTextField @bind-Value="_editDescription" Label="설명" Variant="Variant.Outlined"
-                                          Margin="Margin.Dense" />
+                                          Margin="Margin.Dense"/>
                             <MudSelect T="MemoryType" @bind-Value="_editType" Label="타입"
                                        Variant="Variant.Outlined" Margin="Margin.Dense">
                                 <MudSelectItem T="MemoryType" Value="MemoryType.User">사용자</MudSelectItem>
@@ -103,9 +108,10 @@
                                 <MudSelectItem T="MemoryType" Value="MemoryType.Reference">참조</MudSelectItem>
                             </MudSelect>
                             <MudTextField @bind-Value="_editContent" Label="내용" Variant="Variant.Outlined"
-                                          Lines="12" />
+                                          Lines="12"/>
                             <div class="stack-row gap-2">
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveEdit">저장</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveEdit">저장
+                                </MudButton>
                                 <MudButton Variant="Variant.Text" OnClick="CancelEdit">취소</MudButton>
                             </div>
                         </div>
@@ -139,7 +145,7 @@
                 else
                 {
                     <div class="d-flex flex-column align-center justify-center" style="height: 300px; opacity: 0.5;">
-                        <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Large" />
+                        <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Large"/>
                         <div class="typo-body2 mt-2">왼쪽에서 메모리를 선택하세요</div>
                     </div>
                 }
@@ -213,6 +219,7 @@
             _editing = false;
             return;
         }
+
         if (_selected == null) return;
         _editName = _selected.Name;
         _editDescription = _selected.Description;
@@ -262,23 +269,30 @@
         return $"memory-item{active}";
     }
 
-    private static Color GetTypeColor(MemoryType type) => type switch
+    private static Color GetTypeColor(MemoryType type)
     {
-        MemoryType.User => Color.Primary,
-        MemoryType.Feedback => Color.Warning,
-        MemoryType.Project => Color.Info,
-        MemoryType.Reference => Color.Secondary,
-        _ => Color.Default
-    };
+        return type switch
+        {
+            MemoryType.User => Color.Primary,
+            MemoryType.Feedback => Color.Warning,
+            MemoryType.Project => Color.Info,
+            MemoryType.Reference => Color.Secondary,
+            _ => Color.Default
+        };
+    }
 
-    private static string GetTypeLabel(MemoryType type) => type switch
+    private static string GetTypeLabel(MemoryType type)
     {
-        MemoryType.User => "사용자",
-        MemoryType.Feedback => "피드백",
-        MemoryType.Project => "프로젝트",
-        MemoryType.Reference => "참조",
-        _ => "기타"
-    };
+        return type switch
+        {
+            MemoryType.User => "사용자",
+            MemoryType.Feedback => "피드백",
+            MemoryType.Project => "프로젝트",
+            MemoryType.Reference => "참조",
+            _ => "기타"
+        };
+    }
+
 }
 
 <style>
@@ -304,7 +318,10 @@
         margin-bottom: 4px;
     }
 
-    .memory-item:hover { background: var(--mud-palette-action-default-hover); }
+    .memory-item:hover {
+        background: var(--mud-palette-action-default-hover);
+    }
+
     .memory-item.active {
         background: var(--mud-palette-primary-hover);
         border-left: 2px solid var(--mud-palette-primary);

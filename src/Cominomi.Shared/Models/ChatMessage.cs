@@ -16,22 +16,23 @@ public class ContentPart
 
 public class ChatMessage
 {
-    public string Id { get; init; } = Guid.NewGuid().ToString();
-    public MessageRole Role { get; init; }
-    public string Text { get; set; } = string.Empty;
-    public List<ToolCall> ToolCalls { get; init; } = [];
+    public bool IsStreaming { get; set; }
+    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+    public DateTime? StreamingFinishedAt { get; set; }
+    public DateTime? StreamingStartedAt { get; set; }
     public List<ContentPart> Parts { get; init; } = [];
     public List<FileAttachment> Attachments { get; init; } = [];
-    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
-    public bool IsStreaming { get; set; }
-    public DateTime? StreamingStartedAt { get; set; }
-    public DateTime? StreamingFinishedAt { get; set; }
+    public List<ToolCall> ToolCalls { get; init; } = [];
+    public MessageRole Role { get; init; }
+    public string Id { get; init; } = Guid.NewGuid().ToString();
+    public string Text { get; set; } = string.Empty;
+
     public TimeSpan? Duration => StreamingStartedAt.HasValue && StreamingFinishedAt.HasValue
         ? StreamingFinishedAt.Value - StreamingStartedAt.Value
         : null;
 
     /// <summary>
-    /// Migrates old messages (Text + ToolCalls) to the Parts list for interleaved rendering.
+    ///     Migrates old messages (Text + ToolCalls) to the Parts list for interleaved rendering.
     /// </summary>
     public void MigrateToParts()
     {

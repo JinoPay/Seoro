@@ -29,16 +29,18 @@ public enum HookType
 
 public class HookDefinition
 {
+    public bool Enabled { get; set; } = true;
     public HookEvent Event { get; set; }
     public HookType Type { get; set; } = HookType.Command;
-    public string Command { get; set; } = string.Empty;
-    public string? WorkingDirectory { get; set; }
-    public string? Matcher { get; set; }
-    public bool Enabled { get; set; } = true;
+
     /// <summary>
-    /// Per-hook timeout override in seconds. Null = use AppSettings.HookTimeoutSeconds global default.
+    ///     Per-hook timeout override in seconds. Null = use AppSettings.HookTimeoutSeconds global default.
     /// </summary>
     public int? TimeoutSeconds { get; set; }
+
+    public string Command { get; set; } = string.Empty;
+    public string? Matcher { get; set; }
+    public string? WorkingDirectory { get; set; }
 }
 
 public record HookExecutionResult(

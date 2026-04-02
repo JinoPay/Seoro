@@ -1,8 +1,8 @@
-@using Cominomi.Shared.Models
 @inject IChatState ChatState
 @inject IGitService GitService
 @inject IClaudeService ClaudeService
 @inject ISnackbar Snackbar
+@using System.Timers
 @implements IDisposable
 
 <div class="sidebar-changes">
@@ -12,19 +12,25 @@
             @if (_aheadBehind is { Ahead: > 0 } or { Behind: > 0 })
             {
                 <span class="ahead-behind-badge">
-                    @if (_aheadBehind.Value.Ahead > 0) { <span class="ahead">↑@(_aheadBehind.Value.Ahead)</span> }
-                    @if (_aheadBehind.Value.Behind > 0) { <span class="behind">↓@(_aheadBehind.Value.Behind)</span> }
+                    @if (_aheadBehind.Value.Ahead > 0)
+                    {
+                        <span class="ahead">↑@(_aheadBehind.Value.Ahead)</span>
+                    }
+                    @if (_aheadBehind.Value.Behind > 0)
+                    {
+                        <span class="behind">↓@(_aheadBehind.Value.Behind)</span>
+                    }
                 </span>
             }
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                            Style="width: 22px; height: 22px; opacity: 0.5;"
-                           OnClick="LoadDiffAsync" Disabled="_loading" />
+                           OnClick="LoadDiffAsync" Disabled="_loading"/>
         </div>
     </div>
 
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2" />
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2"/>
     }
     else if (_error != null)
     {
@@ -33,7 +39,7 @@
     else if (_diff == null || _diff.Files.Count == 0)
     {
         <div class="sidebar-explorer-empty">
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large" Style="opacity: 0.15;" />
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large" Style="opacity: 0.15;"/>
             <span>No changes</span>
         </div>
     }
@@ -51,9 +57,11 @@
             @foreach (var group in GroupedFiles)
             {
                 <div class="changes-group-header" @onclick="@(() => ToggleGroup(group.Type))">
-                    <MudIcon Icon="@(_collapsedGroups.Contains(group.Type) ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)"
-                             Size="Size.Small" Style="width: 14px; height: 14px; opacity: 0.5;" />
-                    <span class="changes-group-label" style="@GetFileIconStyle(group.Type)">@GetGroupLabel(group.Type)</span>
+                    <MudIcon
+                        Icon="@(_collapsedGroups.Contains(group.Type) ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)"
+                        Size="Size.Small" Style="width: 14px; height: 14px; opacity: 0.5;"/>
+                    <span class="changes-group-label"
+                          style="@GetFileIconStyle(group.Type)">@GetGroupLabel(group.Type)</span>
                     <span class="changes-group-count">@group.Files.Count</span>
                 </div>
 
@@ -63,11 +71,17 @@
                     {
                         <div @key="file.FilePath" class="sidebar-file-item file" @onclick="@(() => OpenFileDiff(file))">
                             <MudIcon Icon="@GetFileIcon(file.ChangeType)" Size="Size.Small"
-                                     Style="@($"width: 14px; height: 14px; {GetFileIconStyle(file.ChangeType)}")" />
+                                     Style="@($"width: 14px; height: 14px; {GetFileIconStyle(file.ChangeType)}")"/>
                             <span class="sidebar-file-name">@GetFileName(file.FilePath)</span>
                             <div class="diff-stats" style="margin-left: auto;">
-                                @if (file.Additions > 0) { <span class="additions">+@file.Additions</span> }
-                                @if (file.Deletions > 0) { <span class="deletions">-@file.Deletions</span> }
+                                @if (file.Additions > 0)
+                                {
+                                    <span class="additions">+@file.Additions</span>
+                                }
+                                @if (file.Deletions > 0)
+                                {
+                                    <span class="deletions">-@file.Deletions</span>
+                                }
                             </div>
                         </div>
                     }
@@ -79,16 +93,16 @@
             <div class="commit-input-wrap">
                 <MudTextField T="string" @bind-Value="_commitMessage" Placeholder="커밋 메시지..."
                               Variant="Variant.Text" Lines="2" Class="commit-message-field"
-                              Style="font-size: 0.8rem;" />
+                              Style="font-size: 0.8rem;"/>
                 <MudTooltip Text="AI로 커밋 메시지 생성" Placement="Placement.Top">
                     <MudIconButton Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small"
                                    Class="commit-ai-btn" Disabled="@(_generating || _diff == null)"
-                                   OnClick="GenerateCommitMessage" />
+                                   OnClick="GenerateCommitMessage"/>
                 </MudTooltip>
             </div>
             @if (_generating)
             {
-                <MudProgressLinear Indeterminate="true" Color="Color.Secondary" Class="commit-progress" />
+                <MudProgressLinear Indeterminate="true" Color="Color.Secondary" Class="commit-progress"/>
             }
             <MudButton OnClick="CommitChanges" Variant="Variant.Filled" Color="Color.Primary"
                        Size="Size.Small" FullWidth="true" Disabled="@(!CanCommit)"
@@ -109,8 +123,8 @@
     private int _previousFileCount;
     private bool _initialLoaded;
     private FileSystemWatcher? _watcher;
-    private System.Timers.Timer? _debounceTimer;
-    private HashSet<FileChangeType> _collapsedGroups = [];
+    private Timer? _debounceTimer;
+    private readonly HashSet<FileChangeType> _collapsedGroups = [];
     private (int Ahead, int Behind)? _aheadBehind;
 
     // Commit fields
@@ -131,8 +145,8 @@
             return order
                 .Select(type => new FileGroup(type,
                     _diff.Files.Where(f => f.ChangeType == type)
-                         .OrderBy(f => f.FilePath, StringComparer.OrdinalIgnoreCase)
-                         .ToList()))
+                        .OrderBy(f => f.FilePath, StringComparer.OrdinalIgnoreCase)
+                        .ToList()))
                 .Where(g => g.Files.Count > 0)
                 .ToList();
         }
@@ -173,17 +187,17 @@
             EnableRaisingEvents = true
         };
 
-        _debounceTimer = new System.Timers.Timer(1500) { AutoReset = false };
+        _debounceTimer = new Timer(1500) { AutoReset = false };
         _debounceTimer.Elapsed += async (_, _) =>
         {
             try
             {
-                await InvokeAsync(async () =>
-                {
-                    await LoadDiffAsync();
-                });
+                await InvokeAsync(async () => { await LoadDiffAsync(); });
             }
-            catch { /* component may be disposed */ }
+            catch
+            {
+                /* component may be disposed */
+            }
         };
 
         void OnChange(object sender, FileSystemEventArgs e)
@@ -210,6 +224,7 @@
             _watcher.Dispose();
             _watcher = null;
         }
+
         _debounceTimer?.Dispose();
         _debounceTimer = null;
     }
@@ -254,6 +269,7 @@
                 {
                     _ = OnChangesDetected.InvokeAsync();
                 }
+
                 _previousFileCount = newCount;
 
                 _error = null;
@@ -375,7 +391,7 @@
         if (a == null && b == null) return true;
         if (a == null || b == null) return false;
         if (a.Files.Count != b.Files.Count) return false;
-        for (int i = 0; i < a.Files.Count; i++)
+        for (var i = 0; i < a.Files.Count; i++)
         {
             if (a.Files[i].FilePath != b.Files[i].FilePath ||
                 a.Files[i].Additions != b.Files[i].Additions ||
@@ -383,6 +399,7 @@
                 a.Files[i].ChangeType != b.Files[i].ChangeType)
                 return false;
         }
+
         return true;
     }
 
@@ -397,33 +414,42 @@
         return idx >= 0 ? path[(idx + 1)..] : path;
     }
 
-    private static string GetGroupLabel(FileChangeType type) => type switch
+    private static string GetGroupLabel(FileChangeType type)
     {
-        FileChangeType.Modified => "수정됨",
-        FileChangeType.Added => "추가됨",
-        FileChangeType.Deleted => "삭제됨",
-        FileChangeType.Renamed => "이름 변경",
-        FileChangeType.Untracked => "추적 안 됨",
-        _ => "기타"
-    };
+        return type switch
+        {
+            FileChangeType.Modified => "수정됨",
+            FileChangeType.Added => "추가됨",
+            FileChangeType.Deleted => "삭제됨",
+            FileChangeType.Renamed => "이름 변경",
+            FileChangeType.Untracked => "추적 안 됨",
+            _ => "기타"
+        };
+    }
 
-    private static string GetFileIcon(FileChangeType type) => type switch
+    private static string GetFileIcon(FileChangeType type)
     {
-        FileChangeType.Added => Icons.Material.Filled.NoteAdd,
-        FileChangeType.Deleted => Icons.Material.Filled.Delete,
-        FileChangeType.Renamed => Icons.Material.Filled.DriveFileRenameOutline,
-        FileChangeType.Untracked => Icons.Material.Filled.AddCircleOutline,
-        _ => Icons.Material.Filled.EditNote
-    };
+        return type switch
+        {
+            FileChangeType.Added => Icons.Material.Filled.NoteAdd,
+            FileChangeType.Deleted => Icons.Material.Filled.Delete,
+            FileChangeType.Renamed => Icons.Material.Filled.DriveFileRenameOutline,
+            FileChangeType.Untracked => Icons.Material.Filled.AddCircleOutline,
+            _ => Icons.Material.Filled.EditNote
+        };
+    }
 
-    private static string GetFileIconStyle(FileChangeType type) => type switch
+    private static string GetFileIconStyle(FileChangeType type)
     {
-        FileChangeType.Added => "color: var(--color-success);",
-        FileChangeType.Deleted => "color: var(--color-error);",
-        FileChangeType.Renamed => "color: var(--color-warning);",
-        FileChangeType.Untracked => "color: var(--mud-palette-text-secondary);",
-        _ => "color: var(--color-info);"
-    };
+        return type switch
+        {
+            FileChangeType.Added => "color: var(--color-success);",
+            FileChangeType.Deleted => "color: var(--color-error);",
+            FileChangeType.Renamed => "color: var(--color-warning);",
+            FileChangeType.Untracked => "color: var(--mud-palette-text-secondary);",
+            _ => "color: var(--color-info);"
+        };
+    }
 
     private void HandleStateChanged()
     {
@@ -449,8 +475,10 @@
                     StopWatching();
                     StateHasChanged();
                 }
+
                 return;
             }
+
             StateHasChanged();
         });
     }
@@ -460,6 +488,7 @@
         ChatState.OnChange -= HandleStateChanged;
         StopWatching();
     }
+
 }
 
 <style>
@@ -474,7 +503,10 @@
         font-weight: 600;
         opacity: 0.8;
     }
-    .changes-group-header:hover { opacity: 1; }
+
+    .changes-group-header:hover {
+        opacity: 1;
+    }
 
     .changes-group-count {
         margin-left: auto;
@@ -491,8 +523,14 @@
         gap: 4px;
         font-weight: 600;
     }
-    .ahead-behind-badge .ahead { color: var(--color-success); }
-    .ahead-behind-badge .behind { color: var(--color-warning); }
+
+    .ahead-behind-badge .ahead {
+        color: var(--color-success);
+    }
+
+    .ahead-behind-badge .behind {
+        color: var(--color-warning);
+    }
 
     .sidebar-commit-section {
         padding: 8px 8px 10px;
@@ -512,6 +550,7 @@
         padding: 4px 4px 4px 8px;
         transition: border-color 0.15s;
     }
+
     .commit-input-wrap:focus-within {
         border-color: var(--mud-palette-primary);
     }
@@ -521,10 +560,12 @@
         padding: 0 !important;
         margin: 0 !important;
     }
+
     .commit-input-wrap ::deep .mud-input-underline::before,
     .commit-input-wrap ::deep .mud-input-underline::after {
         display: none !important;
     }
+
     .commit-input-wrap ::deep textarea {
         font-size: 0.78rem !important;
         line-height: 1.35 !important;
@@ -545,6 +586,7 @@
         opacity: 0.7;
         transition: opacity 0.15s;
     }
+
     .commit-ai-btn:hover {
         opacity: 1;
         background: var(--mud-palette-action-default-hover) !important;

@@ -1,45 +1,52 @@
 <div class="stack gap-3">
-    <MudSimpleTable Dense="true" Hover="true" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;">
+    <MudSimpleTable Dense="true" Hover="true" Elevation="0"
+                    Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;">
         <thead>
-            <tr>
-                <th style="width: 40%;">키</th>
-                <th>값</th>
-                <th style="width: 48px;"></th>
-            </tr>
+        <tr>
+            <th style="width: 40%;">키</th>
+            <th>값</th>
+            <th style="width: 48px;"></th>
+        </tr>
         </thead>
         <tbody>
-            @if (EnvVars != null)
-            {
-                @foreach (var kvp in EnvVars.ToList())
-                {
-                    <tr>
-                        <td class="typo-body2" style="font-family: monospace;">@kvp.Key</td>
-                        <td class="typo-body2" style="font-family: monospace;">@kvp.Value</td>
-                        <td>
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                           Color="Color.Error" OnClick="@(() => Remove(kvp.Key))" />
-                        </td>
-                    </tr>
-                }
-            }
-            @if (EnvVars == null || EnvVars.Count == 0)
+        @if (EnvVars != null)
+        {
+            @foreach (var kvp in EnvVars.ToList())
             {
                 <tr>
-                    <td colspan="3" class="text-center typo-caption text-secondary pa-3">
-                        등록된 환경변수가 없습니다
+                    <td class="typo-body2" style="font-family: monospace;">@kvp.Key</td>
+                    <td class="typo-body2" style="font-family: monospace;">@kvp.Value</td>
+                    <td>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                       Color="Color.Error" OnClick="@(() => Remove(kvp.Key))"/>
                     </td>
                 </tr>
             }
+        }
+        @if (EnvVars == null || EnvVars.Count == 0)
+        {
+            <tr>
+                <td colspan="3" class="text-center typo-caption text-secondary pa-3">
+                    등록된 환경변수가 없습니다
+                </td>
+            </tr>
+        }
         </tbody>
     </MudSimpleTable>
 
     <div class="d-flex gap-2 align-end">
         <MudTextField T="string" @bind-Value="_newKey" Label="키" Variant="Variant.Outlined"
                       Margin="Margin.Dense" Placeholder="VARIABLE_NAME" Style="flex: 1;"
-                      OnKeyUp="@(e => { if (e.Key == "Enter") Add(); })" />
+                      OnKeyUp="@(e =>
+                               {
+                                   if (e.Key == "Enter") Add();
+                               })"/>
         <MudTextField T="string" @bind-Value="_newValue" Label="값" Variant="Variant.Outlined"
                       Margin="Margin.Dense" Placeholder="value" Style="flex: 1;"
-                      OnKeyUp="@(e => { if (e.Key == "Enter") Add(); })" />
+                      OnKeyUp="@(e =>
+                               {
+                                   if (e.Key == "Enter") Add();
+                               })"/>
         <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
                    OnClick="Add" Disabled="@(string.IsNullOrWhiteSpace(_newKey))"
                    Style="text-transform: none; min-width: 60px; height: 40px;">
@@ -59,7 +66,7 @@
     {
         if (string.IsNullOrWhiteSpace(_newKey)) return;
 
-        EnvVars ??= new();
+        EnvVars ??= new Dictionary<string, string>();
         EnvVars[_newKey.Trim()] = _newValue;
         _newKey = "";
         _newValue = "";
@@ -69,6 +76,7 @@
     private async Task Remove(string key)
     {
         EnvVars?.Remove(key);
-        await EnvVarsChanged.InvokeAsync(EnvVars ?? new());
+        await EnvVarsChanged.InvokeAsync(EnvVars ?? new Dictionary<string, string>());
     }
+
 }

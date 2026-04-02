@@ -1,64 +1,26 @@
+using System.Text;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
-public class SkillFileStore
+public class SkillFileStore(ILogger logger)
 {
-    private readonly ILogger _logger;
-
-    public SkillFileStore(ILogger logger)
-    {
-        _logger = logger;
-    }
-
-    public async Task<List<SkillDefinition>> LoadFromDirectoryAsync(string directory, string scope)
-    {
-        var skills = new List<SkillDefinition>();
-        if (!Directory.Exists(directory))
-            return skills;
-
-        try
-        {
-            var files = Directory.GetFiles(directory, "*.md", SearchOption.AllDirectories);
-            foreach (var file in files)
-            {
-                try
-                {
-                    var content = await File.ReadAllTextAsync(file);
-                    var skill = ParseCommandFile(file, content, scope, directory);
-                    if (skill != null)
-                        skills.Add(skill);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to parse command file: {File}", file);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to scan command directory: {Dir}", directory);
-        }
-
-        return skills;
-    }
-
     public async Task SaveAsync(SkillDefinition command)
     {
-        var dir = command.Scope == "project" ? null : Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".claude", "commands");
+        var dir = command.Scope == "project"
+            ? null
+            : Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".claude", "commands");
 
         if (dir == null && !string.IsNullOrEmpty(command.FilePath))
             dir = Path.GetDirectoryName(command.FilePath);
 
         if (dir == null)
-        {
             dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                 ".claude", "commands");
-        }
 
         Directory.CreateDirectory(dir);
 
@@ -69,7 +31,7 @@ public class SkillFileStore
         var fileDir = Path.GetDirectoryName(filePath);
         if (fileDir != null) Directory.CreateDirectory(fileDir);
 
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
 
         // Write frontmatter if we have metadata
         if (!string.IsNullOrEmpty(command.Description) || command.AllowedTools.Count > 0 || command.Chain.Count > 0)
@@ -83,12 +45,14 @@ public class SkillFileStore
                 foreach (var tool in command.AllowedTools)
                     sb.AppendLine($"  - {tool}");
             }
+
             if (command.Chain.Count > 0)
             {
                 sb.AppendLine("chain:");
                 foreach (var step in command.Chain)
                     sb.AppendLine($"  - {step}");
             }
+
             sb.AppendLine("---");
             sb.AppendLine();
         }
@@ -99,12 +63,48 @@ public class SkillFileStore
         command.FilePath = filePath;
     }
 
+    public async Task<List<SkillDefinition>> LoadFromDirectoryAsync(string directory, string scope)
+    {
+        var skills = new List<SkillDefinition>();
+        if (!Directory.Exists(directory))
+            return skills;
+
+        try
+        {
+            var files = Directory.GetFiles(directory, "*.md", SearchOption.AllDirectories);
+            foreach (var file in files)
+                try
+                {
+                    var content = await File.ReadAllTextAsync(file);
+                    var skill = ParseCommandFile(file, content, scope, directory);
+                    if (skill != null)
+                        skills.Add(skill);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to parse command file: {File}", file);
+                }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to scan command directory: {Dir}", directory);
+        }
+
+        return skills;
+    }
+
     public void Delete(SkillDefinition skill)
     {
-        if (skill.FilePath != null && File.Exists(skill.FilePath))
-        {
-            File.Delete(skill.FilePath);
-        }
+        if (skill.FilePath != null && File.Exists(skill.FilePath)) File.Delete(skill.FilePath);
+    }
+
+    private static List<string> ParseInlineList(string value)
+    {
+        return value.Trim('[', ']')
+            .Split(',')
+            .Select(t => t.Trim().Trim('"', '\''))
+            .Where(t => !string.IsNullOrEmpty(t))
+            .ToList();
     }
 
     internal static SkillDefinition? ParseCommandFile(string filePath, string content, string scope, string baseDir)
@@ -123,7 +123,7 @@ public class SkillFileStore
         }
 
         // Parse optional YAML frontmatter
-        string description = "";
+        var description = "";
         var allowedTools = new List<string>();
         var chain = new List<string>();
         var body = content;
@@ -132,20 +132,18 @@ public class SkillFileStore
         if (lines.Length > 0 && lines[0].Trim() == "---")
         {
             var endIdx = -1;
-            for (int i = 1; i < lines.Length; i++)
-            {
+            for (var i = 1; i < lines.Length; i++)
                 if (lines[i].Trim() == "---")
                 {
                     endIdx = i;
                     break;
                 }
-            }
 
             if (endIdx > 0)
             {
                 string? currentListField = null;
 
-                for (int i = 1; i < endIdx; i++)
+                for (var i = 1; i < endIdx; i++)
                 {
                     var line = lines[i].Trim();
                     if (line.StartsWith("description:"))
@@ -206,14 +204,5 @@ public class SkillFileStore
             AcceptsArguments = acceptsArguments,
             FilePath = filePath
         };
-    }
-
-    private static List<string> ParseInlineList(string value)
-    {
-        return value.Trim('[', ']')
-            .Split(',')
-            .Select(t => t.Trim().Trim('"', '\''))
-            .Where(t => !string.IsNullOrEmpty(t))
-            .ToList();
     }
 }

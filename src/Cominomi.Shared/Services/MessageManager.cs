@@ -1,16 +1,54 @@
-using Cominomi.Shared;
 using Cominomi.Shared.Models;
 
 namespace Cominomi.Shared.Services;
 
-public class MessageManager
-
+public class MessageManager(Action notifyChanged)
 {
-    private readonly Action _notifyChanged;
-
-    public MessageManager(Action notifyChanged)
+    public ChatMessage StartAssistantMessage(Session session)
     {
-        _notifyChanged = notifyChanged;
+        var msg = new ChatMessage
+        {
+            Role = MessageRole.Assistant,
+            IsStreaming = true,
+            StreamingStartedAt = DateTime.UtcNow
+        };
+        lock (session.MessagesLock)
+        {
+            session.Messages.Add(msg);
+        }
+
+        notifyChanged();
+        return msg;
+    }
+
+    public void AddSystemMessage(Session session, string text)
+    {
+        lock (session.MessagesLock)
+        {
+            session.Messages.Add(new ChatMessage
+            {
+                Role = MessageRole.System,
+                Text = text
+            });
+        }
+
+        notifyChanged();
+    }
+
+    public void AddToolCall(ChatMessage message, ToolCall toolCall)
+    {
+        Guard.NotNull(message, nameof(message));
+        Guard.NotNull(toolCall, nameof(toolCall));
+
+        message.ToolCalls.Add(toolCall);
+
+        message.Parts.Add(new ContentPart
+        {
+            Type = ContentPartType.ToolCall,
+            ToolCall = toolCall
+        });
+
+        notifyChanged();
     }
 
     public void AddUserMessage(Session session, string text)
@@ -26,7 +64,8 @@ public class MessageManager
                 Text = text
             });
         }
-        _notifyChanged();
+
+        notifyChanged();
     }
 
     public void AddUserMessage(Session session, string text, List<FileAttachment> attachments)
@@ -44,23 +83,8 @@ public class MessageManager
                 Attachments = attachments
             });
         }
-        _notifyChanged();
-    }
 
-    public ChatMessage StartAssistantMessage(Session session)
-    {
-        var msg = new ChatMessage
-        {
-            Role = MessageRole.Assistant,
-            IsStreaming = true,
-            StreamingStartedAt = DateTime.UtcNow
-        };
-        lock (session.MessagesLock)
-        {
-            session.Messages.Add(msg);
-        }
-        _notifyChanged();
-        return msg;
+        notifyChanged();
     }
 
     public void AppendText(ChatMessage message, string text)
@@ -72,54 +96,30 @@ public class MessageManager
 
         var lastPart = message.Parts.Count > 0 ? message.Parts[^1] : null;
         if (lastPart?.Type == ContentPartType.Text)
-        {
             lastPart.Text += text;
-        }
         else
-        {
             message.Parts.Add(new ContentPart
             {
                 Type = ContentPartType.Text,
                 Text = text
             });
-        }
 
-        _notifyChanged();
+        notifyChanged();
     }
 
     public void AppendThinking(ChatMessage message, string text)
     {
         var lastPart = message.Parts.Count > 0 ? message.Parts[^1] : null;
         if (lastPart?.Type == ContentPartType.Thinking)
-        {
             lastPart.Text += text;
-        }
         else
-        {
             message.Parts.Add(new ContentPart
             {
                 Type = ContentPartType.Thinking,
                 Text = text
             });
-        }
 
-        _notifyChanged();
-    }
-
-    public void AddToolCall(ChatMessage message, ToolCall toolCall)
-    {
-        Guard.NotNull(message, nameof(message));
-        Guard.NotNull(toolCall, nameof(toolCall));
-
-        message.ToolCalls.Add(toolCall);
-
-        message.Parts.Add(new ContentPart
-        {
-            Type = ContentPartType.ToolCall,
-            ToolCall = toolCall
-        });
-
-        _notifyChanged();
+        notifyChanged();
     }
 
     public void FinishMessage(ChatMessage message)
@@ -133,19 +133,6 @@ public class MessageManager
                 .Where(p => p.Type == ContentPartType.Text)
                 .Select(p => p.Text));
 
-        _notifyChanged();
-    }
-
-    public void AddSystemMessage(Session session, string text)
-    {
-        lock (session.MessagesLock)
-        {
-            session.Messages.Add(new ChatMessage
-            {
-                Role = MessageRole.System,
-                Text = text
-            });
-        }
-        _notifyChanged();
+        notifyChanged();
     }
 }

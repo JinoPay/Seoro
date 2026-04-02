@@ -1,14 +1,13 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Cominomi.Shared.Services;
 using Cominomi.Shared.Services.Migration;
 
 namespace Cominomi.Shared.Models;
 
 /// <summary>
-/// 기존 플랫 JSON 포맷과 새 중첩 포맷(git) 모두 지원하는 컨버터.
-/// 읽기: 플랫(기존) → 중첩(신규) 양쪽 모두 역직렬화 가능.
-/// 쓰기: 항상 중첩 포맷으로 직렬화.
+///     기존 플랫 JSON 포맷과 새 중첩 포맷(git) 모두 지원하는 컨버터.
+///     읽기: 플랫(기존) → 중첩(신규) 양쪽 모두 역직렬화 가능.
+///     쓰기: 항상 중첩 포맷으로 직렬화.
 /// </summary>
 public class SessionJsonConverter : JsonConverter<Session>
 {
@@ -18,7 +17,7 @@ public class SessionJsonConverter : JsonConverter<Session>
         var root = doc.RootElement;
 
         // Extract enum values
-        AgentType agentType = AgentType.Code;
+        var agentType = AgentType.Code;
         if (root.TryGetProperty("agentType", out var atEl) && atEl.ValueKind == JsonValueKind.String)
             if (Enum.TryParse<AgentType>(atEl.GetString(), true, out var at))
                 agentType = at;
@@ -31,9 +30,10 @@ public class SessionJsonConverter : JsonConverter<Session>
         if (root.TryGetProperty("maxBudgetUsd", out var mb) && mb.ValueKind == JsonValueKind.Number)
             maxBudgetUsd = mb.GetDecimal();
 
-        DateTime createdAt = DateTime.UtcNow;
+        var createdAt = DateTime.UtcNow;
         if (root.TryGetProperty("createdAt", out var ca) && ca.ValueKind == JsonValueKind.String)
-            if (DateTime.TryParse(ca.GetString(), out var dt)) createdAt = dt;
+            if (DateTime.TryParse(ca.GetString(), out var dt))
+                createdAt = dt;
 
         // Git context: try nested "git" first, then flat properties
         GitContext git;
@@ -48,7 +48,8 @@ public class SessionJsonConverter : JsonConverter<Session>
             if (root.TryGet("worktreePath", out var wtp)) git.WorktreePath = wtp;
             if (root.TryGet("branchName", out var bn)) git.BranchName = bn;
             if (root.TryGet("baseBranch", out var bb)) git.BaseBranch = bb;
-            if (root.TryGetProperty("isLocalDir", out var ild) && ild.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            if (root.TryGetProperty("isLocalDir", out var ild) &&
+                ild.ValueKind is JsonValueKind.True or JsonValueKind.False)
                 git.IsLocalDir = ild.GetBoolean();
             if (root.TryGetProperty("additionalDirs", out var ad) && ad.ValueKind == JsonValueKind.Array)
                 git.AdditionalDirs = JsonSerializer.Deserialize<List<string>>(ad.GetRawText(), options) ?? [];
@@ -70,7 +71,7 @@ public class SessionJsonConverter : JsonConverter<Session>
             MaxBudgetUsd = maxBudgetUsd,
             CreatedAt = createdAt,
             Git = git,
-            Messages = messages,
+            Messages = messages
         };
 
         // Mutable properties — set after construction
@@ -103,15 +104,15 @@ public class SessionJsonConverter : JsonConverter<Session>
             session.TotalOutputTokens = tot.GetInt64();
         if (root.TryGetProperty("titleLocked", out var tl) && tl.ValueKind is JsonValueKind.True or JsonValueKind.False)
             session.TitleLocked = tl.GetBoolean();
-        if (root.TryGetProperty("planCompleted", out var pc) && pc.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        if (root.TryGetProperty("planCompleted", out var pc) &&
+            pc.ValueKind is JsonValueKind.True or JsonValueKind.False)
             session.PlanCompleted = pc.GetBoolean();
         if (root.TryGetProperty("pendingAskUserQuestionInput", out var pauq) && pauq.ValueKind == JsonValueKind.String)
             session.PendingAskUserQuestionInput = pauq.GetString();
 
         if (root.TryGetProperty("updatedAt", out var ua) && ua.ValueKind == JsonValueKind.String)
-        {
-            if (DateTime.TryParse(ua.GetString(), out var dt)) session.UpdatedAt = dt;
-        }
+            if (DateTime.TryParse(ua.GetString(), out var dt))
+                session.UpdatedAt = dt;
 
         return session;
     }
@@ -139,6 +140,7 @@ public class SessionJsonConverter : JsonConverter<Session>
             writer.WritePropertyName("error");
             JsonSerializer.Serialize(writer, value.Error, options);
         }
+
         if (value.ConversationId != null)
             writer.WriteString("conversationId", value.ConversationId);
 
@@ -164,7 +166,8 @@ public class SessionJsonConverter : JsonConverter<Session>
         writer.WriteBoolean("titleLocked", value.TitleLocked);
         writer.WriteBoolean("planCompleted", value.PlanCompleted);
         if (value.PlanFilePath != null) writer.WriteString("planFilePath", value.PlanFilePath);
-        if (value.PendingAskUserQuestionInput != null) writer.WriteString("pendingAskUserQuestionInput", value.PendingAskUserQuestionInput);
+        if (value.PendingAskUserQuestionInput != null)
+            writer.WriteString("pendingAskUserQuestionInput", value.PendingAskUserQuestionInput);
         writer.WriteString("createdAt", value.CreatedAt);
         writer.WriteString("updatedAt", value.UpdatedAt);
 
@@ -183,7 +186,6 @@ public class SessionJsonConverter : JsonConverter<Session>
             git.AdditionalDirs = JsonSerializer.Deserialize<List<string>>(ad.GetRawText(), options) ?? [];
         return git;
     }
-
 }
 
 internal static class JsonElementExtensions
@@ -196,6 +198,7 @@ internal static class JsonElementExtensions
             value = prop.GetString() ?? "";
             return true;
         }
+
         return false;
     }
 }

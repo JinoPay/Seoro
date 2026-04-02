@@ -4,28 +4,25 @@ using System.Text.Json.Nodes;
 namespace Cominomi.Shared.Services.Migration;
 
 /// <summary>
-/// Applies sequential schema migrations to bring JSON from any past version to the current version.
+///     Applies sequential schema migrations to bring JSON from any past version to the current version.
 /// </summary>
 public class SchemaMigrator
 {
-    private readonly int _currentVersion;
     private readonly SortedList<int, IJsonMigration> _migrations = new();
 
     public SchemaMigrator(int currentVersion, IEnumerable<IJsonMigration>? migrations = null)
     {
-        _currentVersion = currentVersion;
+        CurrentVersion = currentVersion;
         if (migrations != null)
-        {
             foreach (var m in migrations)
                 _migrations.Add(m.FromVersion, m);
-        }
     }
 
-    public int CurrentVersion => _currentVersion;
+    public int CurrentVersion { get; }
 
     /// <summary>
-    /// Migrates a JSON string to the current schema version.
-    /// Returns the deserialized object and whether any migration was applied.
+    ///     Migrates a JSON string to the current schema version.
+    ///     Returns the deserialized object and whether any migration was applied.
     /// </summary>
     public MigrationResult<T> DeserializeAndMigrate<T>(string json, JsonSerializerOptions options) where T : class
     {
@@ -34,14 +31,12 @@ public class SchemaMigrator
             return new MigrationResult<T>(JsonSerializer.Deserialize<T>(json, options), false);
 
         var version = SchemaVersion.Read(doc);
-        if (version >= _currentVersion)
-        {
+        if (version >= CurrentVersion)
             // Already at current version — deserialize directly (faster path)
             return new MigrationResult<T>(JsonSerializer.Deserialize<T>(json, options), false);
-        }
 
         // Apply migrations sequentially
-        while (version < _currentVersion)
+        while (version < CurrentVersion)
         {
             if (!_migrations.TryGetValue(version, out var migration))
                 break; // No migration found for this version — stop
@@ -51,7 +46,7 @@ public class SchemaMigrator
         }
 
         // Stamp current version
-        SchemaVersion.Write(doc, _currentVersion);
+        SchemaVersion.Write(doc, CurrentVersion);
 
         var migratedJson = doc.ToJsonString(options);
         var result = JsonSerializer.Deserialize<T>(migratedJson, options);
@@ -59,7 +54,7 @@ public class SchemaMigrator
     }
 
     /// <summary>
-    /// Injects $schemaVersion into serialized JSON.
+    ///     Injects $schemaVersion into serialized JSON.
     /// </summary>
     public string SerializeWithVersion<T>(T obj, JsonSerializerOptions options)
     {
@@ -67,9 +62,10 @@ public class SchemaMigrator
         var node = JsonNode.Parse(json);
         if (node is JsonObject doc)
         {
-            SchemaVersion.Write(doc, _currentVersion);
+            SchemaVersion.Write(doc, CurrentVersion);
             return doc.ToJsonString(options);
         }
+
         return json;
     }
 }

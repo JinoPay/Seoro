@@ -1,5 +1,3 @@
-@using Cominomi.Shared.Models
-
 <div class="heatmap-card">
     <div class="heatmap-title">활동</div>
     <div class="heatmap-container">
@@ -30,7 +28,9 @@
                                 <TooltipContent>
                                     <div style="font-size: 0.75rem;">
                                         <div style="font-weight: 500;">@FormatDate(day.Date)</div>
-                                        <div>@FormatNumber(day.Count) 메시지 · @day.Sessions 세션 · @FormatNumber(day.Tools) 도구</div>
+                                        <div>@FormatNumber(day.Count) 메시지 · @day.Sessions 세션
+                                            · @FormatNumber(day.Tools) 도구
+                                        </div>
                                     </div>
                                 </TooltipContent>
                             </MudTooltip>
@@ -81,7 +81,7 @@
         var weeks = new List<DayCell[]>();
         var currentWeek = new List<DayCell>();
 
-        for (int i = 0; i < totalDays; i++)
+        for (var i = 0; i < totalDays; i++)
         {
             var d = start.AddDays(i);
             var dow = (int)d.DayOfWeek;
@@ -115,15 +115,18 @@
         _weeks = weeks;
     }
 
-    private static string GetColorClass(int count) => count switch
+    private static string GetColorClass(int count)
     {
-        0 => "level-0",
-        < 100 => "level-1",
-        < 500 => "level-2",
-        < 1000 => "level-3",
-        < 3000 => "level-4",
-        _ => "level-5"
-    };
+        return count switch
+        {
+            0 => "level-0",
+            < 100 => "level-1",
+            < 500 => "level-2",
+            < 1000 => "level-3",
+            < 3000 => "level-4",
+            _ => "level-5"
+        };
+    }
 
     private static string FormatDate(string dateStr)
     {
@@ -132,7 +135,10 @@
         return dateStr;
     }
 
-    private static string FormatNumber(int n) => n.ToString("N0");
+    private static string FormatNumber(int n)
+    {
+        return n.ToString("N0");
+    }
 
     private record DayCell
     {
@@ -142,6 +148,7 @@
         public int Tools { get; init; }
         public bool Empty { get; init; }
     }
+
 }
 
 <style>
@@ -210,12 +217,29 @@
         opacity: 0.4;
     }
 
-    .heatmap-cell.level-0 { background: var(--mud-palette-action-default-hover); }
-    .heatmap-cell.level-1 { background: #9be9a8; }
-    .heatmap-cell.level-2 { background: #40c463; }
-    .heatmap-cell.level-3 { background: #30a14e; }
-    .heatmap-cell.level-4 { background: #216e39; }
-    .heatmap-cell.level-5 { background: #0e4429; }
+    .heatmap-cell.level-0 {
+        background: var(--mud-palette-action-default-hover);
+    }
+
+    .heatmap-cell.level-1 {
+        background: #9be9a8;
+    }
+
+    .heatmap-cell.level-2 {
+        background: #40c463;
+    }
+
+    .heatmap-cell.level-3 {
+        background: #30a14e;
+    }
+
+    .heatmap-cell.level-4 {
+        background: #216e39;
+    }
+
+    .heatmap-cell.level-5 {
+        background: #0e4429;
+    }
 
     .heatmap-legend {
         display: flex;
@@ -237,11 +261,25 @@
         border-radius: 2px;
     }
 
-    .heatmap-legend-block.level-0 { background: var(--mud-palette-action-default-hover); }
-    .heatmap-legend-block.level-1 { background: #9be9a8; }
-    .heatmap-legend-block.level-2 { background: #40c463; }
-    .heatmap-legend-block.level-3 { background: #30a14e; }
-    .heatmap-legend-block.level-4 { background: #216e39; }
+    .heatmap-legend-block.level-0 {
+        background: var(--mud-palette-action-default-hover);
+    }
+
+    .heatmap-legend-block.level-1 {
+        background: #9be9a8;
+    }
+
+    .heatmap-legend-block.level-2 {
+        background: #40c463;
+    }
+
+    .heatmap-legend-block.level-3 {
+        background: #30a14e;
+    }
+
+    .heatmap-legend-block.level-4 {
+        background: #216e39;
+    }
 
     .heatmap-legend-count {
         margin-left: auto;

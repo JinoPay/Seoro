@@ -1,30 +1,29 @@
-@using Cominomi.Shared.Services
-
 <div class="tool-card @(!Tool.IsComplete ? "running" : "")">
     <div class="tool-card-header" @onclick="@(() => _expanded = !_expanded)">
         @if (!Tool.IsComplete)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 14px; height: 14px;" Color="Color.Warning" />
+                                 Style="width: 14px; height: 14px;" Color="Color.Warning"/>
         }
         else if (Tool.IsError)
         {
             <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
-                     Style="width: 16px; height: 16px;" />
+                     Style="width: 16px; height: 16px;"/>
         }
         else
         {
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
-                     Style="width: 16px; height: 16px;" />
+                     Style="width: 16px; height: 16px;"/>
         }
-        <MudIcon Icon="@ToolDisplayHelper.GetToolIcon(Tool.Name)" Size="Size.Small" Style="width: 16px; height: 16px; opacity: 0.6;" />
+        <MudIcon Icon="@ToolDisplayHelper.GetToolIcon(Tool.Name)" Size="Size.Small"
+                 Style="width: 16px; height: 16px; opacity: 0.6;"/>
         <span class="tool-card-name">@_headerLabel</span>
         @if (Tool.IsComplete && _compactResult is string hint)
         {
             <span class="tool-card-hint">@hint</span>
         }
         <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                 Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px;" />
+                 Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px;"/>
     </div>
 
     @if (_expanded)
@@ -33,25 +32,25 @@
             @switch (GetWidgetType())
             {
                 case WidgetType.Read:
-                    <ReadToolWidget Tool="Tool" />
+                    <ReadToolWidget Tool="Tool"/>
                     break;
                 case WidgetType.Edit:
-                    <EditToolWidget Tool="Tool" />
+                    <EditToolWidget Tool="Tool"/>
                     break;
                 case WidgetType.Bash:
-                    <BashToolWidget Tool="Tool" />
+                    <BashToolWidget Tool="Tool"/>
                     break;
                 case WidgetType.Grep:
-                    <GrepToolWidget Tool="Tool" />
+                    <GrepToolWidget Tool="Tool"/>
                     break;
                 case WidgetType.Glob:
-                    <GlobToolWidget Tool="Tool" />
+                    <GlobToolWidget Tool="Tool"/>
                     break;
                 case WidgetType.AskUserQuestion:
-                    <AskUserQuestionWidget Tool="Tool" />
+                    <AskUserQuestionWidget Tool="Tool"/>
                     break;
                 case WidgetType.Agent:
-                    <AgentToolWidget Tool="Tool" />
+                    <AgentToolWidget Tool="Tool"/>
                     break;
                 default:
                     @* Generic fallback *@
@@ -60,18 +59,21 @@
                         var formattedInput = ToolDisplayHelper.FormatJson(Tool.Input);
                         var inputLineCount = formattedInput.Split('\n').Length;
                         <div class="tool-card-section">
-                            <div class="tool-card-section-label">입력 @(inputLineCount > 1 ? $"({inputLineCount}줄)" : "")</div>
+                            <div class="tool-card-section-label">
+                                입력 @(inputLineCount > 1 ? $"({inputLineCount}줄)" : "")</div>
                             <div class="tool-card-content">
                                 <pre>@formattedInput</pre>
                             </div>
                         </div>
                     }
+
                     @if (!string.IsNullOrEmpty(Tool.Output))
                     {
                         var lineCount = Tool.Output.Split('\n').Length;
                         <div class="tool-card-section">
                             <div class="tool-card-section-label">출력 @(lineCount > 1 ? $"({lineCount}줄)" : "")</div>
-                            <div class="tool-card-content @(lineCount > 15 && !_outputExpanded ? "tool-output-collapsed" : "")">
+                            <div
+                                class="tool-card-content @(lineCount > 15 && !_outputExpanded ? "tool-output-collapsed" : "")">
                                 <pre>@Tool.Output</pre>
                             </div>
                             @if (lineCount > 15)
@@ -83,6 +85,7 @@
                             }
                         </div>
                     }
+
                     break;
             }
         </div>
@@ -90,8 +93,7 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public ToolCall Tool { get; set; } = default!;
+    [Parameter][EditorRequired] public ToolCall Tool { get; set; } = default!;
 
     private bool _expanded;
     private bool _outputExpanded;
@@ -121,19 +123,32 @@
         }
     }
 
-    private enum WidgetType { Generic, Read, Edit, Bash, Grep, Glob, AskUserQuestion, Agent }
-
-    private WidgetType GetWidgetType() => Tool.Name.ToLowerInvariant() switch
+    private enum WidgetType
     {
-        "read" or "read_file" => WidgetType.Read,
-        "edit" or "edit_file" => WidgetType.Edit,
-        "write" or "write_file" => WidgetType.Edit, // Write uses same diff-style widget
-        "bash" or "execute_bash" => WidgetType.Bash,
-        "grep" => WidgetType.Grep,
-        "glob" => WidgetType.Glob,
-        "askuserquestion" or "ask_user_question" => WidgetType.AskUserQuestion,
-        "agent" => WidgetType.Agent,
-        _ => WidgetType.Generic
-    };
+        Generic,
+        Read,
+        Edit,
+        Bash,
+        Grep,
+        Glob,
+        AskUserQuestion,
+        Agent
+    }
+
+    private WidgetType GetWidgetType()
+    {
+        return Tool.Name.ToLowerInvariant() switch
+        {
+            "read" or "read_file" => WidgetType.Read,
+            "edit" or "edit_file" => WidgetType.Edit,
+            "write" or "write_file" => WidgetType.Edit, // Write uses same diff-style widget
+            "bash" or "execute_bash" => WidgetType.Bash,
+            "grep" => WidgetType.Grep,
+            "glob" => WidgetType.Glob,
+            "askuserquestion" or "ask_user_question" => WidgetType.AskUserQuestion,
+            "agent" => WidgetType.Agent,
+            _ => WidgetType.Generic
+        };
+    }
 
 }

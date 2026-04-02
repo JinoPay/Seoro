@@ -29,7 +29,7 @@ public enum ErrorCode
 
     // Process
     ProcessFailed,
-    HookFailed,
+    HookFailed
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -37,7 +37,7 @@ public enum ErrorCategory
 {
     Unknown,
     Transient,
-    Permanent,
+    Permanent
 }
 
 public record AppError(
@@ -46,41 +46,57 @@ public record AppError(
     string Message,
     string? Details = null)
 {
-    // --- Git ---
+    /// <summary>
+    ///     Classify a git push error as Rejected (force-pushable) or generic failure.
+    ///     Delegates to <see cref="ProcessErrorClassifier" />.
+    /// </summary>
+    public static AppError ClassifyPushError(string errorText)
+    {
+        return ProcessErrorClassifier.ClassifyPushError(errorText);
+    }
 
-    public static AppError WorktreeCreation(string message) =>
-        new(ErrorCode.WorktreeCreationFailed, ErrorCategory.Permanent, message);
-
-    public static AppError PushRejected(string message) =>
-        new(ErrorCode.BranchPushRejected, ErrorCategory.Transient, message);
-
-    public static AppError PushFailed(string message) =>
-        new(ErrorCode.BranchPushFailed, ErrorCategory.Transient, message);
-
-    public static AppError CloneFailed(string message) =>
-        new(ErrorCode.GitCloneFailed, ErrorCategory.Transient, message);
-
-    public static AppError InvalidGitRepo(string message) =>
-        new(ErrorCode.NotAGitRepo, ErrorCategory.Permanent, message);
-
-    // --- Streaming ---
-
-    public static AppError Streaming(string message, string? details = null) =>
-        new(ErrorCode.StreamingFailed, ErrorCategory.Transient, message, details);
+    public static AppError CloneFailed(string message)
+    {
+        return new AppError(ErrorCode.GitCloneFailed, ErrorCategory.Transient, message);
+    }
 
     // --- General ---
 
-    public static AppError FromException(ErrorCode code, Exception ex) =>
-        new(code, ErrorCategory.Unknown, ex.Message, ex.ToString());
+    public static AppError FromException(ErrorCode code, Exception ex)
+    {
+        return new AppError(code, ErrorCategory.Unknown, ex.Message, ex.ToString());
+    }
 
-    public static AppError General(string message) =>
-        new(ErrorCode.Unknown, ErrorCategory.Unknown, message);
+    public static AppError General(string message)
+    {
+        return new AppError(ErrorCode.Unknown, ErrorCategory.Unknown, message);
+    }
 
-    /// <summary>
-    /// Classify a git push error as Rejected (force-pushable) or generic failure.
-    /// Delegates to <see cref="ProcessErrorClassifier"/>.
-    /// </summary>
-    public static AppError ClassifyPushError(string errorText)
-        => ProcessErrorClassifier.ClassifyPushError(errorText);
+    public static AppError InvalidGitRepo(string message)
+    {
+        return new AppError(ErrorCode.NotAGitRepo, ErrorCategory.Permanent, message);
+    }
 
+    public static AppError PushFailed(string message)
+    {
+        return new AppError(ErrorCode.BranchPushFailed, ErrorCategory.Transient, message);
+    }
+
+    public static AppError PushRejected(string message)
+    {
+        return new AppError(ErrorCode.BranchPushRejected, ErrorCategory.Transient, message);
+    }
+
+    // --- Streaming ---
+
+    public static AppError Streaming(string message, string? details = null)
+    {
+        return new AppError(ErrorCode.StreamingFailed, ErrorCategory.Transient, message, details);
+    }
+    // --- Git ---
+
+    public static AppError WorktreeCreation(string message)
+    {
+        return new AppError(ErrorCode.WorktreeCreationFailed, ErrorCategory.Permanent, message);
+    }
 }

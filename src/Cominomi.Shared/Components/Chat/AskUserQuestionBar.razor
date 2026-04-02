@@ -1,5 +1,4 @@
 @using System.Text.Json
-
 @if (IsVisible && _questions.Count > 0)
 {
     <div class="askbar-panel">
@@ -8,7 +7,7 @@
             <div class="askbar-header-left">
                 <div class="askbar-icon-badge">
                     <MudIcon Icon="@Icons.Material.Filled.QuestionAnswer" Size="Size.Small"
-                             Style="width: 18px; height: 18px;" />
+                             Style="width: 18px; height: 18px;"/>
                 </div>
                 <span class="askbar-title">응답 필요</span>
                 @if (_questions.Count > 1)
@@ -40,7 +39,7 @@
                 @foreach (var opt in q.Options)
                 {
                     var isSelected = selectedForThis.Contains(opt.Label);
-                    var isOther = !q.MultiSelect && (anyOptionSelected && !isSelected) || customActive;
+                    var isOther = (!q.MultiSelect && anyOptionSelected && !isSelected) || customActive;
 
                     <button class="askbar-option @(isSelected ? "selected" : "") @(isOther ? "dimmed" : "")"
                             @onclick="@(() => SelectOption(_currentPage, opt.Label))"
@@ -48,15 +47,16 @@
                         <span class="askbar-option-label">
                             @if (isSelected)
                             {
-                                <MudIcon Icon="@(q.MultiSelect ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckCircle)"
-                                         Size="Size.Small"
-                                         Style="width: 14px; height: 14px; color: var(--accent);" />
+                                <MudIcon
+                                    Icon="@(q.MultiSelect ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckCircle)"
+                                    Size="Size.Small"
+                                    Style="width: 14px; height: 14px; color: var(--accent);"/>
                             }
                             else if (q.MultiSelect)
                             {
                                 <MudIcon Icon="@Icons.Material.Filled.CheckBoxOutlineBlank"
                                          Size="Size.Small"
-                                         Style="width: 14px; height: 14px; opacity: 0.4;" />
+                                         Style="width: 14px; height: 14px; opacity: 0.4;"/>
                             }
                             @opt.Label
                         </span>
@@ -67,7 +67,8 @@
                     </button>
                 }
 
-                <div class="askbar-option askbar-custom-option @(customActive ? "selected" : "") @(anyOptionSelected ? "dimmed" : "")">
+                <div
+                    class="askbar-option askbar-custom-option @(customActive ? "selected" : "") @(anyOptionSelected ? "dimmed" : "")">
                     <MudTextField Value="@_customTexts[_currentPage]"
                                   ValueChanged="@((string v) => OnCustomTextChanged(_currentPage, v))"
                                   Placeholder="의견을 직접 입력하세요..."
@@ -76,7 +77,7 @@
                                   Immediate="true"
                                   Underline="false"
                                   Class="askbar-inline-textfield"
-                                  OnKeyDown="HandleInputKeyDown" />
+                                  OnKeyDown="HandleInputKeyDown"/>
                 </div>
             </div>
         </div>
@@ -123,6 +124,7 @@
     [Parameter] public EventCallback<string> OnResponse { get; set; }
 
     private record AskOption(string Label, string? Description);
+
     private record AskQuestion(string? Header, string Question, List<AskOption> Options, bool MultiSelect);
 
     private List<AskQuestion> _questions = [];
@@ -132,8 +134,12 @@
     private string? _lastInput;
     private int _currentPage;
 
-    private bool IsQuestionAnswered(int i) =>
-        _selections[i].Count > 0 || !string.IsNullOrWhiteSpace(_customTexts[i]);
+    private bool IsQuestionAnswered(int i)
+    {
+        return _selections[i].Count > 0 || !string.IsNullOrWhiteSpace(_customTexts[i]);
+    }
+
+
     private bool AllAnswered => _selections.Length > 0 && Enumerable.Range(0, _selections.Length).All(IsQuestionAnswered);
     private bool CurrentAnswered => _selections.Length > 0 && IsQuestionAnswered(_currentPage);
     private bool CanSubmit => AllAnswered;
@@ -148,7 +154,7 @@
         _lastInput = QuestionInput;
         _questions = ParseQuestions(QuestionInput);
         _selections = new HashSet<string>[_questions.Count];
-        for (int i = 0; i < _questions.Count; i++)
+        for (var i = 0; i < _questions.Count; i++)
             _selections[i] = new HashSet<string>();
         _customTexts = new string[_questions.Count];
         Array.Fill(_customTexts, "");
@@ -202,10 +208,12 @@
 
         if (OnResponse.HasDelegate)
         {
-            string GetAnswer(int i) =>
-                !string.IsNullOrWhiteSpace(_customTexts[i])
+            string GetAnswer(int i)
+            {
+                return !string.IsNullOrWhiteSpace(_customTexts[i])
                     ? _customTexts[i].Trim()
                     : string.Join(", ", _selections[i]);
+            }
 
             var response = _questions.Count == 1
                 ? GetAnswer(0)
@@ -255,7 +263,7 @@
                 var question = q.TryGetProperty("question", out var qProp) ? qProp.GetString() ?? "" : "";
                 var header = q.TryGetProperty("header", out var hProp) ? hProp.GetString() : null;
                 var multiSelect = q.TryGetProperty("multiSelect", out var msProp)
-                    && msProp.ValueKind == JsonValueKind.True;
+                                  && msProp.ValueKind == JsonValueKind.True;
 
                 var options = new List<AskOption>();
                 if (q.TryGetProperty("options", out var optsArr) && optsArr.ValueKind == JsonValueKind.Array)
@@ -280,4 +288,5 @@
             return [];
         }
     }
+
 }

@@ -4,8 +4,8 @@ using Cominomi.Shared.Models;
 namespace Cominomi.Shared.Services.Migration;
 
 /// <summary>
-/// Central registry of SchemaMigrators for each persisted model type.
-/// Initialized once at startup; provides fast lookup by type.
+///     Central registry of SchemaMigrators for each persisted model type.
+///     Initialized once at startup; provides fast lookup by type.
 /// </summary>
 public static class SchemaMigratorRegistry
 {
@@ -28,11 +28,6 @@ public static class SchemaMigratorRegistry
         Register<HookDefinition>(new SchemaMigrator(1));
     }
 
-    public static void Register<T>(SchemaMigrator migrator) where T : class
-    {
-        Migrators[typeof(T)] = migrator;
-    }
-
     public static SchemaMigrator? GetMigrator<T>() where T : class
     {
         return Migrators.GetValueOrDefault(typeof(T));
@@ -41,5 +36,10 @@ public static class SchemaMigratorRegistry
     public static SchemaMigrator? GetMigrator(Type type)
     {
         return Migrators.GetValueOrDefault(type);
+    }
+
+    public static void Register<T>(SchemaMigrator migrator) where T : class
+    {
+        Migrators[typeof(T)] = migrator;
     }
 }

@@ -7,68 +7,68 @@
 <div class="overlay-page">
     <div class="overlay-page-header">
         <button class="overlay-back-btn" @onclick="Close">
-            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"/>
             앱으로 돌아가기
         </button>
     </div>
     <div class="overlay-page-content">
-<div class="notification-history-view">
-    <div class="notification-history-header">
-        <span class="notification-history-title">Notifications</span>
-        <div style="display: flex; align-items: center; gap: 4px;">
-            @if (History.UnreadCount > 0)
+        <div class="notification-history-view">
+            <div class="notification-history-header">
+                <span class="notification-history-title">Notifications</span>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    @if (History.UnreadCount > 0)
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                                   Style="font-size: var(--text-xs); text-transform: none; min-width: auto; padding: 2px 8px;"
+                                   OnClick="@History.MarkAllAsRead">
+                            모두 읽음
+                        </MudButton>
+                    }
+                </div>
+            </div>
+
+            @if (_entries.Count == 0)
             {
-                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
-                           Style="font-size: var(--text-xs); text-transform: none; min-width: auto; padding: 2px 8px;"
-                           OnClick="@History.MarkAllAsRead">
-                    모두 읽음
-                </MudButton>
+                <div class="notification-history-empty">
+                    <MudIcon Icon="@Icons.Material.Filled.NotificationsNone" Size="Size.Large" Style="opacity: 0.15;"/>
+                    <p class="typo-body2" style="opacity: 0.4;">알림이 없습니다</p>
+                </div>
             }
-        </div>
-    </div>
-
-    @if (_entries.Count == 0)
-    {
-        <div class="notification-history-empty">
-            <MudIcon Icon="@Icons.Material.Filled.NotificationsNone" Size="Size.Large" Style="opacity: 0.15;" />
-            <p class="typo-body2" style="opacity: 0.4;">알림이 없습니다</p>
-        </div>
-    }
-    else
-    {
-        <div class="notification-history-list">
-            @foreach (var group in _groups)
+            else
             {
-                <div class="notification-date-header">@group.Label</div>
+                <div class="notification-history-list">
+                    @foreach (var group in _groups)
+                    {
+                        <div class="notification-date-header">@group.Label</div>
 
-                @foreach (var entry in group.Entries)
-                {
-                    <div class="notification-entry @(entry.IsRead ? "" : "unread")"
-                         @key="entry.Id"
-                         @onclick="@(() => HandleClick(entry))">
-                        <MudIcon Icon="@GetTypeIcon(entry.Type)"
-                                 Size="Size.Small"
-                                 Color="@GetTypeColor(entry.Type)"
-                                 Style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;" />
-
-                        <div class="notification-entry-content">
-                            <span class="notification-message">@entry.Body</span>
-                            <div class="notification-meta">
-                                <span class="notification-session-badge">@entry.Title</span>
-                                <span class="notification-time">@FormatRelativeTime(entry.Timestamp)</span>
-                            </div>
-                        </div>
-
-                        @if (!entry.IsRead)
+                        @foreach (var entry in group.Entries)
                         {
-                            <div class="notification-unread-dot"></div>
+                            <div class="notification-entry @(entry.IsRead ? "" : "unread")"
+                                 @key="entry.Id"
+                                 @onclick="@(() => HandleClick(entry))">
+                                <MudIcon Icon="@GetTypeIcon(entry.Type)"
+                                         Size="Size.Small"
+                                         Color="@GetTypeColor(entry.Type)"
+                                         Style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;"/>
+
+                                <div class="notification-entry-content">
+                                    <span class="notification-message">@entry.Body</span>
+                                    <div class="notification-meta">
+                                        <span class="notification-session-badge">@entry.Title</span>
+                                        <span class="notification-time">@FormatRelativeTime(entry.Timestamp)</span>
+                                    </div>
+                                </div>
+
+                                @if (!entry.IsRead)
+                                {
+                                    <div class="notification-unread-dot"></div>
+                                }
+                            </div>
                         }
-                    </div>
-                }
+                    }
+                </div>
             }
         </div>
-    }
-</div>
     </div>
 </div>
 
@@ -88,7 +88,10 @@
         _groups = GroupByDate(_entries);
     }
 
-    private void Close() => ChatState.CloseNotifications();
+    private void Close()
+    {
+        ChatState.CloseNotifications();
+    }
 
     private async Task HandleClick(NotificationRecord entry)
     {
@@ -119,23 +122,29 @@
         });
     }
 
-    private static string GetTypeIcon(NotificationType type) => type switch
+    private static string GetTypeIcon(NotificationType type)
     {
-        NotificationType.Success => Icons.Material.Filled.CheckCircle,
-        NotificationType.Error => Icons.Material.Filled.Error,
-        NotificationType.Question => Icons.Material.Filled.QuestionAnswer,
-        NotificationType.PlanReview => Icons.Material.Filled.RateReview,
-        _ => Icons.Material.Filled.Info
-    };
+        return type switch
+        {
+            NotificationType.Success => Icons.Material.Filled.CheckCircle,
+            NotificationType.Error => Icons.Material.Filled.Error,
+            NotificationType.Question => Icons.Material.Filled.QuestionAnswer,
+            NotificationType.PlanReview => Icons.Material.Filled.RateReview,
+            _ => Icons.Material.Filled.Info
+        };
+    }
 
-    private static Color GetTypeColor(NotificationType type) => type switch
+    private static Color GetTypeColor(NotificationType type)
     {
-        NotificationType.Success => Color.Success,
-        NotificationType.Error => Color.Error,
-        NotificationType.Question => Color.Warning,
-        NotificationType.PlanReview => Color.Info,
-        _ => Color.Default
-    };
+        return type switch
+        {
+            NotificationType.Success => Color.Success,
+            NotificationType.Error => Color.Error,
+            NotificationType.Question => Color.Warning,
+            NotificationType.PlanReview => Color.Info,
+            _ => Color.Default
+        };
+    }
 
     private static string FormatRelativeTime(DateTime utcTime)
     {
@@ -175,4 +184,5 @@
         public string Label { get; init; } = "";
         public List<NotificationRecord> Entries { get; init; } = [];
     }
+
 }

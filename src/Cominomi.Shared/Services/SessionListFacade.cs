@@ -4,54 +4,46 @@ using MudBlazor;
 
 namespace Cominomi.Shared.Services;
 
-public class SessionListFacade : ISessionListFacade
+public class SessionListFacade(
+    IChatState chatState,
+    ISessionService sessionService,
+    IOptionsMonitor<AppSettings> appSettings,
+    ISettingsService settingsService,
+    SessionListDataService dataService,
+    IDialogService dialogService,
+    ISnackbar snackbar,
+    ISkillRegistry skillRegistry,
+    IClaudeService claudeService,
+    INotificationHistoryService notificationHistory,
+    IWorkspaceService workspaceService)
+    : ISessionListFacade
 {
-    private readonly IChatState _chatState;
-    private readonly ISessionService _sessionService;
-    private readonly IActiveSessionRegistry _activeSessionRegistry;
-    private readonly IOptionsMonitor<AppSettings> _appSettings;
-    private readonly ISettingsService _settingsService;
-    private readonly SessionListDataService _dataService;
-    private readonly IDialogService _dialogService;
-    private readonly ISnackbar _snackbar;
-    private readonly ISkillRegistry _skillRegistry;
-    private readonly IClaudeService _claudeService;
-    private readonly INotificationHistoryService _notificationHistory;
-    private readonly IWorkspaceService _workspaceService;
-
-    public SessionListFacade(
-        IChatState chatState,
-        ISessionService sessionService,
-        IActiveSessionRegistry activeSessionRegistry,
-        IOptionsMonitor<AppSettings> appSettings,
-        ISettingsService settingsService,
-        SessionListDataService dataService,
-        IDialogService dialogService,
-        ISnackbar snackbar,
-        ISkillRegistry skillRegistry,
-        IClaudeService claudeService,
-        INotificationHistoryService notificationHistory,
-        IWorkspaceService workspaceService)
+    public async Task CleanupSessionAsync(Session session)
     {
-        _chatState = chatState;
-        _sessionService = sessionService;
-        _activeSessionRegistry = activeSessionRegistry;
-        _appSettings = appSettings;
-        _settingsService = settingsService;
-        _dataService = dataService;
-        _dialogService = dialogService;
-        _snackbar = snackbar;
-        _skillRegistry = skillRegistry;
-        _claudeService = claudeService;
-        _notificationHistory = notificationHistory;
-        _workspaceService = workspaceService;
+        await sessionService.CleanupSessionAsync(session.Id);
+        session.TransitionStatus(SessionStatus.Archived);
+    }
+
+    public async Task SelectSessionAsync(Session session, Workspace? ws, List<Workspace> workspaces)
+    {
+        ws ??= workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);
+        if (ws != null)
+            await SwitchWorkspaceAsync(ws);
+
+        // LoadSessionAsync checks the active session registry first,
+        // so we always get the authoritative in-memory instance if one exists.
+        var fullSess = await sessionService.LoadSessionAsync(session.Id);
+        chatState.SetSession(fullSess ?? session);
+        notificationHistory.MarkSessionAsRead(session.Id);
+
+        await SaveLastSelectionAsync(session.WorkspaceId, session.Id);
     }
 
     public Task<(Workspace? Workspace, Session? Session, string? ProjectName)> RestoreLastSelectionAsync(
         List<Workspace> workspaces,
         Dictionary<string, List<Session>> sessionCache)
     {
-        var settings = _appSettings.CurrentValue;
+        var settings = appSettings.CurrentValue;
         var workspace = workspaces.FirstOrDefault(w => w.Id == settings.LastWorkspaceId)
                         ?? workspaces.FirstOrDefault();
 
@@ -63,11 +55,94 @@ public class SessionListFacade : ISessionListFacade
         Session? lastSession = null;
         if (!string.IsNullOrEmpty(settings.LastSessionId)
             && sessionCache.TryGetValue(workspace.Id, out var cached))
-        {
             lastSession = cached.FirstOrDefault(s => s.Id == settings.LastSessionId);
-        }
 
         return Task.FromResult<(Workspace?, Session?, string?)>((workspace, lastSession, projectName));
+    }
+
+    public async Task<bool> DeleteSessionAsync(Session session)
+    {
+        var isStreaming = chatState.IsSessionStreaming(session.Id);
+        var confirmMessage = isStreaming
+            ? $"'{session.Title}' 세션이 현재 진행 중입니다. Claude 프로세스를 종료하고 삭제하시겠습니까?"
+            : $"'{session.Title}' 세션을 삭제하시겠습니까?";
+
+        var result = await dialogService.ShowMessageBoxAsync(
+            "세션 삭제", confirmMessage,
+            "삭제", cancelText: "취소");
+
+        if (result != true) return false;
+
+        // Stop Claude process before deletion
+        claudeService.Cancel(session.Id);
+
+        await sessionService.DeleteSessionAsync(session.Id);
+        notificationHistory.MarkSessionAsRead(session.Id);
+
+        if (dataService.SessionCache.TryGetValue(session.WorkspaceId, out var sessions))
+            sessions.RemoveAll(s => s.Id == session.Id);
+
+        if (chatState.CurrentSession?.Id == session.Id)
+            chatState.SetSession(null!);
+        else
+            chatState.NotifyStateChanged(); // Refresh LandingPage recent chats list
+
+        dataService.DiffStatsCache.Remove(session.Id);
+        dataService.RebuildOrderedSessions();
+        snackbar.SessionDeleted();
+
+        return true;
+    }
+
+    public async Task<bool> DeleteWorkspaceAsync(Workspace workspace)
+    {
+        var result = await dialogService.ShowMessageBoxAsync(
+            "워크스페이스 삭제",
+            $"'{workspace.Name}' 워크스페이스와 모든 세션이 삭제됩니다. 계속하시겠습니까?",
+            "삭제", cancelText: "취소");
+
+        if (result != true) return false;
+
+        try
+        {
+            // Stop streaming and clean up caches for all sessions
+            if (dataService.SessionCache.TryGetValue(workspace.Id, out var cachedSessions))
+                foreach (var session in cachedSessions)
+                {
+                    claudeService.Cancel(session.Id);
+                    notificationHistory.MarkSessionAsRead(session.Id);
+                    dataService.DiffStatsCache.Remove(session.Id);
+                }
+
+            // Delete all sessions
+            var sessions = await sessionService.GetSessionsByWorkspaceAsync(workspace.Id);
+            foreach (var session in sessions) await sessionService.DeleteSessionAsync(session.Id);
+
+            // Delete the workspace
+            await workspaceService.DeleteWorkspaceAsync(workspace.Id);
+
+            // Clear ChatState if this workspace is active
+            if (chatState.CurrentWorkspace?.Id == workspace.Id)
+            {
+                chatState.SetSession(null!);
+                chatState.SetWorkspace(null!);
+            }
+
+            // Close settings panel if open for this workspace
+            if (chatState.SettingsWorkspaceId == workspace.Id)
+                chatState.CloseSettings();
+
+            // Refresh workspace list (fires OnDataChanged → sidebar rebuilds)
+            await dataService.RefreshWorkspacesAsync();
+
+            snackbar.WorkspaceDeleted(workspace.Name);
+            return true;
+        }
+        catch (Exception)
+        {
+            snackbar.Add("삭제 중 오류가 발생했습니다.", Severity.Error);
+            return false;
+        }
     }
 
     public async Task<Session> CreateSessionAsync(Workspace ws, bool localDir = false)
@@ -75,150 +150,39 @@ public class SessionListFacade : ISessionListFacade
         // Workspace override > App default
         var model = !string.IsNullOrEmpty(ws.DefaultModel)
             ? ws.DefaultModel
-            : _appSettings.CurrentValue.DefaultModel;
+            : appSettings.CurrentValue.DefaultModel;
 
         var session = localDir
-            ? await _sessionService.CreateLocalDirSessionAsync(model, ws.Id)
-            : await _sessionService.CreatePendingSessionAsync(model, ws.Id);
+            ? await sessionService.CreateLocalDirSessionAsync(model, ws.Id)
+            : await sessionService.CreatePendingSessionAsync(model, ws.Id);
 
         await SwitchWorkspaceAsync(ws);
-        _chatState.SetSession(session);
+        chatState.SetSession(session);
 
-        if (_dataService.SessionCache.TryGetValue(ws.Id, out var sessions))
+        if (dataService.SessionCache.TryGetValue(ws.Id, out var sessions))
             sessions.Insert(0, session);
 
         await SaveLastSelectionAsync(ws.Id, session.Id);
 
-        _dataService.RebuildOrderedSessions();
+        dataService.RebuildOrderedSessions();
         return session;
-    }
-
-    public async Task SelectSessionAsync(Session session, Workspace? ws, List<Workspace> workspaces)
-    {
-        ws ??= workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);
-        if (ws != null)
-            await SwitchWorkspaceAsync(ws);
-
-        // LoadSessionAsync checks the active session registry first,
-        // so we always get the authoritative in-memory instance if one exists.
-        var fullSess = await _sessionService.LoadSessionAsync(session.Id);
-        _chatState.SetSession(fullSess ?? session);
-        _notificationHistory.MarkSessionAsRead(session.Id);
-
-        await SaveLastSelectionAsync(session.WorkspaceId, session.Id);
-    }
-
-    public async Task CleanupSessionAsync(Session session)
-    {
-        await _sessionService.CleanupSessionAsync(session.Id);
-        session.TransitionStatus(SessionStatus.Archived);
-    }
-
-    public async Task<bool> DeleteSessionAsync(Session session)
-    {
-        var isStreaming = _chatState.IsSessionStreaming(session.Id);
-        var confirmMessage = isStreaming
-            ? $"'{session.Title}' 세션이 현재 진행 중입니다. Claude 프로세스를 종료하고 삭제하시겠습니까?"
-            : $"'{session.Title}' 세션을 삭제하시겠습니까?";
-
-        var result = await _dialogService.ShowMessageBoxAsync(
-            "세션 삭제", confirmMessage,
-            yesText: "삭제", cancelText: "취소");
-
-        if (result != true) return false;
-
-        // Stop Claude process before deletion
-        _claudeService.Cancel(session.Id);
-
-        await _sessionService.DeleteSessionAsync(session.Id);
-        _notificationHistory.MarkSessionAsRead(session.Id);
-
-        if (_dataService.SessionCache.TryGetValue(session.WorkspaceId, out var sessions))
-            sessions.RemoveAll(s => s.Id == session.Id);
-
-        if (_chatState.CurrentSession?.Id == session.Id)
-            _chatState.SetSession(null!);
-        else
-            _chatState.NotifyStateChanged(); // Refresh LandingPage recent chats list
-
-        _dataService.DiffStatsCache.Remove(session.Id);
-        _dataService.RebuildOrderedSessions();
-        _snackbar.SessionDeleted();
-
-        return true;
-    }
-
-    public async Task<bool> DeleteWorkspaceAsync(Workspace workspace)
-    {
-        var result = await _dialogService.ShowMessageBoxAsync(
-            "워크스페이스 삭제",
-            $"'{workspace.Name}' 워크스페이스와 모든 세션이 삭제됩니다. 계속하시겠습니까?",
-            yesText: "삭제", cancelText: "취소");
-
-        if (result != true) return false;
-
-        try
-        {
-            // Stop streaming and clean up caches for all sessions
-            if (_dataService.SessionCache.TryGetValue(workspace.Id, out var cachedSessions))
-            {
-                foreach (var session in cachedSessions)
-                {
-                    _claudeService.Cancel(session.Id);
-                    _notificationHistory.MarkSessionAsRead(session.Id);
-                    _dataService.DiffStatsCache.Remove(session.Id);
-                }
-            }
-
-            // Delete all sessions
-            var sessions = await _sessionService.GetSessionsByWorkspaceAsync(workspace.Id);
-            foreach (var session in sessions)
-            {
-                await _sessionService.DeleteSessionAsync(session.Id);
-            }
-
-            // Delete the workspace
-            await _workspaceService.DeleteWorkspaceAsync(workspace.Id);
-
-            // Clear ChatState if this workspace is active
-            if (_chatState.CurrentWorkspace?.Id == workspace.Id)
-            {
-                _chatState.SetSession(null!);
-                _chatState.SetWorkspace(null!);
-            }
-
-            // Close settings panel if open for this workspace
-            if (_chatState.SettingsWorkspaceId == workspace.Id)
-                _chatState.CloseSettings();
-
-            // Refresh workspace list (fires OnDataChanged → sidebar rebuilds)
-            await _dataService.RefreshWorkspacesAsync();
-
-            _snackbar.WorkspaceDeleted(workspace.Name);
-            return true;
-        }
-        catch (Exception)
-        {
-            _snackbar.Add("삭제 중 오류가 발생했습니다.", Severity.Error);
-            return false;
-        }
-    }
-
-    private async Task SwitchWorkspaceAsync(Workspace ws)
-    {
-        var previousId = _chatState.CurrentWorkspace?.Id;
-        _chatState.SetWorkspace(ws);
-
-        // Reload custom skills when workspace changes (different project path)
-        if (previousId != ws.Id)
-            await _skillRegistry.LoadCustomCommandsAsync(ws.RepoLocalPath);
     }
 
     private async Task SaveLastSelectionAsync(string workspaceId, string sessionId)
     {
-        var settings = _appSettings.CurrentValue;
+        var settings = appSettings.CurrentValue;
         settings.LastWorkspaceId = workspaceId;
         settings.LastSessionId = sessionId;
-        await _settingsService.SaveAsync(settings);
+        await settingsService.SaveAsync(settings);
+    }
+
+    private async Task SwitchWorkspaceAsync(Workspace ws)
+    {
+        var previousId = chatState.CurrentWorkspace?.Id;
+        chatState.SetWorkspace(ws);
+
+        // Reload custom skills when workspace changes (different project path)
+        if (previousId != ws.Id)
+            await skillRegistry.LoadCustomCommandsAsync(ws.RepoLocalPath);
     }
 }

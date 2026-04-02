@@ -9,10 +9,12 @@
         <div class="landing-glow-ring" aria-hidden="true"></div>
         <div class="landing-logo">
             <svg width="56" height="56" viewBox="0 0 456 456" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="68" y="78" width="320" height="240" rx="40" ry="40" fill="currentColor" opacity="0.8" />
-                <polygon points="108,318 68,378 168,318" fill="currentColor" opacity="0.8" />
-                <polyline points="148,158 208,198 148,238" fill="none" stroke="var(--bg-base)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" />
-                <line x1="228" y1="238" x2="308" y2="238" stroke="var(--bg-base)" stroke-width="30" stroke-linecap="round" />
+                <rect x="68" y="78" width="320" height="240" rx="40" ry="40" fill="currentColor" opacity="0.8"/>
+                <polygon points="108,318 68,378 168,318" fill="currentColor" opacity="0.8"/>
+                <polyline points="148,158 208,198 148,238" fill="none" stroke="var(--bg-base)" stroke-width="30"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="228" y1="238" x2="308" y2="238" stroke="var(--bg-base)" stroke-width="30"
+                      stroke-linecap="round"/>
             </svg>
         </div>
     </div>
@@ -22,5 +24,9 @@
 </div>
 
 @code {
-    public Task RefreshAsync() => Task.CompletedTask;
+    public Task RefreshAsync()
+    {
+        return Task.CompletedTask;
+    }
+
 }

@@ -1,4 +1,3 @@
-@using Cominomi.Shared.Models
 @inject IGamificationService GamificationService
 @inject IStatsCacheService StatsCacheService
 @inject ISessionReplayService ReplayService
@@ -10,19 +9,19 @@
         <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
             @if (_refreshing)
             {
-                <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="width: 20px; height: 20px;" />
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="width: 20px; height: 20px;"/>
             }
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                            Disabled="_refreshing || _loading"
                            OnClick="OnRefreshClick"
-                           Title="통계 새로고침" />
+                           Title="통계 새로고침"/>
         </div>
     </div>
     <div class="settings-content-body">
         @if (_loading)
         {
             <div style="display: flex; justify-content: center; padding: 40px;">
-                <MudProgressCircular Indeterminate="true" />
+                <MudProgressCircular Indeterminate="true"/>
             </div>
         }
         else
@@ -35,7 +34,8 @@
                         <span class="typo-subtitle1 ml-2">@_stats.Level.Name</span>
                     </div>
                     <div style="text-align: right;">
-                        <span class="typo-caption">@_stats.Level.Xp.ToString("N0") / @_stats.Level.XpForNext.ToString("N0") XP</span>
+                        <span
+                            class="typo-caption">@_stats.Level.Xp.ToString("N0") / @_stats.Level.XpForNext.ToString("N0") XP</span>
                         @if (_stats.Level.Level < UserLevel.Names.Length)
                         {
                             <div class="typo-caption" style="opacity: 0.7;">
@@ -46,7 +46,7 @@
                 </div>
                 <MudProgressLinear Value="@(_stats.Level.Progress * 100)" Color="Color.Primary"
                                    Rounded="true" Size="Size.Medium"
-                                   Style="height: 8px;" />
+                                   Style="height: 8px;"/>
                 <div class="d-flex gap-4 mt-2" style="font-size: 0.7rem; opacity: 0.8;">
                     <span>@_stats.TotalProjects 프로젝트</span>
                     <span>@_stats.Achievements.Count(a => a.Unlocked)/@_stats.Achievements.Count 업적</span>
@@ -58,13 +58,13 @@
             <StatsOverview TotalSessions="@_stats.TotalSessions"
                            TotalMessages="@_stats.TotalMessages"
                            TotalToolCalls="@_stats.TotalToolCalls"
-                           DaysActive="@_stats.DaysActive" />
+                           DaysActive="@_stats.DaysActive"/>
 
             @* Middle Row: Streak + Config + Cost *@
             <div class="dashboard-middle-row">
                 <StreakCard Current="@_stats.Streak.CurrentStreak"
-                           Longest="@_stats.Streak.LongestStreak"
-                           LastActiveDate="@_stats.Streak.LastActiveDate" />
+                            Longest="@_stats.Streak.LongestStreak"
+                            LastActiveDate="@_stats.Streak.LastActiveDate"/>
 
                 @* Config Completeness *@
                 <div class="dashboard-config-card">
@@ -73,15 +73,17 @@
                         <div style="position: relative; flex-shrink: 0;">
                             <MudProgressCircular Value="@(_stats.ConfigCompleteness * 100)"
                                                  Color="Color.Primary" Size="Size.Large"
-                                                 StrokeWidth="6" />
-                            <span class="dashboard-config-pct">@((_stats.ConfigCompleteness * 100).ToString("F0"))%</span>
+                                                 StrokeWidth="6"/>
+                            <span
+                                class="dashboard-config-pct">@((_stats.ConfigCompleteness * 100).ToString("F0"))%</span>
                         </div>
                         <div class="dashboard-config-items">
                             @foreach (var item in _stats.ConfigItems)
                             {
                                 <div class="dashboard-config-item @(item.IsConfigured ? "configured" : "")">
-                                    <MudIcon Icon="@(item.IsConfigured ? Icons.Material.Filled.CheckCircle : Icons.Material.Outlined.RadioButtonUnchecked)"
-                                             Size="Size.Small" />
+                                    <MudIcon
+                                        Icon="@(item.IsConfigured ? Icons.Material.Filled.CheckCircle : Icons.Material.Outlined.RadioButtonUnchecked)"
+                                        Size="Size.Small"/>
                                     <span>@item.Name</span>
                                 </div>
                             }
@@ -90,16 +92,16 @@
                 </div>
 
                 <CostOverviewCard Cost="@_stats.Cost"
-                                  OnNavigateToUsage="@(() => ChatState.SetSettingsSection("usage"))" />
+                                  OnNavigateToUsage="@(() => ChatState.SetSettingsSection("usage"))"/>
             </div>
 
             @* Activity Heatmap *@
-            <ActivityHeatmap DailyActivity="@_stats.DailyActivity" />
+            <ActivityHeatmap DailyActivity="@_stats.DailyActivity"/>
 
             @* Bottom Row: Session Monitor + Achievements *@
             <div class="dashboard-bottom-row">
-                <SessionMonitor />
-                <AchievementGrid Achievements="@_stats.Achievements" />
+                <SessionMonitor/>
+                <AchievementGrid Achievements="@_stats.Achievements"/>
             </div>
         }
     </div>
@@ -127,12 +129,13 @@
         StateHasChanged();
 
         await StatsCacheService.ForceRefreshAsync();
-        await ReplayService.RefreshSessionIndexAsync(force: true);
+        await ReplayService.RefreshSessionIndexAsync(true);
         _stats = await GamificationService.ForceRefreshDashboardAsync();
 
         _refreshing = false;
         StateHasChanged();
     }
+
 }
 
 <style>

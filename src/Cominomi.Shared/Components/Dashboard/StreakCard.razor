@@ -3,7 +3,7 @@
     <div class="streak-card-main">
         @if (Current > 0)
         {
-            <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Color="Color.Primary" Size="Size.Large" />
+            <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Color="Color.Primary" Size="Size.Large"/>
         }
         <span class="streak-card-number">@Current</span>
         <span class="streak-card-unit">일</span>
@@ -12,7 +12,8 @@
         <div class="streak-card-detail">최장: <span class="streak-card-detail-value">@(Longest)일</span></div>
         @if (LastActiveDate.HasValue)
         {
-            <div class="streak-card-detail">마지막 활동: <span class="streak-card-detail-value">@TimeAgo(LastActiveDate.Value)</span></div>
+            <div class="streak-card-detail">마지막 활동: <span
+                    class="streak-card-detail-value">@TimeAgo(LastActiveDate.Value)</span></div>
         }
     </div>
 </div>
@@ -30,6 +31,7 @@
         if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}시간 전";
         return $"{(int)diff.TotalDays}일 전";
     }
+
 }
 
 <style>

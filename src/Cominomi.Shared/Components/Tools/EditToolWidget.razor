@@ -1,9 +1,8 @@
 @using System.Text.Json
-
 <div class="tool-widget tool-widget-edit">
     <div class="tool-widget-header">
         <MudIcon Icon="@Icons.Material.Filled.EditNote" Size="Size.Small"
-                 Style="width: 14px; height: 14px; opacity: 0.6;" />
+                 Style="width: 14px; height: 14px; opacity: 0.6;"/>
         <span class="tool-widget-filepath">@_filePath</span>
     </div>
     @if (_oldLines.Length > 0 || _newLines.Length > 0)
@@ -28,8 +27,7 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public ToolCall Tool { get; set; } = default!;
+    [Parameter][EditorRequired] public ToolCall Tool { get; set; } = default!;
 
     private string _filePath = "";
     private string[] _oldLines = [];
@@ -68,7 +66,10 @@
             else
                 _newLines = [];
         }
-        catch (JsonException) { /* malformed tool input — render empty */ }
+        catch (JsonException)
+        {
+            /* malformed tool input — render empty */
+        }
     }
 
     private static string ShortenPath(string path)
@@ -77,4 +78,5 @@
         var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         return parts.Length <= 3 ? normalized : string.Join("/", parts[^3..]);
     }
+
 }

@@ -1,4 +1,3 @@
-@using Microsoft.Extensions.Logging
 @inherits LayoutComponentBase
 @inject IChatState ChatState
 @inject IGitService GitService
@@ -14,23 +13,26 @@
 @inject IReleaseNotesService ReleaseNotesService
 @inject INotificationService NotificationService
 @inject INotificationHistoryService NotificationHistory
+@using System.Diagnostics
+@using System.Reflection
+@using Microsoft.Extensions.Logging
 @implements IAsyncDisposable
 
-<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="ThemeService.Theme" />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="ThemeService.Theme"/>
+<MudPopoverProvider/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
 
-<Cominomi.Shared.Components.Chat.ImageLightbox />
-<Cominomi.Shared.Components.Chat.FilePreviewDialog />
+<Cominomi.Shared.Components.Chat.ImageLightbox/>
+<Cominomi.Shared.Components.Chat.FilePreviewDialog/>
 
 @if (ChatState.ShowSettings)
 {
-    <SettingsPage />
+    <SettingsPage/>
 }
 @if (ChatState.ShowNotifications)
 {
-    <NotificationHistoryView />
+    <NotificationHistoryView/>
 }
 
 @{
@@ -38,88 +40,92 @@
 }
 <div class="cominomi-shell @(!_sidebarOpen ? "sidebar-collapsed" : "")"
      style="@(anyOverlay ? "display:none;height:0;overflow:hidden" : "")">
-        @* === Left Panel: Sidebar === *@
-        <aside class="cominomi-sidebar">
-            <SidebarToolbar SidebarOpen="_sidebarOpen"
-                            OnToggleSidebar="@(() => _sidebarOpen = !_sidebarOpen)"
-                            OnOpenNotifications="OpenNotifications" />
-            <SessionList />
-            <SidebarFooter OnOpenSettings="@(() => ChatState.OpenSettings())" />
-        </aside>
+    @* === Left Panel: Sidebar === *@
+    <aside class="cominomi-sidebar">
+        <SidebarToolbar SidebarOpen="_sidebarOpen"
+                        OnToggleSidebar="@(() => _sidebarOpen = !_sidebarOpen)"
+                        OnOpenNotifications="OpenNotifications"/>
+        <SessionList/>
+        <SidebarFooter OnOpenSettings="@(() => ChatState.OpenSettings())"/>
+    </aside>
 
-        @* === Sidebar ↔ Main Resizer === *@
-        @if (_sidebarOpen)
-        {
-            <PanelResizer PanelId="sidebar" CurrentSize="_sidebarWidth" MinSize="180" MaxSize="480"
-                          OnResize="HandleSidebarResize" />
-        }
+    @* === Sidebar ↔ Main Resizer === *@
+    @if (_sidebarOpen)
+    {
+        <PanelResizer PanelId="sidebar" CurrentSize="_sidebarWidth" MinSize="180" MaxSize="480"
+                      OnResize="HandleSidebarResize"/>
+    }
 
-        @* === Center Panel: Chat + Right Panel === *@
-        @{
-            bool showRightPanel = ChatState.CurrentSession != null
-                                  && ChatState.CurrentSession.Status != SessionStatus.Pending;
-        }
-        <main class="cominomi-main">
-            <div class="main-left-col">
-                <MainToolbar />
+    @* === Center Panel: Chat + Right Panel === *@
+    @{
+        var showRightPanel = ChatState.CurrentSession != null
+                             && ChatState.CurrentSession.Status != SessionStatus.Pending;
+    }
+    <main class="cominomi-main">
+        <div class="main-left-col">
+            <MainToolbar/>
 
-                @if (ChatState.Tabs.OpenTabs.Count > 1)
-                {
-                    <MainTabBar />
+            @if (ChatState.Tabs.OpenTabs.Count > 1)
+            {
+                <MainTabBar/>
+            }
+
+            <div class="main-content">
+                @{
+                    var activeType = ChatState.Tabs.ActiveTab?.Type;
+                    var isChatTab = activeType is null or MainTabType.Chat;
                 }
 
-                <div class="main-content">
-                    @{
-                        var activeType = ChatState.Tabs.ActiveTab?.Type;
-                        var isChatTab = activeType is null or MainTabType.Chat;
-                    }
-
-                    @* ChatView는 항상 렌더링 — 탭 전환 시에도 프로세스가 유지되도록 display로 토글 *@
-                    <div style="@(isChatTab ? "flex:1;min-height:0;display:flex;flex-direction:column" : "display:none;height:0;overflow:hidden")">
-                        @Body
-                    </div>
-
-                    @if (activeType == MainTabType.FileContent && ChatState.Tabs.ActiveTab?.FilePath != null)
-                    {
-                        @if (ChatState.Tabs.ActiveTab.ContentEvicted)
-                        {
-                            <div style="display: flex; align-items: center; justify-content: center; flex:1; opacity: 0.5;">
-                                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
-                                <span>Reloading…</span>
-                            </div>
-                        }
-                        else
-                        {
-                            <FileContentView @key="ChatState.Tabs.ActiveTab.Id"
-                                             FilePath="@ChatState.Tabs.ActiveTab.FilePath"
-                                             Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")" />
-                        }
-                    }
-                    else if (activeType == MainTabType.FileDiff && ChatState.Tabs.ActiveTab?.DiffData != null)
-                    {
-                        <FileDiffView @key="ChatState.Tabs.ActiveTab.Id" Diff="ChatState.Tabs.ActiveTab.DiffData" />
-                    }
+                @* ChatView는 항상 렌더링 — 탭 전환 시에도 프로세스가 유지되도록 display로 토글 *@
+                <div
+                    style="@(isChatTab ? "flex:1;min-height:0;display:flex;flex-direction:column" : "display:none;height:0;overflow:hidden")">
+                    @Body
                 </div>
+
+                @if (activeType == MainTabType.FileContent && ChatState.Tabs.ActiveTab?.FilePath != null)
+                {
+                    @if (ChatState.Tabs.ActiveTab.ContentEvicted)
+                    {
+                        <div style="display: flex; align-items: center; justify-content: center; flex:1; opacity: 0.5;">
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2"/>
+                            <span>Reloading…</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <FileContentView @key="ChatState.Tabs.ActiveTab.Id"
+                                         FilePath="@ChatState.Tabs.ActiveTab.FilePath"
+                                         Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")"/>
+                    }
+                }
+                else if (activeType == MainTabType.FileDiff && ChatState.Tabs.ActiveTab?.DiffData != null)
+                {
+                    <FileDiffView @key="ChatState.Tabs.ActiveTab.Id" Diff="ChatState.Tabs.ActiveTab.DiffData"/>
+                }
             </div>
+        </div>
 
-            @if (showRightPanel)
-            {
-                <PanelResizer PanelId="rightpanel" CurrentSize="_rightPanelWidth"
-                              MinSize="280" MaxSize="600" Reverse="true"
-                              OnResize="HandleRightPanelResize" />
+        @if (showRightPanel)
+        {
+            <PanelResizer PanelId="rightpanel" CurrentSize="_rightPanelWidth"
+                          MinSize="280" MaxSize="600" Reverse="true"
+                          OnResize="HandleRightPanelResize"/>
 
-                <div class="main-right-col" style="width: @(_rightPanelWidth)px;">
-                    <div class="right-panel-spacer"></div>
-                    <EmbeddedDiffPanel />
-                </div>
-            }
-        </main>
+            <div class="main-right-col" style="width: @(_rightPanelWidth)px;">
+                <div class="right-panel-spacer"></div>
+                <EmbeddedDiffPanel/>
+            </div>
+        }
+    </main>
 
-    </div>
+</div>
 
-<SetupDialog IsOpen="_setupOpen" IsOpenChanged="OnSetupVisibleChanged" />
-<Cominomi.Shared.Components.Onboarding.OnboardingDialog IsOpen="_onboardingOpen" IsOpenChanged="OnOnboardingVisibleChanged" OnCompleted="OnOnboardingCompleted" />
-<Cominomi.Shared.Components.Onboarding.WhatsNewDialog IsOpen="_whatsNewOpen" IsOpenChanged="OnWhatsNewVisibleChanged" LastSeenVersion="@_lastSeenVersion" />
+<SetupDialog IsOpen="_setupOpen" IsOpenChanged="OnSetupVisibleChanged"/>
+<Cominomi.Shared.Components.Onboarding.OnboardingDialog IsOpen="_onboardingOpen"
+                                                        IsOpenChanged="OnOnboardingVisibleChanged"
+                                                        OnCompleted="OnOnboardingCompleted"/>
+<Cominomi.Shared.Components.Onboarding.WhatsNewDialog IsOpen="_whatsNewOpen" IsOpenChanged="OnWhatsNewVisibleChanged"
+                                                      LastSeenVersion="@_lastSeenVersion"/>
 
 @code {
     private bool _sidebarOpen = true;
@@ -174,15 +180,22 @@
 
             // Apply UI scale from persisted settings
             var settings = await SettingsService.LoadAsync();
-            double scale = settings.UiScale;
+            var scale = settings.UiScale;
             if (scale == 0)
                 scale = await JS.InvokeAsync<double>("getDefaultUiScale");
             await JS.InvokeVoidAsync("setUiScale", scale);
         }
     }
 
-    private void HandleSidebarResize(int newWidth) => _sidebarWidth = newWidth;
-    private void HandleRightPanelResize(int newWidth) => _rightPanelWidth = newWidth;
+    private void HandleSidebarResize(int newWidth)
+    {
+        _sidebarWidth = newWidth;
+    }
+
+    private void HandleRightPanelResize(int newWidth)
+    {
+        _rightPanelWidth = newWidth;
+    }
 
     [JSInvokable]
     public void OnToggleSidebarShortcut()
@@ -246,7 +259,7 @@
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"HandleThemeChanged failed: {ex}");
+                Debug.WriteLine($"HandleThemeChanged failed: {ex}");
             }
         });
     }
@@ -257,14 +270,14 @@
         {
             try
             {
-                double scale = settings.UiScale;
+                var scale = settings.UiScale;
                 if (scale == 0)
                     scale = await JS.InvokeAsync<double>("getDefaultUiScale");
                 await JS.InvokeVoidAsync("setUiScale", scale);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"HandleUiScaleChanged failed: {ex}");
+                Debug.WriteLine($"HandleUiScaleChanged failed: {ex}");
             }
         });
     }
@@ -304,10 +317,7 @@
                     try
                     {
                         await UpdateService.DownloadUpdateAsync();
-                        await InvokeAsync(() =>
-                        {
-                            Snackbar.AppUpdateReady(() => UpdateService.ApplyUpdateAndRestart());
-                        });
+                        await InvokeAsync(() => { Snackbar.AppUpdateReady(() => UpdateService.ApplyUpdateAndRestart()); });
                     }
                     catch (Exception ex)
                     {
@@ -356,10 +366,7 @@
                             try
                             {
                                 await UpdateService.DownloadUpdateAsync();
-                                await InvokeAsync(() =>
-                                {
-                                    Snackbar.AppUpdateReady(() => UpdateService.ApplyUpdateAndRestart());
-                                });
+                                await InvokeAsync(() => { Snackbar.AppUpdateReady(() => UpdateService.ApplyUpdateAndRestart()); });
                             }
                             catch (Exception ex)
                             {
@@ -389,7 +396,10 @@
         });
     }
 
-    private void OpenNotifications() => ChatState.OpenNotifications();
+    private void OpenNotifications()
+    {
+        ChatState.OpenNotifications();
+    }
 
     // --- Onboarding / What's New sequencing ---
 
@@ -442,14 +452,14 @@
 
     private async Task TryShowWhatsNewAsync(AppSettings settings)
     {
-        var currentVersion = System.Reflection.Assembly.GetEntryAssembly()
+        var currentVersion = Assembly.GetEntryAssembly()
             ?.GetName().Version?.ToString(3) ?? "";
 
         if (string.IsNullOrEmpty(currentVersion))
             return;
 
-        bool shouldShow = string.IsNullOrEmpty(settings.LastSeenVersion)
-            || VersionComparer.IsOutdated(settings.LastSeenVersion, currentVersion);
+        var shouldShow = string.IsNullOrEmpty(settings.LastSeenVersion)
+                         || VersionComparer.IsOutdated(settings.LastSeenVersion, currentVersion);
 
         if (shouldShow)
         {
@@ -480,7 +490,7 @@
         _whatsNewOpen = visible;
         if (!visible)
         {
-            var currentVersion = System.Reflection.Assembly.GetEntryAssembly()
+            var currentVersion = Assembly.GetEntryAssembly()
                 ?.GetName().Version?.ToString(3) ?? "";
             await UpdateLastSeenVersionAsync(currentVersion);
         }
@@ -513,7 +523,7 @@
         });
     }
 
-    private HashSet<string> _reloadingTabs = new();
+    private readonly HashSet<string> _reloadingTabs = new();
 
     private async Task ReloadEvictedContent(MainTab tab)
     {
@@ -551,7 +561,12 @@
         {
             await JS.InvokeVoidAsync("unregisterPanelShortcuts");
         }
-        catch { /* May already be disposed */ }
+        catch
+        {
+            /* May already be disposed */
+        }
+
         _panelShortcutRef?.Dispose();
     }
+
 }

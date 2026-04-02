@@ -1,10 +1,8 @@
-@using Cominomi.Shared.Models
-
 @if (IsLoading)
 {
     <div class="branch-selector-loading">
         <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                             Style="width: 14px; height: 14px; color: var(--accent);" />
+                             Style="width: 14px; height: 14px; color: var(--accent);"/>
         <span>브랜치 불러오는 중...</span>
     </div>
 }
@@ -13,10 +11,10 @@ else if (BranchGroups.Count > 0)
     <div class="branch-selector-wrapper">
         <button class="branch-selector-pill" type="button" @onclick="ToggleBranchMenu">
             <MudIcon Icon="@Icons.Material.Filled.AccountTree"
-                     Style="font-size: 16px; opacity: 0.7;" />
+                     Style="font-size: 16px; opacity: 0.7;"/>
             <span class="branch-selector-name">@SelectedBranch</span>
             <MudIcon Icon="@Icons.Material.Filled.UnfoldMore"
-                     Style="font-size: 16px; opacity: 0.4;" />
+                     Style="font-size: 16px; opacity: 0.4;"/>
         </button>
 
         <MudPopover Open="@_branchMenuOpen" AnchorOrigin="Origin.BottomCenter"
@@ -28,7 +26,7 @@ else if (BranchGroups.Count > 0)
                               Immediate="true"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.Search"
-                              Style="font-size: var(--text-sm);" />
+                              Style="font-size: var(--text-sm);"/>
             </div>
             <MudList T="string" Dense="true" Class="branch-list">
                 @foreach (var group in FilteredBranchGroups)
@@ -40,12 +38,12 @@ else if (BranchGroups.Count > 0)
                                      Class="@(branch == SelectedBranch ? "branch-item-active" : "")">
                             <div class="branch-item-content">
                                 <MudIcon Icon="@Icons.Material.Filled.AccountTree"
-                                         Style="font-size: 14px; opacity: 0.5;" />
+                                         Style="font-size: 14px; opacity: 0.5;"/>
                                 <span class="branch-item-name">@branch</span>
                                 @if (branch == SelectedBranch)
                                 {
                                     <MudIcon Icon="@Icons.Material.Filled.Check"
-                                             Style="font-size: 14px; color: var(--accent);" />
+                                             Style="font-size: 14px; color: var(--accent);"/>
                                 }
                             </div>
                         </MudListItem>
@@ -61,14 +59,14 @@ else if (BranchGroups.Count > 0)
         @if (_branchMenuOpen)
         {
             <MudOverlay Visible="true" OnClick="CloseBranchMenu"
-                        DarkBackground="false" ZIndex="1" />
+                        DarkBackground="false" ZIndex="1"/>
         }
     </div>
 }
 
 @code {
-    [Parameter, EditorRequired] public List<BranchGroup> BranchGroups { get; set; } = [];
-    [Parameter, EditorRequired] public string SelectedBranch { get; set; } = "";
+    [Parameter][EditorRequired] public List<BranchGroup> BranchGroups { get; set; } = [];
+    [Parameter][EditorRequired] public string SelectedBranch { get; set; } = "";
     [Parameter] public EventCallback<string> SelectedBranchChanged { get; set; }
     [Parameter] public bool IsLoading { get; set; }
 
@@ -102,4 +100,5 @@ else if (BranchGroups.Count > 0)
         _branchSearchText = "";
         await SelectedBranchChanged.InvokeAsync(branch);
     }
+
 }

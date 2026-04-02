@@ -5,9 +5,6 @@ namespace Cominomi.Shared.Services;
 
 public static partial class DiffParser
 {
-    [GeneratedRegex(@"^@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@")]
-    private static partial Regex HunkHeaderRegex();
-
     public static ParsedDiff Parse(string unifiedDiff)
     {
         var result = new ParsedDiff();
@@ -16,7 +13,7 @@ public static partial class DiffParser
 
         var lines = unifiedDiff.Split('\n');
         DiffHunk? currentHunk = null;
-        int prevHunkNewEnd = 1; // 1-based line after previous hunk's new-side range
+        var prevHunkNewEnd = 1; // 1-based line after previous hunk's new-side range
 
         foreach (var line in lines)
         {
@@ -83,4 +80,7 @@ public static partial class DiffParser
 
         return result;
     }
+
+    [GeneratedRegex(@"^@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@")]
+    private static partial Regex HunkHeaderRegex();
 }

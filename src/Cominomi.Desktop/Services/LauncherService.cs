@@ -4,65 +4,49 @@ using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Desktop.Services;
 
-public class LauncherService : ILauncherService
+public class LauncherService(IShellService shell, ILogger<LauncherService> logger) : ILauncherService
 {
-    private readonly IShellService _shell;
-    private readonly ILogger<LauncherService> _logger;
-    private List<IdeInfo>? _cachedIdes;
-
-    private record IdeDefinition(
-        string Name, string Icon,
-        string? WinCommand, string? MacCommand, string? MacAppName);
-
     private static readonly IdeDefinition[] IdeDefinitions =
     [
-        new("VS Code",       "vscode",   "code",       "code",      "Visual Studio Code"),
-        new("Cursor",        "cursor",   "cursor",     "cursor",    "Cursor"),
-        new("Windsurf",      "windsurf", "windsurf",   "windsurf",  "Windsurf"),
-        new("Visual Studio", "vs",       "devenv",     null,        null),
-        new("Rider",         "rider",    "rider64",    "rider",     "Rider"),
-        new("WebStorm",      "webstorm", "webstorm64", "webstorm",  "WebStorm"),
-        new("IntelliJ IDEA", "idea",     "idea64",     "idea",      "IntelliJ IDEA"),
-        new("GoLand",        "goland",   "goland64",   "goland",    "GoLand"),
-        new("Fleet",         "fleet",    "fleet",      "fleet",     "Fleet"),
-        new("Zed",           "zed",      null,         "zed",       "Zed"),
-        new("Sublime Text",  "sublime",  "subl",       "subl",      "Sublime Text"),
+        new("VS Code", "vscode", "code", "code", "Visual Studio Code"),
+        new("Cursor", "cursor", "cursor", "cursor", "Cursor"),
+        new("Windsurf", "windsurf", "windsurf", "windsurf", "Windsurf"),
+        new("Visual Studio", "vs", "devenv", null, null),
+        new("Rider", "rider", "rider64", "rider", "Rider"),
+        new("WebStorm", "webstorm", "webstorm64", "webstorm", "WebStorm"),
+        new("IntelliJ IDEA", "idea", "idea64", "idea", "IntelliJ IDEA"),
+        new("GoLand", "goland", "goland64", "goland", "GoLand"),
+        new("Fleet", "fleet", "fleet", "fleet", "Fleet"),
+        new("Zed", "zed", null, "zed", "Zed"),
+        new("Sublime Text", "sublime", "subl", "subl", "Sublime Text")
     ];
 
-    public LauncherService(IShellService shell, ILogger<LauncherService> logger)
-    {
-        _shell = shell;
-        _logger = logger;
-    }
+    private List<IdeInfo>? _cachedIdes;
 
     public async Task OpenFolderAsync(string folderPath)
     {
         try
         {
             if (OperatingSystem.IsWindows())
-            {
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = "explorer.exe",
                     Arguments = $"\"{folderPath}\"",
                     UseShellExecute = true
                 });
-            }
             else if (OperatingSystem.IsMacOS())
-            {
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = "open",
                     Arguments = $"\"{folderPath}\"",
                     UseShellExecute = false
                 });
-            }
 
             await Task.CompletedTask;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to open folder: {Path}", folderPath);
+            logger.LogError(ex, "Failed to open folder: {Path}", folderPath);
         }
     }
 
@@ -83,7 +67,7 @@ public class LauncherService : ILauncherService
                 return;
             }
 
-            var resolved = await _shell.WhichAsync(ideCommand);
+            var resolved = await shell.WhichAsync(ideCommand);
             var command = resolved ?? ideCommand;
 
             Process.Start(new ProcessStartInfo
@@ -95,7 +79,7 @@ public class LauncherService : ILauncherService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to open IDE {Ide} for path: {Path}", ideCommand, folderPath);
+            logger.LogError(ex, "Failed to open IDE {Ide} for path: {Path}", ideCommand, folderPath);
         }
     }
 
@@ -107,7 +91,6 @@ public class LauncherService : ILauncherService
         var result = new List<IdeInfo>();
 
         foreach (var def in IdeDefinitions)
-        {
             try
             {
                 var detected = await TryDetectIdeAsync(def);
@@ -116,9 +99,8 @@ public class LauncherService : ILauncherService
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "IDE detection skipped: {Name}", def.Name);
+                logger.LogDebug(ex, "IDE detection skipped: {Name}", def.Name);
             }
-        }
 
         _cachedIdes = result;
         return result;
@@ -130,7 +112,7 @@ public class LauncherService : ILauncherService
         if (command == null) return null;
 
         // Tier 1: CLI command via WhichAsync
-        var path = await _shell.WhichAsync(command);
+        var path = await shell.WhichAsync(command);
         if (path != null)
             return new IdeInfo(def.Name, command, def.Icon);
 
@@ -158,4 +140,11 @@ public class LauncherService : ILauncherService
 
         return null;
     }
+
+    private record IdeDefinition(
+        string Name,
+        string Icon,
+        string? WinCommand,
+        string? MacCommand,
+        string? MacAppName);
 }

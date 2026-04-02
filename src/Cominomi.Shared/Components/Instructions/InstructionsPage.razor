@@ -1,4 +1,4 @@
-@using Cominomi.Shared.Models
+@using System.Text.RegularExpressions
 @inject IInstructionsService InstructionsService
 @inject IChatState ChatState
 @inject ISnackbar Snackbar
@@ -13,7 +13,7 @@
                                  Icon="@Icons.Material.Filled.Visibility"
                                  ToggledIcon="@Icons.Material.Filled.Edit"
                                  Size="Size.Small" Color="Color.Primary"
-                                 title="@(_showPreview ? "에디터로 전환" : "프리뷰로 전환")" />
+                                 title="@(_showPreview ? "에디터로 전환" : "프리뷰로 전환")"/>
         </ExtraActions>
     </ClaudeSettingScopeHeader>
 
@@ -41,7 +41,7 @@
             <MudTextField T="string" @bind-Value="_instruction.Content"
                           Variant="Variant.Outlined" Lines="25"
                           Placeholder="# CLAUDE.md&#10;&#10;이 파일은 Claude Code에 프로젝트 관련 지침을 제공합니다."
-                          Style="font-family: monospace; font-size: 0.8125rem;" />
+                          Style="font-family: monospace; font-size: 0.8125rem;"/>
         }
 
         @if (_instruction.ImportRefs.Count > 0)
@@ -63,11 +63,13 @@
 </div>
 
 @code {
+
     private InstructionFile _instruction = new()
     {
         Scope = ClaudeSettingsScope.Global,
         FilePath = ""
     };
+
     private ClaudeSettingsScope _scope = ClaudeSettingsScope.Global;
     private string? _projectPath;
     private bool _showPreview;
@@ -125,27 +127,28 @@
             .Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
         // Headings
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"^### (.+)$",
-            "<h3>$1</h3>", System.Text.RegularExpressions.RegexOptions.Multiline);
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"^## (.+)$",
-            "<h2>$1</h2>", System.Text.RegularExpressions.RegexOptions.Multiline);
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"^# (.+)$",
-            "<h1>$1</h1>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = Regex.Replace(html, @"^### (.+)$",
+            "<h3>$1</h3>", RegexOptions.Multiline);
+        html = Regex.Replace(html, @"^## (.+)$",
+            "<h2>$1</h2>", RegexOptions.Multiline);
+        html = Regex.Replace(html, @"^# (.+)$",
+            "<h1>$1</h1>", RegexOptions.Multiline);
         // Bold and italic
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
+        html = Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+        html = Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
         // Inline code
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"`(.+?)`",
+        html = Regex.Replace(html, @"`(.+?)`",
             "<code style='background: var(--mud-palette-background); padding: 2px 4px; border-radius: 3px;'>$1</code>");
         // List items
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"^- (.+)$",
-            "<li>$1</li>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = Regex.Replace(html, @"^- (.+)$",
+            "<li>$1</li>", RegexOptions.Multiline);
         // Paragraphs
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"\n\n", "</p><p>");
+        html = Regex.Replace(html, @"\n\n", "</p><p>");
         html = $"<div class='instructions-md-content'><p>{html}</p></div>";
 
         return html;
     }
+
 }
 
 <style>
@@ -159,9 +162,30 @@
         max-height: 60vh;
     }
 
-    .instructions-md-content h1 { font-size: 1.5rem; font-weight: 700; margin: 16px 0 8px; }
-    .instructions-md-content h2 { font-size: 1.25rem; font-weight: 600; margin: 14px 0 6px; }
-    .instructions-md-content h3 { font-size: 1.1rem; font-weight: 600; margin: 12px 0 4px; }
-    .instructions-md-content li { margin-left: 20px; list-style: disc; }
-    .instructions-md-content p { margin: 8px 0; }
+    .instructions-md-content h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 16px 0 8px;
+    }
+
+    .instructions-md-content h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 14px 0 6px;
+    }
+
+    .instructions-md-content h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 12px 0 4px;
+    }
+
+    .instructions-md-content li {
+        margin-left: 20px;
+        list-style: disc;
+    }
+
+    .instructions-md-content p {
+        margin: 8px 0;
+    }
 </style>

@@ -1,10 +1,8 @@
-@using Cominomi.Shared.Models
-
 <div class="stack gap-4">
     @* Allow rules *@
     <div>
         <div class="d-flex align-center gap-2 mb-2">
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small"/>
             <span class="typo-subtitle2" style="color: var(--mud-palette-success);">Allow</span>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@(Permissions?.Allow?.Count ?? 0)</MudChip>
         </div>
@@ -23,17 +21,20 @@
         <div class="d-flex gap-2">
             <MudTextField T="string" @bind-Value="_allowInput" Placeholder="Bash(npm run *)"
                           Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1;"
-                          OnKeyUp="@(e => { if (e.Key == "Enter") AddRule("allow"); })"
-                          HelperText="도구 패턴 입력 후 Enter 또는 추가 버튼" />
+                          OnKeyUp="@(e =>
+                                   {
+                                       if (e.Key == "Enter") AddRule("allow");
+                                   })"
+                          HelperText="도구 패턴 입력 후 Enter 또는 추가 버튼"/>
             <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Success"
-                           OnClick="@(() => AddRule("allow"))" Size="Size.Small" />
+                           OnClick="@(() => AddRule("allow"))" Size="Size.Small"/>
         </div>
     </div>
 
     @* Ask rules *@
     <div>
         <div class="d-flex align-center gap-2 mb-2">
-            <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Color="Color.Warning" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Color="Color.Warning" Size="Size.Small"/>
             <span class="typo-subtitle2" style="color: var(--mud-palette-warning);">Ask</span>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@(Permissions?.Ask?.Count ?? 0)</MudChip>
         </div>
@@ -52,17 +53,20 @@
         <div class="d-flex gap-2">
             <MudTextField T="string" @bind-Value="_askInput" Placeholder="Edit(/src/**/*.config)"
                           Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1;"
-                          OnKeyUp="@(e => { if (e.Key == "Enter") AddRule("ask"); })"
-                          HelperText="확인이 필요한 도구 패턴" />
+                          OnKeyUp="@(e =>
+                                   {
+                                       if (e.Key == "Enter") AddRule("ask");
+                                   })"
+                          HelperText="확인이 필요한 도구 패턴"/>
             <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Warning"
-                           OnClick="@(() => AddRule("ask"))" Size="Size.Small" />
+                           OnClick="@(() => AddRule("ask"))" Size="Size.Small"/>
         </div>
     </div>
 
     @* Deny rules *@
     <div>
         <div class="d-flex align-center gap-2 mb-2">
-            <MudIcon Icon="@Icons.Material.Filled.Block" Color="Color.Error" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.Block" Color="Color.Error" Size="Size.Small"/>
             <span class="typo-subtitle2" style="color: var(--mud-palette-error);">Deny</span>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@(Permissions?.Deny?.Count ?? 0)</MudChip>
         </div>
@@ -81,10 +85,13 @@
         <div class="d-flex gap-2">
             <MudTextField T="string" @bind-Value="_denyInput" Placeholder="WebFetch(domain:*)"
                           Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1;"
-                          OnKeyUp="@(e => { if (e.Key == "Enter") AddRule("deny"); })"
-                          HelperText="차단할 도구 패턴" />
+                          OnKeyUp="@(e =>
+                                   {
+                                       if (e.Key == "Enter") AddRule("deny");
+                                   })"
+                          HelperText="차단할 도구 패턴"/>
             <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Error"
-                           OnClick="@(() => AddRule("deny"))" Size="Size.Small" />
+                           OnClick="@(() => AddRule("deny"))" Size="Size.Small"/>
         </div>
     </div>
 </div>
@@ -146,4 +153,5 @@
 
         await PermissionsChanged.InvokeAsync(Permissions);
     }
+
 }

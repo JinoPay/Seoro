@@ -1,35 +1,32 @@
-@using Cominomi.Shared.Models
-@using Cominomi.Shared.Services
-
 <div class="tool-group @(_expanded ? "expanded" : "") @(IsActive ? "running" : "")">
     <div class="tool-group-header" @onclick="Toggle">
         @if (IsActive)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 14px; height: 14px;" Color="Color.Warning" />
+                                 Style="width: 14px; height: 14px;" Color="Color.Warning"/>
         }
         else if (HasError)
         {
             <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
-                     Style="width: 16px; height: 16px;" />
+                     Style="width: 16px; height: 16px;"/>
         }
         else
         {
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
-                     Style="width: 16px; height: 16px;" />
+                     Style="width: 16px; height: 16px;"/>
         }
 
         <div class="tool-group-icons">
             @foreach (var icon in GetUniqueIcons())
             {
-                <MudIcon Icon="@icon" Size="Size.Small" Style="width: 14px; height: 14px; opacity: 0.5;" />
+                <MudIcon Icon="@icon" Size="Size.Small" Style="width: 14px; height: 14px; opacity: 0.5;"/>
             }
         </div>
 
         <span class="tool-group-summary">@Group.Summary</span>
 
         <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                 Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px; margin-left: auto;" />
+                 Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px; margin-left: auto;"/>
     </div>
 
     @if (_expanded)
@@ -39,7 +36,7 @@
             {
                 @if (part.ToolCall != null)
                 {
-                    <ToolCallCard Tool="part.ToolCall" />
+                    <ToolCallCard Tool="part.ToolCall"/>
                 }
             }
         </div>
@@ -47,11 +44,9 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public ContentGroup Group { get; set; } = default!;
+    [Parameter][EditorRequired] public ContentGroup Group { get; set; } = default!;
 
-    [Parameter]
-    public bool IsActive { get; set; }
+    [Parameter] public bool IsActive { get; set; }
 
     private bool _expanded;
     private bool _wasActive;
@@ -69,7 +64,10 @@
         _wasActive = IsActive;
     }
 
-    private void Toggle() => _expanded = !_expanded;
+    private void Toggle()
+    {
+        _expanded = !_expanded;
+    }
 
     private List<string> GetUniqueIcons()
     {
@@ -79,4 +77,5 @@
             .Distinct()
             .ToList();
     }
+
 }

@@ -5,53 +5,39 @@ namespace Cominomi.Shared.Models;
 
 public class StreamEvent
 {
-    [JsonPropertyName("type")]
-    public string Type { get; set; } = string.Empty;
+    [JsonPropertyName("content_block")] public ContentBlock? ContentBlock { get; set; }
 
-    [JsonPropertyName("subtype")]
-    public string? Subtype { get; set; }
+    [JsonPropertyName("delta")] public ContentDelta? Delta { get; set; }
 
-    [JsonPropertyName("message")]
-    public StreamMessage? Message { get; set; }
+    [JsonPropertyName("cost_usd")] public decimal? CostUsd { get; set; }
 
-    [JsonPropertyName("index")]
-    public int? Index { get; set; }
+    [JsonPropertyName("total_cost_usd")] public decimal? TotalCostUsd { get; set; }
 
-    [JsonPropertyName("content_block")]
-    public ContentBlock? ContentBlock { get; set; }
+    [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 
-    [JsonPropertyName("delta")]
-    public ContentDelta? Delta { get; set; }
+    [JsonPropertyName("index")] public int? Index { get; set; }
 
-    [JsonPropertyName("model")]
-    public string? Model { get; set; }
+    [JsonPropertyName("error")] public JsonElement? Error { get; set; }
 
-    [JsonPropertyName("error")]
-    public JsonElement? Error { get; set; }
+    [JsonPropertyName("message")] public StreamMessage? Message { get; set; }
 
-    [JsonPropertyName("cost_usd")]
-    public decimal? CostUsd { get; set; }
+    [JsonPropertyName("type")] public string Type { get; set; } = string.Empty;
 
-    [JsonPropertyName("total_cost_usd")]
-    public decimal? TotalCostUsd { get; set; }
-
-    [JsonPropertyName("result")]
-    public string? Result { get; set; }
-
-    [JsonPropertyName("session_id")]
-    public string? SessionId { get; set; }
+    [JsonPropertyName("model")] public string? Model { get; set; }
 
     [JsonPropertyName("parent_tool_use_id")]
     public string? ParentToolUseId { get; set; }
 
-    [JsonPropertyName("usage")]
-    public UsageInfo? Usage { get; set; }
+    [JsonPropertyName("result")] public string? Result { get; set; }
 
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+    [JsonPropertyName("session_id")] public string? SessionId { get; set; }
+
+    [JsonPropertyName("subtype")] public string? Subtype { get; set; }
+
+    [JsonPropertyName("usage")] public UsageInfo? Usage { get; set; }
 
     /// <summary>
-    /// Extract error message from either a string or structured error object.
+    ///     Extract error message from either a string or structured error object.
     /// </summary>
     public string? GetErrorMessage()
     {
@@ -70,89 +56,66 @@ public class StreamEvent
 
 public class StreamMessage
 {
-    [JsonPropertyName("id")]
-    public string Id { get; set; } = string.Empty;
+    [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 
-    [JsonPropertyName("role")]
-    public string Role { get; set; } = string.Empty;
+    [JsonPropertyName("content")] public List<ContentBlock>? Content { get; set; }
 
-    [JsonPropertyName("model")]
-    public string Model { get; set; } = string.Empty;
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
 
-    [JsonPropertyName("content")]
-    public List<ContentBlock>? Content { get; set; }
+    [JsonPropertyName("model")] public string Model { get; set; } = string.Empty;
 
-    [JsonPropertyName("stop_reason")]
-    public string? StopReason { get; set; }
+    [JsonPropertyName("role")] public string Role { get; set; } = string.Empty;
 
-    [JsonPropertyName("usage")]
-    public UsageInfo? Usage { get; set; }
+    [JsonPropertyName("stop_reason")] public string? StopReason { get; set; }
 
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+    [JsonPropertyName("usage")] public UsageInfo? Usage { get; set; }
 }
 
 public class ContentBlock
 {
-    [JsonPropertyName("type")]
-    public string Type { get; set; } = string.Empty;
+    [JsonPropertyName("is_error")] public bool? IsError { get; set; }
 
-    [JsonPropertyName("text")]
-    public string? Text { get; set; }
+    [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 
-    [JsonPropertyName("thinking")]
-    public string? Thinking { get; set; }
+    [JsonPropertyName("content")] public JsonElement? Content { get; set; }
 
-    [JsonPropertyName("id")]
-    public string? Id { get; set; }
+    [JsonPropertyName("input")] public JsonElement? Input { get; set; }
 
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
+    [JsonPropertyName("type")] public string Type { get; set; } = string.Empty;
 
-    [JsonPropertyName("input")]
-    public JsonElement? Input { get; set; }
+    [JsonPropertyName("id")] public string? Id { get; set; }
 
-    [JsonPropertyName("tool_use_id")]
-    public string? ToolUseId { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
 
-    [JsonPropertyName("content")]
-    public JsonElement? Content { get; set; }
+    [JsonPropertyName("text")] public string? Text { get; set; }
 
-    [JsonPropertyName("is_error")]
-    public bool? IsError { get; set; }
+    [JsonPropertyName("thinking")] public string? Thinking { get; set; }
 
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+    [JsonPropertyName("tool_use_id")] public string? ToolUseId { get; set; }
 }
 
 public class ContentDelta
 {
-    [JsonPropertyName("type")]
-    public string Type { get; set; } = string.Empty;
+    [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 
-    [JsonPropertyName("text")]
-    public string? Text { get; set; }
+    [JsonPropertyName("type")] public string Type { get; set; } = string.Empty;
 
-    [JsonPropertyName("partial_json")]
-    public string? PartialJson { get; set; }
+    [JsonPropertyName("partial_json")] public string? PartialJson { get; set; }
 
-    [JsonPropertyName("thinking")]
-    public string? Thinking { get; set; }
+    [JsonPropertyName("stop_reason")] public string? StopReason { get; set; }
 
-    [JsonPropertyName("stop_reason")]
-    public string? StopReason { get; set; }
+    [JsonPropertyName("text")] public string? Text { get; set; }
 
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+    [JsonPropertyName("thinking")] public string? Thinking { get; set; }
 }
 
 public class UsageInfo
 {
-    [JsonPropertyName("input_tokens")]
-    public int InputTokens { get; set; }
+    [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 
-    [JsonPropertyName("output_tokens")]
-    public int OutputTokens { get; set; }
+    [JsonPropertyName("input_tokens")] public int InputTokens { get; set; }
+
+    [JsonPropertyName("output_tokens")] public int OutputTokens { get; set; }
 
     [JsonPropertyName("cache_creation_input_tokens")]
     public int? CacheCreationInputTokens { get; set; }
@@ -162,7 +125,4 @@ public class UsageInfo
 
     [JsonPropertyName("server_tool_use_input_tokens")]
     public int? ServerToolUseInputTokens { get; set; }
-
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }

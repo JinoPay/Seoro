@@ -5,23 +5,28 @@ using Pty.Net;
 
 namespace Cominomi.Shared.Services;
 
-public class TerminalService : ITerminalService
+public class TerminalService(IShellService shellService, ILogger<TerminalService> logger)
+    : ITerminalService
 {
-    private readonly IShellService _shellService;
-    private readonly ILogger<TerminalService> _logger;
     private readonly ConcurrentDictionary<string, TerminalSession> _sessions = new();
 
-    public event Action<string, string>? OnOutput;
-    public event Action<string, int>? OnExited;
-
-    public TerminalService(IShellService shellService, ILogger<TerminalService> logger)
+    public async ValueTask DisposeAsync()
     {
-        _shellService = shellService;
-        _logger = logger;
+        var keys = _sessions.Keys.ToList();
+        foreach (var key in keys)
+            await StopAsync(key);
+        if (keys.Count > 0)
+            logger.LogDebug("All terminal sessions disposed ({Count} sessions)", keys.Count);
     }
 
+    public event Action<string, int>? OnExited;
+
+    public event Action<string, string>? OnOutput;
+
     public bool IsRunning(string sessionKey)
-        => _sessions.TryGetValue(sessionKey, out var s) && s.IsAlive;
+    {
+        return _sessions.TryGetValue(sessionKey, out var s) && s.IsAlive;
+    }
 
     public async Task StartAsync(string sessionKey, string workingDirectory, ShellInfo? shell = null)
     {
@@ -31,12 +36,13 @@ public class TerminalService : ITerminalService
         // Validate working directory exists — fall back to current directory
         if (!Directory.Exists(workingDirectory))
         {
-            _logger.LogWarning("Terminal CWD does not exist: {Dir}, falling back to current directory", workingDirectory);
+            logger.LogWarning("Terminal CWD does not exist: {Dir}, falling back to current directory",
+                workingDirectory);
             workingDirectory = Environment.CurrentDirectory;
         }
 
-        shell ??= await _shellService.GetTerminalShellAsync();
-        _logger.LogInformation("Starting PTY terminal for session {Key} with {Shell} in {Dir}",
+        shell ??= await shellService.GetTerminalShellAsync();
+        logger.LogInformation("Starting PTY terminal for session {Key} with {Shell} in {Dir}",
             sessionKey, shell.Type, workingDirectory);
 
         var args = new List<string>();
@@ -48,7 +54,7 @@ public class TerminalService : ITerminalService
 
         var env = new Dictionary<string, string>
         {
-            ["TERM"] = "xterm-256color",
+            ["TERM"] = "xterm-256color"
         };
 
         var options = new PtyOptions
@@ -59,7 +65,7 @@ public class TerminalService : ITerminalService
             Cwd = workingDirectory,
             Cols = 120,
             Rows = 30,
-            Environment = env,
+            Environment = env
         };
 
         var ptyConnection = await PtyProvider.SpawnAsync(options, CancellationToken.None);
@@ -76,7 +82,7 @@ public class TerminalService : ITerminalService
 
         ptyConnection.ProcessExited += (_, e) =>
         {
-            _logger.LogInformation("PTY process exited for session {Key} with code {Code}",
+            logger.LogInformation("PTY process exited for session {Key} with code {Code}",
                 sessionKey, e.ExitCode);
             session.MarkExited();
             OnExited?.Invoke(sessionKey, e.ExitCode);
@@ -84,22 +90,6 @@ public class TerminalService : ITerminalService
 
         // Background task to read PTY output
         _ = ReadPtyOutputAsync(sessionKey, ptyConnection, cts.Token);
-    }
-
-    public async Task WriteAsync(string sessionKey, string data)
-    {
-        if (!_sessions.TryGetValue(sessionKey, out var session)) return;
-
-        try
-        {
-            var bytes = Encoding.UTF8.GetBytes(data);
-            await session.Pty.WriterStream.WriteAsync(bytes);
-            await session.Pty.WriterStream.FlushAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Failed to write to PTY for session {Key}", sessionKey);
-        }
     }
 
     public Task StopAsync(string sessionKey)
@@ -114,18 +104,36 @@ public class TerminalService : ITerminalService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to kill PTY process for session {Key}", sessionKey);
+            logger.LogDebug(ex, "Failed to kill PTY process for session {Key}", sessionKey);
         }
+
         try
         {
             session.Pty.Dispose();
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to dispose PTY for session {Key}", sessionKey);
+            logger.LogDebug(ex, "Failed to dispose PTY for session {Key}", sessionKey);
         }
+
         session.Cts.Dispose();
         return Task.CompletedTask;
+    }
+
+    public async Task WriteAsync(string sessionKey, string data)
+    {
+        if (!_sessions.TryGetValue(sessionKey, out var session)) return;
+
+        try
+        {
+            var bytes = Encoding.UTF8.GetBytes(data);
+            await session.Pty.WriterStream.WriteAsync(bytes);
+            await session.Pty.WriterStream.FlushAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Failed to write to PTY for session {Key}", sessionKey);
+        }
     }
 
     /// <summary>Resize the PTY for the given session.</summary>
@@ -139,17 +147,8 @@ public class TerminalService : ITerminalService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to resize PTY for session {Key}", sessionKey);
+            logger.LogDebug(ex, "Failed to resize PTY for session {Key}", sessionKey);
         }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        var keys = _sessions.Keys.ToList();
-        foreach (var key in keys)
-            await StopAsync(key);
-        if (keys.Count > 0)
-            _logger.LogDebug("All terminal sessions disposed ({Count} sessions)", keys.Count);
     }
 
     private async Task ReadPtyOutputAsync(string sessionKey, IPtyConnection pty, CancellationToken ct)
@@ -176,20 +175,18 @@ public class TerminalService : ITerminalService
                 OnOutput?.Invoke(sessionKey, text);
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+        }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "PTY output read error for session {Key}", sessionKey);
+            logger.LogDebug(ex, "PTY output read error for session {Key}", sessionKey);
         }
     }
 
     private sealed class TerminalSession
     {
-        public IPtyConnection Pty { get; }
-        public CancellationTokenSource Cts { get; }
         private bool _exited;
-
-        public bool IsAlive => !_exited;
 
         public TerminalSession(IPtyConnection pty, CancellationTokenSource cts)
         {
@@ -197,6 +194,13 @@ public class TerminalService : ITerminalService
             Cts = cts;
         }
 
-        public void MarkExited() => _exited = true;
+        public bool IsAlive => !_exited;
+        public CancellationTokenSource Cts { get; }
+        public IPtyConnection Pty { get; }
+
+        public void MarkExited()
+        {
+            _exited = true;
+        }
     }
 }

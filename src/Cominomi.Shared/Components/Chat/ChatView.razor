@@ -1,5 +1,3 @@
-@using Cominomi.Shared.Models
-@using Microsoft.Extensions.Logging
 @inject IChatState ChatState
 @inject IChatMessageOrchestrator Orchestrator
 @inject IClaudeService ClaudeService
@@ -11,11 +9,13 @@
 @inject INotificationService NotificationService
 @inject INotificationHistoryService NotificationHistory
 @inject IChatEventBus EventBus
+@using Microsoft.Extensions.Logging
 @implements IDisposable
 
 @ChatContentFragment
 
 @code {
+
     private RenderFragment ChatContentFragment => __builder =>
     {
         var session = ChatState.CurrentSession;
@@ -23,58 +23,60 @@
         <div class="chat-container">
             @* Message area *@
             <CascadingValue Value="_askUserResponseCallback" Name="OnAskUserResponse">
-            <div class="message-area" id="message-list">
-                @if (session == null)
-                {
-                    <LandingPage @ref="_landingPage" />
-                }
-                else if (session.Messages.Count == 0)
-                {
-                    <div class="welcome-container">
-                        <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Color="Color.Primary" Style="opacity: 0.4;" />
-                        <span class="welcome-title">무엇을 도와드릴까요?</span>
-                        @if (session.Status == SessionStatus.Pending)
-                        {
-                            <BranchSelector BranchGroups="_branchGroups"
-                                            SelectedBranch="@_selectedBranch"
-                                            SelectedBranchChanged="@(b => _selectedBranch = b)"
-                                            IsLoading="_isLoadingBranches" />
-                        }
-                    </div>
-                }
-                else
-                {
-                    <div class="message-container">
-                        @foreach (var message in session.GetMessagesSnapshot())
-                        {
-                            <MessageBubble @key="message.Id" Message="message" />
-                        }
-                    </div>
-                }
-            </div>
-            @if (!_isAtBottom && session?.Messages.Count > 0)
-            {
-                <div class="scroll-to-bottom-btn @(_askUserBarVisible ? "askbar-active" : "")" @onclick="ScrollToBottom">
-                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                <div class="message-area" id="message-list">
+                    @if (session == null)
+                    {
+                        <LandingPage @ref="_landingPage"/>
+                    }
+                    else if (session.Messages.Count == 0)
+                    {
+                        <div class="welcome-container">
+                            <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Color="Color.Primary"
+                                     Style="opacity: 0.4;"/>
+                            <span class="welcome-title">무엇을 도와드릴까요?</span>
+                            @if (session.Status == SessionStatus.Pending)
+                            {
+                                <BranchSelector BranchGroups="_branchGroups"
+                                                SelectedBranch="@_selectedBranch"
+                                                SelectedBranchChanged="@(b => _selectedBranch = b)"
+                                                IsLoading="_isLoadingBranches"/>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="message-container">
+                            @foreach (var message in session.GetMessagesSnapshot())
+                            {
+                                <MessageBubble @key="message.Id" Message="message"/>
+                            }
+                        </div>
+                    }
                 </div>
-            }
+                @if (!_isAtBottom && session?.Messages.Count > 0)
+                {
+                    <div class="scroll-to-bottom-btn @(_askUserBarVisible ? "askbar-active" : "")"
+                         @onclick="ScrollToBottom">
+                        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small"/>
+                    </div>
+                }
             </CascadingValue>
 
             @* Quick response bar *@
             <QuickResponseBar IsVisible="@(_quickResponseVisible && !_planReviewVisible && !_askUserBarVisible)"
                               Options="_quickResponseOptions"
-                              OnResponse="HandleQuickResponse" />
+                              OnResponse="HandleQuickResponse"/>
 
             @* AskUserQuestion bar *@
             <AskUserQuestionBar IsVisible="@(_askUserBarVisible && !_planReviewVisible)"
                                 QuestionInput="@_askUserQuestionInput"
-                                OnResponse="HandleAskUserBarResponse" />
+                                OnResponse="HandleAskUserBarResponse"/>
 
             @* Plan review bar *@
             <PlanReviewBar IsVisible="_planReviewVisible"
                            PlanContent="@_planContent"
                            PlanFilePath="@_planFilePath"
-                           OnAction="HandlePlanReviewAction" />
+                           OnAction="HandlePlanReviewAction"/>
 
             @* Input area *@
             @if (session != null)
@@ -92,7 +94,7 @@
                            CurrentSession="@session"
                            PlanFilePath="@_lastPlanFilePath"
                            PlanContent="@_lastPlanContent"
-                           IsPlanReviewVisible="_planReviewVisible" />
+                           IsPlanReviewVisible="_planReviewVisible"/>
             }
         </div>
     };
@@ -156,9 +158,9 @@
         {
             try
             {
-                bool needsBranches = ChatState.CurrentSession?.Status == SessionStatus.Pending
-                                     && ChatState.CurrentSession?.Id != _branchesForSessionId
-                                     && !_isLoadingBranches;
+                var needsBranches = ChatState.CurrentSession?.Status == SessionStatus.Pending
+                                    && ChatState.CurrentSession?.Id != _branchesForSessionId
+                                    && !_isLoadingBranches;
 
                 var pendingMsg = ChatState.ConsumePendingMessage();
                 if (pendingMsg != null && ChatState.CurrentSession != null && !ChatState.IsStreaming)
@@ -409,6 +411,7 @@
                 {
                     ChatState.CurrentSession.PlanCompleted = false;
                 }
+
                 break;
 
             case PlanReviewAction.Advice:
@@ -424,11 +427,11 @@
     private Task HandleSend(ChatInputMessage input)
     {
         if (ChatState.CurrentSession == null || ChatState.IsStreaming
-            || (string.IsNullOrWhiteSpace(input.Text) && input.Attachments.Count == 0))
+                                             || (string.IsNullOrWhiteSpace(input.Text) && input.Attachments.Count == 0))
             return Task.CompletedTask;
 
         // Capture plan review state before clearing
-        bool wasPlanReviewVisible = _planReviewVisible;
+        var wasPlanReviewVisible = _planReviewVisible;
 
         _quickResponseVisible = false;
         _quickResponseOptions = [];
@@ -475,7 +478,9 @@
                 var result = await Orchestrator.SendAsync(session, input, branch, workspace, ct);
                 await ApplyResultAsync(result, session);
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException)
+            {
+            }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Unhandled exception in SendAsync for session {SessionId}", sessionId);
@@ -584,7 +589,7 @@
             var isCurrentSession = ChatState.CurrentSession?.Id == session.Id;
             var isViewing = isFocused && isCurrentSession;
 
-            NotificationHistory.Record(session.Title, body, type, session.Id, isRead: isViewing);
+            NotificationHistory.Record(session.Title, body, type, session.Id, isViewing);
 
             if (!isViewing)
                 await NotificationService.SendAsync(session.Title, body, type);
@@ -621,6 +626,8 @@
                 task.ContinueWith(static t => { _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
             cts.Dispose();
         }
+
         _sessionTasks.Clear();
     }
+
 }

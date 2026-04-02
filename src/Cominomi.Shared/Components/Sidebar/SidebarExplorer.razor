@@ -1,6 +1,6 @@
-@using Cominomi.Shared.Models
 @inject IChatState ChatState
 @inject IGitService GitService
+@using System.Timers
 @implements IDisposable
 
 <div class="sidebar-explorer">
@@ -9,13 +9,13 @@
         <div class="tree-header-actions">
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                            Style="width: 22px; height: 22px; opacity: 0.5;"
-                           OnClick="LoadFilesAsync" Disabled="_loading" />
+                           OnClick="LoadFilesAsync" Disabled="_loading"/>
         </div>
     </div>
 
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2" />
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2"/>
     }
     else if (_error != null)
     {
@@ -24,7 +24,7 @@
     else if (_tree.Count == 0)
     {
         <div class="sidebar-explorer-empty">
-            <MudIcon Icon="@Icons.Material.Filled.FolderOff" Size="Size.Large" Style="opacity: 0.15;" />
+            <MudIcon Icon="@Icons.Material.Filled.FolderOff" Size="Size.Large" Style="opacity: 0.15;"/>
             <span>No files found</span>
         </div>
     }
@@ -35,7 +35,7 @@
                           ExpandedDirs="_expandedDirs"
                           Diff="_diff"
                           OnToggleDir="ToggleDir"
-                          OnOpenFile="OpenFile" />
+                          OnOpenFile="OpenFile"/>
         </div>
     }
 </div>
@@ -48,12 +48,12 @@
     private string? _lastSessionId;
 
     // Per-session expanded dirs state
-    private Dictionary<string, HashSet<string>> _sessionExpandedDirs = new();
+    private readonly Dictionary<string, HashSet<string>> _sessionExpandedDirs = new();
     private HashSet<string> _expandedDirs = new();
 
     // FileSystemWatcher for throttled change detection
     private FileSystemWatcher? _watcher;
-    private System.Timers.Timer? _debounceTimer;
+    private Timer? _debounceTimer;
     private readonly object _debounceLock = new();
 
     protected override async Task OnInitializedAsync()
@@ -110,7 +110,7 @@
             EnableRaisingEvents = true
         };
 
-        _debounceTimer = new System.Timers.Timer(2000) { AutoReset = false };
+        _debounceTimer = new Timer(2000) { AutoReset = false };
         _debounceTimer.Elapsed += async (_, _) =>
         {
             try
@@ -118,7 +118,7 @@
                 await InvokeAsync(async () =>
                 {
                     var prevDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? new HashSet<string>();
-                    await LoadFilesAsync(preserveExpanded: true);
+                    await LoadFilesAsync(true);
                     var newDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? new HashSet<string>();
 
                     // Auto-expand directories of newly changed files
@@ -131,7 +131,10 @@
                     }
                 });
             }
-            catch { /* component may be disposed */ }
+            catch
+            {
+                /* component may be disposed */
+            }
         };
 
         void OnChange(object sender, FileSystemEventArgs e)
@@ -161,6 +164,7 @@
             _watcher.Dispose();
             _watcher = null;
         }
+
         lock (_debounceLock)
         {
             _debounceTimer?.Dispose();
@@ -186,7 +190,10 @@
                 var diffBase = !string.IsNullOrEmpty(session.Git.BaseBranch) ? session.Git.BaseBranch : "HEAD";
                 _diff = await GitService.GetDiffSummaryAsync(session.Git.WorktreePath, diffBase);
             }
-            catch { _diff = null; }
+            catch
+            {
+                _diff = null;
+            }
 
             _tree = BuildTree(files);
 
@@ -211,7 +218,10 @@
     }
 
     // Parameterless overload for button click
-    private Task LoadFilesAsync() => LoadFilesAsync(preserveExpanded: false);
+    private Task LoadFilesAsync()
+    {
+        return LoadFilesAsync(false);
+    }
 
     private async Task OpenFile(string filePath)
     {
@@ -239,7 +249,7 @@
     {
         var parts = filePath.Split('/');
         var currentPath = "";
-        for (int i = 0; i < parts.Length - 1; i++)
+        for (var i = 0; i < parts.Length - 1; i++)
         {
             currentPath = i == 0 ? parts[i] : $"{currentPath}/{parts[i]}";
             _expandedDirs.Add(currentPath);
@@ -269,10 +279,10 @@
             var currentList = root;
             var currentPath = "";
 
-            for (int i = 0; i < parts.Length; i++)
+            for (var i = 0; i < parts.Length; i++)
             {
                 currentPath = i == 0 ? parts[i] : $"{currentPath}/{parts[i]}";
-                bool isLast = i == parts.Length - 1;
+                var isLast = i == parts.Length - 1;
 
                 if (isLast)
                 {
@@ -286,6 +296,7 @@
                         dirMap[currentPath] = dirNode;
                         currentList.Add(dirNode);
                     }
+
                     currentList = dirNode.Children;
                 }
             }
@@ -340,15 +351,17 @@
                 }
                 else
                 {
-                    _tree = new();
+                    _tree = new List<FileNode>();
                     _diff = null;
                     _error = null;
                     _expandedDirs = new HashSet<string>();
                     StopWatching();
                     StateHasChanged();
                 }
+
                 return;
             }
+
             StateHasChanged();
         });
     }

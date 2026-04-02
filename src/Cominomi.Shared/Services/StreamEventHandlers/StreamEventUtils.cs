@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Cominomi.Shared.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services.StreamEventHandlers;
 
@@ -15,10 +14,8 @@ internal static class StreamEventUtils
         {
             var parts = new List<string>();
             foreach (var item in content.EnumerateArray())
-            {
                 if (item.TryGetProperty("text", out var textProp) && textProp.ValueKind == JsonValueKind.String)
                     parts.Add(textProp.GetString() ?? "");
-            }
             return string.Join("\n", parts);
         }
 
@@ -32,11 +29,14 @@ internal static class StreamEventUtils
 
         if (evt.ExtensionData != null)
         {
-            if (evt.ExtensionData.TryGetValue("cost_usd", out var costEl) && costEl.TryGetDecimal(out var cost) && cost > 0)
+            if (evt.ExtensionData.TryGetValue("cost_usd", out var costEl) && costEl.TryGetDecimal(out var cost) &&
+                cost > 0)
                 return cost;
-            if (evt.ExtensionData.TryGetValue("total_cost_usd", out var tcEl) && tcEl.TryGetDecimal(out var tc) && tc > 0)
+            if (evt.ExtensionData.TryGetValue("total_cost_usd", out var tcEl) && tcEl.TryGetDecimal(out var tc) &&
+                tc > 0)
                 return tc;
         }
+
         return null;
     }
 
@@ -57,14 +57,15 @@ internal static class StreamEventUtils
             cacheRead = cr;
 
         if (input == 0 && output == 0
-            && evt.ExtensionData.TryGetValue("usage", out var usageEl)
-            && usageEl.ValueKind == JsonValueKind.Object)
+                       && evt.ExtensionData.TryGetValue("usage", out var usageEl)
+                       && usageEl.ValueKind == JsonValueKind.Object)
         {
             if (usageEl.TryGetProperty("input_tokens", out var inProp))
                 inProp.TryGetInt32(out input);
             if (usageEl.TryGetProperty("output_tokens", out var outProp))
                 outProp.TryGetInt32(out output);
-            if (usageEl.TryGetProperty("cache_creation_input_tokens", out var cwProp) && cwProp.TryGetInt32(out var cwVal))
+            if (usageEl.TryGetProperty("cache_creation_input_tokens", out var cwProp) &&
+                cwProp.TryGetInt32(out var cwVal))
                 cacheCreation = cwVal;
             if (usageEl.TryGetProperty("cache_read_input_tokens", out var crProp) && crProp.TryGetInt32(out var crVal))
                 cacheRead = crVal;
@@ -77,8 +78,7 @@ internal static class StreamEventUtils
             InputTokens = input,
             OutputTokens = output,
             CacheCreationInputTokens = cacheCreation,
-            CacheReadInputTokens = cacheRead,
+            CacheReadInputTokens = cacheRead
         };
     }
-
 }

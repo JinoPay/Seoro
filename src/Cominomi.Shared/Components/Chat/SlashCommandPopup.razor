@@ -1,9 +1,7 @@
-@using Cominomi.Shared.Models
-
 @if (IsOpen && FilteredCommands.Count > 0)
 {
     <div class="slash-popup">
-        @for (int i = 0; i < FilteredCommands.Count; i++)
+        @for (var i = 0; i < FilteredCommands.Count; i++)
         {
             var idx = i;
             var cmd = FilteredCommands[idx];
@@ -18,7 +16,7 @@
     </div>
 
     <MudOverlay Visible="true" OnClick="@(() => OnDismiss.InvokeAsync())"
-                DarkBackground="false" ZIndex="1" />
+                DarkBackground="false" ZIndex="1"/>
 }
 
 @code {

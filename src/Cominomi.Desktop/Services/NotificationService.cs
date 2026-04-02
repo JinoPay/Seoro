@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Security;
+using System.Text;
 using Cominomi.Shared.Models;
 using Cominomi.Shared.Services;
 using Microsoft.Extensions.Logging;
@@ -7,18 +9,11 @@ using Microsoft.Extensions.Options;
 
 namespace Cominomi.Desktop.Services;
 
-public class NotificationService : INotificationService
+public class NotificationService(ILogger<NotificationService> logger, IOptionsMonitor<AppSettings> appSettings)
+    : INotificationService
 {
-    private readonly ILogger<NotificationService> _logger;
-    private readonly IOptionsMonitor<AppSettings> _appSettings;
     private bool _initialized;
     private bool _nativeNotificationsAvailable;
-
-    public NotificationService(ILogger<NotificationService> logger, IOptionsMonitor<AppSettings> appSettings)
-    {
-        _logger = logger;
-        _appSettings = appSettings;
-    }
 
     public Task InitializeAsync()
     {
@@ -26,30 +21,39 @@ public class NotificationService : INotificationService
 
         if (OperatingSystem.IsMacOS())
         {
-            try { EnsureBundleIdentifier(); }
-            catch (Exception ex) { _logger.LogWarning(ex, "Failed to set macOS bundle identifier"); }
+            try
+            {
+                EnsureBundleIdentifier();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to set macOS bundle identifier");
+            }
 
             _nativeNotificationsAvailable = HasAppBundle();
 
             if (_nativeNotificationsAvailable)
-            {
-                try { RequestNotificationAuthorization(); }
-                catch (Exception ex) { _logger.LogWarning(ex, "Failed to request notification authorization"); }
-            }
+                try
+                {
+                    RequestNotificationAuthorization();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to request notification authorization");
+                }
             else
-            {
-                _logger.LogInformation("Not running in .app bundle — skipping UNUserNotificationCenter, will use AppleScript fallback");
-            }
+                logger.LogInformation(
+                    "Not running in .app bundle — skipping UNUserNotificationCenter, will use AppleScript fallback");
         }
 
         _initialized = true;
-        _logger.LogInformation("Notifications initialized");
+        logger.LogInformation("Notifications initialized");
         return Task.CompletedTask;
     }
 
     public async Task SendAsync(string title, string body, NotificationType type = NotificationType.Info)
     {
-        var settings = _appSettings.CurrentValue;
+        var settings = appSettings.CurrentValue;
         if (!settings.NotificationsEnabled) return;
 
         if (!_initialized)
@@ -61,66 +65,51 @@ public class NotificationService : INotificationService
         try
         {
             if (OperatingSystem.IsWindows())
-            {
                 SendWindowsNotification(title, body, playSound);
-            }
             else if (OperatingSystem.IsMacOS())
-            {
                 SendMacNotification(title, body, playSound, soundName);
-            }
             else
-            {
-                _logger.LogDebug("Notification (no platform): {Title} - {Body}", title, body);
-            }
+                logger.LogDebug("Notification (no platform): {Title} - {Body}", title, body);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send notification");
+            logger.LogError(ex, "Failed to send notification");
         }
     }
 
-    private void SendWindowsNotification(string title, string body, bool playSound)
+    #region macOS AppleScript Fallback
+
+    private static void ExecuteAppleScriptInProcess(string source)
     {
-        var escapedTitle = System.Security.SecurityElement.Escape(title);
-        var escapedBody = System.Security.SecurityElement.Escape(body);
+        var selAlloc = SelRegisterName("alloc");
+        var selRelease = SelRegisterName("release");
 
-        var audioElement = playSound ? "" : "<audio silent=\"true\"/>";
+        var nsSource = CreateNSString(source);
 
-        var toastXml =
-            "<toast>" +
-              "<visual>" +
-                "<binding template=\"ToastGeneric\">" +
-                  $"<text>{escapedTitle}</text>" +
-                  $"<text>{escapedBody}</text>" +
-                "</binding>" +
-              "</visual>" +
-              audioElement +
-            "</toast>";
-
-        var psXmlLiteral = toastXml.Replace("'", "''");
-
-        var script =
-            "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; " +
-            "[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null; " +
-            "$xml = [Windows.Data.Xml.Dom.XmlDocument]::new(); " +
-            $"$xml.LoadXml('{psXmlLiteral}'); " +
-            "$toast = [Windows.UI.Notifications.ToastNotification]::new($xml); " +
-            "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Cominomi').Show($toast)";
-
-        var scriptBytes = System.Text.Encoding.Unicode.GetBytes(script);
-        var encodedCommand = Convert.ToBase64String(scriptBytes);
-
-        var psi = new ProcessStartInfo
+        try
         {
-            FileName = "powershell",
-            Arguments = $"-NoProfile -EncodedCommand {encodedCommand}",
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+            var nsAppleScriptClass = ObjcGetClass("NSAppleScript");
+            var scriptAlloc = ObjcMsgSend(nsAppleScriptClass, selAlloc);
+            var script = ObjcMsgSendIntPtr(scriptAlloc, SelRegisterName("initWithSource:"), nsSource);
 
-        using var process = Process.Start(psi);
-        _logger.LogDebug("Windows notification sent: {Title} - {Body}", title, body);
+            try
+            {
+                var result = ObjcMsgSendIntPtr(script, SelRegisterName("executeAndReturnError:"), 0);
+                if (result == 0)
+                    throw new InvalidOperationException("NSAppleScript executeAndReturnError: returned nil");
+            }
+            finally
+            {
+                ObjcMsgSend(script, selRelease);
+            }
+        }
+        finally
+        {
+            ObjcMsgSend(nsSource, selRelease);
+        }
     }
+
+    #endregion
 
     private void SendMacNotification(string title, string body, bool playSound, string soundName)
     {
@@ -128,19 +117,18 @@ public class NotificationService : INotificationService
         // Only available when running inside a .app bundle — otherwise the ObjC runtime
         // throws NSInternalInconsistencyException (bundleProxyForCurrentProcess is nil)
         if (_nativeNotificationsAvailable)
-        {
             try
             {
                 SendMacNotificationNative(title, body, playSound, soundName);
-                _logger.LogDebug("macOS notification sent via UNUserNotificationCenter: {Title} - {Body} (sound: {Sound})",
+                logger.LogDebug(
+                    "macOS notification sent via UNUserNotificationCenter: {Title} - {Body} (sound: {Sound})",
                     title, body, playSound ? soundName : "off");
                 return;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "UNUserNotificationCenter failed, falling back to AppleScript");
+                logger.LogWarning(ex, "UNUserNotificationCenter failed, falling back to AppleScript");
             }
-        }
 
         var escapedTitle = title.Replace("\\", "\\\\").Replace("\"", "\\\"");
         var escapedBody = body.Replace("\\", "\\\\").Replace("\"", "\\\"");
@@ -151,18 +139,16 @@ public class NotificationService : INotificationService
         // In-process NSAppleScript: only try inside .app bundle — without one,
         // macOS silently drops the notification (no app to attribute it to)
         if (_nativeNotificationsAvailable)
-        {
             try
             {
                 ExecuteAppleScriptInProcess(script);
-                _logger.LogDebug("macOS notification sent via NSAppleScript: {Title} - {Body}", title, body);
+                logger.LogDebug("macOS notification sent via NSAppleScript: {Title} - {Body}", title, body);
                 return;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "NSAppleScript failed, falling back to osascript");
+                logger.LogWarning(ex, "NSAppleScript failed, falling back to osascript");
             }
-        }
 
         // osascript subprocess — works without .app bundle (attributed to Script Editor)
         var psi = new ProcessStartInfo
@@ -182,13 +168,56 @@ public class NotificationService : INotificationService
             if (process.ExitCode != 0)
             {
                 var stderr = process.StandardError.ReadToEnd();
-                _logger.LogWarning("osascript exited with code {Code}: {Error}", process.ExitCode, stderr);
+                logger.LogWarning("osascript exited with code {Code}: {Error}", process.ExitCode, stderr);
             }
             else
             {
-                _logger.LogDebug("macOS notification sent via osascript fallback: {Title} - {Body}", title, body);
+                logger.LogDebug("macOS notification sent via osascript fallback: {Title} - {Body}", title, body);
             }
         }
+    }
+
+    private void SendWindowsNotification(string title, string body, bool playSound)
+    {
+        var escapedTitle = SecurityElement.Escape(title);
+        var escapedBody = SecurityElement.Escape(body);
+
+        var audioElement = playSound ? "" : "<audio silent=\"true\"/>";
+
+        var toastXml =
+            "<toast>" +
+            "<visual>" +
+            "<binding template=\"ToastGeneric\">" +
+            $"<text>{escapedTitle}</text>" +
+            $"<text>{escapedBody}</text>" +
+            "</binding>" +
+            "</visual>" +
+            audioElement +
+            "</toast>";
+
+        var psXmlLiteral = toastXml.Replace("'", "''");
+
+        var script =
+            "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; " +
+            "[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null; " +
+            "$xml = [Windows.Data.Xml.Dom.XmlDocument]::new(); " +
+            $"$xml.LoadXml('{psXmlLiteral}'); " +
+            "$toast = [Windows.UI.Notifications.ToastNotification]::new($xml); " +
+            "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Cominomi').Show($toast)";
+
+        var scriptBytes = Encoding.Unicode.GetBytes(script);
+        var encodedCommand = Convert.ToBase64String(scriptBytes);
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "powershell",
+            Arguments = $"-NoProfile -EncodedCommand {encodedCommand}",
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(psi);
+        logger.LogDebug("Windows notification sent: {Title} - {Body}", title, body);
     }
 
     #region macOS UNUserNotificationCenter
@@ -227,6 +256,7 @@ public class NotificationService : INotificationService
                         SelRegisterName("soundNamed:"), nsSoundName);
                     ObjcMsgSend(nsSoundName, SelRegisterName("release"));
                 }
+
                 ObjcMsgSendIntPtr(content, SelRegisterName("setSound:"), sound);
             }
 
@@ -263,7 +293,7 @@ public class NotificationService : INotificationService
             SelRegisterName("currentNotificationCenter"));
         if (center == 0)
         {
-            _logger.LogWarning("UNUserNotificationCenter.currentNotificationCenter returned nil");
+            logger.LogWarning("UNUserNotificationCenter.currentNotificationCenter returned nil");
             return;
         }
 
@@ -275,7 +305,7 @@ public class NotificationService : INotificationService
             SelRegisterName("requestAuthorizationWithOptions:completionHandler:"),
             6, block);
 
-        _logger.LogInformation("Requested macOS notification authorization");
+        logger.LogInformation("Requested macOS notification authorization");
     }
 
     #endregion
@@ -347,7 +377,10 @@ public class NotificationService : INotificationService
     private static nint _bundleIdString;
     private static ObjcMethodImp? _bundleIdImp;
 
-    private static nint BundleIdentifierOverride(nint self, nint sel) => _bundleIdString;
+    private static nint BundleIdentifierOverride(nint self, nint sel)
+    {
+        return _bundleIdString;
+    }
 
     private void EnsureBundleIdentifier()
     {
@@ -355,7 +388,7 @@ public class NotificationService : INotificationService
         var existingId = ObjcMsgSend(mainBundle, SelRegisterName("bundleIdentifier"));
         if (existingId != 0)
         {
-            _logger.LogDebug("macOS bundle identifier already set");
+            logger.LogDebug("macOS bundle identifier already set");
             return;
         }
 
@@ -366,7 +399,7 @@ public class NotificationService : INotificationService
         var method = ClassGetInstanceMethod(bundleClass, SelRegisterName("bundleIdentifier"));
         MethodSetImplementation(method, Marshal.GetFunctionPointerForDelegate(_bundleIdImp));
 
-        _logger.LogInformation("Swizzled macOS bundle identifier to com.cominomi.app");
+        logger.LogInformation("Swizzled macOS bundle identifier to com.cominomi.app");
     }
 
     #endregion
@@ -424,40 +457,6 @@ public class NotificationService : INotificationService
         }, _authBlockPtr, false);
 
         return _authBlockPtr;
-    }
-
-    #endregion
-
-    #region macOS AppleScript Fallback
-
-    private static void ExecuteAppleScriptInProcess(string source)
-    {
-        var selAlloc = SelRegisterName("alloc");
-        var selRelease = SelRegisterName("release");
-
-        var nsSource = CreateNSString(source);
-
-        try
-        {
-            var nsAppleScriptClass = ObjcGetClass("NSAppleScript");
-            var scriptAlloc = ObjcMsgSend(nsAppleScriptClass, selAlloc);
-            var script = ObjcMsgSendIntPtr(scriptAlloc, SelRegisterName("initWithSource:"), nsSource);
-
-            try
-            {
-                var result = ObjcMsgSendIntPtr(script, SelRegisterName("executeAndReturnError:"), 0);
-                if (result == 0)
-                    throw new InvalidOperationException("NSAppleScript executeAndReturnError: returned nil");
-            }
-            finally
-            {
-                ObjcMsgSend(script, selRelease);
-            }
-        }
-        finally
-        {
-            ObjcMsgSend(nsSource, selRelease);
-        }
     }
 
     #endregion

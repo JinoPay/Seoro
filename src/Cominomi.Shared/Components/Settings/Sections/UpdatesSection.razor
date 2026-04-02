@@ -1,3 +1,4 @@
+@using System.Reflection
 @inject IUpdateService UpdateService
 
 <div class="settings-section-title">업데이트</div>
@@ -7,7 +8,7 @@
     <div class="stack-row items-center gap-2">
         <span class="typo-body2">현재 버전:</span>
         <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">
-            @(System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "개발 모드")
+            @(Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "개발 모드")
         </MudChip>
         @if (!UpdateService.IsInstalled)
         {
@@ -19,7 +20,7 @@
 
     <MudSwitch T="bool" @bind-Value="Settings.AutoUpdateEnabled"
                Label="자동 업데이트 확인"
-               Color="Color.Primary" UncheckedColor="Color.Default" />
+               Color="Color.Primary" UncheckedColor="Color.Default"/>
     <small class="typo-caption text-secondary" style="margin-top: -8px;">
         앱 시작 시 및 주기적으로 새 버전이 있는지 자동으로 확인합니다.
     </small>
@@ -46,7 +47,7 @@
         @if (_updateChecking)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 16px; height: 16px; margin-right: 8px;" />
+                                 Style="width: 16px; height: 16px; margin-right: 8px;"/>
             @:확인 중...
         }
         else
@@ -75,7 +76,7 @@
     {
         <MudAlert Severity="Severity.Info" Dense="true">
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 16px; height: 16px; margin-right: 8px;" />
+                                 Style="width: 16px; height: 16px; margin-right: 8px;"/>
             업데이트 다운로드 중...
         </MudAlert>
     }
@@ -112,10 +113,10 @@
 </div>
 
 <div class="settings-group-title" style="margin-top: 24px;">릴리스 노트</div>
-<ReleaseNotesPanel />
+<ReleaseNotesPanel/>
 
 @code {
-    [Parameter, EditorRequired] public AppSettings Settings { get; set; } = null!;
+    [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
 
     private bool _updateChecking;
     private UpdateInfo? _updateInfo;
@@ -180,4 +181,5 @@
             return $"{bytes / 1024.0:F1} KB";
         return $"{bytes} B";
     }
+
 }

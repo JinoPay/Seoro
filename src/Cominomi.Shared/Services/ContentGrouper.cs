@@ -7,11 +7,37 @@ namespace Cominomi.Shared.Services;
 
 public static partial class ContentGrouper
 {
-    [GeneratedRegex(@"^\d+\.", RegexOptions.Multiline)]
-    private static partial Regex NumberedListRegex();
+    public static ActivitySummaryInfo BuildActivitySummary(List<ContentGroup> activityGroups)
+    {
+        var info = new ActivitySummaryInfo();
+        var fileChanges = new Dictionary<string, string>();
 
-    [GeneratedRegex(@"^[-*]\s", RegexOptions.Multiline)]
-    private static partial Regex BulletListRegex();
+        foreach (var group in activityGroups)
+            switch (group.Type)
+            {
+                case ContentGroupType.ToolGroup:
+                    foreach (var part in group.Parts)
+                    {
+                        info.TotalToolCalls++;
+                        if (part.ToolCall?.IsError == true) info.HasErrors = true;
+                        ExtractFilePath(part.ToolCall, fileChanges);
+                    }
+
+                    break;
+                case ContentGroupType.Thinking:
+                    info.ThinkingBlocks++;
+                    break;
+                case ContentGroupType.Text:
+                    info.TextSegments++;
+                    break;
+            }
+
+        info.FileChanges = fileChanges
+            .Select(kv => new FileChangeInfo { FilePath = kv.Key, ToolAction = kv.Value })
+            .ToList();
+
+        return info;
+    }
 
     public static List<ContentGroup> Group(List<ContentPart> parts, bool isStreaming)
     {
@@ -21,7 +47,7 @@ public static partial class ContentGrouper
         var groups = new List<ContentGroup>();
         ContentGroup? currentToolGroup = null;
 
-        for (int i = 0; i < parts.Count; i++)
+        for (var i = 0; i < parts.Count; i++)
         {
             var part = parts[i];
 
@@ -81,62 +107,6 @@ public static partial class ContentGrouper
         return groups;
     }
 
-    private static void ClassifyTextGroups(List<ContentGroup> groups, bool isStreaming)
-    {
-        // Find the last text group index
-        int lastTextIndex = -1;
-        for (int i = groups.Count - 1; i >= 0; i--)
-        {
-            if (groups[i].Type == ContentGroupType.Text)
-            {
-                lastTextIndex = i;
-                break;
-            }
-        }
-
-        for (int i = 0; i < groups.Count; i++)
-        {
-            var group = groups[i];
-            if (group.Type != ContentGroupType.Text)
-                continue;
-
-            var text = group.Parts[0].Text?.Trim() ?? "";
-            bool hasPrevTool = i > 0 && groups[i - 1].Type == ContentGroupType.ToolGroup;
-            bool hasNextTool = i < groups.Count - 1 && groups[i + 1].Type == ContentGroupType.ToolGroup;
-
-            if (i == lastTextIndex)
-            {
-                if (hasNextTool)
-                {
-                    // More tool calls follow — only collapse if clearly filler
-                    if (text.Length <= 80 && IsIntermediateText(text))
-                    {
-                        group.IsIntermediate = true;
-                    }
-                    else
-                    {
-                        group.Type = ContentGroupType.FinalText;
-                    }
-                }
-                else
-                {
-                    // Final text after all tools — always show
-                    group.Type = ContentGroupType.FinalText;
-                }
-                continue;
-            }
-
-            // Non-last text: check if intermediate (between tool groups or short/filler)
-            if (hasPrevTool || hasNextTool)
-            {
-                if (text.Length <= 150 || IsIntermediateText(text) || IsLikelyVerboseText(text))
-                {
-                    group.IsIntermediate = true;
-                }
-            }
-        }
-    }
-
     private static bool IsIntermediateText(string text)
     {
         // Language-agnostic structural heuristic:
@@ -169,42 +139,62 @@ public static partial class ContentGrouper
         return false;
     }
 
+    [GeneratedRegex(@"^[-*]\s", RegexOptions.Multiline)]
+    private static partial Regex BulletListRegex();
+
+    [GeneratedRegex(@"^\d+\.", RegexOptions.Multiline)]
+    private static partial Regex NumberedListRegex();
+
     private static string BuildToolSummary(List<ContentPart> toolParts)
     {
         return ToolDisplayHelper.BuildDescriptiveSummary(toolParts);
     }
 
-    public static ActivitySummaryInfo BuildActivitySummary(List<ContentGroup> activityGroups)
+    private static void ClassifyTextGroups(List<ContentGroup> groups, bool isStreaming)
     {
-        var info = new ActivitySummaryInfo();
-        var fileChanges = new Dictionary<string, string>();
-
-        foreach (var group in activityGroups)
-        {
-            switch (group.Type)
+        // Find the last text group index
+        var lastTextIndex = -1;
+        for (var i = groups.Count - 1; i >= 0; i--)
+            if (groups[i].Type == ContentGroupType.Text)
             {
-                case ContentGroupType.ToolGroup:
-                    foreach (var part in group.Parts)
-                    {
-                        info.TotalToolCalls++;
-                        if (part.ToolCall?.IsError == true) info.HasErrors = true;
-                        ExtractFilePath(part.ToolCall, fileChanges);
-                    }
-                    break;
-                case ContentGroupType.Thinking:
-                    info.ThinkingBlocks++;
-                    break;
-                case ContentGroupType.Text:
-                    info.TextSegments++;
-                    break;
+                lastTextIndex = i;
+                break;
             }
+
+        for (var i = 0; i < groups.Count; i++)
+        {
+            var group = groups[i];
+            if (group.Type != ContentGroupType.Text)
+                continue;
+
+            var text = group.Parts[0].Text?.Trim() ?? "";
+            var hasPrevTool = i > 0 && groups[i - 1].Type == ContentGroupType.ToolGroup;
+            var hasNextTool = i < groups.Count - 1 && groups[i + 1].Type == ContentGroupType.ToolGroup;
+
+            if (i == lastTextIndex)
+            {
+                if (hasNextTool)
+                {
+                    // More tool calls follow — only collapse if clearly filler
+                    if (text.Length <= 80 && IsIntermediateText(text))
+                        group.IsIntermediate = true;
+                    else
+                        group.Type = ContentGroupType.FinalText;
+                }
+                else
+                {
+                    // Final text after all tools — always show
+                    group.Type = ContentGroupType.FinalText;
+                }
+
+                continue;
+            }
+
+            // Non-last text: check if intermediate (between tool groups or short/filler)
+            if (hasPrevTool || hasNextTool)
+                if (text.Length <= 150 || IsIntermediateText(text) || IsLikelyVerboseText(text))
+                    group.IsIntermediate = true;
         }
-
-        info.FileChanges = fileChanges
-            .Select(kv => new FileChangeInfo { FilePath = kv.Key, ToolAction = kv.Value })
-            .ToList();
-
-        return info;
     }
 
     private static void ExtractFilePath(ToolCall? tool, Dictionary<string, string> fileChanges)
@@ -227,6 +217,9 @@ public static partial class ContentGrouper
             if (!string.IsNullOrEmpty(path))
                 fileChanges.TryAdd(path, name);
         }
-        catch { /* input may not be valid JSON */ }
+        catch
+        {
+            /* input may not be valid JSON */
+        }
     }
 }

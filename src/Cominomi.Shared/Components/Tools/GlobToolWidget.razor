@@ -1,9 +1,8 @@
 @using System.Text.Json
-
 <div class="tool-widget tool-widget-glob">
     <div class="tool-widget-header">
         <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small"
-                 Style="width: 14px; height: 14px; opacity: 0.6;" />
+                 Style="width: 14px; height: 14px; opacity: 0.6;"/>
         <span class="tool-widget-pattern">@_pattern</span>
         @if (_fileCount > 0)
         {
@@ -17,14 +16,15 @@
             {
                 <div class="glob-file-item">
                     <MudIcon Icon="@GetFileIcon(file)" Size="Size.Small"
-                             Style="width: 14px; height: 14px; opacity: 0.5;" />
+                             Style="width: 14px; height: 14px; opacity: 0.5;"/>
                     <span>@ShortenPath(file)</span>
                 </div>
             }
         </div>
         @if (_files.Count > 10)
         {
-            <div class="tool-widget-toggle" @onclick="@(() => _collapsed = !_collapsed)" @onclick:stopPropagation="true">
+            <div class="tool-widget-toggle" @onclick="@(() => _collapsed = !_collapsed)"
+                 @onclick:stopPropagation="true">
                 @(_collapsed ? $"전체 보기 ({_files.Count}개 파일)" : "접기")
             </div>
         }
@@ -32,8 +32,7 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public ToolCall Tool { get; set; } = default!;
+    [Parameter][EditorRequired] public ToolCall Tool { get; set; } = default!;
 
     private string _pattern = "";
     private List<string> _files = [];
@@ -55,7 +54,10 @@
                     if (doc.RootElement.TryGetProperty("pattern", out var p))
                         _pattern = p.GetString() ?? "";
                 }
-                catch (JsonException) { /* malformed tool input — render empty */ }
+                catch (JsonException)
+                {
+                    /* malformed tool input — render empty */
+                }
             }
         }
 
@@ -86,4 +88,5 @@
         var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         return parts.Length <= 3 ? normalized : string.Join("/", parts[^3..]);
     }
+
 }

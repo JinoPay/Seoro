@@ -17,7 +17,7 @@
             <MudTooltip Text="@($"브랜치: {ChatState.CurrentSession.Git.BranchName}")" Placement="Placement.Bottom">
                 <span class="toolbar-branch-badge">
                     <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
-                             Style="width: 12px; height: 12px; opacity: 0.6;" />
+                             Style="width: 12px; height: 12px; opacity: 0.6;"/>
                     @ChatState.CurrentSession.Git.BranchName
                 </span>
             </MudTooltip>
@@ -28,17 +28,18 @@
             <MudTooltip Text="플랜 모드 — 코드 변경 없이 분석만 수행" Placement="Placement.Bottom">
                 <span class="toolbar-indicator plan">
                     <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"
-                             Style="width: 14px; height: 14px;" />
+                             Style="width: 14px; height: 14px;"/>
                 </span>
             </MudTooltip>
         }
 
         @if (ChatState.CurrentSession.EffortLevel is not (null or "" or "auto"))
         {
-            <MudTooltip Text="@($"사고 수준: {FormatEffortLevel(ChatState.CurrentSession.EffortLevel)}")" Placement="Placement.Bottom">
+            <MudTooltip Text="@($"사고 수준: {FormatEffortLevel(ChatState.CurrentSession.EffortLevel)}")"
+                        Placement="Placement.Bottom">
                 <span class="toolbar-indicator effort">
                     <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
-                             Style="width: 14px; height: 14px;" />
+                             Style="width: 14px; height: 14px;"/>
                 </span>
             </MudTooltip>
         }
@@ -62,14 +63,14 @@
                                    OnClick="ToggleSync"
                                    Disabled="_syncBusy || IsSyncBlockedByOther"
                                    Class="@(IsSynced ? "sync-active" : "")"
-                                   Style="width: 28px; height: 28px;" />
+                                   Style="width: 28px; height: 28px;"/>
                 </MudTooltip>
             }
 
             <MudTooltip Text="폴더 열기" Placement="Placement.Bottom">
                 <MudIconButton Icon="@Icons.Material.Outlined.FolderOpen" Size="Size.Small"
                                OnClick="OpenFolder"
-                               Style="width: 28px; height: 28px; opacity: 0.5;" />
+                               Style="width: 28px; height: 28px; opacity: 0.5;"/>
             </MudTooltip>
 
             @if (_availableIdes.Count == 1)
@@ -77,7 +78,7 @@
                 <MudTooltip Text="@($"{_availableIdes[0].Name}에서 열기")" Placement="Placement.Bottom">
                     <MudIconButton Icon="@Icons.Material.Outlined.Code" Size="Size.Small"
                                    OnClick="@(() => OpenInIde(_availableIdes[0].Command))"
-                                   Style="width: 28px; height: 28px; opacity: 0.5;" />
+                                   Style="width: 28px; height: 28px; opacity: 0.5;"/>
                 </MudTooltip>
             }
             else if (_availableIdes.Count > 1)
@@ -111,7 +112,7 @@
     private bool IsSynced => SyncService.IsSessionSynced(ChatState.CurrentSession?.Id ?? "");
     private bool IsSyncBlockedByOther => SyncService.IsSyncActive && !IsSynced;
 
-    private string _mod = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "\u2318" : "Ctrl";
+    private readonly string _mod = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "\u2318" : "Ctrl";
 
     private string SyncTooltip => IsSynced
         ? $"로컬 동기화 해제 ({_mod}+Shift+S)"
@@ -207,12 +208,15 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private static string FormatEffortLevel(string? level) => level switch
+    private static string FormatEffortLevel(string? level)
     {
-        "low" => "낮음 (low)",
-        "high" => "높음 (high)",
-        _ => level ?? "auto"
-    };
+        return level switch
+        {
+            "low" => "낮음 (low)",
+            "high" => "높음 (high)",
+            _ => level ?? "auto"
+        };
+    }
 
     public void Dispose()
     {
@@ -221,5 +225,6 @@
         _syncStopSub?.Dispose();
         _syncToggleSub?.Dispose();
     }
+
 }
 

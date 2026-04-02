@@ -1,5 +1,3 @@
-@using Cominomi.Shared.Models
-
 <div class="settings-content-header">
     <div class="d-flex align-center gap-2">
         <MudChipSet T="string" SelectedValue="@_scopeStr" SelectedValueChanged="OnScopeChipChanged"
@@ -7,7 +5,8 @@
                     Variant="Variant.Outlined" Color="Color.Primary">
             <MudChip T="string" Value="@("Global")" Icon="@Icons.Material.Filled.Public">글로벌</MudChip>
             <MudChip T="string" Value="@("Project")" Icon="@Icons.Material.Filled.Folder"
-                     Disabled="@(string.IsNullOrEmpty(ProjectPath))">프로젝트</MudChip>
+                     Disabled="@(string.IsNullOrEmpty(ProjectPath))">프로젝트
+            </MudChip>
             @if (ShowLocalScope)
             {
                 <MudChip T="string" Value="@("Local")" Icon="@Icons.Material.Filled.Lock"
@@ -21,7 +20,7 @@
         {
             <div style="width: 200px;">
                 <ProjectScopePicker SelectedPath="@ProjectPath"
-                                    SelectedPathChanged="OnProjectChanged" Label="" />
+                                    SelectedPathChanged="OnProjectChanged" Label=""/>
             </div>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
                      Color="@(Scope == ClaudeSettingsScope.Project ? Color.Info : Color.Warning)">
@@ -65,4 +64,5 @@
     {
         await ProjectPathChanged.InvokeAsync(path);
     }
+
 }

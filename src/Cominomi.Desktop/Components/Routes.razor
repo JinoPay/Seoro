@@ -1,19 +1,19 @@
 @using Cominomi.Desktop.Components.Pages
-
 <Router AppAssembly="typeof(Program).Assembly"
-        AdditionalAssemblies="new[] { typeof(Cominomi.Shared.Services.ChatState).Assembly }"
+        AdditionalAssemblies="new[] { typeof(ChatState).Assembly }"
         NotFoundPage="typeof(NotFound)">
     <Found Context="routeData">
         <Cominomi.Shared.Components.Layout.LoggingErrorBoundary @ref="_errorBoundary">
             <ChildContent>
-                <RouteView RouteData="routeData" DefaultLayout="typeof(Cominomi.Shared.Components.Layout.MainLayout)" />
-                <FocusOnNavigate RouteData="routeData" Selector="h1" />
+                <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)"/>
+                <FocusOnNavigate RouteData="routeData" Selector="h1"/>
             </ChildContent>
             <ErrorContent Context="ex">
                 <div style="padding: 2rem; color: #ff6b6b;">
                     <h3>렌더링 오류 발생</h3>
                     <pre style="white-space: pre-wrap; font-size: 0.85rem; opacity: 0.8;">@ex.ToString()</pre>
-                    <button @onclick="Recover" style="margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer;">복구</button>
+                    <button @onclick="Recover" style="margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer;">복구
+                    </button>
                 </div>
             </ErrorContent>
         </Cominomi.Shared.Components.Layout.LoggingErrorBoundary>
@@ -21,7 +21,11 @@
 </Router>
 
 @code {
-    private Cominomi.Shared.Components.Layout.LoggingErrorBoundary? _errorBoundary;
+    private LoggingErrorBoundary? _errorBoundary;
 
-    private void Recover() => _errorBoundary?.Recover();
+    private void Recover()
+    {
+        _errorBoundary?.Recover();
+    }
+
 }

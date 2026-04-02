@@ -6,7 +6,7 @@
      aria-orientation="horizontal"
      aria-valuenow="@CurrentSize"
      tabindex="0"
-     @onkeydown="HandleKeyDown" />
+     @onkeydown="HandleKeyDown"/>
 
 @code {
     [Parameter] public int CurrentSize { get; set; }
@@ -63,7 +63,12 @@
         {
             await JS.InvokeVoidAsync("unregisterVerticalResizer", _element);
         }
-        catch { /* Component may already be disposed */ }
+        catch
+        {
+            /* Component may already be disposed */
+        }
+
         _dotNetRef?.Dispose();
     }
+
 }

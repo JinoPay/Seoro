@@ -31,14 +31,14 @@
     <MudTextField @bind-Value="Settings.FallbackModel" Label="Fallback 모델"
                   Variant="Variant.Outlined" Margin="Margin.Dense"
                   Placeholder="sonnet"
-                  HelperText="기본 모델 과부하 시 대체 모델 (비워두면 미사용)" />
+                  HelperText="기본 모델 과부하 시 대체 모델 (비워두면 미사용)"/>
 
     <MudTextField @bind-Value="Settings.McpConfigPath" Label="MCP 설정 파일 경로"
                   Variant="Variant.Outlined" Margin="Margin.Dense"
                   Placeholder="./mcp.json"
-                  HelperText="MCP 서버 설정 JSON 파일 경로 (비워두면 미사용)" />
+                  HelperText="MCP 서버 설정 JSON 파일 경로 (비워두면 미사용)"/>
 </div>
 
 @code {
-    [Parameter, EditorRequired] public AppSettings Settings { get; set; } = null!;
+    [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
 }

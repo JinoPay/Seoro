@@ -4,7 +4,7 @@ namespace Cominomi.Shared.Services;
 
 public interface ISettingsService
 {
-    Task<AppSettings> LoadAsync();
-    Task SaveAsync(AppSettings settings);
     event Action<AppSettings>? OnSettingsChanged;
+    Task SaveAsync(AppSettings settings);
+    Task<AppSettings> LoadAsync();
 }

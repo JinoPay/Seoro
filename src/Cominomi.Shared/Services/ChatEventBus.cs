@@ -5,9 +5,26 @@ namespace Cominomi.Shared.Services;
 public class ChatEventBus : IChatEventBus
 {
     private readonly ConcurrentDictionary<Type, List<Delegate>> _handlers = new();
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     public event Action? OnAny;
+
+    public IDisposable Subscribe<T>(Action<T> handler) where T : ChatEvent
+    {
+        var list = _handlers.GetOrAdd(typeof(T), _ => new List<Delegate>());
+        lock (_lock)
+        {
+            list.Add(handler);
+        }
+
+        return new Subscription(() =>
+        {
+            lock (_lock)
+            {
+                list.Remove(handler);
+            }
+        });
+    }
 
     public void Publish<T>(T evt) where T : ChatEvent
     {
@@ -19,6 +36,7 @@ public class ChatEventBus : IChatEventBus
             {
                 snapshot = list.ToArray();
             }
+
             foreach (var handler in snapshot)
                 ((Action<T>)handler)(evt);
         }
@@ -27,24 +45,11 @@ public class ChatEventBus : IChatEventBus
         OnAny?.Invoke();
     }
 
-    public IDisposable Subscribe<T>(Action<T> handler) where T : ChatEvent
-    {
-        var list = _handlers.GetOrAdd(typeof(T), _ => new List<Delegate>());
-        lock (_lock)
-        {
-            list.Add(handler);
-        }
-        return new Subscription(() =>
-        {
-            lock (_lock)
-            {
-                list.Remove(handler);
-            }
-        });
-    }
-
     private sealed class Subscription(Action onDispose) : IDisposable
     {
-        public void Dispose() => onDispose();
+        public void Dispose()
+        {
+            onDispose();
+        }
     }
 }

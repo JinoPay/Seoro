@@ -1,4 +1,4 @@
-@using Cominomi.Shared.Models
+@using System.Text.RegularExpressions
 @inject IRulesService RulesService
 @inject IChatState ChatState
 @inject IDialogService DialogService
@@ -30,7 +30,7 @@
                 <MudTextField T="string" @bind-Value="_search" Placeholder="룰 검색..."
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
-                              Class="mb-2" />
+                              Class="mb-2"/>
 
                 @foreach (var rule in FilteredRules)
                 {
@@ -68,17 +68,18 @@
 
                     <div class="d-flex justify-space-between align-center mb-3">
                         <MudTextField T="string" @bind-Value="_selectedRule.FileName" Label="파일명"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 300px;" />
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 300px;"/>
                         <div class="d-flex gap-2">
                             <MudToggleIconButton @bind-Toggled="_showPreview"
                                                  Icon="@Icons.Material.Filled.Visibility"
                                                  ToggledIcon="@Icons.Material.Filled.Edit"
                                                  Size="Size.Small" Color="Color.Primary"
-                                                 title="@(_showPreview ? "에디터로 전환" : "프리뷰로 전환")" />
+                                                 title="@(_showPreview ? "에디터로 전환" : "프리뷰로 전환")"/>
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
-                                           OnClick="DeleteSelected" Size="Size.Small" />
+                                           OnClick="DeleteSelected" Size="Size.Small"/>
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                                       OnClick="SaveSelected" Style="text-transform: none;">저장</MudButton>
+                                       OnClick="SaveSelected" Style="text-transform: none;">저장
+                            </MudButton>
                         </div>
                     </div>
 
@@ -93,13 +94,13 @@
                         <MudTextField T="string" @bind-Value="_selectedRule.Content" Label="룰 내용 (Markdown)"
                                       Variant="Variant.Outlined" Lines="20"
                                       Style="font-family: monospace; font-size: 0.8125rem;"
-                                      Placeholder="# Rule Title&#10;&#10;- Rule 1&#10;- Rule 2" />
+                                      Placeholder="# Rule Title&#10;&#10;- Rule 1&#10;- Rule 2"/>
                     }
                 }
                 else
                 {
                     <div class="d-flex flex-column align-center justify-center" style="height: 300px; opacity: 0.5;">
-                        <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Large" />
+                        <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Large"/>
                         <div class="typo-body2 mt-2">왼쪽에서 룰을 선택하거나 새 룰을 만드세요</div>
                     </div>
                 }
@@ -109,7 +110,7 @@
 </div>
 
 <TemplateGalleryDialog @bind-IsOpen="_showTemplates" DefaultCategory="TemplateCategory.Rule"
-                       OnTemplateSelected="ApplyTemplate" />
+                       OnTemplateSelected="ApplyTemplate"/>
 
 @code {
     private List<RuleFile> _rules = [];
@@ -124,7 +125,7 @@
     private List<RuleFile> FilteredRules => string.IsNullOrWhiteSpace(_search)
         ? _rules
         : _rules.Where(r => r.FileName.Contains(_search, StringComparison.OrdinalIgnoreCase)
-            || r.Content.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
+                            || r.Content.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -201,7 +202,7 @@
 
             // 파일명이 변경되었으면 구 파일 삭제
             if (_originalFilePath != null && _originalFilePath != newPath
-                && File.Exists(_originalFilePath))
+                                          && File.Exists(_originalFilePath))
             {
                 await RulesService.DeleteAsync(_originalFilePath);
             }
@@ -224,7 +225,7 @@
         var result = await DialogService.ShowMessageBoxAsync(
             "룰 삭제",
             $"'{_selectedRule.FileName}'을(를) 삭제하시겠습니까?",
-            yesText: "삭제", cancelText: "취소");
+            "삭제", cancelText: "취소");
 
         if (result != true) return;
 
@@ -262,22 +263,23 @@
         if (string.IsNullOrWhiteSpace(markdown)) return "<p class='text-secondary'>내용이 없습니다.</p>";
         var html = markdown
             .Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"^### (.+)$",
-            "<h3>$1</h3>", System.Text.RegularExpressions.RegexOptions.Multiline);
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"^## (.+)$",
-            "<h2>$1</h2>", System.Text.RegularExpressions.RegexOptions.Multiline);
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"^# (.+)$",
-            "<h1>$1</h1>", System.Text.RegularExpressions.RegexOptions.Multiline);
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"`(.+?)`",
+        html = Regex.Replace(html, @"^### (.+)$",
+            "<h3>$1</h3>", RegexOptions.Multiline);
+        html = Regex.Replace(html, @"^## (.+)$",
+            "<h2>$1</h2>", RegexOptions.Multiline);
+        html = Regex.Replace(html, @"^# (.+)$",
+            "<h1>$1</h1>", RegexOptions.Multiline);
+        html = Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+        html = Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
+        html = Regex.Replace(html, @"`(.+?)`",
             "<code style='background: var(--mud-palette-background); padding: 2px 4px; border-radius: 3px;'>$1</code>");
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"^- (.+)$",
-            "<li>$1</li>", System.Text.RegularExpressions.RegexOptions.Multiline);
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"\n\n", "</p><p>");
+        html = Regex.Replace(html, @"^- (.+)$",
+            "<li>$1</li>", RegexOptions.Multiline);
+        html = Regex.Replace(html, @"\n\n", "</p><p>");
         html = $"<div class='rules-md-content'><p>{html}</p></div>";
         return html;
     }
+
 }
 
 <style>
@@ -304,7 +306,10 @@
         transition: background 0.1s;
     }
 
-    .rules-item:hover { background: var(--mud-palette-action-default-hover); }
+    .rules-item:hover {
+        background: var(--mud-palette-action-default-hover);
+    }
+
     .rules-item.active {
         background: var(--mud-palette-primary-hover);
         border-left: 2px solid var(--mud-palette-primary);
@@ -327,9 +332,30 @@
         max-height: 55vh;
     }
 
-    .rules-md-content h1 { font-size: 1.5rem; font-weight: 700; margin: 16px 0 8px; }
-    .rules-md-content h2 { font-size: 1.25rem; font-weight: 600; margin: 14px 0 6px; }
-    .rules-md-content h3 { font-size: 1.1rem; font-weight: 600; margin: 12px 0 4px; }
-    .rules-md-content li { margin-left: 20px; list-style: disc; }
-    .rules-md-content p { margin: 8px 0; }
+    .rules-md-content h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 16px 0 8px;
+    }
+
+    .rules-md-content h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 14px 0 6px;
+    }
+
+    .rules-md-content h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 12px 0 4px;
+    }
+
+    .rules-md-content li {
+        margin-left: 20px;
+        list-style: disc;
+    }
+
+    .rules-md-content p {
+        margin: 8px 0;
+    }
 </style>

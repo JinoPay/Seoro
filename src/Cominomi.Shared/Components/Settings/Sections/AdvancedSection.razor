@@ -3,7 +3,7 @@
 
 <div class="stack gap-3">
     <MudSwitch T="bool" @bind-Value="Settings.DebugMode" Label="디버그 모드"
-               Color="Color.Warning" UncheckedColor="Color.Default" />
+               Color="Color.Warning" UncheckedColor="Color.Default"/>
     <small class="typo-caption text-secondary" style="margin-top: -8px;">
         활성화하면 Claude CLI에 --debug 플래그를 전달합니다.
     </small>
@@ -20,29 +20,29 @@
         <div class="stack-row gap-1 items-center">
             <MudTextField T="string" Value="@key" ReadOnly="true"
                           Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Style="flex: 0.4;" />
+                          Style="flex: 0.4;"/>
             <MudTextField T="string" Value="@Settings.EnvironmentVariables[key]"
                           ValueChanged="@(v => Settings.EnvironmentVariables[key] = v)"
                           Variant="Variant.Outlined" Margin="Margin.Dense"
                           Style="flex: 0.6;"
-                          InputType="@(key.Contains("KEY", StringComparison.OrdinalIgnoreCase) ? InputType.Password : InputType.Text)" />
+                          InputType="@(key.Contains("KEY", StringComparison.OrdinalIgnoreCase) ? InputType.Password : InputType.Text)"/>
             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                            Color="Color.Error"
-                           OnClick="@(() => RemoveEnvVar(key))" />
+                           OnClick="@(() => RemoveEnvVar(key))"/>
         </div>
     }
 
     <div class="stack-row gap-1 items-center">
         <MudTextField @bind-Value="_newEnvKey" Placeholder="변수명"
                       Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Style="flex: 0.4;" />
+                      Style="flex: 0.4;"/>
         <MudTextField @bind-Value="_newEnvValue" Placeholder="값"
                       Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Style="flex: 0.6;" />
+                      Style="flex: 0.6;"/>
         <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
                        Color="Color.Primary"
                        OnClick="AddEnvVar"
-                       Disabled="@(string.IsNullOrWhiteSpace(_newEnvKey))" />
+                       Disabled="@(string.IsNullOrWhiteSpace(_newEnvKey))"/>
     </div>
 
     <small class="typo-caption text-secondary">
@@ -51,7 +51,7 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public AppSettings Settings { get; set; } = null!;
+    [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
 
     private string _newEnvKey = "";
     private string _newEnvValue = "";
@@ -70,4 +70,5 @@
     {
         Settings.EnvironmentVariables.Remove(key);
     }
+
 }

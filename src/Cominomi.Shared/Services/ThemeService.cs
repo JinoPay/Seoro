@@ -7,6 +7,19 @@ public class ThemeService : IThemeService
 {
     private readonly ISettingsService _settingsService;
 
+    public ThemeService(ISettingsService settingsService)
+    {
+        _settingsService = settingsService;
+        _settingsService.OnSettingsChanged += HandleSettingsChanged;
+    }
+
+    public void Dispose()
+    {
+        _settingsService.OnSettingsChanged -= HandleSettingsChanged;
+    }
+
+    public event Action? OnThemeChanged;
+
     public bool IsDarkMode { get; private set; } = true;
 
     public MudTheme Theme { get; } = new()
@@ -17,7 +30,7 @@ public class ThemeService : IThemeService
             {
                 FontFamily = new[] { "Pretendard", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif" },
                 FontSize = "0.875rem",
-                LineHeight = "1.5",
+                LineHeight = "1.5"
             },
             Body1 = new Body1Typography { FontSize = "0.875rem", LineHeight = "1.5" },
             Body2 = new Body2Typography { FontSize = "0.8125rem", LineHeight = "1.5" },
@@ -27,8 +40,8 @@ public class ThemeService : IThemeService
                 FontSize = "0.8125rem",
                 FontWeight = "500",
                 TextTransform = "none",
-                LetterSpacing = "0.01em",
-            },
+                LetterSpacing = "0.01em"
+            }
         },
         PaletteLight = new PaletteLight
         {
@@ -52,7 +65,7 @@ public class ThemeService : IThemeService
             Success = "#16a34a",
             Warning = "#d97706",
             Error = "#dc2626",
-            Info = "#2563eb",
+            Info = "#2563eb"
         },
         PaletteDark = new PaletteDark
         {
@@ -76,17 +89,9 @@ public class ThemeService : IThemeService
             Success = "#86efac",
             Warning = "#fcd34d",
             Error = "#fca5a5",
-            Info = "#93c5fd",
+            Info = "#93c5fd"
         }
     };
-
-    public event Action? OnThemeChanged;
-
-    public ThemeService(ISettingsService settingsService)
-    {
-        _settingsService = settingsService;
-        _settingsService.OnSettingsChanged += HandleSettingsChanged;
-    }
 
     public async Task InitializeAsync()
     {
@@ -107,10 +112,5 @@ public class ThemeService : IThemeService
     {
         IsDarkMode = settings.Theme != "light";
         OnThemeChanged?.Invoke();
-    }
-
-    public void Dispose()
-    {
-        _settingsService.OnSettingsChanged -= HandleSettingsChanged;
     }
 }

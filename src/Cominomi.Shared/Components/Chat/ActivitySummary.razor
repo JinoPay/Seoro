@@ -1,19 +1,15 @@
 @using Markdig
-@using Cominomi.Shared.Models
-@using Cominomi.Shared.Services
-@using Cominomi.Shared.Components.Tools
-
 <div class="activity-summary @(_expanded ? "expanded" : "")">
     <div class="activity-summary-header" @onclick="Toggle">
         @if (SummaryInfo.HasErrors)
         {
             <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
-                     Style="width: 16px; height: 16px;" />
+                     Style="width: 16px; height: 16px;"/>
         }
         else
         {
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
-                     Style="width: 16px; height: 16px;" />
+                     Style="width: 16px; height: 16px;"/>
         }
 
         <span class="activity-summary-text">@SummaryInfo.SummaryText</span>
@@ -36,7 +32,7 @@
         }
 
         <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                 Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px;" />
+                 Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px;"/>
     </div>
 
     @if (_expanded)
@@ -52,10 +48,11 @@
                          @onclick="@(() => ToggleThinking(idx))">
                         <div class="thinking-header">
                             <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
-                                     Style="width: 14px; height: 14px; opacity: 0.6;" />
+                                     Style="width: 14px; height: 14px; opacity: 0.6;"/>
                             <span>@GetThinkingPreview(thinkingText, _thinkingExpanded.Contains(idx))</span>
-                            <MudIcon Icon="@(_thinkingExpanded.Contains(idx) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                                     Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;" />
+                            <MudIcon
+                                Icon="@(_thinkingExpanded.Contains(idx) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;"/>
                         </div>
                         @if (_thinkingExpanded.Contains(idx))
                         {
@@ -67,7 +64,7 @@
                 }
                 else if (group.Type == ContentGroupType.ToolGroup)
                 {
-                    <ToolGroupCard Group="group" IsActive="false" />
+                    <ToolGroupCard Group="group" IsActive="false"/>
                 }
                 else if (group.Type == ContentGroupType.Text)
                 {
@@ -82,22 +79,23 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public List<ContentGroup> ActivityGroups { get; set; } = [];
+    [Parameter][EditorRequired] public List<ContentGroup> ActivityGroups { get; set; } = [];
 
-    [Parameter, EditorRequired]
-    public ActivitySummaryInfo SummaryInfo { get; set; } = default!;
+    [Parameter][EditorRequired] public ActivitySummaryInfo SummaryInfo { get; set; } = default!;
 
-    [Parameter]
-    public TimeSpan? Duration { get; set; }
+    [Parameter] public TimeSpan? Duration { get; set; }
 
     private bool _expanded;
     private readonly HashSet<int> _thinkingExpanded = [];
+
     private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
         .Build();
 
-    private void Toggle() => _expanded = !_expanded;
+    private void Toggle()
+    {
+        _expanded = !_expanded;
+    }
 
     private void ToggleThinking(int index)
     {
@@ -121,10 +119,15 @@
         return $"{(int)duration.TotalMinutes}분 {duration.Seconds}초";
     }
 
-    private static string GetBadgeClass(string action) => action switch
+    private static string GetBadgeClass(string action)
     {
-        "Write" => "file-badge-created",
-        "Edit" => "file-badge-modified",
-        _ => "file-badge-read"
-    };
+        return action switch
+        {
+            "Write" => "file-badge-created",
+            "Edit" => "file-badge-modified",
+            _ => "file-badge-read"
+        };
+    }
+
+
 }

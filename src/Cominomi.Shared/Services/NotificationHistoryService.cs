@@ -5,25 +5,71 @@ namespace Cominomi.Shared.Services;
 public class NotificationHistoryService : INotificationHistoryService
 {
     private const int MaxEntries = 100;
-    private readonly List<NotificationRecord> _entries = new();
-    private readonly object _lock = new();
+    private readonly List<NotificationRecord> _entries = [];
+    private readonly Lock _lock = new();
 
-    public IReadOnlyList<NotificationRecord> Entries
-    {
-        get
-        {
-            lock (_lock)
-                return _entries.ToList();
-        }
-    }
+    public event Action? OnChange;
 
     public int UnreadCount
     {
         get
         {
             lock (_lock)
+            {
                 return _entries.Count(e => !e.IsRead);
+            }
         }
+    }
+
+    public IReadOnlyList<NotificationRecord> Entries
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _entries.ToList();
+            }
+        }
+    }
+
+    public void MarkAllAsRead()
+    {
+        lock (_lock)
+        {
+            foreach (var entry in _entries)
+                entry.IsRead = true;
+        }
+
+        OnChange?.Invoke();
+    }
+
+    public void MarkAsRead(string id)
+    {
+        lock (_lock)
+        {
+            var entry = _entries.FirstOrDefault(e => e.Id == id);
+            if (entry != null) entry.IsRead = true;
+        }
+
+        OnChange?.Invoke();
+    }
+
+    public void MarkSessionAsRead(string sessionId)
+    {
+        bool changed;
+        lock (_lock)
+        {
+            changed = false;
+            foreach (var entry in _entries)
+                if (entry.SessionId == sessionId && !entry.IsRead)
+                {
+                    entry.IsRead = true;
+                    changed = true;
+                }
+        }
+
+        if (changed)
+            OnChange?.Invoke();
     }
 
     public void Record(string title, string body, NotificationType type, string? sessionId = null, bool isRead = false)
@@ -45,48 +91,4 @@ public class NotificationHistoryService : INotificationHistoryService
 
         OnChange?.Invoke();
     }
-
-    public void MarkAsRead(string id)
-    {
-        lock (_lock)
-        {
-            var entry = _entries.FirstOrDefault(e => e.Id == id);
-            if (entry != null) entry.IsRead = true;
-        }
-
-        OnChange?.Invoke();
-    }
-
-    public void MarkAllAsRead()
-    {
-        lock (_lock)
-        {
-            foreach (var entry in _entries)
-                entry.IsRead = true;
-        }
-
-        OnChange?.Invoke();
-    }
-
-    public void MarkSessionAsRead(string sessionId)
-    {
-        bool changed;
-        lock (_lock)
-        {
-            changed = false;
-            foreach (var entry in _entries)
-            {
-                if (entry.SessionId == sessionId && !entry.IsRead)
-                {
-                    entry.IsRead = true;
-                    changed = true;
-                }
-            }
-        }
-
-        if (changed)
-            OnChange?.Invoke();
-    }
-
-    public event Action? OnChange;
 }

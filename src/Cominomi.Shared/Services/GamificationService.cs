@@ -3,30 +3,22 @@ using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
-public class GamificationService : IGamificationService
+public class GamificationService(
+    IStatsCacheService statsCacheService,
+    ISessionReplayService replayService,
+    IClaudeSettingsService claudeSettings,
+    ILogger<GamificationService> logger)
+    : IGamificationService
 {
-    private readonly IStatsCacheService _statsCacheService;
-    private readonly ISessionService _sessionService;
-    private readonly ISessionReplayService _replayService;
-    private readonly IClaudeSettingsService _claudeSettings;
-    private readonly ILogger<GamificationService> _logger;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
     private DashboardStats? _cachedStats;
     private DateTime _cachedAt;
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
-    public GamificationService(
-        IStatsCacheService statsCacheService,
-        ISessionService sessionService,
-        ISessionReplayService replayService,
-        IClaudeSettingsService claudeSettings,
-        ILogger<GamificationService> logger)
+    public async Task<DashboardStats> ForceRefreshDashboardAsync()
     {
-        _statsCacheService = statsCacheService;
-        _sessionService = sessionService;
-        _replayService = replayService;
-        _claudeSettings = claudeSettings;
-        _logger = logger;
+        _cachedStats = null;
+        return await GetDashboardStatsAsync();
     }
 
     public async Task<DashboardStats> GetDashboardStatsAsync()
@@ -38,8 +30,8 @@ public class GamificationService : IGamificationService
         try
         {
             // Ensure session index is up-to-date, then aggregate from index (no list allocation)
-            await _replayService.RefreshSessionIndexAsync();
-            var indexStats = await _replayService.GetIndexStatsAsync();
+            await replayService.RefreshSessionIndexAsync();
+            var indexStats = await replayService.GetIndexStatsAsync();
 
             stats.DailyActivity = indexStats.DailyActivity;
             stats.TotalSessions = indexStats.TotalSessions;
@@ -53,10 +45,11 @@ public class GamificationService : IGamificationService
             stats.LongestSessionMs = indexStats.LongestSessionMs;
 
             // Cache stats from stats-cache.json
-            var usageStats = await _statsCacheService.GetMergedStatsAsync();
+            var usageStats = await statsCacheService.GetMergedStatsAsync();
             var cacheTotal = usageStats.TotalCacheCreationTokens + usageStats.TotalCacheReadTokens;
             stats.CacheHitRate = cacheTotal > 0
-                ? (double)usageStats.TotalCacheReadTokens / cacheTotal * 100 : 0;
+                ? (double)usageStats.TotalCacheReadTokens / cacheTotal * 100
+                : 0;
 
             // Cache savings
             decimal savings = 0;
@@ -66,6 +59,7 @@ public class GamificationService : IGamificationService
                 if (pricing != null)
                     savings += (decimal)m.CacheReadTokens / 1_000_000m * (pricing.Input - pricing.CacheRead);
             }
+
             stats.EstimatedCacheSavings = savings;
 
             // Streak
@@ -75,8 +69,8 @@ public class GamificationService : IGamificationService
             stats.Streak = CalculateStreak(activeDates);
 
             // XP and level
-            var settings = await _claudeSettings.ReadAsync(ClaudeSettingsScope.Global);
-            int xp = CalculateXp(settings, stats);
+            var settings = await claudeSettings.ReadAsync(ClaudeSettingsScope.Global);
+            var xp = CalculateXp(settings, stats);
             stats.Level = CalculateLevel(xp);
 
             // Config completeness
@@ -92,7 +86,7 @@ public class GamificationService : IGamificationService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error computing dashboard stats");
+            logger.LogWarning(ex, "Error computing dashboard stats");
         }
 
         _cachedStats = stats;
@@ -100,49 +94,42 @@ public class GamificationService : IGamificationService
         return stats;
     }
 
-    public async Task<DashboardStats> ForceRefreshDashboardAsync()
+    private static (double completeness, List<ConfigItem> items) CalculateConfigCompleteness(ClaudeSettings settings)
     {
-        _cachedStats = null;
-        return await GetDashboardStatsAsync();
+        var items = new List<ConfigItem>
+        {
+            new() { Name = "모델", IsConfigured = settings.Model != null },
+            new() { Name = "성능 수준", IsConfigured = settings.EffortLevel != null },
+            new() { Name = "기본 모드", IsConfigured = settings.DefaultMode != null },
+            new() { Name = "권한", IsConfigured = settings.Permissions is { Allow.Count: > 0 } or { Deny.Count: > 0 } },
+            new() { Name = "훅", IsConfigured = settings.Hooks is { Count: > 0 } },
+            new() { Name = "MCP 서버", IsConfigured = settings.McpServers is { Count: > 0 } }
+        };
+        var filled = items.Count(i => i.IsConfigured);
+        return ((double)filled / items.Count, items);
     }
 
-    private async Task<CostSummary> CalculateCostSummaryAsync()
+    private static Achievement A(string id, string name, string desc, string icon,
+        AchievementCategory cat, AchievementRarity rarity, bool unlocked)
     {
-        var now = DateTime.UtcNow;
-        var dayOfMonth = now.Day;
-
-        var todayStats = await _statsCacheService.GetMergedStatsAsync(days: 1);
-        var weekStats = await _statsCacheService.GetMergedStatsAsync(days: 7);
-        var monthStats = await _statsCacheService.GetMergedStatsAsync(days: dayOfMonth);
-
-        var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
-        var projection = dayOfMonth > 0 ? monthStats.TotalCost / dayOfMonth * daysInMonth : 0m;
-
-        var last7 = weekStats.DailyTokenTrend
-            .OrderBy(d => d.Date)
-            .Select(d => d.DailyCost)
-            .ToList();
-
-        return new CostSummary
+        return new Achievement
         {
-            Today = todayStats.TotalCost,
-            ThisMonth = monthStats.TotalCost,
-            MonthlyProjection = projection,
-            Last7Days = last7,
+            Id = id, Name = name, Description = desc, Icon = icon,
+            Category = cat, Rarity = rarity, Unlocked = unlocked
         };
     }
 
     /// <summary>
-    /// Expanded XP sources:
-    /// - Config: model/effort set (+50), hooks (+20/hook), MCP servers (+30/server)
-    /// - Activity: days active (+5/day), messages (+1 per 10, cap 500), tool calls (+1 per 20, cap 500)
-    /// - Sessions: +2/session (cap 300)
-    /// - Streaks: current streak * 10, longest streak * 5
-    /// - Projects: +15/project
+    ///     Expanded XP sources:
+    ///     - Config: model/effort set (+50), hooks (+20/hook), MCP servers (+30/server)
+    ///     - Activity: days active (+5/day), messages (+1 per 10, cap 500), tool calls (+1 per 20, cap 500)
+    ///     - Sessions: +2/session (cap 300)
+    ///     - Streaks: current streak * 10, longest streak * 5
+    ///     - Projects: +15/project
     /// </summary>
     private static int CalculateXp(ClaudeSettings settings, DashboardStats stats)
     {
-        int xp = 0;
+        var xp = 0;
 
         // Config XP
         if (settings.Model != null || settings.EffortLevel != null) xp += 50;
@@ -168,84 +155,10 @@ public class GamificationService : IGamificationService
         return xp;
     }
 
-    private static UserLevel CalculateLevel(int xp)
-    {
-        var level = new UserLevel { Xp = xp };
-        for (int i = UserLevel.Thresholds.Length - 1; i >= 0; i--)
-        {
-            if (xp >= UserLevel.Thresholds[i])
-            {
-                level.Level = i + 1;
-                level.Name = UserLevel.Names[Math.Min(i, UserLevel.Names.Length - 1)];
-                level.XpForNext = i < UserLevel.Thresholds.Length - 1
-                    ? UserLevel.Thresholds[i + 1] : UserLevel.Thresholds[^1];
-                level.Progress = level.XpForNext > UserLevel.Thresholds[i]
-                    ? (double)(xp - UserLevel.Thresholds[i]) / (level.XpForNext - UserLevel.Thresholds[i])
-                    : 1.0;
-                break;
-            }
-        }
-        return level;
-    }
-
-    private static StreakInfo CalculateStreak(List<DateOnly> activeDates)
-    {
-        if (activeDates.Count == 0) return new StreakInfo();
-
-        var sorted = activeDates.OrderDescending().ToList();
-        var today = DateOnly.FromDateTime(DateTime.Now);
-
-        int current = 0;
-        var checkDate = today;
-        foreach (var date in sorted)
-        {
-            if (date == checkDate || date == checkDate.AddDays(-1))
-            {
-                current++;
-                checkDate = date;
-            }
-            else if (date < checkDate.AddDays(-1)) break;
-        }
-
-        // Longest streak
-        int longest = 0, streak = 1;
-        for (int i = 1; i < sorted.Count; i++)
-        {
-            if (sorted[i - 1].DayNumber - sorted[i].DayNumber == 1)
-                streak++;
-            else
-            {
-                longest = Math.Max(longest, streak);
-                streak = 1;
-            }
-        }
-        longest = Math.Max(longest, streak);
-
-        return new StreakInfo
-        {
-            CurrentStreak = current,
-            LongestStreak = longest,
-            LastActiveDate = sorted.Count > 0 ? sorted[0].ToDateTime(TimeOnly.MinValue) : null
-        };
-    }
-
-    private static (double completeness, List<ConfigItem> items) CalculateConfigCompleteness(ClaudeSettings settings)
-    {
-        var items = new List<ConfigItem>
-        {
-            new() { Name = "모델", IsConfigured = settings.Model != null },
-            new() { Name = "성능 수준", IsConfigured = settings.EffortLevel != null },
-            new() { Name = "기본 모드", IsConfigured = settings.DefaultMode != null },
-            new() { Name = "권한", IsConfigured = settings.Permissions is { Allow.Count: > 0 } or { Deny.Count: > 0 } },
-            new() { Name = "훅", IsConfigured = settings.Hooks is { Count: > 0 } },
-            new() { Name = "MCP 서버", IsConfigured = settings.McpServers is { Count: > 0 } },
-        };
-        var filled = items.Count(i => i.IsConfigured);
-        return ((double)filled / items.Count, items);
-    }
-
     private static int GetHookCount(ClaudeSettings settings)
-        => settings.Hooks?.Values.Sum(configs => configs.Sum(c => c.Hooks.Count)) ?? 0;
+    {
+        return settings.Hooks?.Values.Sum(configs => configs.Sum(c => c.Hooks.Count)) ?? 0;
+    }
 
     // ═══════════════════════════════════════════
     //  Achievements — 7 categories, 42 total
@@ -396,14 +309,96 @@ public class GamificationService : IGamificationService
                 stats.LongestSessionMs >= 8 * 3600 * 1000),
             A("time-allnighter", "밤샘 전사", "야간 100회 이상 작업", "nightlight",
                 AchievementCategory.Time, AchievementRarity.Epic,
-                stats.NightSessionCount >= 100),
+                stats.NightSessionCount >= 100)
         ];
     }
 
-    private static Achievement A(string id, string name, string desc, string icon,
-        AchievementCategory cat, AchievementRarity rarity, bool unlocked) => new()
+    private static StreakInfo CalculateStreak(List<DateOnly> activeDates)
     {
-        Id = id, Name = name, Description = desc, Icon = icon,
-        Category = cat, Rarity = rarity, Unlocked = unlocked
-    };
+        if (activeDates.Count == 0) return new StreakInfo();
+
+        var sorted = activeDates.OrderDescending().ToList();
+        var today = DateOnly.FromDateTime(DateTime.Now);
+
+        var current = 0;
+        var checkDate = today;
+        foreach (var date in sorted)
+            if (date == checkDate || date == checkDate.AddDays(-1))
+            {
+                current++;
+                checkDate = date;
+            }
+            else if (date < checkDate.AddDays(-1))
+            {
+                break;
+            }
+
+        // Longest streak
+        int longest = 0, streak = 1;
+        for (var i = 1; i < sorted.Count; i++)
+            if (sorted[i - 1].DayNumber - sorted[i].DayNumber == 1)
+            {
+                streak++;
+            }
+            else
+            {
+                longest = Math.Max(longest, streak);
+                streak = 1;
+            }
+
+        longest = Math.Max(longest, streak);
+
+        return new StreakInfo
+        {
+            CurrentStreak = current,
+            LongestStreak = longest,
+            LastActiveDate = sorted.Count > 0 ? sorted[0].ToDateTime(TimeOnly.MinValue) : null
+        };
+    }
+
+    private static UserLevel CalculateLevel(int xp)
+    {
+        var level = new UserLevel { Xp = xp };
+        for (var i = UserLevel.Thresholds.Length - 1; i >= 0; i--)
+            if (xp >= UserLevel.Thresholds[i])
+            {
+                level.Level = i + 1;
+                level.Name = UserLevel.Names[Math.Min(i, UserLevel.Names.Length - 1)];
+                level.XpForNext = i < UserLevel.Thresholds.Length - 1
+                    ? UserLevel.Thresholds[i + 1]
+                    : UserLevel.Thresholds[^1];
+                level.Progress = level.XpForNext > UserLevel.Thresholds[i]
+                    ? (double)(xp - UserLevel.Thresholds[i]) / (level.XpForNext - UserLevel.Thresholds[i])
+                    : 1.0;
+                break;
+            }
+
+        return level;
+    }
+
+    private async Task<CostSummary> CalculateCostSummaryAsync()
+    {
+        var now = DateTime.UtcNow;
+        var dayOfMonth = now.Day;
+
+        var todayStats = await statsCacheService.GetMergedStatsAsync(1);
+        var weekStats = await statsCacheService.GetMergedStatsAsync(7);
+        var monthStats = await statsCacheService.GetMergedStatsAsync(dayOfMonth);
+
+        var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
+        var projection = dayOfMonth > 0 ? monthStats.TotalCost / dayOfMonth * daysInMonth : 0m;
+
+        var last7 = weekStats.DailyTokenTrend
+            .OrderBy(d => d.Date)
+            .Select(d => d.DailyCost)
+            .ToList();
+
+        return new CostSummary
+        {
+            Today = todayStats.TotalCost,
+            ThisMonth = monthStats.TotalCost,
+            MonthlyProjection = projection,
+            Last7Days = last7
+        };
+    }
 }

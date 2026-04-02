@@ -1,6 +1,4 @@
 @using Markdig
-@using Cominomi.Shared.Models
-
 @if (IsVisible)
 {
     <div class="plan-review-panel">
@@ -8,18 +6,18 @@
         <div class="plan-review-header" @onclick="TogglePreview">
             <div class="plan-review-header-left">
                 <div class="plan-review-icon-badge">
-                    <MudIcon Icon="@Icons.Material.Filled.Map" Size="Size.Small" Style="width: 18px; height: 18px;" />
+                    <MudIcon Icon="@Icons.Material.Filled.Map" Size="Size.Small" Style="width: 18px; height: 18px;"/>
                 </div>
                 <div class="plan-review-title-area">
                     <span class="plan-review-title">플랜 완료</span>
                     @if (!string.IsNullOrEmpty(PlanFilePath))
                     {
-                        <span class="plan-review-filename">@System.IO.Path.GetFileName(PlanFilePath)</span>
+                        <span class="plan-review-filename">@Path.GetFileName(PlanFilePath)</span>
                     }
                 </div>
             </div>
             <MudIcon Icon="@(_showPreview ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                     Size="Size.Small" Style="width: 18px; height: 18px; opacity: 0.5;" />
+                     Size="Size.Small" Style="width: 18px; height: 18px; opacity: 0.5;"/>
         </div>
 
         @* Plan content markdown *@
@@ -72,6 +70,9 @@
         .UseAdvancedExtensions()
         .Build();
 
-    private void TogglePreview() => _showPreview = !_showPreview;
+    private void TogglePreview()
+    {
+        _showPreview = !_showPreview;
+    }
 
 }

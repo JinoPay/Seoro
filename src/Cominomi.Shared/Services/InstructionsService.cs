@@ -13,6 +13,27 @@ public partial class InstructionsService : IInstructionsService
         _logger = logger;
     }
 
+    public string GetFilePath(ClaudeSettingsScope scope, string? projectPath = null)
+    {
+        return scope switch
+        {
+            ClaudeSettingsScope.Global => Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "CLAUDE.md"),
+            ClaudeSettingsScope.Project => Path.Combine(
+                projectPath ?? throw new ArgumentException("projectPath required"), ".claude", "CLAUDE.md"),
+            ClaudeSettingsScope.Local => Path.Combine(
+                projectPath ?? throw new ArgumentException("projectPath required"), "CLAUDE.md"),
+            _ => throw new ArgumentOutOfRangeException(nameof(scope))
+        };
+    }
+
+    public async Task SaveAsync(ClaudeSettingsScope scope, string content, string? projectPath = null)
+    {
+        var filePath = GetFilePath(scope, projectPath);
+        await AtomicFileWriter.WriteAsync(filePath, content);
+        _logger.LogDebug("Saved instructions: {Path}", filePath);
+    }
+
     public Task<InstructionFile> ReadAsync(ClaudeSettingsScope scope, string? projectPath = null)
     {
         var filePath = GetFilePath(scope, projectPath);
@@ -28,27 +49,6 @@ public partial class InstructionsService : IInstructionsService
             Exists = exists,
             ImportRefs = imports
         });
-    }
-
-    public async Task SaveAsync(ClaudeSettingsScope scope, string content, string? projectPath = null)
-    {
-        var filePath = GetFilePath(scope, projectPath);
-        await AtomicFileWriter.WriteAsync(filePath, content);
-        _logger.LogDebug("Saved instructions: {Path}", filePath);
-    }
-
-    public string GetFilePath(ClaudeSettingsScope scope, string? projectPath = null)
-    {
-        return scope switch
-        {
-            ClaudeSettingsScope.Global => Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "CLAUDE.md"),
-            ClaudeSettingsScope.Project => Path.Combine(
-                projectPath ?? throw new ArgumentException("projectPath required"), ".claude", "CLAUDE.md"),
-            ClaudeSettingsScope.Local => Path.Combine(
-                projectPath ?? throw new ArgumentException("projectPath required"), "CLAUDE.md"),
-            _ => throw new ArgumentOutOfRangeException(nameof(scope))
-        };
     }
 
     private static List<string> ExtractImportRefs(string content)

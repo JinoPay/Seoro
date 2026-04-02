@@ -6,36 +6,36 @@ using Microsoft.Extensions.Options;
 
 namespace Cominomi.Shared.Services;
 
-public class HooksEngine : IHooksEngine
+public class HooksEngine(
+    ILogger<HooksEngine> logger,
+    IShellService shellService,
+    IProcessRunner processRunner,
+    IOptionsMonitor<AppSettings> appSettings)
+    : IHooksEngine
 {
+    private const int MaxConcurrency = 8;
+    private const int MaxTimeoutSeconds = 300;
+
+    private const int MinTimeoutSeconds = 1;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private const int MinTimeoutSeconds = 1;
-    private const int MaxTimeoutSeconds = 300;
-    private const int MaxConcurrency = 8;
-
-    private readonly ILogger<HooksEngine> _logger;
-    private readonly IShellService _shellService;
-    private readonly IProcessRunner _processRunner;
-    private readonly IOptionsMonitor<AppSettings> _appSettings;
-    private readonly string _hooksFile;
+    private readonly string _hooksFile = Path.Combine(AppPaths.Settings, "hooks.json");
     private List<HookDefinition> _hooks = [];
 
-    public HooksEngine(
-        ILogger<HooksEngine> logger,
-        IShellService shellService,
-        IProcessRunner processRunner,
-        IOptionsMonitor<AppSettings> appSettings)
+    public List<HookDefinition> GetHooks()
     {
-        _logger = logger;
-        _shellService = shellService;
-        _processRunner = processRunner;
-        _appSettings = appSettings;
-        _hooksFile = Path.Combine(AppPaths.Settings, "hooks.json");
+        return [.. _hooks];
+    }
+
+    public async Task AddHookAsync(HookDefinition hook)
+    {
+        _hooks.Add(hook);
+        await SaveAsync();
     }
 
     public async Task LoadAsync()
@@ -69,9 +69,15 @@ public class HooksEngine : IHooksEngine
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to load hooks configuration");
+            logger.LogWarning(ex, "Failed to load hooks configuration");
             _hooks = [];
         }
+    }
+
+    public async Task RemoveHookAsync(HookEvent hookEvent, string command)
+    {
+        _hooks.RemoveAll(h => h.Event == hookEvent && h.Command == command);
+        await SaveAsync();
     }
 
     public async Task SaveAsync()
@@ -87,9 +93,9 @@ public class HooksEngine : IHooksEngine
         var hooks = _hooks.Where(h => h.Event == hookEvent && h.Enabled).ToList();
         if (hooks.Count == 0) return [];
 
-        _logger.LogInformation("Firing hook event {Event} ({Count} hooks)", hookEvent, hooks.Count);
+        logger.LogInformation("Firing hook event {Event} ({Count} hooks)", hookEvent, hooks.Count);
 
-        var shell = await _shellService.GetShellAsync();
+        var shell = await shellService.GetShellAsync();
 
         // Concurrent execution with bounded parallelism to prevent resource exhaustion
         using var semaphore = new SemaphoreSlim(MaxConcurrency);
@@ -119,22 +125,18 @@ public class HooksEngine : IHooksEngine
                 [CominomiConstants.Env.HookEvent] = hookEvent.ToString()
             };
             if (env != null)
-            {
                 foreach (var (key, value) in env)
                     envVars[key] = value;
-            }
 
-            var globalDefault = _appSettings.CurrentValue.HookTimeoutSeconds;
+            var globalDefault = appSettings.CurrentValue.HookTimeoutSeconds;
             var rawTimeout = hook.TimeoutSeconds ?? globalDefault;
             var timeoutSeconds = Math.Clamp(rawTimeout, MinTimeoutSeconds, MaxTimeoutSeconds);
             if (rawTimeout != timeoutSeconds)
-            {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Hook '{Command}' timeout {Original}s clamped to {Clamped}s (allowed: {Min}-{Max})",
                     hook.Command, rawTimeout, timeoutSeconds, MinTimeoutSeconds, MaxTimeoutSeconds);
-            }
 
-            var result = await _processRunner.RunAsync(new ProcessRunOptions
+            var result = await processRunner.RunAsync(new ProcessRunOptions
             {
                 FileName = shell.FileName,
                 Arguments = shell.Type == ShellType.Cmd
@@ -146,11 +148,11 @@ public class HooksEngine : IHooksEngine
             });
 
             if (!string.IsNullOrWhiteSpace(result.Stdout))
-                _logger.LogDebug("Hook '{Command}' stdout: {Stdout}", hook.Command, result.Stdout.TrimEnd());
+                logger.LogDebug("Hook '{Command}' stdout: {Stdout}", hook.Command, result.Stdout.TrimEnd());
             if (!string.IsNullOrWhiteSpace(result.Stderr))
-                _logger.LogWarning("Hook '{Command}' stderr: {Stderr}", hook.Command, result.Stderr.TrimEnd());
+                logger.LogWarning("Hook '{Command}' stderr: {Stderr}", hook.Command, result.Stderr.TrimEnd());
             if (!result.Success)
-                _logger.LogWarning("Hook '{Command}' for event {Event} exited with code {ExitCode}",
+                logger.LogWarning("Hook '{Command}' for event {Event} exited with code {ExitCode}",
                     hook.Command, hookEvent, result.ExitCode);
 
             var timedOut = result.ExitCode == -1 && result.Stderr.Contains("timed out");
@@ -159,22 +161,8 @@ public class HooksEngine : IHooksEngine
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Hook '{Command}' for event {Event} failed", hook.Command, hookEvent);
+            logger.LogWarning(ex, "Hook '{Command}' for event {Event} failed", hook.Command, hookEvent);
             return new HookExecutionResult(hook.Command, false, -1, "", ex.Message, false);
         }
-    }
-
-    public List<HookDefinition> GetHooks() => [.. _hooks];
-
-    public async Task AddHookAsync(HookDefinition hook)
-    {
-        _hooks.Add(hook);
-        await SaveAsync();
-    }
-
-    public async Task RemoveHookAsync(HookEvent hookEvent, string command)
-    {
-        _hooks.RemoveAll(h => h.Event == hookEvent && h.Command == command);
-        await SaveAsync();
     }
 }

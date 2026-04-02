@@ -3,7 +3,7 @@
                    Disabled="Disabled"
                    Class="@ButtonClass"
                    Style="@Style"
-                   OnClick="Toggle" />
+                   OnClick="Toggle"/>
 </div>
 
 <MudPopover Open="_open" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter"
@@ -12,7 +12,7 @@
     <div class="add-session-option" @onclick="HandleNewChat">
         <div class="add-session-icon" style="background: var(--accent-dim);">
             <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
-                     Style="color: var(--accent);" />
+                     Style="color: var(--accent);"/>
         </div>
         <div class="add-session-label">
             <span class="add-session-title">새 워크트리</span>
@@ -22,7 +22,7 @@
     <div class="add-session-option" @onclick="HandleAddLocalDir">
         <div class="add-session-icon" style="background: var(--color-warning-bg);">
             <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small"
-                     Style="color: var(--color-warning);" />
+                     Style="color: var(--color-warning);"/>
         </div>
         <div class="add-session-label">
             <span class="add-session-title">로컬 디렉터리</span>
@@ -31,7 +31,7 @@
     </div>
 </MudPopover>
 
-<MudOverlay Visible="_open" OnClick="Close" LockScroll="false" />
+<MudOverlay Visible="_open" OnClick="Close" LockScroll="false"/>
 
 @code {
     [Parameter] public string WorkspaceId { get; set; } = "";
@@ -50,7 +50,10 @@
             _open = !_open;
     }
 
-    private void Close() => _open = false;
+    private void Close()
+    {
+        _open = false;
+    }
 
     private async Task HandleNewChat()
     {
@@ -63,4 +66,5 @@
         _open = false;
         await OnAddLocalDir.InvokeAsync();
     }
+
 }

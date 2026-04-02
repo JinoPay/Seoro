@@ -1,11 +1,10 @@
-@using Cominomi.Shared.Models
 @inject IMcpService McpService
 @inject ISnackbar Snackbar
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
         <div class="typo-h6">
-            <MudIcon Icon="@Icons.Material.Filled.Hub" Class="mr-2" />
+            <MudIcon Icon="@Icons.Material.Filled.Hub" Class="mr-2"/>
             MCP 서버 관리
         </div>
     </TitleContent>
@@ -16,7 +15,7 @@
                 @if (_loading)
                 {
                     <div style="display: flex; justify-content: center; padding: 24px;">
-                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
                     </div>
                 }
                 else if (_servers.Count == 0)
@@ -32,11 +31,12 @@
                         {
                             <div class="mcp-server-card">
                                 <div class="mcp-server-card-header">
-                                    <MudIcon Icon="@(server.Status.Running ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.RadioButtonUnchecked)"
-                                             Color="@(server.Status.Running ? Color.Success : Color.Default)"
-                                             Size="Size.Small" Style="width: 16px; height: 16px;" />
+                                    <MudIcon
+                                        Icon="@(server.Status.Running ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.RadioButtonUnchecked)"
+                                        Color="@(server.Status.Running ? Color.Success : Color.Default)"
+                                        Size="Size.Small" Style="width: 16px; height: 16px;"/>
                                     <MudIcon Icon="@GetTransportIcon(server)" Size="Size.Small"
-                                             Style="width: 16px; height: 16px; opacity: 0.6;" />
+                                             Style="width: 16px; height: 16px; opacity: 0.6;"/>
                                     <span class="typo-subtitle2">@server.Name</span>
                                     <div style="margin-left: auto; display: flex; gap: 2px; align-items: center;">
                                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
@@ -49,10 +49,10 @@
                                         </MudChip>
                                         <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
                                                        Color="Color.Primary"
-                                                       OnClick="@(() => StartEdit(server))" />
+                                                       OnClick="@(() => StartEdit(server))"/>
                                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                                        Color="Color.Error"
-                                                       OnClick="@(() => RemoveServer(server))" />
+                                                       OnClick="@(() => RemoveServer(server))"/>
                                     </div>
                                 </div>
                                 <div class="mcp-server-card-detail typo-caption text-secondary">
@@ -71,7 +71,8 @@
                 }
                 <div style="padding: 8px;">
                     <MudButton StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                               Variant="Variant.Text" OnClick="RefreshServers">새로고침</MudButton>
+                               Variant="Variant.Text" OnClick="RefreshServers">새로고침
+                    </MudButton>
                 </div>
             </MudTabPanel>
 
@@ -80,7 +81,7 @@
                          Icon="@(_editingServer != null ? Icons.Material.Filled.Edit : Icons.Material.Filled.Add)">
                 <div class="stack gap-3 pa-3">
                     <MudTextField @bind-Value="_newName" Label="서버 이름" Variant="Variant.Outlined"
-                                  Margin="Margin.Dense" Required="true" />
+                                  Margin="Margin.Dense" Required="true"/>
 
                     <MudSelect T="string" @bind-Value="_newTransport" Label="전송 방식"
                                Variant="Variant.Outlined" Margin="Margin.Dense">
@@ -92,15 +93,15 @@
                     {
                         <MudTextField @bind-Value="_newCommand" Label="명령어" Variant="Variant.Outlined"
                                       Margin="Margin.Dense" Placeholder="npx, node, python..."
-                                      Required="true" />
+                                      Required="true"/>
                         <MudTextField @bind-Value="_newArgs" Label="인수 (공백 구분)" Variant="Variant.Outlined"
-                                      Margin="Margin.Dense" Placeholder="-y server-filesystem /tmp" />
+                                      Margin="Margin.Dense" Placeholder="-y server-filesystem /tmp"/>
                     }
                     else
                     {
                         <MudTextField @bind-Value="_newUrl" Label="서버 URL" Variant="Variant.Outlined"
                                       Margin="Margin.Dense" Placeholder="http://localhost:3000/sse"
-                                      Required="true" />
+                                      Required="true"/>
                     }
 
                     <MudSelect T="string" @bind-Value="_newScope" Label="범위"
@@ -120,17 +121,18 @@
                                 <MudTextField T="string" Value="@_envKeys[capturedIdx]"
                                               ValueChanged="@(v => _envKeys[capturedIdx] = v)"
                                               Placeholder="KEY" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                              Style="flex: 0.4;" />
+                                              Style="flex: 0.4;"/>
                                 <MudTextField T="string" Value="@_envValues[capturedIdx]"
                                               ValueChanged="@(v => _envValues[capturedIdx] = v)"
                                               Placeholder="VALUE" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                              Style="flex: 0.6;" InputType="InputType.Password" />
+                                              Style="flex: 0.6;" InputType="InputType.Password"/>
                                 <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small"
-                                               OnClick="@(() => RemoveEnvRow(capturedIdx))" />
+                                               OnClick="@(() => RemoveEnvRow(capturedIdx))"/>
                             </div>
                         }
                         <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Variant="Variant.Text"
-                                   OnClick="AddEnvRow">환경변수 추가</MudButton>
+                                   OnClick="AddEnvRow">환경변수 추가
+                        </MudButton>
                     </div>
 
                     <div class="stack-row gap-2">
@@ -159,18 +161,18 @@
                             @if (_importing)
                             {
                                 <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                     Style="width: 16px; height: 16px; margin-right: 8px;" />
+                                                     Style="width: 16px; height: 16px; margin-right: 8px;"/>
                             }
                             Claude Desktop 설정 가져오기
                         </MudButton>
                     </div>
 
-                    <MudDivider />
+                    <MudDivider/>
 
                     <div>
                         <div class="typo-subtitle2 mb-2">JSON으로 가져오기</div>
                         <MudTextField @bind-Value="_importJson" Label="MCP 설정 JSON" Variant="Variant.Outlined"
-                                      Lines="6" Placeholder='{"mcpServers": {"name": {"command": "...", "args": []}}}' />
+                                      Lines="6" Placeholder='{"mcpServers": {"name": {"command": "...", "args": []}}}'/>
                         <MudSelect T="string" @bind-Value="_importScope" Label="범위"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-2">
                             <MudSelectItem T="string" Value="@("user")">사용자 (전역)</MudSelectItem>
@@ -208,8 +210,8 @@
     private string _newArgs = "";
     private string _newUrl = "";
     private string _newScope = "user";
-    private List<string> _envKeys = [];
-    private List<string> _envValues = [];
+    private readonly List<string> _envKeys = [];
+    private readonly List<string> _envValues = [];
 
     // Import
     private string _importJson = "";
@@ -253,7 +255,7 @@
     private async Task AddServer()
     {
         var env = new Dictionary<string, string>();
-        for (int i = 0; i < _envKeys.Count; i++)
+        for (var i = 0; i < _envKeys.Count; i++)
         {
             if (!string.IsNullOrWhiteSpace(_envKeys[i]))
                 env[_envKeys[i]] = _envValues[i];
@@ -307,7 +309,7 @@
         if (_editingServer == null) return;
 
         var env = new Dictionary<string, string>();
-        for (int i = 0; i < _envKeys.Count; i++)
+        for (var i = 0; i < _envKeys.Count; i++)
         {
             if (!string.IsNullOrWhiteSpace(_envKeys[i]))
                 env[_envKeys[i]] = _envValues[i];
@@ -420,28 +422,39 @@
         await IsOpenChanged.InvokeAsync(false);
     }
 
-    private static bool IsCloudServer(McpServer server) =>
-        server.Transport == "sse" ||
-        (!string.IsNullOrEmpty(server.Url) && !server.Url.Contains("localhost") && !server.Url.Contains("127.0.0.1"));
+    private static bool IsCloudServer(McpServer server)
+    {
+        return server.Transport == "sse" ||
+               (!string.IsNullOrEmpty(server.Url) && !server.Url.Contains("localhost") && !server.Url.Contains("127.0.0.1"));
+    }
 
-    private static string GetTransportIcon(McpServer server) =>
-        server.Transport == "sse" || IsCloudServer(server)
+    private static string GetTransportIcon(McpServer server)
+    {
+        return server.Transport == "sse" || IsCloudServer(server)
             ? Icons.Material.Filled.Cloud
             : Icons.Material.Filled.Terminal;
+    }
 
-    private static Color GetScopeColor(string scope) => scope switch
+    private static Color GetScopeColor(string scope)
     {
-        "project" => Color.Info,
-        "local" => Color.Warning,
-        _ => Color.Default
-    };
+        return scope switch
+        {
+            "project" => Color.Info,
+            "local" => Color.Warning,
+            _ => Color.Default
+        };
+    }
 
-    private static string GetScopeLabel(string scope) => scope switch
+    private static string GetScopeLabel(string scope)
     {
-        "project" => "프로젝트",
-        "local" => "로컬",
-        _ => "전역"
-    };
+        return scope switch
+        {
+            "project" => "프로젝트",
+            "local" => "로컬",
+            _ => "전역"
+        };
+    }
+
 }
 
 <style>

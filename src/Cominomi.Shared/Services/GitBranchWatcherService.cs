@@ -7,23 +7,23 @@ namespace Cominomi.Shared.Services;
 
 public interface IGitBranchWatcherService : IDisposable
 {
-    void Watch(Session session);
-    void Unwatch();
     Task RefreshBranchAsync(Session session);
     void RefreshBranchFromHeadFile(Session session);
+    void Unwatch();
+    void Watch(Session session);
 }
 
 public partial class GitBranchWatcherService : IGitBranchWatcherService
 {
+    private const int DebounceMs = 200;
     private readonly IChatState _chatState;
+    private readonly IDisposable _sessionChangeSub;
     private readonly IGitService _gitService;
     private readonly ILogger<GitBranchWatcherService> _logger;
-    private readonly IDisposable _sessionChangeSub;
 
     private FileSystemWatcher? _watcher;
-    private Timer? _debounceTimer;
     private Session? _watchedSession;
-    private const int DebounceMs = 200;
+    private Timer? _debounceTimer;
 
     public GitBranchWatcherService(
         IChatState chatState,
@@ -42,6 +42,67 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
             else
                 Unwatch();
         });
+    }
+
+    public void Dispose()
+    {
+        Unwatch();
+        _sessionChangeSub.Dispose();
+    }
+
+    public async Task RefreshBranchAsync(Session session)
+    {
+        var workDir = session.Git.WorktreePath;
+        if (string.IsNullOrEmpty(workDir))
+            return;
+
+        try
+        {
+            var branch = await _gitService.GetCurrentBranchAsync(workDir);
+            if (!string.IsNullOrEmpty(branch) && branch != session.Git.BranchName)
+            {
+                session.Git.BranchName = branch;
+                ApplyDerivedTitle(session, branch);
+                _chatState.NotifyStateChanged();
+                _logger.LogDebug("Branch refreshed to {Branch} for session {SessionId}", branch, session.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to refresh branch for session {SessionId}", session.Id);
+        }
+    }
+
+    public void RefreshBranchFromHeadFile(Session session)
+    {
+        var workDir = session.Git.WorktreePath;
+        if (string.IsNullOrEmpty(workDir))
+            return;
+
+        var gitDir = ResolveGitDir(workDir);
+        if (gitDir == null)
+            return;
+
+        var headPath = Path.Combine(gitDir, "HEAD");
+        if (File.Exists(headPath))
+            UpdateBranchFromHeadFile(headPath, session);
+    }
+
+    public void Unwatch()
+    {
+        _debounceTimer?.Dispose();
+        _debounceTimer = null;
+
+        if (_watcher != null)
+        {
+            _watcher.Changed -= OnHeadChanged;
+            _watcher.Created -= OnHeadChanged;
+            _watcher.Renamed -= OnHeadRenamed;
+            _watcher.Dispose();
+            _watcher = null;
+        }
+
+        _watchedSession = null;
     }
 
     public void Watch(Session session)
@@ -84,54 +145,49 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
         }
     }
 
-    public void Unwatch()
+    [GeneratedRegex(@"^\d{8}-\d{6}$")]
+    private static partial Regex TimestampBranchRegex();
+
+    private static string? ResolveGitDir(string worktreePath)
     {
-        _debounceTimer?.Dispose();
-        _debounceTimer = null;
+        var dotGit = Path.Combine(worktreePath, ".git");
 
-        if (_watcher != null)
-        {
-            _watcher.Changed -= OnHeadChanged;
-            _watcher.Created -= OnHeadChanged;
-            _watcher.Renamed -= OnHeadRenamed;
-            _watcher.Dispose();
-            _watcher = null;
-        }
+        if (Directory.Exists(dotGit))
+            return dotGit;
 
-        _watchedSession = null;
+        if (File.Exists(dotGit))
+            // Worktree: .git is a file containing "gitdir: <path>"
+            try
+            {
+                var content = File.ReadAllText(dotGit).Trim();
+                if (content.StartsWith("gitdir: "))
+                {
+                    var gitdir = content["gitdir: ".Length..].Trim();
+                    if (!Path.IsPathRooted(gitdir))
+                        gitdir = Path.GetFullPath(Path.Combine(worktreePath, gitdir));
+                    return Directory.Exists(gitdir) ? gitdir : null;
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+        return null;
     }
 
-    public async Task RefreshBranchAsync(Session session)
+    private void ApplyDerivedTitle(Session session, string branch)
     {
-        var workDir = session.Git.WorktreePath;
-        if (string.IsNullOrEmpty(workDir))
+        if (session.TitleLocked)
             return;
 
-        try
+        var title = DeriveTitleFromBranch(branch);
+        if (title != null)
         {
-            var branch = await _gitService.GetCurrentBranchAsync(workDir);
-            if (!string.IsNullOrEmpty(branch) && branch != session.Git.BranchName)
-            {
-                session.Git.BranchName = branch;
-                ApplyDerivedTitle(session, branch);
-                _chatState.NotifyStateChanged();
-                _logger.LogDebug("Branch refreshed to {Branch} for session {SessionId}", branch, session.Id);
-            }
+            session.Title = title;
+            session.TitleLocked = true;
+            _chatState.Tabs.UpdateChatTabTitle(title);
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to refresh branch for session {SessionId}", session.Id);
-        }
-    }
-
-    private void OnHeadChanged(object sender, FileSystemEventArgs e)
-    {
-        DebouncedHeadUpdate(e.FullPath);
-    }
-
-    private void OnHeadRenamed(object sender, RenamedEventArgs e)
-    {
-        DebouncedHeadUpdate(e.FullPath);
     }
 
     private void DebouncedHeadUpdate(string fullPath)
@@ -148,19 +204,14 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
         }, null, DebounceMs, Timeout.Infinite);
     }
 
-    public void RefreshBranchFromHeadFile(Session session)
+    private void OnHeadChanged(object sender, FileSystemEventArgs e)
     {
-        var workDir = session.Git.WorktreePath;
-        if (string.IsNullOrEmpty(workDir))
-            return;
+        DebouncedHeadUpdate(e.FullPath);
+    }
 
-        var gitDir = ResolveGitDir(workDir);
-        if (gitDir == null)
-            return;
-
-        var headPath = Path.Combine(gitDir, "HEAD");
-        if (File.Exists(headPath))
-            UpdateBranchFromHeadFile(headPath, session);
+    private void OnHeadRenamed(object sender, RenamedEventArgs e)
+    {
+        DebouncedHeadUpdate(e.FullPath);
     }
 
     private void UpdateBranchFromHeadFile(string headPath, Session session)
@@ -195,20 +246,6 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
         }
     }
 
-    private void ApplyDerivedTitle(Session session, string branch)
-    {
-        if (session.TitleLocked)
-            return;
-
-        var title = DeriveTitleFromBranch(branch);
-        if (title != null)
-        {
-            session.Title = title;
-            session.TitleLocked = true;
-            _chatState.Tabs.UpdateChatTabTitle(title);
-        }
-    }
-
     internal static string? DeriveTitleFromBranch(string branch)
     {
         var suffix = branch.StartsWith(CominomiConstants.BranchPrefix)
@@ -226,44 +263,5 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
             title = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(title);
 
         return title;
-    }
-
-    [GeneratedRegex(@"^\d{8}-\d{6}$")]
-    private static partial Regex TimestampBranchRegex();
-
-    private static string? ResolveGitDir(string worktreePath)
-    {
-        var dotGit = Path.Combine(worktreePath, ".git");
-
-        if (Directory.Exists(dotGit))
-            return dotGit;
-
-        if (File.Exists(dotGit))
-        {
-            // Worktree: .git is a file containing "gitdir: <path>"
-            try
-            {
-                var content = File.ReadAllText(dotGit).Trim();
-                if (content.StartsWith("gitdir: "))
-                {
-                    var gitdir = content["gitdir: ".Length..].Trim();
-                    if (!Path.IsPathRooted(gitdir))
-                        gitdir = Path.GetFullPath(Path.Combine(worktreePath, gitdir));
-                    return Directory.Exists(gitdir) ? gitdir : null;
-                }
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        return null;
-    }
-
-    public void Dispose()
-    {
-        Unwatch();
-        _sessionChangeSub.Dispose();
     }
 }

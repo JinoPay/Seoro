@@ -3,41 +3,35 @@ using Microsoft.Extensions.Logging;
 
 namespace Cominomi.Shared.Services;
 
-public class ChatMessageOrchestrator : IChatMessageOrchestrator
+public class ChatMessageOrchestrator(
+    IChatState chatState,
+    IClaudeService claudeService,
+    ISessionService sessionService,
+    IAttachmentService attachmentService,
+    IStreamEventProcessor streamProcessor,
+    ISystemPromptBuilder systemPromptBuilder,
+    IHooksEngine hooksEngine,
+    IActiveSessionRegistry activeSessionRegistry,
+    IGitBranchWatcherService branchWatcher,
+    ILogger<ChatMessageOrchestrator> logger)
+    : IChatMessageOrchestrator
 {
-    private readonly IChatState _chatState;
-    private readonly IClaudeService _claudeService;
-    private readonly ISessionService _sessionService;
-    private readonly IAttachmentService _attachmentService;
-    private readonly IStreamEventProcessor _streamProcessor;
-    private readonly ISystemPromptBuilder _systemPromptBuilder;
-    private readonly IHooksEngine _hooksEngine;
-    private readonly IActiveSessionRegistry _activeSessionRegistry;
-    private readonly IGitBranchWatcherService _branchWatcher;
-    private readonly ILogger<ChatMessageOrchestrator> _logger;
-
-    public ChatMessageOrchestrator(
-        IChatState chatState,
-        IClaudeService claudeService,
-        ISessionService sessionService,
-        IAttachmentService attachmentService,
-        IStreamEventProcessor streamProcessor,
-        ISystemPromptBuilder systemPromptBuilder,
-        IHooksEngine hooksEngine,
-        IActiveSessionRegistry activeSessionRegistry,
-        IGitBranchWatcherService branchWatcher,
-        ILogger<ChatMessageOrchestrator> logger)
+    public async Task<StreamResult> ContinueAsync(
+        Session session,
+        Workspace? workspace,
+        CancellationToken ct = default)
     {
-        _chatState = chatState;
-        _claudeService = claudeService;
-        _sessionService = sessionService;
-        _attachmentService = attachmentService;
-        _streamProcessor = streamProcessor;
-        _systemPromptBuilder = systemPromptBuilder;
-        _hooksEngine = hooksEngine;
-        _activeSessionRegistry = activeSessionRegistry;
-        _branchWatcher = branchWatcher;
-        _logger = logger;
+        chatState.AddSystemMessage(session, "계속 진행 중...");
+        chatState.SetStreaming(true, session.Id);
+        chatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
+        var assistantMsg = chatState.StartAssistantMessage(session);
+        activeSessionRegistry.Register(session);
+
+        var systemPrompt = await systemPromptBuilder.BuildAsync(session, workspace);
+
+        return await RunStreamingLoopAsync(
+            session, assistantMsg, systemPrompt, string.Empty,
+            session.ConversationId, true, ct);
     }
 
     public async Task<StreamResult> SendAsync(
@@ -55,10 +49,10 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
 
             try
             {
-                _chatState.SetStreaming(true, session.Id);
-                _chatState.SetPhase(StreamingPhase.Preparing, sessionId: session.Id);
+                chatState.SetStreaming(true, session.Id);
+                chatState.SetPhase(StreamingPhase.Preparing, sessionId: session.Id);
 
-                var updated = await _sessionService.InitializeWorktreeAsync(session.Id, selectedBranch);
+                var updated = await sessionService.InitializeWorktreeAsync(session.Id, selectedBranch);
                 session.Git.WorktreePath = updated.Git.WorktreePath;
                 session.Git.BranchName = updated.Git.BranchName;
                 session.Git.BaseBranch = updated.Git.BaseBranch;
@@ -67,8 +61,8 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
 
                 if (session.Status == SessionStatus.Error)
                 {
-                    _chatState.SetStreaming(false, session.Id);
-                    _chatState.NotifyStateChanged();
+                    chatState.SetStreaming(false, session.Id);
+                    chatState.NotifyStateChanged();
                     return new StreamResult();
                 }
             }
@@ -76,8 +70,8 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
             {
                 session.TransitionStatus(SessionStatus.Error);
                 session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
-                _chatState.SetStreaming(false, session.Id);
-                _chatState.NotifyStateChanged();
+                chatState.SetStreaming(false, session.Id);
+                chatState.NotifyStateChanged();
                 return new StreamResult();
             }
         }
@@ -89,60 +83,43 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         foreach (var pending in input.Attachments)
         {
             FileAttachment attachment;
-            if (pending.FilePath != null && pending.Data.Length == 0)
-                attachment = await _attachmentService.CopyFileToWorktreeAsync(pending.FilePath, session.Git.WorktreePath);
+            if (pending is { FilePath: not null, Data.Length: 0 })
+                attachment =
+                    await attachmentService.CopyFileToWorktreeAsync(pending.FilePath, session.Git.WorktreePath);
             else
-                attachment = await _attachmentService.SaveBytesToWorktreeAsync(
+                attachment = await attachmentService.SaveBytesToWorktreeAsync(
                     pending.Data, pending.FileName, pending.ContentType, session.Git.WorktreePath);
             fileAttachments.Add(attachment);
         }
 
-        var messageForClaude = _attachmentService.BuildMessageWithAttachments(input.Text, fileAttachments);
+        var messageForClaude = attachmentService.BuildMessageWithAttachments(input.Text, fileAttachments);
 
         // --- User message ---
         if (fileAttachments.Count > 0)
-            _chatState.AddUserMessage(session, input.Text, fileAttachments);
+            chatState.AddUserMessage(session, input.Text, fileAttachments);
         else
-            _chatState.AddUserMessage(session, input.Text);
+            chatState.AddUserMessage(session, input.Text);
 
-        await _sessionService.SaveSessionAsync(session);
-        _activeSessionRegistry.Register(session);
+        await sessionService.SaveSessionAsync(session);
+        activeSessionRegistry.Register(session);
 
         // --- Streaming setup ---
-        _chatState.SetStreaming(true, session.Id);
-        _chatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
-        var assistantMsg = _chatState.StartAssistantMessage(session);
+        chatState.SetStreaming(true, session.Id);
+        chatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
+        var assistantMsg = chatState.StartAssistantMessage(session);
 
         // --- Stream + finalize ---
         var conversationId = session.ConversationId;
-        var systemPrompt = await _systemPromptBuilder.BuildAsync(session, workspace);
+        var systemPrompt = await systemPromptBuilder.BuildAsync(session, workspace);
 
         var result = await RunStreamingLoopAsync(
             session, assistantMsg, systemPrompt, messageForClaude,
-            conversationId, continueMode: false, ct);
+            conversationId, false, ct);
 
         // --- Post-stream: hooks ---
         FireHooksInBackground(session);
 
         return result;
-    }
-
-    public async Task<StreamResult> ContinueAsync(
-        Session session,
-        Workspace? workspace,
-        CancellationToken ct = default)
-    {
-        _chatState.AddSystemMessage(session, "계속 진행 중...");
-        _chatState.SetStreaming(true, session.Id);
-        _chatState.SetPhase(StreamingPhase.Sending, sessionId: session.Id);
-        var assistantMsg = _chatState.StartAssistantMessage(session);
-        _activeSessionRegistry.Register(session);
-
-        var systemPrompt = await _systemPromptBuilder.BuildAsync(session, workspace);
-
-        return await RunStreamingLoopAsync(
-            session, assistantMsg, systemPrompt, string.Empty,
-            session.ConversationId, continueMode: true, ct);
     }
 
     // ──────────────────────────────────────────────
@@ -158,7 +135,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         bool continueMode,
         CancellationToken ct)
     {
-        bool firstEvent = true;
+        var firstEvent = true;
         var streamCtx = new StreamProcessingContext
         {
             Session = session,
@@ -166,57 +143,57 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
             StreamStartTime = DateTime.UtcNow
         };
         string? errorMessage = null;
-        bool wasCancelled = false;
+        var wasCancelled = false;
 
         try
         {
             ct.ThrowIfCancellationRequested();
 
-            await foreach (var evt in _claudeService.SendMessageAsync(
-                message,
-                session.Git.WorktreePath,
-                session.Model,
-                session.PermissionMode,
-                effortLevel: session.EffortLevel ?? "auto",
-                sessionId: session.Id,
-                conversationId: conversationId,
-                systemPrompt: systemPrompt,
-                continueMode: continueMode).WithCancellation(ct))
+            await foreach (var evt in claudeService.SendMessageAsync(
+                               message,
+                               session.Git.WorktreePath,
+                               session.Model,
+                               session.PermissionMode,
+                               session.EffortLevel ?? "auto",
+                               session.Id,
+                               conversationId,
+                               systemPrompt,
+                               continueMode).WithCancellation(ct))
             {
                 if (firstEvent)
                 {
-                    _chatState.SetPhase(StreamingPhase.Thinking, sessionId: session.Id);
+                    chatState.SetPhase(StreamingPhase.Thinking, sessionId: session.Id);
                     firstEvent = false;
                 }
 
-                await _streamProcessor.ProcessEventAsync(evt, streamCtx);
+                await streamProcessor.ProcessEventAsync(evt, streamCtx);
             }
 
-            await _streamProcessor.FinalizeAsync(streamCtx);
+            await streamProcessor.FinalizeAsync(streamCtx);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             wasCancelled = true;
-            _logger.LogInformation("{Mode} cancelled for session {SessionId}",
+            logger.LogInformation("{Mode} cancelled for session {SessionId}",
                 continueMode ? "Continue" : "Message processing", session.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during {Mode} for session {SessionId}",
+            logger.LogError(ex, "Error during {Mode} for session {SessionId}",
                 continueMode ? "continue" : "message processing", session.Id);
             if (string.IsNullOrEmpty(assistantMsg.Text))
-                _chatState.AppendText(assistantMsg, $"Error: {ex.Message}");
+                chatState.AppendText(assistantMsg, $"Error: {ex.Message}");
             errorMessage = ex.Message;
         }
         finally
         {
-            _chatState.FinishMessage(assistantMsg);
-            _chatState.SetStreaming(false, session.Id);
+            chatState.FinishMessage(assistantMsg);
+            chatState.SetStreaming(false, session.Id);
 
-            _chatState.NotifyStateChanged();
-            await _sessionService.SaveSessionAsync(session);
-            _activeSessionRegistry.Unregister(session.Id);
-            _ = _branchWatcher.RefreshBranchAsync(session);
+            chatState.NotifyStateChanged();
+            await sessionService.SaveSessionAsync(session);
+            activeSessionRegistry.Unregister(session.Id);
+            _ = branchWatcher.RefreshBranchAsync(session);
         }
 
         return new StreamResult
@@ -238,7 +215,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
         {
             try
             {
-                await _hooksEngine.FireAsync(HookEvent.OnMessageComplete, new Dictionary<string, string>
+                await hooksEngine.FireAsync(HookEvent.OnMessageComplete, new Dictionary<string, string>
                 {
                     ["COMINOMI_SESSION_ID"] = session.Id,
                     ["COMINOMI_CITY_NAME"] = session.CityName
@@ -246,7 +223,7 @@ public class ChatMessageOrchestrator : IChatMessageOrchestrator
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Hook fire failed for OnMessageComplete");
+                logger.LogWarning(ex, "Hook fire failed for OnMessageComplete");
             }
         });
     }

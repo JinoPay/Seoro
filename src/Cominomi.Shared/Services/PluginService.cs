@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Cominomi.Shared;
 using Cominomi.Shared.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -8,27 +7,27 @@ namespace Cominomi.Shared.Services;
 
 public class PluginManifest
 {
-    public string Name { get; set; } = "";
-    public string? Description { get; set; }
-    public string? Version { get; set; }
-    public string? Author { get; set; }
-    public string? EntryPoint { get; set; }
     public List<string> Permissions { get; set; } = [];
+    public string Name { get; set; } = "";
+    public string? Author { get; set; }
+    public string? Description { get; set; }
+    public string? EntryPoint { get; set; }
+    public string? Version { get; set; }
 }
 
 public class PluginInfo
 {
+    public bool IsEnabled { get; set; }
+    public List<string> Permissions { get; set; } = [];
+    public PluginStatus Status { get; set; } = PluginStatus.Discovered;
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
-    public string? Description { get; set; }
-    public string? Version { get; set; }
-    public string? Author { get; set; }
-    public string? EntryPoint { get; set; }
     public string Path { get; set; } = "";
-    public bool IsEnabled { get; set; }
-    public PluginStatus Status { get; set; } = PluginStatus.Discovered;
+    public string? Author { get; set; }
+    public string? Description { get; set; }
+    public string? EntryPoint { get; set; }
     public string? Error { get; set; }
-    public List<string> Permissions { get; set; } = [];
+    public string? Version { get; set; }
 }
 
 public enum PluginStatus
@@ -43,103 +42,47 @@ public enum PluginStatus
 public interface IPluginService
 {
     string PluginsDirectory { get; }
+    Task EnsurePluginsDirectoryAsync();
+    Task SetPluginEnabledAsync(string pluginId, bool enabled);
+    Task UnloadPluginAsync(string pluginId);
+    Task<bool> LoadPluginAsync(string pluginId);
+    Task<bool> RemovePluginAsync(string pluginId);
+    Task<bool> ValidatePluginAsync(string pluginId);
     Task<List<PluginInfo>> GetInstalledPluginsAsync();
     Task<PluginInfo?> GetPluginAsync(string pluginId);
-    Task SetPluginEnabledAsync(string pluginId, bool enabled);
-    Task<bool> ValidatePluginAsync(string pluginId);
-    Task<bool> RemovePluginAsync(string pluginId);
-    Task EnsurePluginsDirectoryAsync();
-    Task<bool> LoadPluginAsync(string pluginId);
-    Task UnloadPluginAsync(string pluginId);
 }
 
-public class PluginService : IPluginService
+public class PluginService(
+    IOptionsMonitor<AppSettings> appSettings,
+    ISettingsService settingsService,
+    ILogger<PluginService> logger)
+    : IPluginService
 {
-    private readonly IOptionsMonitor<AppSettings> _appSettings;
-    private readonly ISettingsService _settingsService;
-    private readonly ILogger<PluginService> _logger;
     private IPluginExecutionEngine? _executionEngine;
 
-    public string PluginsDirectory { get; } = System.IO.Path.Combine(
+    public string PluginsDirectory { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".claude", "plugins");
-
-    public PluginService(IOptionsMonitor<AppSettings> appSettings, ISettingsService settingsService, ILogger<PluginService> logger)
-    {
-        _appSettings = appSettings;
-        _settingsService = settingsService;
-        _logger = logger;
-    }
-
-    /// <summary>
-    /// Late-bind the execution engine to avoid circular DI.
-    /// </summary>
-    public void SetExecutionEngine(IPluginExecutionEngine engine) => _executionEngine = engine;
 
     public async Task EnsurePluginsDirectoryAsync()
     {
         if (!Directory.Exists(PluginsDirectory))
-        {
             try
             {
                 Directory.CreateDirectory(PluginsDirectory);
-                _logger.LogInformation("Created plugins directory at {Path}", PluginsDirectory);
+                logger.LogInformation("Created plugins directory at {Path}", PluginsDirectory);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to create plugins directory at {Path}", PluginsDirectory);
+                logger.LogWarning(ex, "Failed to create plugins directory at {Path}", PluginsDirectory);
             }
-        }
-    }
-
-    public async Task<List<PluginInfo>> GetInstalledPluginsAsync()
-    {
-        var plugins = new List<PluginInfo>();
-
-        if (!Directory.Exists(PluginsDirectory))
-        {
-            _logger.LogInformation(
-                "플러그인 디렉토리가 없습니다. 플러그인을 사용하려면 {Path} 디렉토리를 생성하고 플러그인 폴더와 manifest.json을 추가하세요.",
-                PluginsDirectory);
-            return plugins;
-        }
-
-        var settings = _appSettings.CurrentValue;
-
-        try
-        {
-            foreach (var dir in Directory.GetDirectories(PluginsDirectory))
-            {
-                var pluginId = System.IO.Path.GetFileName(dir);
-                var plugin = await LoadPluginFromDirectoryAsync(dir, pluginId, settings);
-                plugins.Add(plugin);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to enumerate plugins directory");
-        }
-
-        return plugins;
-    }
-
-    public async Task<PluginInfo?> GetPluginAsync(string pluginId)
-    {
-        Guard.NotNullOrWhiteSpace(pluginId, nameof(pluginId));
-
-        var pluginDir = System.IO.Path.Combine(PluginsDirectory, pluginId);
-        if (!Directory.Exists(pluginDir))
-            return null;
-
-        var settings = _appSettings.CurrentValue;
-        return await LoadPluginFromDirectoryAsync(pluginDir, pluginId, settings);
     }
 
     public async Task SetPluginEnabledAsync(string pluginId, bool enabled)
     {
         Guard.NotNullOrWhiteSpace(pluginId, nameof(pluginId));
 
-        var settings = _appSettings.CurrentValue;
+        var settings = appSettings.CurrentValue;
         settings.DisabledPlugins ??= [];
 
         if (enabled)
@@ -147,8 +90,53 @@ public class PluginService : IPluginService
         else if (!settings.DisabledPlugins.Contains(pluginId))
             settings.DisabledPlugins.Add(pluginId);
 
-        await _settingsService.SaveAsync(settings);
-        _logger.LogInformation("Plugin '{PluginId}' {State}", pluginId, enabled ? "enabled" : "disabled");
+        await settingsService.SaveAsync(settings);
+        logger.LogInformation("Plugin '{PluginId}' {State}", pluginId, enabled ? "enabled" : "disabled");
+    }
+
+    public async Task UnloadPluginAsync(string pluginId)
+    {
+        if (_executionEngine != null)
+            await _executionEngine.UnloadPluginAsync(pluginId);
+    }
+
+    public async Task<bool> LoadPluginAsync(string pluginId)
+    {
+        if (_executionEngine == null)
+        {
+            logger.LogWarning("Plugin execution engine not available");
+            return false;
+        }
+
+        var plugin = await GetPluginAsync(pluginId);
+        if (plugin == null) return false;
+
+        return await _executionEngine.LoadPluginAsync(plugin);
+    }
+
+    public async Task<bool> RemovePluginAsync(string pluginId)
+    {
+        var pluginDir = Path.Combine(PluginsDirectory, pluginId);
+        if (!Directory.Exists(pluginDir))
+            return false;
+
+        try
+        {
+            Directory.Delete(pluginDir, true);
+            logger.LogInformation("Removed plugin '{PluginId}'", pluginId);
+
+            // Clean up settings
+            var settings = appSettings.CurrentValue;
+            settings.DisabledPlugins?.Remove(pluginId);
+            await settingsService.SaveAsync(settings);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to remove plugin '{PluginId}'", pluginId);
+            return false;
+        }
     }
 
     public async Task<bool> ValidatePluginAsync(string pluginId)
@@ -162,69 +150,77 @@ public class PluginService : IPluginService
             errors.Add("manifest.json: 'name' 필드 누락");
 
         if (string.IsNullOrWhiteSpace(plugin.EntryPoint))
+        {
             errors.Add("manifest.json: 'entryPoint' 필드 누락");
+        }
         else
         {
-            var entryPath = System.IO.Path.Combine(plugin.Path, plugin.EntryPoint);
+            var entryPath = Path.Combine(plugin.Path, plugin.EntryPoint);
             if (!File.Exists(entryPath))
                 errors.Add($"진입점 파일을 찾을 수 없음: {plugin.EntryPoint}");
         }
 
         if (errors.Count > 0)
         {
-            _logger.LogWarning("Plugin '{PluginId}' validation failed: {Errors}", pluginId, string.Join("; ", errors));
+            logger.LogWarning("Plugin '{PluginId}' validation failed: {Errors}", pluginId, string.Join("; ", errors));
             return false;
         }
 
         return true;
     }
 
-    public async Task<bool> RemovePluginAsync(string pluginId)
+    public async Task<List<PluginInfo>> GetInstalledPluginsAsync()
     {
-        var pluginDir = System.IO.Path.Combine(PluginsDirectory, pluginId);
-        if (!Directory.Exists(pluginDir))
-            return false;
+        var plugins = new List<PluginInfo>();
+
+        if (!Directory.Exists(PluginsDirectory))
+        {
+            logger.LogInformation(
+                "플러그인 디렉토리가 없습니다. 플러그인을 사용하려면 {Path} 디렉토리를 생성하고 플러그인 폴더와 manifest.json을 추가하세요.",
+                PluginsDirectory);
+            return plugins;
+        }
+
+        var settings = appSettings.CurrentValue;
 
         try
         {
-            Directory.Delete(pluginDir, recursive: true);
-            _logger.LogInformation("Removed plugin '{PluginId}'", pluginId);
-
-            // Clean up settings
-            var settings = _appSettings.CurrentValue;
-            settings.DisabledPlugins?.Remove(pluginId);
-            await _settingsService.SaveAsync(settings);
-
-            return true;
+            foreach (var dir in Directory.GetDirectories(PluginsDirectory))
+            {
+                var pluginId = Path.GetFileName(dir);
+                var plugin = await LoadPluginFromDirectoryAsync(dir, pluginId, settings);
+                plugins.Add(plugin);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to remove plugin '{PluginId}'", pluginId);
-            return false;
-        }
-    }
-
-    public async Task<bool> LoadPluginAsync(string pluginId)
-    {
-        if (_executionEngine == null)
-        {
-            _logger.LogWarning("Plugin execution engine not available");
-            return false;
+            logger.LogWarning(ex, "Failed to enumerate plugins directory");
         }
 
-        var plugin = await GetPluginAsync(pluginId);
-        if (plugin == null) return false;
-
-        return await _executionEngine.LoadPluginAsync(plugin);
+        return plugins;
     }
 
-    public async Task UnloadPluginAsync(string pluginId)
+    public async Task<PluginInfo?> GetPluginAsync(string pluginId)
     {
-        if (_executionEngine != null)
-            await _executionEngine.UnloadPluginAsync(pluginId);
+        Guard.NotNullOrWhiteSpace(pluginId, nameof(pluginId));
+
+        var pluginDir = Path.Combine(PluginsDirectory, pluginId);
+        if (!Directory.Exists(pluginDir))
+            return null;
+
+        var settings = appSettings.CurrentValue;
+        return await LoadPluginFromDirectoryAsync(pluginDir, pluginId, settings);
     }
 
-    private async Task<PluginInfo> LoadPluginFromDirectoryAsync(string dir, string pluginId, Models.AppSettings settings)
+    /// <summary>
+    ///     Late-bind the execution engine to avoid circular DI.
+    /// </summary>
+    public void SetExecutionEngine(IPluginExecutionEngine engine)
+    {
+        _executionEngine = engine;
+    }
+
+    private async Task<PluginInfo> LoadPluginFromDirectoryAsync(string dir, string pluginId, AppSettings settings)
     {
         var plugin = new PluginInfo
         {
@@ -235,7 +231,7 @@ public class PluginService : IPluginService
             Status = PluginStatus.Discovered
         };
 
-        var manifestPath = System.IO.Path.Combine(dir, "manifest.json");
+        var manifestPath = Path.Combine(dir, "manifest.json");
         if (!File.Exists(manifestPath))
         {
             plugin.Status = PluginStatus.Invalid;
@@ -260,20 +256,20 @@ public class PluginService : IPluginService
             if (root.TryGetProperty("entryPoint", out var entryPoint))
                 plugin.EntryPoint = entryPoint.GetString();
             if (root.TryGetProperty("permissions", out var perms) && perms.ValueKind == JsonValueKind.Array)
-            {
                 foreach (var perm in perms.EnumerateArray())
                 {
                     var permStr = perm.GetString();
                     if (permStr != null) plugin.Permissions.Add(permStr);
                 }
-            }
 
             // Validate entry point existence
             if (!string.IsNullOrEmpty(plugin.EntryPoint))
             {
-                var entryPath = System.IO.Path.Combine(dir, plugin.EntryPoint);
+                var entryPath = Path.Combine(dir, plugin.EntryPoint);
                 if (File.Exists(entryPath))
+                {
                     plugin.Status = PluginStatus.Valid;
+                }
                 else
                 {
                     plugin.Status = PluginStatus.Invalid;
@@ -289,7 +285,7 @@ public class PluginService : IPluginService
         {
             plugin.Status = PluginStatus.Error;
             plugin.Error = $"매니페스트 파싱 실패: {ex.Message}";
-            _logger.LogDebug(ex, "Failed to read plugin manifest at {Path}", manifestPath);
+            logger.LogDebug(ex, "Failed to read plugin manifest at {Path}", manifestPath);
         }
 
         return plugin;

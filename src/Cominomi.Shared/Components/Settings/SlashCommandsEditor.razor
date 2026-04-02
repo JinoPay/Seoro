@@ -1,4 +1,3 @@
-@using Cominomi.Shared.Models
 @inject ISkillRegistry SkillRegistry
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -6,7 +5,7 @@
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
         <div class="typo-h6">
-            <MudIcon Icon="@Icons.Material.Filled.Code" Class="mr-2" />
+            <MudIcon Icon="@Icons.Material.Filled.Code" Class="mr-2"/>
             슬래시 명령어 관리
         </div>
     </TitleContent>
@@ -18,7 +17,7 @@
                     <MudTextField @bind-Value="_searchText" Placeholder="명령어 검색..."
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                                  Immediate="true" Style="flex: 1;" />
+                                  Immediate="true" Style="flex: 1;"/>
                     <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                                StartIcon="@Icons.Material.Filled.AutoAwesome"
                                OnClick="OpenTemplates" Size="Size.Small">
@@ -34,7 +33,7 @@
                 @if (_loading)
                 {
                     <div style="display: flex; justify-content: center; padding: 24px;">
-                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
                     </div>
                 }
                 else if (!FilteredCommands.Any())
@@ -55,7 +54,8 @@
                                         @if (cmd.IsBuiltIn)
                                         {
                                             <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
-                                                     Color="Color.Default">내장</MudChip>
+                                                     Color="Color.Default">내장
+                                            </MudChip>
                                         }
                                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
                                                  Color="@GetScopeColor(cmd.Scope)">
@@ -65,22 +65,23 @@
                                         {
                                             <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
                                                            Color="Color.Primary"
-                                                           OnClick="@(() => EditCommand(cmd))" />
+                                                           OnClick="@(() => EditCommand(cmd))"/>
                                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                                            Color="Color.Error"
-                                                           OnClick="@(() => ConfirmDelete(cmd))" />
+                                                           OnClick="@(() => ConfirmDelete(cmd))"/>
                                         }
                                         else
                                         {
                                             <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
                                                            Color="Color.Default"
-                                                           OnClick="@(() => ViewCommand(cmd))" />
+                                                           OnClick="@(() => ViewCommand(cmd))"/>
                                         }
                                     </div>
                                 </div>
                                 @if (!string.IsNullOrEmpty(cmd.Description))
                                 {
-                                    <div class="typo-body2 text-secondary" style="margin-top: 2px;">@cmd.Description</div>
+                                    <div class="typo-body2 text-secondary"
+                                         style="margin-top: 2px;">@cmd.Description</div>
                                 }
                                 @if (cmd.AcceptsArguments || cmd.AllowedTools.Count > 0)
                                 {
@@ -88,7 +89,8 @@
                                         @if (cmd.AcceptsArguments)
                                         {
                                             <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
-                                                     Color="Color.Info">$ARGS</MudChip>
+                                                     Color="Color.Info">$ARGS
+                                            </MudChip>
                                         }
                                         @foreach (var tool in cmd.AllowedTools)
                                         {
@@ -104,7 +106,8 @@
 
                 <div style="padding: 8px;">
                     <MudButton StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                               Variant="Variant.Text" OnClick="RefreshCommands">새로고침</MudButton>
+                               Variant="Variant.Text" OnClick="RefreshCommands">새로고침
+                    </MudButton>
                 </div>
             </MudTabPanel>
 
@@ -116,12 +119,12 @@
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Placeholder="my-command" Required="true"
                                   Disabled="_isViewOnly"
-                                  HelperText="슬래시(/) 없이 입력. 네임스페이스는 콜론으로 구분 (예: frontend:component)" />
+                                  HelperText="슬래시(/) 없이 입력. 네임스페이스는 콜론으로 구분 (예: frontend:component)"/>
 
                     <MudTextField @bind-Value="_editDescription" Label="설명"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Placeholder="이 명령어의 기능을 설명합니다"
-                                  Disabled="_isViewOnly" />
+                                  Disabled="_isViewOnly"/>
 
                     <MudSelect T="string" @bind-Value="_editScope" Label="범위"
                                Variant="Variant.Outlined" Margin="Margin.Dense"
@@ -133,7 +136,7 @@
                     <MudTextField @bind-Value="_editContent" Label="명령어 내용 (Markdown)"
                                   Variant="Variant.Outlined" Lines="10"
                                   Placeholder="$ARGUMENTS 플레이스홀더로 인수를 받을 수 있습니다."
-                                  Disabled="_isViewOnly" />
+                                  Disabled="_isViewOnly"/>
 
                     <div>
                         <div class="typo-subtitle2 mb-1">허용된 도구 (선택사항)</div>
@@ -264,7 +267,7 @@
         var result = await DialogService.ShowMessageBoxAsync(
             "명령어 삭제",
             $"'/{cmd.Name}' 명령어를 삭제하시겠습니까?",
-            yesText: "삭제", cancelText: "취소");
+            "삭제", cancelText: "취소");
 
         if (result != true) return;
 
@@ -330,20 +333,26 @@
         return "명령어 추가";
     }
 
-    private static Color GetScopeColor(string scope) => scope switch
+    private static Color GetScopeColor(string scope)
     {
-        "project" => Color.Info,
-        "user" => Color.Warning,
-        _ => Color.Default
-    };
+        return scope switch
+        {
+            "project" => Color.Info,
+            "user" => Color.Warning,
+            _ => Color.Default
+        };
+    }
 
-    private static string GetScopeLabel(string scope) => scope switch
+    private static string GetScopeLabel(string scope)
     {
-        "default" => "기본",
-        "user" => "사용자",
-        "project" => "프로젝트",
-        _ => scope
-    };
+        return scope switch
+        {
+            "default" => "기본",
+            "user" => "사용자",
+            "project" => "프로젝트",
+            _ => scope
+        };
+    }
 
     private async Task OnVisibleChanged(bool visible)
     {
@@ -383,12 +392,17 @@
         IsOpen = false;
         await IsOpenChanged.InvokeAsync(false);
     }
+
 }
 
 <TemplateGalleryDialog IsOpen="_showTemplates"
-                       IsOpenChanged="@(v => { _showTemplates = v; StateHasChanged(); })"
+                       IsOpenChanged="@(v =>
+                                      {
+                                          _showTemplates = v;
+                                          StateHasChanged();
+                                      })"
                        DefaultCategory="TemplateCategory.Skill"
-                       OnTemplateSelected="OnTemplateSelected" />
+                       OnTemplateSelected="OnTemplateSelected"/>
 
 <style>
     .skill-card-list {
