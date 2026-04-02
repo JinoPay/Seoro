@@ -11,6 +11,7 @@ public class SyncState
     public List<SyncBackupEntry> BackedUpFiles { get; set; } = [];
     public string BackupDir { get; set; } = "";
     public string BaseBranch { get; set; } = "";
+    public string BaseCommit { get; set; } = "";
     public string RepoLocalPath { get; set; } = "";
     public string SessionId { get; set; } = "";
     public string WorkspaceId { get; set; } = "";

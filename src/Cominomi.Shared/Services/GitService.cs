@@ -586,6 +586,12 @@ public class GitService(
         return result.Success ? result.Output.Trim() : null;
     }
 
+    public async Task<string?> ResolveCommitHashAsync(string repoDir, string refName, CancellationToken ct = default)
+    {
+        var result = await RunGitAsync(repoDir, ct, "rev-parse", "--verify", refName);
+        return result.Success ? result.Output.Trim() : null;
+    }
+
     public async Task<string[]> ReadBaseFileLinesAsync(string workingDir, string baseBranch, string relativePath,
         int startLine, int endLine, CancellationToken ct = default)
     {

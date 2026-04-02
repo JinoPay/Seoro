@@ -253,7 +253,7 @@
 
         try
         {
-            var diffBase = !string.IsNullOrEmpty(session.Git.BaseBranch) ? session.Git.BaseBranch : "HEAD";
+            var diffBase = session.Git.GetDiffBase();
             var diffTask = GitService.GetDiffSummaryAsync(session.Git.WorktreePath, diffBase);
             var aheadBehindTask = GitService.GetAheadBehindAsync(session.Git.WorktreePath);
 

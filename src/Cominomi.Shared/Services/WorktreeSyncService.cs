@@ -152,6 +152,7 @@ public class WorktreeSyncService : IWorktreeSyncService
                 RepoLocalPath = repoLocal,
                 WorktreePath = session.Git.WorktreePath,
                 BaseBranch = session.Git.BaseBranch,
+                BaseCommit = session.Git.BaseCommit,
                 BackupDir = backupDir
             };
 
@@ -359,7 +360,8 @@ public class WorktreeSyncService : IWorktreeSyncService
     private async Task CopyWorktreeChangesAsync(SyncState state, CancellationToken ct = default)
     {
         // git diff로 후보 파일을 빠르게 추린 뒤, 실제 파일 비교로 검증
-        var changedFiles = await _gitService.GetChangedFilesAsync(state.WorktreePath, state.BaseBranch, ct);
+        var diffBase = !string.IsNullOrEmpty(state.BaseCommit) ? state.BaseCommit : state.BaseBranch;
+        var changedFiles = await _gitService.GetChangedFilesAsync(state.WorktreePath, diffBase, ct);
         var copied = 0;
 
         foreach (var relativePath in changedFiles)

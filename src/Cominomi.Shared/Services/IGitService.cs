@@ -43,6 +43,7 @@ public interface IGitService
     Task<List<string>> ListTrackedFilesAsync(string workingDir, CancellationToken ct = default);
     Task<string?> DetectDefaultBranchAsync(string repoDir);
     Task<string?> GetCurrentBranchAsync(string repoDir);
+    Task<string?> ResolveCommitHashAsync(string repoDir, string refName, CancellationToken ct = default);
 
     Task<string[]> ReadBaseFileLinesAsync(string workingDir, string baseBranch, string relativePath, int startLine,
         int endLine, CancellationToken ct = default);

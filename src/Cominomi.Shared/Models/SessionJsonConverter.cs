@@ -48,6 +48,7 @@ public class SessionJsonConverter : JsonConverter<Session>
             if (root.TryGet("worktreePath", out var wtp)) git.WorktreePath = wtp;
             if (root.TryGet("branchName", out var bn)) git.BranchName = bn;
             if (root.TryGet("baseBranch", out var bb)) git.BaseBranch = bb;
+            if (root.TryGet("baseCommit", out var bc)) git.BaseCommit = bc;
             if (root.TryGetProperty("isLocalDir", out var ild) &&
                 ild.ValueKind is JsonValueKind.True or JsonValueKind.False)
                 git.IsLocalDir = ild.GetBoolean();
@@ -154,6 +155,7 @@ public class SessionJsonConverter : JsonConverter<Session>
         writer.WriteString("worktreePath", value.Git.WorktreePath);
         writer.WriteString("branchName", value.Git.BranchName);
         writer.WriteString("baseBranch", value.Git.BaseBranch);
+        writer.WriteString("baseCommit", value.Git.BaseCommit);
         writer.WriteBoolean("isLocalDir", value.Git.IsLocalDir);
         writer.WritePropertyName("additionalDirs");
         JsonSerializer.Serialize(writer, value.Git.AdditionalDirs, options);
@@ -180,6 +182,7 @@ public class SessionJsonConverter : JsonConverter<Session>
         if (el.TryGet("worktreePath", out var wtp)) git.WorktreePath = wtp;
         if (el.TryGet("branchName", out var bn)) git.BranchName = bn;
         if (el.TryGet("baseBranch", out var bb)) git.BaseBranch = bb;
+        if (el.TryGet("baseCommit", out var bc)) git.BaseCommit = bc;
         if (el.TryGetProperty("isLocalDir", out var ild) && ild.ValueKind is JsonValueKind.True or JsonValueKind.False)
             git.IsLocalDir = ild.GetBoolean();
         if (el.TryGetProperty("additionalDirs", out var ad) && ad.ValueKind == JsonValueKind.Array)

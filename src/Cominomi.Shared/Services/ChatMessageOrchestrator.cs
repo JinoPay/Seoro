@@ -56,6 +56,7 @@ public class ChatMessageOrchestrator(
                 session.Git.WorktreePath = updated.Git.WorktreePath;
                 session.Git.BranchName = updated.Git.BranchName;
                 session.Git.BaseBranch = updated.Git.BaseBranch;
+                session.Git.BaseCommit = updated.Git.BaseCommit;
                 session.SetInitialStatus(updated.Status);
                 session.Error = updated.Error;
 

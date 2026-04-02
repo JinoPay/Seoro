@@ -437,6 +437,8 @@ public partial class SessionService(
             }
             else
             {
+                session.Git.BaseCommit =
+                    await gitService.ResolveCommitHashAsync(workspace.RepoLocalPath, baseBranch) ?? "";
                 session.TransitionStatus(SessionStatus.Ready);
             }
         }
@@ -498,6 +500,8 @@ public partial class SessionService(
                 }
                 else
                 {
+                    session.Git.BaseCommit =
+                        await gitService.ResolveCommitHashAsync(workspace.RepoLocalPath, baseBranch) ?? "";
                     session.TransitionStatus(SessionStatus.Ready);
                     // Initialize .context/ directory for collaboration
                     await contextService.EnsureContextDirectoryAsync(session.Git.WorktreePath);
