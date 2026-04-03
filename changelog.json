@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.6.10",
+    "date": "2026-04-03",
+    "changes": [
+      { "type": "refactor", "description": "계정 내보내기/가져오기 기능 제거" }
+    ]
+  },
+  {
     "version": "1.6.9",
     "date": "2026-04-03",
     "changes": [
