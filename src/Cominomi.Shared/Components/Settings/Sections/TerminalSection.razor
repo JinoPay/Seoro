@@ -4,21 +4,24 @@
 <div class="settings-section-desc">내장 터미널의 기본 셸을 설정합니다.</div>
 
 <div class="stack gap-3">
-    <MudSelect T="string" Value="Settings.TerminalShell"
-               ValueChanged="@((string v) => HandleTerminalShellChanged(v))"
-               Label="기본 셸"
-               Variant="Variant.Outlined" Margin="Margin.Dense">
-        <MudSelectItem T="string" Value="@((string?)null)">자동 감지 (@_detectedShellLabel)</MudSelectItem>
-        @foreach (var shell in _availableShells)
-        {
-            <MudSelectItem T="string" Value="@(ShellService.ShellTypeToKey(shell.Type))">
-                @ShellService.GetShellDisplayName(shell)
-            </MudSelectItem>
-        }
-    </MudSelect>
-    <small class="typo-caption text-secondary">
-        터미널 패널에서 사용할 셸입니다. "자동 감지"는 시스템 기본 셸을 사용합니다.
-    </small>
+    <div>
+        <div class="settings-field-label">기본 셸</div>
+        <div class="settings-pill-group">
+            <button class="settings-pill @(Settings.TerminalShell == null ? "active" : "")"
+                    @onclick="@(() => HandleTerminalShellChanged(null!))">
+                자동 감지 (@_detectedShellLabel)
+            </button>
+            @foreach (var shell in _availableShells)
+            {
+                var key = ShellService.ShellTypeToKey(shell.Type);
+                <button class="settings-pill @(Settings.TerminalShell == key ? "active" : "")"
+                        @onclick="@(() => HandleTerminalShellChanged(key))">
+                    @ShellService.GetShellDisplayName(shell)
+                </button>
+            }
+        </div>
+        <div class="settings-field-hint">터미널 패널에서 사용할 셸입니다. "자동 감지"는 시스템 기본 셸을 사용합니다.</div>
+    </div>
 </div>
 
 @code {

@@ -30,22 +30,33 @@
         }
     </MudSelect>
 
-    <MudSelect T="string" @bind-Value="Settings.DefaultEffortLevel" Label="기본 Effort 레벨"
-               Variant="Variant.Outlined" Margin="Margin.Dense"
-               HelperText="Cominomi에서 Claude CLI 실행 시 적용됩니다. auto: 모델 기본값, high: 높은 사고 수준, max: 확장 사고 모드 (Opus 전용)">
-        <MudSelectItem T="string" Value="@("auto")">Auto</MudSelectItem>
-        <MudSelectItem T="string" Value="@("low")">Low</MudSelectItem>
-        <MudSelectItem T="string" Value="@("medium")">Medium</MudSelectItem>
-        <MudSelectItem T="string" Value="@("high")">High</MudSelectItem>
-        <MudSelectItem T="string" Value="@("max")">Max (Thinking)</MudSelectItem>
-    </MudSelect>
+    <div>
+        <div class="settings-field-label">기본 Effort 레벨</div>
+        <div class="settings-segmented">
+            <button class="settings-seg-item @(Settings.DefaultEffortLevel == "auto" ? "active" : "")"
+                    @onclick="@(() => Settings.DefaultEffortLevel = "auto")">Auto</button>
+            <button class="settings-seg-item @(Settings.DefaultEffortLevel == "low" ? "active" : "")"
+                    @onclick="@(() => Settings.DefaultEffortLevel = "low")">Low</button>
+            <button class="settings-seg-item @(Settings.DefaultEffortLevel == "medium" ? "active" : "")"
+                    @onclick="@(() => Settings.DefaultEffortLevel = "medium")">Medium</button>
+            <button class="settings-seg-item @(Settings.DefaultEffortLevel == "high" ? "active" : "")"
+                    @onclick="@(() => Settings.DefaultEffortLevel = "high")">High</button>
+            <button class="settings-seg-item @(Settings.DefaultEffortLevel == "max" ? "active" : "")"
+                    @onclick="@(() => Settings.DefaultEffortLevel = "max")">Max</button>
+        </div>
+        <div class="settings-field-hint">auto: 모델 기본값, high: 높은 사고 수준, max: 확장 사고 모드 (Opus 전용)</div>
+    </div>
 
-    <MudSelect T="string" @bind-Value="Settings.DefaultPermissionMode" Label="기본 권한 모드"
-               Variant="Variant.Outlined" Margin="Margin.Dense"
-               HelperText="Cominomi에서 Claude CLI 실행 시 적용되는 권한 모드입니다.">
-        <MudSelectItem T="string" Value="@("bypassAll")">일반 모드 (Bypass All)</MudSelectItem>
-        <MudSelectItem T="string" Value="@("plan")">플랜 모드</MudSelectItem>
-    </MudSelect>
+    <div>
+        <div class="settings-field-label">기본 권한 모드</div>
+        <div class="settings-segmented">
+            <button class="settings-seg-item @(Settings.DefaultPermissionMode == "bypassAll" ? "active" : "")"
+                    @onclick="@(() => Settings.DefaultPermissionMode = "bypassAll")">일반 모드</button>
+            <button class="settings-seg-item @(Settings.DefaultPermissionMode == "plan" ? "active" : "")"
+                    @onclick="@(() => Settings.DefaultPermissionMode = "plan")">플랜 모드</button>
+        </div>
+        <div class="settings-field-hint">Cominomi에서 Claude CLI 실행 시 적용되는 권한 모드입니다.</div>
+    </div>
 
     <MudTextField @bind-Value="Settings.FallbackModel" Label="Fallback 모델"
                   Variant="Variant.Outlined" Margin="Margin.Dense"

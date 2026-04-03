@@ -18,25 +18,29 @@
         }
     </div>
 
-    <MudSwitch T="bool" @bind-Value="Settings.AutoUpdateEnabled"
-               Label="자동 업데이트 확인"
-               Color="Color.Primary" UncheckedColor="Color.Default"/>
-    <small class="typo-caption text-secondary" style="margin-top: -8px;">
-        앱 시작 시 및 주기적으로 새 버전이 있는지 자동으로 확인합니다.
-    </small>
+    <div class="settings-toggle-row">
+        <div>
+            <span class="typo-body2">자동 업데이트 확인</span>
+            <div class="typo-caption text-secondary">앱 시작 시 및 주기적으로 새 버전이 있는지 확인합니다.</div>
+        </div>
+        <MudSwitch T="bool" @bind-Value="Settings.AutoUpdateEnabled"
+                   Color="Color.Primary" UncheckedColor="Color.Default"/>
+    </div>
 
     @if (Settings.AutoUpdateEnabled)
     {
-        <MudSelect T="int" @bind-Value="Settings.UpdateCheckIntervalMinutes"
-                   Label="업데이트 확인 주기" Variant="Variant.Outlined" Dense="true"
-                   Style="max-width: 240px;">
-            <MudSelectItem T="int" Value="30">30분</MudSelectItem>
-            <MudSelectItem T="int" Value="60">1시간</MudSelectItem>
-            <MudSelectItem T="int" Value="180">3시간</MudSelectItem>
-            <MudSelectItem T="int" Value="360">6시간</MudSelectItem>
-            <MudSelectItem T="int" Value="720">12시간</MudSelectItem>
-            <MudSelectItem T="int" Value="1440">24시간</MudSelectItem>
-        </MudSelect>
+        <div>
+            <div class="settings-field-label">업데이트 확인 주기</div>
+            <div class="settings-pill-group">
+                @foreach (var interval in _intervals)
+                {
+                    <button class="settings-pill @(Settings.UpdateCheckIntervalMinutes == interval.Value ? "active" : "")"
+                            @onclick="@(() => Settings.UpdateCheckIntervalMinutes = interval.Value)">
+                        @interval.Label
+                    </button>
+                }
+            </div>
+        </div>
     }
 
     <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
@@ -117,6 +121,12 @@
 
 @code {
     [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
+
+    private static readonly (int Value, string Label)[] _intervals =
+    [
+        (30, "30분"), (60, "1시간"), (180, "3시간"),
+        (360, "6시간"), (720, "12시간"), (1440, "24시간")
+    ];
 
     private bool _updateChecking;
     private UpdateInfo? _updateInfo;

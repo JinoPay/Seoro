@@ -41,29 +41,39 @@
                                       Placeholder="claude-sonnet-4-20250514"
                                       HelperText="Cominomi 외부에서 CLI 직접 실행 시 사용됩니다."/>
 
-                        <MudSelect T="EffortLevel?" @bind-Value="_settings.EffortLevel" Label="Effort 레벨"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
-                                   HelperText="Cominomi 앱 설정 > AI 모델에서 지정한 값이 우선합니다.">
-                            <MudSelectItem T="EffortLevel?" Value="@(EffortLevel.Low)">Low</MudSelectItem>
-                            <MudSelectItem T="EffortLevel?" Value="@(EffortLevel.Medium)">Medium</MudSelectItem>
-                            <MudSelectItem T="EffortLevel?" Value="@(EffortLevel.High)">High</MudSelectItem>
-                        </MudSelect>
+                        <div>
+                            <div class="settings-field-label">Effort 레벨</div>
+                            <div class="settings-segmented">
+                                <button class="settings-seg-item @(_settings.EffortLevel == null ? "active" : "")"
+                                        @onclick="@(() => _settings.EffortLevel = null)">미설정</button>
+                                <button class="settings-seg-item @(_settings.EffortLevel == EffortLevel.Low ? "active" : "")"
+                                        @onclick="@(() => _settings.EffortLevel = EffortLevel.Low)">Low</button>
+                                <button class="settings-seg-item @(_settings.EffortLevel == EffortLevel.Medium ? "active" : "")"
+                                        @onclick="@(() => _settings.EffortLevel = EffortLevel.Medium)">Medium</button>
+                                <button class="settings-seg-item @(_settings.EffortLevel == EffortLevel.High ? "active" : "")"
+                                        @onclick="@(() => _settings.EffortLevel = EffortLevel.High)">High</button>
+                            </div>
+                            <div class="settings-field-hint">Cominomi 앱 설정 > AI 모델에서 지정한 값이 우선합니다.</div>
+                        </div>
 
-                        <MudSelect T="ClaudeDefaultMode?" @bind-Value="_settings.DefaultMode" Label="기본 모드"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
-                                   HelperText="Cominomi 외부에서 CLI 직접 실행 시 사용됩니다.">
-                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.Default)">Default
-                            </MudSelectItem>
-                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.Plan)">Plan</MudSelectItem>
-                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.AcceptEdits)">Accept
-                                Edits
-                            </MudSelectItem>
-                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.DontAsk)">Don't Ask
-                            </MudSelectItem>
-                            <MudSelectItem T="ClaudeDefaultMode?" Value="@(ClaudeDefaultMode.BypassPermissions)">Bypass
-                                Permissions
-                            </MudSelectItem>
-                        </MudSelect>
+                        <div>
+                            <div class="settings-field-label">기본 모드</div>
+                            <div class="settings-segmented">
+                                <button class="settings-seg-item @(_settings.DefaultMode == null ? "active" : "")"
+                                        @onclick="@(() => _settings.DefaultMode = null)">미설정</button>
+                                <button class="settings-seg-item @(_settings.DefaultMode == ClaudeDefaultMode.Default ? "active" : "")"
+                                        @onclick="@(() => _settings.DefaultMode = ClaudeDefaultMode.Default)">Default</button>
+                                <button class="settings-seg-item @(_settings.DefaultMode == ClaudeDefaultMode.Plan ? "active" : "")"
+                                        @onclick="@(() => _settings.DefaultMode = ClaudeDefaultMode.Plan)">Plan</button>
+                                <button class="settings-seg-item @(_settings.DefaultMode == ClaudeDefaultMode.AcceptEdits ? "active" : "")"
+                                        @onclick="@(() => _settings.DefaultMode = ClaudeDefaultMode.AcceptEdits)">Accept Edits</button>
+                                <button class="settings-seg-item @(_settings.DefaultMode == ClaudeDefaultMode.DontAsk ? "active" : "")"
+                                        @onclick="@(() => _settings.DefaultMode = ClaudeDefaultMode.DontAsk)">Don't Ask</button>
+                                <button class="settings-seg-item @(_settings.DefaultMode == ClaudeDefaultMode.BypassPermissions ? "active" : "")"
+                                        @onclick="@(() => _settings.DefaultMode = ClaudeDefaultMode.BypassPermissions)">Bypass</button>
+                            </div>
+                            <div class="settings-field-hint">Cominomi 외부에서 CLI 직접 실행 시 사용됩니다.</div>
+                        </div>
 
                         <div class="settings-toggle-row">
                             <div>

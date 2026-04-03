@@ -6,34 +6,40 @@
 <div class="settings-section-desc">작업 완료, 응답 대기, 플랜 리뷰 시 OS 알림을 발송합니다.</div>
 
 <div class="stack gap-3">
-    <MudSwitch T="bool" @bind-Value="Settings.NotificationsEnabled" Label="데스크톱 알림"
-               Color="Color.Primary" UncheckedColor="Color.Default"/>
+    <div class="settings-toggle-row">
+        <div>
+            <span class="typo-body2">데스크톱 알림</span>
+            <div class="typo-caption text-secondary">작업 완료 시 OS 알림을 표시합니다.</div>
+        </div>
+        <MudSwitch T="bool" @bind-Value="Settings.NotificationsEnabled"
+                   Color="Color.Primary" UncheckedColor="Color.Default"/>
+    </div>
 
-    <MudSwitch T="bool" @bind-Value="Settings.NotificationSound" Label="알림 사운드"
-               Color="Color.Primary" UncheckedColor="Color.Default"
-               Disabled="@(!Settings.NotificationsEnabled)"/>
+    <div class="settings-toggle-row">
+        <div>
+            <span class="typo-body2">알림 사운드</span>
+            <div class="typo-caption text-secondary">알림 발생 시 소리를 재생합니다.</div>
+        </div>
+        <MudSwitch T="bool" @bind-Value="Settings.NotificationSound"
+                   Color="Color.Primary" UncheckedColor="Color.Default"
+                   Disabled="@(!Settings.NotificationsEnabled)"/>
+    </div>
 
     @if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
     {
-        <MudSelect T="string" @bind-Value="Settings.NotificationSoundName"
-                   Label="사운드 종류" Variant="Variant.Outlined" Margin="Margin.Dense"
-                   Disabled="@(!Settings.NotificationsEnabled || !Settings.NotificationSound)">
-            <MudSelectItem T="string" Value="@("default")">기본 (Default)</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Glass")">Glass</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Ping")">Ping</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Pop")">Pop</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Purr")">Purr</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Tink")">Tink</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Basso")">Basso</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Blow")">Blow</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Bottle")">Bottle</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Frog")">Frog</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Funk")">Funk</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Hero")">Hero</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Morse")">Morse</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Submarine")">Submarine</MudSelectItem>
-            <MudSelectItem T="string" Value="@("Sosumi")">Sosumi</MudSelectItem>
-        </MudSelect>
+        <div>
+            <div class="settings-field-label">사운드 종류</div>
+            <div class="settings-pill-group">
+                @foreach (var sound in _sounds)
+                {
+                    <button class="settings-pill @(Settings.NotificationSoundName == sound.Value ? "active" : "")"
+                            disabled="@(!Settings.NotificationsEnabled || !Settings.NotificationSound)"
+                            @onclick="@(() => Settings.NotificationSoundName = sound.Value)">
+                        @sound.Label
+                    </button>
+                }
+            </div>
+        </div>
     }
 
     <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
@@ -54,6 +60,14 @@
 @code {
     [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
     [Parameter] public EventCallback OnSave { get; set; }
+
+    private static readonly (string Value, string Label)[] _sounds =
+    [
+        ("default", "기본"), ("Glass", "Glass"), ("Ping", "Ping"), ("Pop", "Pop"),
+        ("Purr", "Purr"), ("Tink", "Tink"), ("Basso", "Basso"), ("Blow", "Blow"),
+        ("Bottle", "Bottle"), ("Frog", "Frog"), ("Funk", "Funk"), ("Hero", "Hero"),
+        ("Morse", "Morse"), ("Submarine", "Submarine"), ("Sosumi", "Sosumi")
+    ];
 
     private async Task SendTestNotification()
     {

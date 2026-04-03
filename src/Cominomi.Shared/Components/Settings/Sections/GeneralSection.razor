@@ -6,12 +6,17 @@
 <div class="settings-section-desc">앱의 기본 동작을 설정합니다.</div>
 
 <div class="stack gap-3">
-    <MudSelect T="string" @bind-Value="Settings.Theme" Label="테마"
-               Variant="Variant.Outlined" Margin="Margin.Dense">
-        <MudSelectItem T="string" Value="@("dark")">다크</MudSelectItem>
-        <MudSelectItem T="string" Value="@("light")">라이트</MudSelectItem>
-        <MudSelectItem T="string" Value="@("system")">시스템</MudSelectItem>
-    </MudSelect>
+    <div>
+        <div class="settings-field-label">테마</div>
+        <div class="settings-segmented">
+            <button class="settings-seg-item @(Settings.Theme == "dark" ? "active" : "")"
+                    @onclick="@(() => Settings.Theme = "dark")">다크</button>
+            <button class="settings-seg-item @(Settings.Theme == "light" ? "active" : "")"
+                    @onclick="@(() => Settings.Theme = "light")">라이트</button>
+            <button class="settings-seg-item @(Settings.Theme == "system" ? "active" : "")"
+                    @onclick="@(() => Settings.Theme = "system")">시스템</button>
+        </div>
+    </div>
 
     <div class="settings-group-title" style="margin-top: 16px;">화면 배율</div>
 
