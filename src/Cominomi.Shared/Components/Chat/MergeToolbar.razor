@@ -78,36 +78,73 @@
                 </div>
             </div>
 
-            @* 액션 버튼들 (오른쪽) *@
-            <div class="merge-actions">
-                <MudTooltip Text="@(noTarget ? "대상 브랜치를 선택하세요" : $"{_targetBranch}에 일반 머지")" Placement="Placement.Bottom">
-                    <button class="merge-action-btn @(isStreaming || noTarget ? "disabled" : "")"
-                            @onclick="@(() => SendMergePrompt(false))"
+            @* GitHub 스타일 스플릿 버튼 (오른쪽) *@
+            <div class="merge-split-wrap">
+                <MudTooltip Text="@(noTarget ? "대상 브랜치를 선택하세요" : (_isSquash ? $"{_targetBranch}에 스쿼시 머지" : $"{_targetBranch}에 일반 머지"))"
+                            Placement="Placement.Bottom">
+                    <button class="merge-split-primary @(isStreaming || noTarget ? "disabled" : "")"
+                            @onclick="ExecuteSelected"
                             disabled="@(isStreaming || noTarget)">
-                        <MudIcon Icon="@Icons.Material.Outlined.MergeType" Style="width: 14px; height: 14px;"/>
-                        <span>머지</span>
+                        <MudIcon Icon="@(_isSquash ? Icons.Material.Outlined.Compress : Icons.Material.Outlined.MergeType)"
+                                 Style="width: 13px; height: 13px;"/>
+                        <span>@(_isSquash ? "스쿼시 머지" : "머지")</span>
                     </button>
                 </MudTooltip>
+                <button class="merge-split-chevron @(isStreaming ? "disabled" : "")"
+                        @onclick="ToggleStrategyMenu"
+                        disabled="@isStreaming">
+                    <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Style="width: 13px; height: 13px;"/>
+                </button>
 
-                <MudTooltip Text="@(noTarget ? "대상 브랜치를 선택하세요" : $"{_targetBranch}에 스쿼시 머지")" Placement="Placement.Bottom">
-                    <button class="merge-action-btn @(isStreaming || noTarget ? "disabled" : "")"
-                            @onclick="@(() => SendMergePrompt(true))"
-                            disabled="@(isStreaming || noTarget)">
-                        <MudIcon Icon="@Icons.Material.Outlined.Compress" Style="width: 14px; height: 14px;"/>
-                        <span>스쿼시</span>
-                    </button>
-                </MudTooltip>
+                <MudPopover Open="@_strategyMenuOpen" AnchorOrigin="Origin.BottomRight"
+                            TransformOrigin="Origin.TopRight" Class="strategy-popover">
+                    <div class="strategy-menu">
+                        <div class="strategy-item @(_isSquash ? "selected" : "")"
+                             @onclick="@(() => SelectStrategy(true))">
+                            <MudIcon Icon="@Icons.Material.Outlined.Compress"
+                                     Style="width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0;"/>
+                            <div class="strategy-item-body">
+                                <div class="strategy-item-title">스쿼시 머지</div>
+                                <div class="strategy-item-desc">커밋을 하나로 합쳐 병합</div>
+                            </div>
+                            @if (_isSquash)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Check"
+                                         Style="width: 14px; height: 14px; color: var(--accent); flex-shrink: 0;"/>
+                            }
+                        </div>
+                        <div class="strategy-item @(!_isSquash ? "selected" : "")"
+                             @onclick="@(() => SelectStrategy(false))">
+                            <MudIcon Icon="@Icons.Material.Outlined.MergeType"
+                                     Style="width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0;"/>
+                            <div class="strategy-item-body">
+                                <div class="strategy-item-title">일반 머지</div>
+                                <div class="strategy-item-desc">머지 커밋으로 이력 유지</div>
+                            </div>
+                            @if (!_isSquash)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Check"
+                                         Style="width: 14px; height: 14px; color: var(--accent); flex-shrink: 0;"/>
+                            }
+                        </div>
+                        @if (hasRemote)
+                        {
+                            <div class="strategy-divider"/>
+                            <div class="strategy-item" @onclick="HandlePrFromMenu">
+                                <MudIcon Icon="@Icons.Material.Outlined.OpenInNew"
+                                         Style="width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0;"/>
+                                <div class="strategy-item-body">
+                                    <div class="strategy-item-title">PR 올리기</div>
+                                    <div class="strategy-item-desc">GitHub Pull Request 생성</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </MudPopover>
 
-                @if (hasRemote)
+                @if (_strategyMenuOpen)
                 {
-                    <MudTooltip Text="PR 올리기" Placement="Placement.Bottom">
-                        <button class="merge-action-btn merge-action-pr @(isStreaming ? "disabled" : "")"
-                                @onclick="SendCreatePrPrompt"
-                                disabled="@isStreaming">
-                            <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Style="width: 14px; height: 14px;"/>
-                            <span>PR</span>
-                        </button>
-                    </MudTooltip>
+                    <MudOverlay Visible="true" OnClick="CloseStrategyMenu" DarkBackground="false" ZIndex="1"/>
                 }
             </div>
         }
@@ -132,6 +169,8 @@
     private string? _lastSessionId;
     private bool _branchMenuOpen;
     private string _branchSearchText = "";
+    private bool _isSquash = true;
+    private bool _strategyMenuOpen;
 
     private IEnumerable<BranchGroup> FilteredBranchGroups =>
         string.IsNullOrWhiteSpace(_branchSearchText)
@@ -218,6 +257,33 @@
         _targetBranch = branch;
         _branchMenuOpen = false;
         _branchSearchText = "";
+    }
+
+    private void ToggleStrategyMenu()
+    {
+        _strategyMenuOpen = !_strategyMenuOpen;
+    }
+
+    private void CloseStrategyMenu()
+    {
+        _strategyMenuOpen = false;
+    }
+
+    private void SelectStrategy(bool squash)
+    {
+        _isSquash = squash;
+        _strategyMenuOpen = false;
+    }
+
+    private void ExecuteSelected()
+    {
+        SendMergePrompt(_isSquash);
+    }
+
+    private void HandlePrFromMenu()
+    {
+        _strategyMenuOpen = false;
+        SendCreatePrPrompt();
     }
 
     private void SendMergePrompt(bool squash)
