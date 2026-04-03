@@ -18,6 +18,9 @@ public static class AppPaths
     public static string Usage { get; } = EnsureDir(BaseDir);
     public static string Workspaces { get; } = EnsureDir(Path.Combine(BaseDir, "workspaces"));
 
+    public static string AccountBackups { get; } = EnsureDir(Path.Combine(BaseDir, "account-backups"));
+    public static string AccountsFile { get; } = Path.Combine(BaseDir, "accounts.json");
+
     private static string EnsureDir(string path)
     {
         Directory.CreateDirectory(path);

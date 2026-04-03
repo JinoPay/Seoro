@@ -1,0 +1,125 @@
+@inject IClaudeAccountService AccountService
+@inject IChatState ChatState
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<div class="settings-content-area">
+    <div class="settings-content-header">
+        <div>
+            <span class="typo-h6">계정 관리</span>
+            <div class="typo-caption text-secondary mt-1">
+                여러 Claude 계정을 등록하고 원클릭으로 전환합니다.
+                각 계정의 인증 정보가 안전하게 백업되어 언제든 복원됩니다.
+            </div>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.PersonAdd"
+                   OnClick="OpenAddDialog"
+                   Style="text-transform: none; flex-shrink: 0;">
+            현재 계정 등록
+        </MudButton>
+    </div>
+
+    <div class="settings-content-body">
+        @if (!AccountService.CanSwitch())
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                진행 중인 세션이 있어 계정 전환이 비활성화되어 있습니다. 세션이 끝난 후 전환하세요.
+            </MudAlert>
+        }
+
+        @if (_loading)
+        {
+            <div class="d-flex justify-center pa-8">
+                <MudProgressCircular Indeterminate="true"/>
+            </div>
+        }
+        else if (_accounts.Count == 0)
+        {
+            <div class="accounts-empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.ManageAccounts"
+                         Style="font-size: 48px; color: var(--mud-palette-text-disabled);"/>
+                <div class="typo-body1 text-secondary mt-2">등록된 계정이 없습니다</div>
+                <div class="typo-caption text-disabled mt-1" style="max-width: 320px;">
+                    현재 <code>claude login</code>으로 로그인된 계정을 등록하세요.
+                    계정을 여러 개 등록하면 이 화면에서 바로 전환할 수 있습니다.
+                </div>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.PersonAdd"
+                           OnClick="OpenAddDialog" Class="mt-3"
+                           Style="text-transform: none;">
+                    현재 계정 등록
+                </MudButton>
+            </div>
+        }
+        else
+        {
+            <div class="accounts-how-to">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Style="opacity:.5; flex-shrink:0;"/>
+                <span class="typo-caption text-secondary">
+                    계정을 추가로 등록하려면 터미널에서 <code>claude logout</code> → <code>claude login</code>으로
+                    다른 계정으로 로그인한 뒤 "현재 계정 등록"을 누르세요.
+                </span>
+            </div>
+
+            <div class="accounts-grid">
+                @foreach (var account in _accounts)
+                {
+                    <AccountCard Account="@account"
+                                 CanSwitch="@AccountService.CanSwitch()"
+                                 OnChanged="LoadAccounts"
+                                 AutoFetch="true"/>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<ClaudeAccount> _accounts = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AccountService.OnAccountsChanged += HandleAccountsChanged;
+        // 페이지 진입 시 실제 CLI 상태와 동기화 (외부 로그인/아웃 반영)
+        await AccountService.SyncActiveAccountAsync();
+        await LoadAccounts();
+    }
+
+    private async Task LoadAccounts()
+    {
+        _loading = true;
+        StateHasChanged();
+        try
+        {
+            var all = await AccountService.GetAccountsAsync();
+            // 활성 계정을 항상 맨 위에 표시
+            _accounts = [..all.OrderByDescending(a => a.IsActive).ThenByDescending(a => a.LastSwitchedAt)];
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenAddDialog()
+    {
+        var dialog = await DialogService.ShowAsync<AddAccountDialog>(
+            "",
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true });
+        await dialog.Result;
+    }
+
+    private void HandleAccountsChanged()
+    {
+        InvokeAsync(LoadAccounts);
+    }
+
+    public void Dispose()
+    {
+        AccountService.OnAccountsChanged -= HandleAccountsChanged;
+    }
+}

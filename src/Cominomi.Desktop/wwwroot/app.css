@@ -5138,3 +5138,132 @@ select:focus-visible {
     max-height: 400px;
     overflow-y: auto;
 }
+
+/* ===== Account Management ===== */
+
+.accounts-how-to {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-secondary);
+    border-radius: 8px;
+    margin-bottom: var(--space-1);
+}
+
+.accounts-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.accounts-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-12) var(--space-6);
+    text-align: center;
+}
+
+.acct-card {
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    padding: 14px 16px;
+    background: var(--surface-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.15s;
+}
+
+.acct-card--active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 5%, var(--surface-primary));
+}
+
+.acct-card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.acct-card-identity {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    flex: 1;
+}
+
+.acct-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: default;
+}
+
+.acct-email {
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.acct-usage-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.acct-usage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.acct-usage-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.acct-usage-pct {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.acct-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.acct-stats {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+}
+
+.acct-stats strong {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.acct-stats-dot {
+    color: var(--text-disabled);
+}
+
+.acct-actions {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+}

@@ -1,0 +1,217 @@
+@inject IClaudeAccountService AccountService
+@inject ISnackbar Snackbar
+
+<div class="@($"acct-card{(Account.IsActive ? " acct-card--active" : "")}")">
+
+    @* ── Identity ── *@
+    <div class="acct-card-top">
+        <MudAvatar Style="@($"background:{AvatarColor()};color:#fff;font-weight:700;font-size:15px;width:38px;height:38px;flex-shrink:0;")">
+            @if (!string.IsNullOrEmpty(Account.EmailAddress))
+            {
+                @Account.EmailAddress[0].ToString().ToUpper()
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small"/>
+            }
+        </MudAvatar>
+
+        <div class="acct-card-identity">
+            @if (_editingName)
+            {
+                <MudTextField @bind-Value="_editName" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="font-size:13px;margin:0;" AutoFocus="true"
+                              @onkeydown="OnEditKeyDown" @onblur="SaveName"/>
+            }
+            else
+            {
+                <span class="acct-name" @ondblclick="StartEdit">@Account.ProfileName</span>
+            }
+            <span class="acct-email">@Account.EmailAddress</span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:auto;">
+            @if (Account.IsActive)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled"
+                         Icon="@Icons.Material.Filled.CheckCircle" Style="height:20px;font-size:11px;">활성</MudChip>
+            }
+            @if (_backupMissing)
+            {
+                <MudTooltip Text="백업 파일이 없습니다. 계정을 다시 등록하세요.">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Error"/>
+                </MudTooltip>
+            }
+        </div>
+    </div>
+
+    @* ── Usage ── *@
+    @if (_fetchingUsage)
+    {
+        <MudProgressLinear Indeterminate="true" Size="Size.Small" Rounded="true" Style="margin:8px 0 4px;"/>
+    }
+    else if (_usage?.Utilization.HasValue == true)
+    {
+        <div class="acct-usage-block">
+            <div class="acct-usage-header">
+                <span class="acct-usage-label">5시간 Rate Limit</span>
+                <span class="acct-usage-pct" style="color:@UsageColorCss(_usage.Utilization.Value);">@($"{_usage.Utilization:F0}%")</span>
+            </div>
+            <MudProgressLinear Value="@_usage.Utilization.Value" Max="100"
+                               Color="@UsageColor(_usage.Utilization.Value)"
+                               Rounded="true" Size="Size.Small"/>
+        </div>
+    }
+
+    @* ── Stats + Actions ── *@
+    <div class="acct-card-footer">
+        <div class="acct-stats">
+            <span>전환 <strong>@Account.SwitchCount</strong></span>
+            <span class="acct-stats-dot">·</span>
+            <span><strong>@FormatDuration(Account.TotalActiveSeconds)</strong></span>
+            <span class="acct-stats-dot">·</span>
+            <span>@FormatLastUsed(Account.LastSwitchedAt)</span>
+        </div>
+
+        <div class="acct-actions">
+            <MudTooltip Text="@(CanSwitch ? "" : "진행 중인 세션이 있어 전환할 수 없습니다.")">
+                <MudButton Variant="@(Account.IsActive ? Variant.Outlined : Variant.Filled)"
+                           Color="Color.Primary" Size="Size.Small"
+                           StartIcon="@(Account.IsActive ? Icons.Material.Filled.Check : Icons.Material.Filled.SwitchAccount)"
+                           OnClick="Switch"
+                           Disabled="@(Account.IsActive || !CanSwitch || _switching)"
+                           Style="text-transform:none;min-width:76px;height:28px;font-size:12px;border-radius:6px;">
+                    @if (_switching)
+                    {
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="margin-right:4px;"/>
+                    }
+                    @(Account.IsActive ? "현재 계정" : "전환")
+                </MudButton>
+            </MudTooltip>
+
+            <MudTooltip Text="사용량 새로고침">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                               OnClick="FetchUsage" Disabled="_fetchingUsage"
+                               Style="width:28px;height:28px;"/>
+            </MudTooltip>
+            <MudTooltip Text="이름 편집">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                               OnClick="StartEdit" Style="width:28px;height:28px;"/>
+            </MudTooltip>
+            <MudTooltip Text="계정 삭제">
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                               Color="Color.Error" OnClick="Delete" Style="width:28px;height:28px;"/>
+            </MudTooltip>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ClaudeAccount Account { get; set; } = null!;
+    [Parameter] public bool CanSwitch { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+    [Parameter] public bool AutoFetch { get; set; }
+
+    private bool _switching;
+    private bool _fetchingUsage;
+    private bool _editingName;
+    private bool _backupMissing;
+    private string _editName = "";
+    private AccountUsageInfo? _usage;
+    private string? _usageError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AutoFetch) await FetchUsage();
+    }
+
+    private async Task Switch()
+    {
+        _switching = true;
+        StateHasChanged();
+        try
+        {
+            var success = await AccountService.SwitchToAsync(Account.Id);
+            if (success)
+                Snackbar.Add($"'{Account.ProfileName}' 계정으로 전환했습니다.", Severity.Success);
+            else
+                Snackbar.Add("계정 전환에 실패했습니다.", Severity.Error);
+            await OnChanged.InvokeAsync();
+        }
+        finally { _switching = false; }
+    }
+
+    private async Task FetchUsage()
+    {
+        _fetchingUsage = true;
+        _usageError = null;
+        StateHasChanged();
+        try
+        {
+            _usage = await AccountService.FetchUsageAsync(Account.Id);
+            if (_usage == null)
+            {
+                _usageError = "failed";
+                if (!AutoFetch)
+                    Snackbar.Add("사용량 정보를 불러올 수 없습니다.", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            _usageError = ex.Message;
+            if (!AutoFetch)
+                Snackbar.Add($"사용량 조회 오류: {ex.Message}", Severity.Error);
+        }
+        finally { _fetchingUsage = false; }
+    }
+
+    private void StartEdit() { _editName = Account.ProfileName; _editingName = true; }
+
+    private async Task SaveName()
+    {
+        _editingName = false;
+        if (_editName.Trim() == Account.ProfileName || string.IsNullOrWhiteSpace(_editName)) return;
+        await AccountService.UpdateProfileNameAsync(Account.Id, _editName.Trim());
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task OnEditKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SaveName();
+        else if (e.Key == "Escape") _editingName = false;
+    }
+
+    private async Task Delete()
+    {
+        await AccountService.RemoveAccountAsync(Account.Id);
+        Snackbar.Add($"'{Account.ProfileName}' 계정이 삭제되었습니다.", Severity.Info);
+        await OnChanged.InvokeAsync();
+    }
+
+    private string AvatarColor()
+    {
+        var colors = new[] { "#7c6cf6", "#22c55e", "#3b82f6", "#f97316", "#ec4899", "#06b6d4", "#a855f7" };
+        return colors[Math.Abs(Account.Id.GetHashCode()) % colors.Length];
+    }
+
+    private static string FormatDuration(long s)
+    {
+        if (s < 60) return $"{s}초";
+        if (s < 3600) return $"{s / 60}분";
+        return $"{s / 3600}h {s % 3600 / 60}m";
+    }
+
+    private static string FormatLastUsed(DateTime? dt)
+    {
+        if (dt == null) return "사용 없음";
+        var d = DateTime.UtcNow - dt.Value;
+        if (d.TotalMinutes < 1) return "방금 전";
+        if (d.TotalHours < 1)   return $"{(int)d.TotalMinutes}분 전";
+        if (d.TotalDays < 1)    return $"{(int)d.TotalHours}시간 전";
+        return $"{(int)d.TotalDays}일 전";
+    }
+
+    private static Color UsageColor(double p) => p >= 90 ? Color.Error : p >= 70 ? Color.Warning : Color.Success;
+    private static string UsageColorCss(double p) => p >= 90 ? "var(--mud-palette-error)" : p >= 70 ? "var(--mud-palette-warning)" : "var(--mud-palette-success)";
+}

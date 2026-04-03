@@ -90,6 +90,11 @@
                 <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"/>
                 인스트럭션
             </button>
+            <button class="settings-nav-item @ActiveClass("accounts")"
+                    @onclick="@(() => SetSection("accounts"))">
+                <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small"/>
+                계정 설정
+            </button>
         </div>
 
         <div class="settings-nav-label">도구</div>
@@ -159,6 +164,10 @@
         else if (ChatState.SettingsSection == "instructions")
         {
             <InstructionsPage/>
+        }
+        else if (ChatState.SettingsSection == "accounts")
+        {
+            <AccountsPage/>
         }
         else if (ChatState.SettingsSection == "session-replay")
         {

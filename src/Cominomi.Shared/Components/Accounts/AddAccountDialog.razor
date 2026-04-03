@@ -1,0 +1,112 @@
+@inject IClaudeAccountService AccountService
+@inject IClaudeCredentialService CredentialService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Primary"/>
+            <span class="typo-subtitle1">현재 계정 등록</span>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="stack gap-3" style="min-width: 340px;">
+            @if (_loading)
+            {
+                <div class="d-flex justify-center pa-4">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
+                </div>
+            }
+            else
+            {
+                <div class="typo-caption text-secondary">
+                    현재 Claude CLI에 로그인된 계정의 인증 정보를 저장합니다.
+                    이 정보는 Cominomi 앱 데이터 폴더에 안전하게 백업됩니다.
+                </div>
+
+                @if (!string.IsNullOrEmpty(_detectedEmail))
+                {
+                    <div class="d-flex align-center gap-2 pa-2"
+                         style="background: var(--mud-palette-background-grey); border-radius: 8px;">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Small" Color="Color.Success"/>
+                        <div>
+                            <div class="typo-caption text-secondary">감지된 계정</div>
+                            <div class="typo-body2">@_detectedEmail</div>
+                        </div>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined"
+                                 Style="height: 20px; margin-left: auto;">로그인됨</MudChip>
+                    </div>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">
+                        이메일을 자동으로 감지하지 못했습니다.
+                        계정 등록은 정상적으로 진행됩니다.
+                    </MudAlert>
+                }
+
+                <MudTextField @bind-Value="_profileName" Label="프로필 이름"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="예: 개인, 회사, 프리랜서..."
+                              HelperText="여러 계정을 구분하는 이름 (예: 개인, 회사)"
+                              Immediate="true" AutoFocus="true"
+                              @onkeydown="OnKeyDown"/>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">취소</MudButton>
+        <MudButton OnClick="Confirm" Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@(!CanConfirm)" StartIcon="@Icons.Material.Filled.Save">
+            등록
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private string _profileName = "";
+    private string? _detectedEmail;
+    private bool _loading = true;
+
+    private bool CanConfirm => !_loading && !string.IsNullOrWhiteSpace(_profileName);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var configJson = await CredentialService.ReadCurrentConfigAsync();
+            var credJson = await CredentialService.ReadCurrentCredentialsAsync();
+            _detectedEmail = CredentialService.ExtractEmail(configJson, credJson);
+        }
+        catch { /* 이메일 감지 실패해도 등록은 계속 진행 */ }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task Confirm()
+    {
+        if (!CanConfirm) return;
+
+        try
+        {
+            var account = await AccountService.RegisterCurrentAsync(_profileName.Trim());
+            Snackbar.Add($"'{account.ProfileName}' 계정이 등록되었습니다.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(account));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"등록 실패: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Confirm();
+    }
+}
