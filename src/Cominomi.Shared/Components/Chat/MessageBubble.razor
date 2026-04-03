@@ -45,18 +45,17 @@
 
             @if (Message.Attachments.Count > 0)
             {
-                <div class="stack-column gap-1" style="margin-bottom: 8px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px;">
                     @foreach (var attachment in Message.Attachments)
                     {
                         @if (attachment.IsImage)
                         {
-                            <div style="margin: 4px 0; cursor: pointer;"
+                            <div style="cursor: pointer;"
+                                 title="@attachment.OriginalFileName"
                                  @onclick="@(() => Lightbox.Open(GetImageSrc(attachment), attachment.OriginalFileName))">
                                 <img src="@GetImageSrc(attachment)"
                                      alt="@attachment.OriginalFileName"
-                                     style="max-width: 300px; max-height: 200px; border-radius: 8px; object-fit: contain;"/>
-                                <div
-                                    style="font-size: 0.7rem; opacity: 0.4; margin-top: 2px;">@attachment.OriginalFileName</div>
+                                     style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover;"/>
                             </div>
                         }
                         else
