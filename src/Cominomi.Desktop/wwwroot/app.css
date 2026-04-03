@@ -578,8 +578,8 @@ html *::after {
 /* Keyboard shortcut badge — visible only while Ctrl/⌘ held */
 .tree-session-shortcuts {
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-end;
     gap: 0;
     flex-shrink: 0;
     align-self: center;
