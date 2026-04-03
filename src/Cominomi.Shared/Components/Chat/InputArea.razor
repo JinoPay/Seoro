@@ -2,6 +2,7 @@
 @inject ISkillRegistry SkillRegistry
 @inject IJSRuntime JSRuntime
 @inject IChatState ChatState
+@inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
 <div class="input-area-container" id="input-area">
@@ -268,6 +269,13 @@
     public void OnFilePasted(string fileName, string contentType, string base64Data)
     {
         AddPendingAttachmentFromBase64(fileName, contentType, base64Data);
+    }
+
+    [JSInvokable]
+    public void OnLargeTextPasted(string fileName, string contentType, string base64Data)
+    {
+        AddPendingAttachmentFromBase64(fileName, contentType, base64Data);
+        Snackbar.Add("긴 텍스트가 파일로 첨부되었습니다.", Severity.Info);
     }
 
     [JSInvokable]

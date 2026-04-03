@@ -18,6 +18,9 @@ public static class CominomiConstants
 
     public const string DefaultEffortLevel = "auto";
 
+    // Chat input: paste text longer than this threshold is auto-converted to a file attachment
+    public const int PasteAsFileThreshold = 500;
+
     // Default values duplicated across AppSettings, Session, ClaudeService, etc.
     public const string DefaultPermissionMode = "bypassAll";
     public const string PathCaptureSentinel = "___COMINOMI_PATH___";

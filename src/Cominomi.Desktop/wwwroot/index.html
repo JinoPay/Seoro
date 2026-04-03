@@ -262,6 +262,18 @@
                     return;
                 }
 
+                // Long text: auto-convert to file attachment
+                if (plainText && plainText.length >= 500) {
+                    e.preventDefault();
+                    try {
+                        var encoded = btoa(unescape(encodeURIComponent(plainText)));
+                        await dotNetRef.invokeMethodAsync('OnLargeTextPasted', 'pasted-text.txt', 'text/plain', encoded);
+                    } catch (err) {
+                        console.error('[Cominomi:paste] large text encode error:', err);
+                    }
+                    return;
+                }
+
                 // Fallback: if no file items in clipboardData, try Clipboard API
                 if (navigator.clipboard && navigator.clipboard.read) {
                     try {
