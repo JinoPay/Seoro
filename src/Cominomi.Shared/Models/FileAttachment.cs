@@ -15,6 +15,7 @@ public class ChatInputMessage
     public List<PendingAttachment> Attachments { get; set; } = [];
     public List<SkillChainStep>? PendingChain { get; set; }
     public string Text { get; set; } = string.Empty;
+    public string? ModelOverride { get; set; }
 }
 
 public class PendingAttachment

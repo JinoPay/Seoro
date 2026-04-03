@@ -115,7 +115,7 @@ public class ChatMessageOrchestrator(
 
         var result = await RunStreamingLoopAsync(
             session, assistantMsg, systemPrompt, messageForClaude,
-            conversationId, false, ct);
+            conversationId, false, ct, input.ModelOverride);
 
         // --- Post-stream: hooks ---
         FireHooksInBackground(session);
@@ -134,7 +134,8 @@ public class ChatMessageOrchestrator(
         string message,
         string? conversationId,
         bool continueMode,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? modelOverride = null)
     {
         var firstEvent = true;
         var streamCtx = new StreamProcessingContext
@@ -153,7 +154,7 @@ public class ChatMessageOrchestrator(
             await foreach (var evt in claudeService.SendMessageAsync(
                                message,
                                session.Git.WorktreePath,
-                               session.Model,
+                               modelOverride ?? session.Model,
                                session.PermissionMode,
                                session.EffortLevel ?? "auto",
                                session.Id,

@@ -123,6 +123,7 @@
     private List<SkillChainStep>? _pendingChain;
     private IDisposable? _planModeSub;
     private IDisposable? _effortLevelSub;
+    private IDisposable? _mergeRequestSub;
 
     protected override void OnInitialized()
     {
@@ -149,6 +150,9 @@
                 var next = current == "auto" ? maxLevel : "auto";
                 await HandleEffortLevelChanged(next);
             }));
+
+        _mergeRequestSub = EventBus.Subscribe<MergeRequestedEvent>(e =>
+            InvokeAsync(() => HandleSend(e.Input)));
     }
 
     private void HandleStateChanged()
@@ -616,6 +620,7 @@
         _selfRef?.Dispose();
         _planModeSub?.Dispose();
         _effortLevelSub?.Dispose();
+        _mergeRequestSub?.Dispose();
 
         foreach (var (_, (cts, task)) in _sessionTasks)
         {

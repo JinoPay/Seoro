@@ -667,6 +667,69 @@ html *::after {
     border-bottom: 1px solid var(--border-default);
 }
 
+.merge-toolbar {
+    height: 44px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-3);
+    gap: var(--space-2);
+}
+
+.merge-branch-selector-wrap {
+    position: relative;
+}
+
+.merge-branch-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border-default);
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.72rem;
+    color: var(--mud-palette-text-primary);
+    transition: background 0.15s;
+    white-space: nowrap;
+    max-width: 160px;
+}
+
+.merge-branch-pill:hover:not(:disabled) {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.merge-branch-pill:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.merge-branch-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+.merge-split-btn-group ::deep .mud-button-group-root {
+    height: 26px;
+}
+
+.merge-split-btn-group ::deep .mud-button {
+    font-size: 0.72rem !important;
+    text-transform: none !important;
+    height: 26px !important;
+    min-width: 48px;
+    padding: 0 8px !important;
+}
+
+.merge-split-btn-group ::deep .mud-icon-button {
+    height: 26px !important;
+    width: 24px !important;
+    padding: 0 !important;
+}
+
 .main-toolbar {
     display: flex;
     align-items: center;

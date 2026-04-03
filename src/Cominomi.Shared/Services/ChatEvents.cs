@@ -34,3 +34,5 @@ public sealed record ToggleSyncEvent : ChatEvent;
 public sealed record WorktreeSyncStartedEvent(string SessionId, string WorkspaceId) : ChatEvent;
 
 public sealed record WorktreeSyncStoppedEvent(string SessionId, string WorkspaceId) : ChatEvent;
+
+public sealed record MergeRequestedEvent(ChatInputMessage Input) : ChatEvent;
