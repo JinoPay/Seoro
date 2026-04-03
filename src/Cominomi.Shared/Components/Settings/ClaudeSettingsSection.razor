@@ -1,6 +1,5 @@
 @inject IClaudeSettingsService ClaudeSettingsService
 @inject IChatState ChatState
-@inject IMcpService McpService
 @inject ISnackbar Snackbar
 
 <div class="settings-content-area">
@@ -117,42 +116,20 @@
                     <AdditionalDirectoriesEditor @bind-Directories="_settings.AdditionalDirectories"/>
                 </div>
 
-                @* ── Group 5: MCP 서버 (요약) ── *@
+                @* ── Group 5: MCP 서버 (링크) ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
                         <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small"/>
                         MCP 서버
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@_mcpServers.Count</MudChip>
                         <div style="flex: 1;"></div>
                         <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
-                                   OnClick="@(() => _showMcpDialog = true)" Style="text-transform: none;">
+                                   OnClick="NavigateToMcp" Style="text-transform: none;">
                             관리
                         </MudButton>
                     </div>
-                    @if (_mcpServers.Count > 0)
-                    {
-                        <div class="d-flex flex-wrap gap-2">
-                            @foreach (var server in _mcpServers)
-                            {
-                                <div class="d-flex align-center gap-2"
-                                     style="border: 1px solid var(--mud-palette-lines-default); border-radius: 6px; padding: 4px 10px;">
-                                    <div class="settings-icon-box">
-                                        <MudIcon
-                                            Icon="@(server.Transport == "sse" ? Icons.Material.Filled.Cloud : Icons.Material.Filled.Terminal)"
-                                            Size="Size.Small" Style="font-size: 14px;"/>
-                                    </div>
-                                    <span class="typo-body2">@server.Name</span>
-                                    <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small"
-                                             Style="font-size: 8px;"
-                                             Color="@(server.Status.ConnectionStatus == McpConnectionStatus.Reachable ? Color.Success : Color.Default)"/>
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="typo-caption text-secondary">등록된 MCP 서버가 없습니다.</div>
-                    }
+                    <div class="typo-caption text-secondary">
+                        MCP 서버는 별도 페이지에서 관리합니다.
+                    </div>
                 </div>
 
                 @* ── Group 6: 훅 (요약) ── *@
@@ -193,8 +170,6 @@
     </div>
 </div>
 
-<McpManagerDialog @bind-IsOpen="_showMcpDialog"/>
-
 @code {
     [Parameter] public string? ProjectPath { get; set; }
 
@@ -203,8 +178,6 @@
     private string? _projectPath;
     private bool _loading;
     private bool _saving;
-    private bool _showMcpDialog;
-    private List<McpServer> _mcpServers = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -215,14 +188,8 @@
 
         try
         {
-            var settingsTask = ClaudeSettingsService.ReadAsync(_scope,
+            _settings = await ClaudeSettingsService.ReadAsync(_scope,
                 _scope == ClaudeSettingsScope.Global ? null : _projectPath);
-            var mcpTask = McpService.ListServersAsync();
-
-            await Task.WhenAll(settingsTask, mcpTask);
-
-            _settings = settingsTask.Result;
-            _mcpServers = mcpTask.Result;
         }
         catch
         {
@@ -290,6 +257,11 @@
     private void NavigateToHooks()
     {
         ChatState.SetSettingsSection("hooks");
+    }
+
+    private void NavigateToMcp()
+    {
+        ChatState.SetSettingsSection("mcp");
     }
 
 }

@@ -1,0 +1,51 @@
+<div class="settings-content-header">
+    <div class="d-flex align-center gap-2">
+        <MudChipSet T="string" SelectedValue="@_scopeStr" SelectedValueChanged="OnScopeChanged"
+                    SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                    Variant="Variant.Outlined" Color="Color.Primary">
+            <MudChip T="string" Value="@("Desktop")" Icon="@Icons.Material.Filled.DesktopWindows">Desktop</MudChip>
+            <MudChip T="string" Value="@("Global")" Icon="@Icons.Material.Filled.Public">글로벌</MudChip>
+            <MudChip T="string" Value="@("Local")" Icon="@Icons.Material.Filled.FolderSpecial"
+                     Disabled="@NeedsProjectAndNone">로컬</MudChip>
+            <MudChip T="string" Value="@("Project")" Icon="@Icons.Material.Filled.Folder"
+                     Disabled="@NeedsProjectAndNone">프로젝트</MudChip>
+        </MudChipSet>
+
+        @if (Scope is McpScope.Local or McpScope.Project)
+        {
+            <div style="width: 220px;">
+                <ProjectScopePicker SelectedPath="@ProjectPath"
+                                    SelectedPathChanged="OnProjectChanged" Label=""/>
+            </div>
+        }
+    </div>
+
+    <div class="d-flex align-center gap-2">
+        @if (ExtraActions != null)
+        {
+            @ExtraActions
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public McpScope Scope { get; set; }
+    [Parameter] public EventCallback<McpScope> ScopeChanged { get; set; }
+    [Parameter] public string? ProjectPath { get; set; }
+    [Parameter] public EventCallback<string?> ProjectPathChanged { get; set; }
+    [Parameter] public RenderFragment? ExtraActions { get; set; }
+
+    private string _scopeStr => Scope.ToString();
+    private bool NeedsProjectAndNone => false; // Local/Project tabs always enabled; empty state shown instead
+
+    private async Task OnScopeChanged(string value)
+    {
+        if (Enum.TryParse<McpScope>(value, out var scope))
+            await ScopeChanged.InvokeAsync(scope);
+    }
+
+    private async Task OnProjectChanged(string? path)
+    {
+        await ProjectPathChanged.InvokeAsync(path);
+    }
+}

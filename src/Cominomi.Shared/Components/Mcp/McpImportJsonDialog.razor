@@ -1,0 +1,116 @@
+@inject IMcpService McpService
+@inject ISnackbar Snackbar
+
+<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged">
+    <TitleContent>
+        <div class="typo-h6">
+            <MudIcon Icon="@Icons.Material.Filled.FileDownload" Class="mr-2"/>
+            JSON으로 가져오기
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="stack gap-3">
+            <MudTextField Value="@_json" ValueChanged="OnJsonChanged" T="string"
+                          Label="MCP 설정 JSON" Variant="Variant.Outlined" Lines="6"
+                          Placeholder='{"mcpServers": {"name": {"command": "...", "args": []}}}'/>
+
+            @if (!string.IsNullOrWhiteSpace(_json) && _preview.Count > 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    가져올 서버: @string.Join(", ", _preview)
+                </MudAlert>
+            }
+            @if (!string.IsNullOrWhiteSpace(_json) && _parseError != null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">JSON 오류: @_parseError</MudAlert>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">취소</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Import"
+                   Disabled="@(string.IsNullOrWhiteSpace(_json) || _parseError != null || _importing)">
+            @if (_importing)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                     Style="width:14px;height:14px;margin-right:6px;"/>
+            }
+            가져오기
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public McpScope Scope { get; set; }
+    [Parameter] public string? ProjectPath { get; set; }
+    [Parameter] public EventCallback OnImported { get; set; }
+
+    private string _json = "";
+    private List<string> _preview = [];
+    private string? _parseError;
+    private bool _importing;
+
+    private void OnJsonChanged(string value)
+    {
+        _json = value;
+        _preview.Clear();
+        _parseError = null;
+        if (string.IsNullOrWhiteSpace(value)) return;
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(value);
+            if (doc.RootElement.TryGetProperty("mcpServers", out var servers))
+                foreach (var s in servers.EnumerateObject())
+                    _preview.Add(s.Name);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _parseError = ex.Message;
+        }
+    }
+
+    private async Task Import()
+    {
+        _importing = true;
+        StateHasChanged();
+
+        // map McpScope to string scope that ImportFromJsonAsync expects
+        var scopeStr = Scope == McpScope.Global ? "user" : "project";
+        var result = await McpService.ImportFromJsonAsync(_json, scopeStr);
+
+        _importing = false;
+
+        if (result.Success)
+        {
+            Snackbar.Add(result.Error ?? "JSON 설정을 가져왔습니다.", Severity.Success);
+            _json = "";
+            _preview.Clear();
+            await OnImported.InvokeAsync();
+            await Close();
+        }
+        else
+        {
+            Snackbar.Add($"가져오기 실패: {result.Error}", Severity.Error);
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private async Task OnVisibleChanged(bool visible)
+    {
+        if (IsOpen != visible)
+        {
+            IsOpen = visible;
+            await IsOpenChanged.InvokeAsync(visible);
+        }
+    }
+}

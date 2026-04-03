@@ -1,0 +1,265 @@
+@inject ISnackbar Snackbar
+
+<div class="mcp-editor-panel @(IsOpen ? "open" : "")">
+    @if (IsOpen)
+    {
+        <div class="mcp-editor-header">
+            <span class="typo-subtitle1">@(IsNew ? "서버 추가" : $"편집: {_name}")</span>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="Cancel"/>
+        </div>
+
+        <div class="mcp-editor-body">
+            <MudTextField @bind-Value="_name" Label="서버 이름" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Disabled="@(!IsNew && !string.IsNullOrEmpty(_originalName))"
+                          Required="true"/>
+
+            <div class="mt-3">
+                <div class="typo-caption text-secondary mb-1">유형</div>
+                <MudChipSet T="string" SelectedValue="@_transport" SelectedValueChanged="OnTransportChanged"
+                            SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                            Variant="Variant.Outlined" Color="Color.Primary" Class="d-flex gap-1">
+                    <MudChip T="string" Value="@("stdio")" Icon="@Icons.Material.Filled.Terminal">
+                        Command (stdio)
+                    </MudChip>
+                    <MudChip T="string" Value="@("sse")" Icon="@Icons.Material.Filled.Language">
+                        URL (SSE/HTTP)
+                    </MudChip>
+                </MudChipSet>
+            </div>
+
+            @if (_transport == "stdio")
+            {
+                <MudTextField @bind-Value="_command" Label="명령어" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Class="mt-3"
+                              Placeholder="npx, node, python..." Required="true"/>
+
+                <div class="mt-3">
+                    <div class="typo-subtitle2 mb-1">인수 (Arguments)</div>
+                    @for (var i = 0; i < _argsList.Count; i++)
+                    {
+                        var idx = i;
+                        <div class="d-flex gap-1 align-center mb-1">
+                            <MudTextField T="string" Value="@_argsList[idx]"
+                                          ValueChanged="@(v => _argsList[idx] = v)"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1;"
+                                          Placeholder="@("-y @modelcontextprotocol/server-...")"/>
+                            <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small"
+                                           OnClick="@(() => RemoveArg(idx))"/>
+                        </div>
+                    }
+                    <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Variant="Variant.Text"
+                               OnClick="AddArg">인수 추가</MudButton>
+                </div>
+            }
+            else
+            {
+                <MudTextField @bind-Value="_url" Label="서버 URL" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Class="mt-3"
+                              Placeholder="http://localhost:3000/sse" Required="true"/>
+            }
+
+            <div class="mt-3">
+                <div class="typo-subtitle2 mb-1">환경변수</div>
+                @for (var i = 0; i < _envKeys.Count; i++)
+                {
+                    var idx = i;
+                    <div class="d-flex gap-1 align-center mb-1">
+                        <MudTextField T="string" Value="@_envKeys[idx]"
+                                      ValueChanged="@(v => _envKeys[idx] = v)"
+                                      Placeholder="KEY" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Style="flex:0.45;"/>
+                        <MudTextField T="string" Value="@_envValues[idx]"
+                                      ValueChanged="@(v => _envValues[idx] = v)"
+                                      Placeholder="VALUE" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Style="flex:0.55;" InputType="InputType.Password"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small"
+                                       OnClick="@(() => RemoveEnvRow(idx))"/>
+                    </div>
+                }
+                <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Variant="Variant.Text"
+                           OnClick="AddEnvRow">환경변수 추가</MudButton>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_formError))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@_formError</MudAlert>
+            }
+
+            @if (!IsNew && !string.IsNullOrEmpty(_originalName) && Scope != McpScope.Desktop)
+            {
+                <McpToolPermissions ServerName="@_originalName" Scope="Scope" ProjectPath="ProjectPath"/>
+            }
+        </div>
+
+        @if (Scope != McpScope.Desktop)
+        {
+            <div class="mcp-editor-footer">
+                <MudButton Variant="Variant.Text" OnClick="Cancel">취소</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save"
+                           Disabled="@(IsFormInvalid() || _saving)">
+                    @if (_saving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                             Style="width:14px;height:14px;margin-right:6px;"/>
+                    }
+                    @(IsNew ? "서버 추가" : "저장")
+                </MudButton>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public McpServer? Server { get; set; } // null = new
+    [Parameter] public bool ForceNew { get; set; } // treat as new even when Server != null (template prefill)
+    [Parameter] public McpScope Scope { get; set; }
+    [Parameter] public string? ProjectPath { get; set; }
+    [Parameter] public EventCallback<McpServer> OnSave { get; set; }
+
+    private bool IsNew => Server == null || ForceNew;
+    private string _originalName = "";
+    private string _name = "";
+    private string _transport = "stdio";
+    private string _command = "";
+    private string _url = "";
+    private readonly List<string> _argsList = [];
+    private readonly List<string> _envKeys = [];
+    private readonly List<string> _envValues = [];
+    private string _formError = "";
+    private bool _saving;
+
+    protected override void OnParametersSet()
+    {
+        if (!IsOpen) return;
+
+        _formError = "";
+        if (Server != null)
+        {
+            _originalName = Server.Name;
+            _name = Server.Name;
+            _transport = Server.Transport;
+            _command = Server.Command ?? "";
+            _url = Server.Url ?? "";
+            _argsList.Clear();
+            _argsList.AddRange(Server.Args);
+            _envKeys.Clear();
+            _envValues.Clear();
+            foreach (var (k, v) in Server.Env) { _envKeys.Add(k); _envValues.Add(v); }
+        }
+        else
+        {
+            _originalName = "";
+            _name = "";
+            _transport = "stdio";
+            _command = "";
+            _url = "";
+            _argsList.Clear();
+            _envKeys.Clear();
+            _envValues.Clear();
+        }
+    }
+
+    private void OnTransportChanged(string value) => _transport = value;
+    private void AddArg() => _argsList.Add("");
+    private void RemoveArg(int idx) { if (idx < _argsList.Count) _argsList.RemoveAt(idx); }
+    private void AddEnvRow() { _envKeys.Add(""); _envValues.Add(""); }
+    private void RemoveEnvRow(int idx) { if (idx < _envKeys.Count) { _envKeys.RemoveAt(idx); _envValues.RemoveAt(idx); } }
+
+    private bool IsFormInvalid() =>
+        string.IsNullOrWhiteSpace(_name) ||
+        (_transport == "stdio" && string.IsNullOrWhiteSpace(_command)) ||
+        (_transport != "stdio" && string.IsNullOrWhiteSpace(_url));
+
+    private McpServer BuildServer() => new()
+    {
+        Name = _name.Trim(),
+        Transport = _transport,
+        Command = _transport == "stdio" ? _command.Trim() : null,
+        Args = _transport == "stdio" ? _argsList.ToList() : [],
+        Url = _transport != "stdio" ? _url.Trim() : null,
+        Env = BuildEnv(),
+        Scope = Scope.ToString().ToLowerInvariant()
+    };
+
+    private Dictionary<string, string> BuildEnv()
+    {
+        var env = new Dictionary<string, string>();
+        for (var i = 0; i < _envKeys.Count; i++)
+            if (!string.IsNullOrWhiteSpace(_envKeys[i]))
+                env[_envKeys[i]] = _envValues[i];
+        return env;
+    }
+
+    private async Task Save()
+    {
+        _formError = "";
+        _saving = true;
+        StateHasChanged();
+        try
+        {
+            await OnSave.InvokeAsync(BuildServer());
+        }
+        finally
+        {
+            _saving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Cancel()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+}
+
+<style>
+    .mcp-editor-panel {
+        width: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid transparent;
+        transition: width 0.2s ease, border-color 0.2s ease;
+        flex-shrink: 0;
+        position: relative;
+    }
+
+    .mcp-editor-panel.open {
+        width: 380px;
+        min-width: 340px;
+        border-left-color: var(--mud-palette-lines-default);
+        overflow-y: auto;
+    }
+
+    .mcp-editor-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+        position: sticky;
+        top: 0;
+        background: var(--mud-palette-background);
+        z-index: 1;
+    }
+
+    .mcp-editor-body {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+    }
+
+    .mcp-editor-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 12px 16px;
+        border-top: 1px solid var(--mud-palette-lines-default);
+        position: sticky;
+        bottom: 0;
+        background: var(--mud-palette-background);
+    }
+</style>

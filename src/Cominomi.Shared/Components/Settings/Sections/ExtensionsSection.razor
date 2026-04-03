@@ -1,21 +1,5 @@
 <div class="settings-section-title">확장</div>
-<div class="settings-section-desc">MCP 서버, 플러그인, 커스텀 명령어를 관리합니다.</div>
-
-<div class="settings-group">
-    <div class="settings-group-title">MCP 서버</div>
-    <div class="stack gap-2">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.Hub"
-                   OnClick="@(() => _mcpManagerOpen = true)"
-                   Style="text-transform: none; align-self: flex-start;"
-                   Size="Size.Small">
-            MCP 서버 관리
-        </MudButton>
-        <small class="typo-caption text-secondary">
-            MCP 서버 추가/제거, Claude Desktop에서 가져오기, JSON 가져오기 등을 지원합니다.
-        </small>
-    </div>
-</div>
+<div class="settings-section-desc">플러그인, 커스텀 명령어를 관리합니다.</div>
 
 <div class="settings-group">
     <div class="settings-group-title">플러그인</div>
@@ -49,12 +33,10 @@
     </div>
 </div>
 
-<McpManagerDialog @bind-IsOpen="_mcpManagerOpen"/>
 <SlashCommandsEditor @bind-IsOpen="_slashCommandsOpen"/>
 <PluginManagerDialog @bind-IsOpen="_pluginManagerOpen"/>
 
 @code {
-    private bool _mcpManagerOpen;
     private bool _slashCommandsOpen;
     private bool _pluginManagerOpen;
 }

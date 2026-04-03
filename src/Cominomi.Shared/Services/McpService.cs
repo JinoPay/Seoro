@@ -10,6 +10,7 @@ namespace Cominomi.Shared.Services;
 public class McpService(
     IProcessRunner processRunner,
     HttpClient httpClient,
+    IClaudeSettingsService claudeSettingsService,
     ILogger<McpService> logger)
     : IMcpService
 {
@@ -453,6 +454,336 @@ public class McpService(
         Args = server.Args.Count > 0 ? server.Args : null,
         Env = server.Env.Count > 0 ? server.Env : null,
         Type = server.Transport != "stdio" ? server.Transport : null,
+        Url = string.IsNullOrEmpty(server.Url) ? null : server.Url
+    };
+
+    // ── Scope-aware CRUD ─────────────────────────────────────────────────────
+
+    public async Task<List<McpServer>> ListServersByScopeAsync(McpScope scope, string? projectPath = null)
+    {
+        try
+        {
+            return scope switch
+            {
+                McpScope.Desktop => await ListDesktopServersAsync(),
+                McpScope.Global => await ListFromSettingsAsync(ClaudeSettingsScope.Global, null),
+                McpScope.Local => await ListFromMcpJsonAsync(
+                    Path.Combine(projectPath ?? Directory.GetCurrentDirectory(), ".mcp.json"), "local"),
+                McpScope.Project => await ListFromSettingsAsync(ClaudeSettingsScope.Project, projectPath),
+                _ => []
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to list MCP servers for scope {Scope}", scope);
+            return [];
+        }
+    }
+
+    public async Task<McpOperationResult> AddServerToScopeAsync(McpServer server, McpScope scope, string? projectPath = null)
+    {
+        if (scope == McpScope.Desktop)
+            return McpOperationResult.Fail("Desktop scope는 읽기 전용입니다.");
+
+        await _lock.WaitAsync();
+        try
+        {
+            if (scope == McpScope.Local)
+            {
+                var configPath = Path.Combine(projectPath ?? Directory.GetCurrentDirectory(), ".mcp.json");
+                var config = await ReadConfigAsync(configPath);
+                config.McpServers ??= new Dictionary<string, McpServerEntry>();
+                if (config.McpServers.ContainsKey(server.Name))
+                    return McpOperationResult.Fail($"서버 '{server.Name}'이 이미 존재합니다.");
+                config.McpServers[server.Name] = ToEntry(server);
+                await WriteConfigAsync(configPath, config);
+            }
+            else
+            {
+                var settingsScope = scope == McpScope.Global ? ClaudeSettingsScope.Global : ClaudeSettingsScope.Project;
+                var settings = await claudeSettingsService.ReadAsync(settingsScope, projectPath);
+                settings.McpServers ??= new Dictionary<string, ClaudeMcpServerConfig>();
+                if (settings.McpServers.ContainsKey(server.Name))
+                    return McpOperationResult.Fail($"서버 '{server.Name}'이 이미 존재합니다.");
+                settings.McpServers[server.Name] = ToClaudeEntry(server);
+                await claudeSettingsService.WriteAsync(settingsScope, settings, projectPath);
+            }
+
+            logger.LogInformation("MCP server '{Name}' added to scope '{Scope}'", server.Name, scope);
+            return McpOperationResult.Ok();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to add MCP server {Name} to scope {Scope}", server.Name, scope);
+            return McpOperationResult.Fail(ex.Message);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public async Task<McpOperationResult> RemoveServerFromScopeAsync(string name, McpScope scope, string? projectPath = null)
+    {
+        if (scope == McpScope.Desktop)
+            return McpOperationResult.Fail("Desktop scope는 읽기 전용입니다.");
+
+        await _lock.WaitAsync();
+        try
+        {
+            if (scope == McpScope.Local)
+            {
+                var configPath = Path.Combine(projectPath ?? Directory.GetCurrentDirectory(), ".mcp.json");
+                var config = await ReadConfigAsync(configPath);
+                if (config.McpServers == null || !config.McpServers.ContainsKey(name))
+                    return McpOperationResult.Fail($"서버 '{name}'을 찾을 수 없습니다.");
+                config.McpServers.Remove(name);
+                await WriteConfigAsync(configPath, config);
+            }
+            else
+            {
+                var settingsScope = scope == McpScope.Global ? ClaudeSettingsScope.Global : ClaudeSettingsScope.Project;
+                var settings = await claudeSettingsService.ReadAsync(settingsScope, projectPath);
+                if (settings.McpServers == null || !settings.McpServers.ContainsKey(name))
+                    return McpOperationResult.Fail($"서버 '{name}'을 찾을 수 없습니다.");
+                settings.McpServers.Remove(name);
+                await claudeSettingsService.WriteAsync(settingsScope, settings, projectPath);
+            }
+
+            logger.LogInformation("MCP server '{Name}' removed from scope '{Scope}'", name, scope);
+            return McpOperationResult.Ok();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to remove MCP server {Name} from scope {Scope}", name, scope);
+            return McpOperationResult.Fail(ex.Message);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public async Task<McpOperationResult> UpdateServerInScopeAsync(string oldName, McpServer server, McpScope scope, string? projectPath = null)
+    {
+        if (scope == McpScope.Desktop)
+            return McpOperationResult.Fail("Desktop scope는 읽기 전용입니다.");
+
+        await _lock.WaitAsync();
+        try
+        {
+            if (scope == McpScope.Local)
+            {
+                var configPath = Path.Combine(projectPath ?? Directory.GetCurrentDirectory(), ".mcp.json");
+                var config = await ReadConfigAsync(configPath);
+                config.McpServers ??= new Dictionary<string, McpServerEntry>();
+                if (!config.McpServers.ContainsKey(oldName))
+                    return McpOperationResult.Fail($"서버 '{oldName}'을 찾을 수 없습니다.");
+                if (oldName != server.Name && config.McpServers.ContainsKey(server.Name))
+                    return McpOperationResult.Fail($"서버 '{server.Name}'이 이미 존재합니다.");
+                config.McpServers.Remove(oldName);
+                config.McpServers[server.Name] = ToEntry(server);
+                await WriteConfigAsync(configPath, config);
+            }
+            else
+            {
+                var settingsScope = scope == McpScope.Global ? ClaudeSettingsScope.Global : ClaudeSettingsScope.Project;
+                var settings = await claudeSettingsService.ReadAsync(settingsScope, projectPath);
+                settings.McpServers ??= new Dictionary<string, ClaudeMcpServerConfig>();
+                if (!settings.McpServers.ContainsKey(oldName))
+                    return McpOperationResult.Fail($"서버 '{oldName}'을 찾을 수 없습니다.");
+                if (oldName != server.Name && settings.McpServers.ContainsKey(server.Name))
+                    return McpOperationResult.Fail($"서버 '{server.Name}'이 이미 존재합니다.");
+                settings.McpServers.Remove(oldName);
+                settings.McpServers[server.Name] = ToClaudeEntry(server);
+                await claudeSettingsService.WriteAsync(settingsScope, settings, projectPath);
+            }
+
+            logger.LogInformation("MCP server '{OldName}' updated to '{Name}' in scope '{Scope}'", oldName, server.Name, scope);
+            return McpOperationResult.Ok();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update MCP server {OldName} in scope {Scope}", oldName, scope);
+            return McpOperationResult.Fail(ex.Message);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    // ── Cloud Servers ─────────────────────────────────────────────────────────
+
+    public async Task<List<McpServer>> ListCloudServersAsync()
+    {
+        var cachePath = Path.Combine(ClaudeHomeDir, "mcp-needs-auth-cache.json");
+        if (!File.Exists(cachePath)) return [];
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(cachePath);
+            using var doc = JsonDocument.Parse(json);
+            var servers = new List<McpServer>();
+
+            // The cache file is expected to be a flat object: { "serverName": {...} }
+            if (doc.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var prop in doc.RootElement.EnumerateObject())
+                {
+                    servers.Add(new McpServer
+                    {
+                        Name = prop.Name,
+                        Scope = "cloud",
+                        Transport = "sse",
+                        IsActive = false,
+                        Status = new McpServerStatus { ConnectionStatus = McpConnectionStatus.Unknown }
+                    });
+                }
+            }
+
+            return servers;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to read cloud MCP cache at {Path}", cachePath);
+            return [];
+        }
+    }
+
+    // ── Tool Permissions ──────────────────────────────────────────────────────
+
+    public List<McpToolPermission> ExtractToolPermissions(string serverName, PermissionRules? permissions)
+    {
+        if (permissions == null) return [];
+        var prefix = $"mcp__{serverName}__";
+        var result = new List<McpToolPermission>();
+
+        void Collect(IEnumerable<string>? patterns, McpPermissionLevel level)
+        {
+            if (patterns == null) return;
+            foreach (var p in patterns)
+            {
+                if (!p.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                result.Add(new McpToolPermission
+                {
+                    RawPattern = p,
+                    ToolName = p[prefix.Length..],
+                    Level = level
+                });
+            }
+        }
+
+        Collect(permissions.Allow, McpPermissionLevel.Allow);
+        Collect(permissions.Ask, McpPermissionLevel.Ask);
+        Collect(permissions.Deny, McpPermissionLevel.Deny);
+        return result;
+    }
+
+    public PermissionRules ApplyToolPermission(PermissionRules? permissions, string serverName, string toolName, McpPermissionLevel level)
+    {
+        permissions ??= new PermissionRules();
+        var pattern = $"mcp__{serverName}__{toolName}";
+
+        // Remove from all lists first
+        permissions.Allow = permissions.Allow?.Where(p => p != pattern).ToList();
+        permissions.Ask = permissions.Ask?.Where(p => p != pattern).ToList();
+        permissions.Deny = permissions.Deny?.Where(p => p != pattern).ToList();
+
+        // Add to the correct list
+        switch (level)
+        {
+            case McpPermissionLevel.Allow:
+                permissions.Allow ??= [];
+                permissions.Allow.Add(pattern);
+                break;
+            case McpPermissionLevel.Ask:
+                permissions.Ask ??= [];
+                permissions.Ask.Add(pattern);
+                break;
+            case McpPermissionLevel.Deny:
+                permissions.Deny ??= [];
+                permissions.Deny.Add(pattern);
+                break;
+        }
+
+        return permissions;
+    }
+
+    public PermissionRules RemoveToolPermission(PermissionRules? permissions, string rawPattern)
+    {
+        permissions ??= new PermissionRules();
+        permissions.Allow = permissions.Allow?.Where(p => p != rawPattern).ToList();
+        permissions.Ask = permissions.Ask?.Where(p => p != rawPattern).ToList();
+        permissions.Deny = permissions.Deny?.Where(p => p != rawPattern).ToList();
+        return permissions;
+    }
+
+    // ── Private Scope Helpers ─────────────────────────────────────────────────
+
+    private async Task<List<McpServer>> ListDesktopServersAsync()
+    {
+        var desktopConfigPath = GetClaudeDesktopConfigPath();
+        if (desktopConfigPath == null || !File.Exists(desktopConfigPath)) return [];
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(desktopConfigPath);
+            var config = JsonSerializer.Deserialize<McpConfigFile>(json, ReadOptions);
+            if (config?.McpServers == null) return [];
+
+            return config.McpServers.Select(kvp => new McpServer
+            {
+                Name = kvp.Key,
+                Transport = kvp.Value.Type?.ToLowerInvariant() ?? "stdio",
+                Command = kvp.Value.Command,
+                Args = kvp.Value.Args ?? [],
+                Env = kvp.Value.Env ?? new Dictionary<string, string>(),
+                Url = kvp.Value.Url,
+                Scope = "desktop",
+                IsActive = false,
+                Status = new McpServerStatus { ConnectionStatus = McpConnectionStatus.Unknown }
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to read Claude Desktop config");
+            return [];
+        }
+    }
+
+    private async Task<List<McpServer>> ListFromSettingsAsync(ClaudeSettingsScope settingsScope, string? projectPath)
+    {
+        var settings = await claudeSettingsService.ReadAsync(settingsScope, projectPath);
+        if (settings.McpServers == null) return [];
+
+        var scopeStr = settingsScope == ClaudeSettingsScope.Global ? "user" : "project";
+        return settings.McpServers.Select(kvp => new McpServer
+        {
+            Name = kvp.Key,
+            Transport = kvp.Value.Url != null ? "sse" : "stdio",
+            Command = kvp.Value.Command,
+            Args = kvp.Value.Args ?? [],
+            Env = kvp.Value.Env ?? new Dictionary<string, string>(),
+            Url = kvp.Value.Url,
+            Scope = scopeStr,
+            IsActive = true,
+            Status = new McpServerStatus { ConnectionStatus = McpConnectionStatus.Unknown }
+        }).ToList();
+    }
+
+    private async Task<List<McpServer>> ListFromMcpJsonAsync(string configPath, string scope)
+    {
+        var servers = new List<McpServer>();
+        await LoadServersFromConfigAsync(servers, configPath, scope);
+        return servers;
+    }
+
+    private static ClaudeMcpServerConfig ToClaudeEntry(McpServer server) => new()
+    {
+        Command = string.IsNullOrEmpty(server.Command) ? null : server.Command,
+        Args = server.Args.Count > 0 ? server.Args : null,
+        Env = server.Env.Count > 0 ? server.Env : null,
         Url = string.IsNullOrEmpty(server.Url) ? null : server.Url
     };
 

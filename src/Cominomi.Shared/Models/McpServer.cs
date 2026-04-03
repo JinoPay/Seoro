@@ -1,5 +1,22 @@
 namespace Cominomi.Shared.Models;
 
+public enum McpScope
+{
+    Desktop, // Claude Desktop's claude_desktop_config.json (read-only)
+    Global,  // ~/.claude/settings.json -> mcpServers
+    Local,   // <project>/.mcp.json
+    Project  // <project>/.claude/settings.json -> mcpServers
+}
+
+public enum McpPermissionLevel { Allow, Ask, Deny }
+
+public class McpToolPermission
+{
+    public string ToolName { get; set; } = "";
+    public McpPermissionLevel Level { get; set; }
+    public string RawPattern { get; set; } = ""; // e.g. "mcp__serverName__toolName"
+}
+
 public class McpServer
 {
     public bool IsActive { get; set; } = true;

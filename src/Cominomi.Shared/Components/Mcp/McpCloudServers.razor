@@ -1,0 +1,75 @@
+@if (_servers.Count > 0)
+{
+    <div class="mcp-cloud-section">
+        <div class="mcp-group-label">
+            <MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small" Style="opacity:0.6;"/>
+            CLOUD (configured at claude.ai)
+        </div>
+        <div class="mcp-cloud-grid">
+            @foreach (var server in _servers)
+            {
+                <div class="mcp-cloud-card">
+                    <div class="mcp-cloud-card-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small"/>
+                    </div>
+                    <div>
+                        <div class="typo-subtitle2">@server.Name</div>
+                        <div class="typo-caption text-secondary">Managed via claude.ai</div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public List<McpServer> Servers { get; set; } = [];
+
+    private List<McpServer> _servers => Servers;
+}
+
+<style>
+    .mcp-cloud-section {
+        margin-bottom: 20px;
+    }
+
+    .mcp-group-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 8px;
+    }
+
+    .mcp-cloud-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 8px;
+    }
+
+    .mcp-cloud-card {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 8px;
+        opacity: 0.65;
+    }
+
+    .mcp-cloud-card-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--mud-palette-info) 12%, transparent);
+        color: var(--mud-palette-info);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+</style>

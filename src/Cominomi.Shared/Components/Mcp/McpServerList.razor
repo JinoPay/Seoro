@@ -1,0 +1,47 @@
+@if (Servers.Count == 0)
+{
+    <div class="mcp-empty-state">
+        <MudIcon Icon="@Icons.Material.Filled.Hub" Style="font-size: 2rem; opacity: 0.2;" Class="mb-2"/>
+        <div class="typo-body2 text-secondary">등록된 MCP 서버가 없습니다</div>
+        <div class="typo-caption text-disabled mt-1">서버를 추가하거나 템플릿으로 시작하세요</div>
+        @if (IsReadOnly)
+        {
+            <div class="typo-caption text-secondary mt-2">Desktop scope는 읽기 전용입니다.</div>
+        }
+    </div>
+}
+else
+{
+    <div class="stack gap-1">
+        @foreach (var server in Servers)
+        {
+            <McpServerCard Server="server"
+                           IsSelected="@(SelectedServer?.Name == server.Name)"
+                           OnSelect="OnSelect"
+                           OnEdit="OnEdit"
+                           OnDelete="OnDelete"
+                           OnTest="OnTest"/>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public List<McpServer> Servers { get; set; } = [];
+    [Parameter] public McpServer? SelectedServer { get; set; }
+    [Parameter] public bool IsReadOnly { get; set; }
+    [Parameter] public EventCallback<McpServer> OnSelect { get; set; }
+    [Parameter] public EventCallback<McpServer> OnEdit { get; set; }
+    [Parameter] public EventCallback<McpServer> OnDelete { get; set; }
+    [Parameter] public EventCallback<McpServer> OnTest { get; set; }
+}
+
+<style>
+    .mcp-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 24px;
+        text-align: center;
+    }
+</style>

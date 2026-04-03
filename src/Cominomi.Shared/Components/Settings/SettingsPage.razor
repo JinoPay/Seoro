@@ -75,6 +75,11 @@
                 <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small"/>
                 Claude 설정
             </button>
+            <button class="settings-nav-item @ActiveClass("mcp")"
+                    @onclick="@(() => SetSection("mcp"))">
+                <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small"/>
+                MCP 서버
+            </button>
             <button class="settings-nav-item @ActiveClass("hooks")"
                     @onclick="@(() => SetSection("hooks"))">
                 <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small"/>
@@ -152,6 +157,10 @@
         else if (ChatState.SettingsSection == "claude-settings")
         {
             <ClaudeSettingsSection/>
+        }
+        else if (ChatState.SettingsSection == "mcp")
+        {
+            <McpPage/>
         }
         else if (ChatState.SettingsSection == "hooks")
         {

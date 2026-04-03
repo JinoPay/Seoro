@@ -1,0 +1,339 @@
+@inject IMcpService McpService
+@inject ISnackbar Snackbar
+
+<div class="settings-content-area wide">
+    <McpScopeHeader Scope="_scope" ScopeChanged="OnScopeChanged"
+                    ProjectPath="@_projectPath" ProjectPathChanged="OnProjectPathChanged">
+        <ExtraActions>
+            <MudButton StartIcon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small"
+                       Variant="Variant.Outlined"
+                       OnClick="@(() => _galleryOpen = true)"
+                       Style="text-transform: none;">
+                템플릿
+            </MudButton>
+            <MudMenu Icon="@Icons.Material.Filled.FileDownload" Size="Size.Small"
+                     Variant="Variant.Outlined" Dense="true"
+                     TooltipText="가져오기" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                <MudMenuItem Icon="@Icons.Material.Filled.DesktopWindows"
+                             OnClick="ImportFromDesktop"
+                             Disabled="@(_scope == McpScope.Desktop)">
+                    Claude Desktop에서 가져오기
+                </MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Code"
+                             OnClick="@(() => _importJsonOpen = true)">
+                    JSON으로 가져오기
+                </MudMenuItem>
+            </MudMenu>
+            @if (_scope != McpScope.Desktop)
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"
+                           Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="OpenNewEditor"
+                           Style="text-transform: none;">
+                    서버 추가
+                </MudButton>
+            }
+        </ExtraActions>
+    </McpScopeHeader>
+
+    <div class="settings-content-body">
+        @if (_loading)
+        {
+            <div style="display:flex;justify-content:center;padding:48px;">
+                <MudProgressCircular Indeterminate="true"/>
+            </div>
+        }
+        else if ((_scope is McpScope.Local or McpScope.Project) && string.IsNullOrEmpty(_projectPath))
+        {
+            <div class="mcp-select-project">
+                <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:2rem;opacity:0.3;" Class="mb-2"/>
+                <div class="typo-body2 text-secondary">프로젝트를 선택하세요</div>
+            </div>
+        }
+        else
+        {
+            <div class="mcp-page-layout">
+                <div class="mcp-list-panel">
+                    @if (_cloudServers.Count > 0)
+                    {
+                        <div class="mcp-group-label">
+                            <MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small" Style="opacity:0.6;"/>
+                            CLOUD (configured at claude.ai)
+                        </div>
+                        <McpCloudServers Servers="_cloudServers"/>
+                        @if (_servers.Count > 0)
+                        {
+                            <div class="mcp-group-label mt-3">
+                                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" Style="opacity:0.6;"/>
+                                @GetScopeLabel()
+                            </div>
+                        }
+                    }
+                    else if (_servers.Count > 0)
+                    {
+                        <div class="mcp-group-label">
+                            <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" Style="opacity:0.6;"/>
+                            @GetScopeLabel()
+                        </div>
+                    }
+
+                    <McpServerList Servers="_servers"
+                                   SelectedServer="_editingServer"
+                                   IsReadOnly="@(_scope == McpScope.Desktop)"
+                                   OnSelect="OpenEditorForServer"
+                                   OnEdit="OpenEditorForServer"
+                                   OnDelete="ConfirmDelete"
+                                   OnTest="TestConnection"/>
+                </div>
+
+                <McpServerEditor IsOpen="_editorOpen"
+                                 IsOpenChanged="OnEditorOpenChanged"
+                                 Server="@(_editingServer ?? _templatePrefill)"
+                                 ForceNew="@(_editingServer == null)"
+                                 Scope="_scope"
+                                 ProjectPath="_projectPath"
+                                 OnSave="SaveServer"/>
+            </div>
+        }
+    </div>
+</div>
+
+@* Dialogs *@
+<TemplateGalleryDialog @bind-IsOpen="_galleryOpen"
+                       DefaultCategory="TemplateCategory.Mcp"
+                       OnTemplateSelected="ApplyTemplate"/>
+
+<McpImportJsonDialog @bind-IsOpen="_importJsonOpen"
+                     Scope="_scope"
+                     ProjectPath="_projectPath"
+                     OnImported="RefreshServers"/>
+
+@code {
+    private McpScope _scope = McpScope.Global;
+    private string? _projectPath;
+    private List<McpServer> _servers = [];
+    private List<McpServer> _cloudServers = [];
+    private McpServer? _editingServer; // null = new server mode
+    private bool _editorOpen;
+    private bool _loading;
+    private bool _galleryOpen;
+    private bool _importJsonOpen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshServers();
+    }
+
+    private async Task OnScopeChanged(McpScope scope)
+    {
+        _scope = scope;
+        _editorOpen = false;
+        _editingServer = null;
+        await RefreshServers();
+    }
+
+    private async Task OnProjectPathChanged(string? path)
+    {
+        _projectPath = path;
+        _editorOpen = false;
+        _editingServer = null;
+        await RefreshServers();
+    }
+
+    private async Task RefreshServers()
+    {
+        _loading = true;
+        StateHasChanged();
+        try
+        {
+            if ((_scope is McpScope.Local or McpScope.Project) && string.IsNullOrEmpty(_projectPath))
+            {
+                _servers = [];
+                _cloudServers = [];
+                return;
+            }
+
+            var serversTask = McpService.ListServersByScopeAsync(_scope, _projectPath);
+            var cloudTask = _scope == McpScope.Desktop
+                ? McpService.ListCloudServersAsync()
+                : Task.FromResult(new List<McpServer>());
+
+            await Task.WhenAll(serversTask, cloudTask);
+            _servers = serversTask.Result;
+            _cloudServers = cloudTask.Result;
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenNewEditor()
+    {
+        _editingServer = null;
+        _templatePrefill = null;
+        _editorOpen = true;
+        StateHasChanged();
+    }
+
+    private void OpenEditorForServer(McpServer server)
+    {
+        _editingServer = server;
+        _templatePrefill = null;
+        _editorOpen = true;
+        StateHasChanged();
+    }
+
+    private void OnEditorOpenChanged(bool open)
+    {
+        _editorOpen = open;
+        if (!open) _editingServer = null;
+        StateHasChanged();
+    }
+
+    private async Task SaveServer(McpServer server)
+    {
+        McpOperationResult result;
+        if (_editingServer == null)
+        {
+            result = await McpService.AddServerToScopeAsync(server, _scope, _projectPath);
+            if (result.Success)
+                Snackbar.Add($"서버 '{server.Name}'이 추가되었습니다.", Severity.Success);
+        }
+        else
+        {
+            result = await McpService.UpdateServerInScopeAsync(_editingServer.Name, server, _scope, _projectPath);
+            if (result.Success)
+                Snackbar.Add($"서버 '{server.Name}'이 수정되었습니다.", Severity.Success);
+        }
+
+        if (result.Success)
+        {
+            _editorOpen = false;
+            _editingServer = null;
+            await RefreshServers();
+        }
+        else
+        {
+            Snackbar.Add($"실패: {result.Error}", Severity.Error);
+        }
+    }
+
+    private async Task ConfirmDelete(McpServer server)
+    {
+        var result = await McpService.RemoveServerFromScopeAsync(server.Name, _scope, _projectPath);
+        if (result.Success)
+        {
+            Snackbar.Add($"서버 '{server.Name}'이 제거되었습니다.", Severity.Success);
+            if (_editingServer?.Name == server.Name)
+            {
+                _editorOpen = false;
+                _editingServer = null;
+            }
+            await RefreshServers();
+        }
+        else
+        {
+            Snackbar.Add($"제거 실패: {result.Error}", Severity.Error);
+        }
+    }
+
+    private async Task TestConnection(McpServer server)
+    {
+        var idx = _servers.IndexOf(server);
+        if (idx < 0) return;
+
+        _servers[idx].Status.ConnectionStatus = McpConnectionStatus.Checking;
+        StateHasChanged();
+
+        var status = await McpService.TestConnectionAsync(_servers[idx]);
+        _servers[idx].Status = status;
+        StateHasChanged();
+
+        var msg = status.ConnectionStatus == McpConnectionStatus.Reachable
+            ? $"'{server.Name}' 연결 확인"
+            : $"'{server.Name}' 연결 실패: {status.Error}";
+        Snackbar.Add(msg, status.ConnectionStatus == McpConnectionStatus.Reachable ? Severity.Success : Severity.Warning);
+    }
+
+    private async Task ImportFromDesktop()
+    {
+        var result = await McpService.ImportFromClaudeDesktopAsync();
+        Snackbar.Add(result.Success ? result.Error ?? "가져오기 완료" : result.Error ?? "가져오기 실패",
+            result.Success ? Severity.Success : Severity.Error);
+        if (result.Success) await RefreshServers();
+    }
+
+    // Template prefill: when set, editor uses this as the initial values but treats it as new
+    private McpServer? _templatePrefill;
+
+    private void ApplyTemplate(TemplateDefinition template)
+    {
+        _galleryOpen = false;
+        if (template.Category != TemplateCategory.Mcp) return;
+
+        _editingServer = null;
+        _templatePrefill = new McpServer
+        {
+            Name = template.Id.Replace("mcp-", ""),
+            Transport = template.McpType ?? "stdio",
+            Command = template.McpCommand ?? "",
+            Url = template.McpUrl ?? "",
+            Args = template.McpArgsList ?? []
+        };
+
+        if (template.McpEnv != null)
+            foreach (var (k, v) in template.McpEnv)
+                _templatePrefill.Env[k] = v;
+
+        _editorOpen = true;
+        StateHasChanged();
+    }
+
+    private string GetScopeLabel() => _scope switch
+    {
+        McpScope.Desktop => "CLAUDE DESKTOP",
+        McpScope.Global => "CLAUDE CODE (USER)",
+        McpScope.Local => "PROJECT (.mcp.json)",
+        McpScope.Project => "PROJECT (.claude/settings.json)",
+        _ => _scope.ToString().ToUpperInvariant()
+    };
+}
+
+<style>
+    .mcp-page-layout {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .mcp-list-panel {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 4px;
+        min-width: 0;
+    }
+
+    .mcp-group-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--mud-palette-text-secondary);
+        margin-bottom: 8px;
+    }
+
+    .mcp-select-project {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 300px;
+        text-align: center;
+    }
+</style>

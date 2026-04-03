@@ -1,0 +1,149 @@
+<div class="mcp-server-card @(IsSelected ? "selected" : "")"
+     @onclick="OnClick" @onclick:stopPropagation="false">
+    <div class="mcp-server-card-icon @(Server.Transport == "sse" ? "icon-sse" : "icon-stdio")">
+        <MudIcon Icon="@(Server.Transport == "sse" ? Icons.Material.Filled.Language : Icons.Material.Filled.Terminal)"
+                 Size="Size.Small"/>
+    </div>
+    <div class="mcp-server-card-body">
+        <div class="mcp-server-card-name typo-subtitle2">@Server.Name</div>
+        <div class="mcp-server-card-detail typo-caption text-secondary">
+            @if (Server.Transport == "stdio")
+            {
+                <span>@Server.Command @(Server.Args.Count > 0 ? string.Join(" ", Server.Args) : "")</span>
+            }
+            else if (!string.IsNullOrEmpty(Server.Url))
+            {
+                <span>@Server.Url</span>
+            }
+            else
+            {
+                <span class="text-disabled">—</span>
+            }
+        </div>
+    </div>
+    <div class="mcp-server-card-status">
+        @switch (Server.Status.ConnectionStatus)
+        {
+            case McpConnectionStatus.Checking:
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width:14px;height:14px;"/>
+                break;
+            case McpConnectionStatus.Reachable:
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" Style="width:14px;height:14px;"/>
+                break;
+            case McpConnectionStatus.Unreachable:
+                <MudTooltip Text="@Server.Status.Error">
+                    <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" Size="Size.Small" Style="width:14px;height:14px;"/>
+                </MudTooltip>
+                break;
+            case McpConnectionStatus.Error:
+                <MudTooltip Text="@Server.Status.Error">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Style="width:14px;height:14px;"/>
+                </MudTooltip>
+                break;
+        }
+    </div>
+    <div class="mcp-server-card-actions" @onclick:stopPropagation="true">
+        <MudTooltip Text="연결 테스트">
+            <MudIconButton Icon="@Icons.Material.Filled.NetworkCheck" Size="Size.Small"
+                           OnClick="@(() => OnTest.InvokeAsync(Server))"/>
+        </MudTooltip>
+        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                       OnClick="@(() => OnEdit.InvokeAsync(Server))"/>
+        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                       OnClick="@(() => OnDelete.InvokeAsync(Server))"/>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public McpServer Server { get; set; } = null!;
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public EventCallback<McpServer> OnEdit { get; set; }
+    [Parameter] public EventCallback<McpServer> OnDelete { get; set; }
+    [Parameter] public EventCallback<McpServer> OnTest { get; set; }
+    [Parameter] public EventCallback<McpServer> OnSelect { get; set; }
+
+    private void OnClick() => OnSelect.InvokeAsync(Server);
+}
+
+<style>
+    .mcp-server-card {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+    }
+
+    .mcp-server-card:hover {
+        border-color: var(--mud-palette-primary);
+        background: var(--mud-palette-primary-hover);
+    }
+
+    .mcp-server-card.selected {
+        border-color: var(--mud-palette-primary);
+        background: var(--mud-palette-primary-hover);
+    }
+
+    .mcp-server-card-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .icon-stdio {
+        background: color-mix(in srgb, var(--mud-palette-success) 12%, transparent);
+        color: var(--mud-palette-success);
+    }
+
+    .icon-sse {
+        background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+        color: var(--mud-palette-primary);
+    }
+
+    .mcp-server-card-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .mcp-server-card-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .mcp-server-card-detail {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 2px;
+    }
+
+    .mcp-server-card-status {
+        flex-shrink: 0;
+    }
+
+    .mcp-server-card-actions {
+        display: flex;
+        gap: 2px;
+        opacity: 0;
+        transition: opacity 0.15s;
+        flex-shrink: 0;
+    }
+
+    .mcp-server-card:hover .mcp-server-card-actions {
+        opacity: 1;
+    }
+
+    .mcp-server-card.selected .mcp-server-card-actions {
+        opacity: 1;
+    }
+</style>
