@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.16.11",
+    "date": "2026-04-03",
+    "changes": [
+      { "type": "refactor", "description": "텍스트 첨부파일 뷰어를 인라인 카드/다이얼로그 방식에서 기존 탭 시스템으로 교체 — 파일 클릭 시 Explorer와 동일하게 탭에서 열림" },
+      { "type": "refactor", "description": "FilePreviewDialog 및 FilePreviewService 제거" }
+    ]
+  },
+  {
     "version": "1.6.10",
     "date": "2026-04-03",
     "changes": [
