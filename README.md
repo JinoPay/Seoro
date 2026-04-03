@@ -48,15 +48,17 @@
 | 💬 **멀티세션 스트리밍 채팅** | 📊 **분석 대시보드** |
 | 여러 Claude 세션을 동시에 운영하고 실시간 스트리밍으로 응답을 받아보세요. 리치 마크다운, 코드 하이라이팅, 이미지 라이트박스, 파일 첨부를 지원합니다. | 활동 히트맵, 비용 개요 및 월간 추정치, 세션 모니터, 스트릭 추적, 시간대별 활동 분포를 한눈에 확인하세요. |
 | 🏆 **게이미피케이션** | ⏮ **세션 리플레이** |
-| 15단계 레벨 시스템 (**새내기** → **조물주**), 7개 카테고리의 업적, 연속 스트릭으로 코딩에 동기를 부여합니다. | 과거 세션을 타임라인으로 재생하며 작업 이력을 탐색하고, 전체 텍스트 검색으로 원하는 대화를 찾아보세요. |
+| 15단계 레벨 시스템 (**새내기** → **조물주**), 9개 카테고리 105개 업적, 연속 스트릭으로 코딩에 동기를 부여합니다. | 과거 세션을 타임라인으로 재생하며 작업 이력을 탐색하고, 전체 텍스트 검색으로 원하는 대화를 찾아보세요. |
 | 🖥 **내장 PTY 터미널** | 🔀 **Git 통합** |
 | xterm.js 기반 완전한 터미널 에뮬레이션. 멀티셸 선택, 분할 뷰, 리사이즈를 지원합니다. | 실시간 브랜치 추적, AI 커밋 메시지 자동 생성, 인라인 diff, 워크트리 지원까지. |
 | 🧩 **플러그인 시스템** | 📁 **워크스페이스 관리** |
 | `~/.claude/plugins` 경로의 커스텀 플러그인을 자동 탐색하고, 권한 시스템으로 안전하게 확장하세요. | 프로젝트별 모델 설정, 시스템 프롬프트, 기본 브랜치, 리뷰 설정을 독립적으로 관리하세요. |
 | 📝 **Hooks · Rules · Instructions** | 🧠 **Memory 관리** |
 | 커스텀 훅(스크립트, 웹훅, 플러그인), 프로젝트 규칙 파일, 인스트럭션 파일을 GUI에서 직접 관리하세요. | 영구 메모리 항목(User, Feedback, Project, Reference)으로 컨텍스트를 구축하고 워크스페이스별로 필터링하세요. |
-| 🔌 **MCP 서버 통합** | 🔄 **자동 업데이트** |
-| SSE 및 커맨드 기반 MCP 서버를 GUI에서 설정·관리. Claude Desktop에서 import도 가능합니다. | Velopack 기반 델타 업데이트로 빠르고 가벼운 업데이트. 인앱 릴리스 노트 뷰어도 포함. |
+| 🔌 **MCP 서버 통합** | 👤 **계정 관리** |
+| SSE 및 커맨드 기반 MCP 서버를 전용 페이지에서 설정·관리. Claude Desktop에서 import도 가능합니다. | 여러 Anthropic 계정을 등록하고 즉시 전환하세요. 계정별 사용량을 한눈에 확인할 수 있습니다. |
+| 🔄 **자동 업데이트** | |
+| Velopack 기반 델타 업데이트로 빠르고 가벼운 업데이트. 인앱 릴리스 노트 뷰어도 포함. | |
 
 <br>
 
@@ -81,7 +83,7 @@ Cominomi는 사용량에 따라 XP를 부여하고, 15단계 레벨로 성장을
 | 8 | 거장 | 4,000 | | | | |
 
 **업적 등급** &nbsp; `Common` · `Rare` · `Epic` · `Legendary`
-&emsp;7개 카테고리: Config · Usage · Streak · Mastery · Explorer · Efficiency · Time
+&emsp;9개 카테고리 105개 업적: Config · Usage · Streak · Mastery · Explorer · Efficiency · Time · Economy · Pattern
 
 </details>
 
@@ -169,7 +171,7 @@ src/
   Cominomi.Shared/                # 공유 라이브러리 (플랫폼 독립)
     Models/                       #   데이터 모델 (Session, ChatMessage, StreamEvent 등)
     Services/                     #   비즈니스 로직 (ClaudeService, GitService, ChatState 등)
-    Components/                   #   Blazor 컴포넌트 (Chat, Dashboard, Settings 등 86개)
+    Components/                   #   Blazor 컴포넌트 (Chat, Dashboard, Settings 등 98개)
 tests/
   Cominomi.Shared.Tests/          # 유닛 테스트 (xUnit)
 ```
@@ -186,8 +188,8 @@ tests/
 릴리스는 GitHub Actions로 자동화되어 있습니다. 버전 태그를 push하면 CI/CD가 트리거됩니다.
 
 ```bash
-git tag v1.6.0
-git push origin v1.6.0
+git tag v1.16.12
+git push origin v1.16.12
 ```
 
 **CI 파이프라인이 수행하는 작업:**

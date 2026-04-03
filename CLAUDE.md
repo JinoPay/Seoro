@@ -27,7 +27,7 @@ src/
   Cominomi.Shared/           # Core logic (platform-agnostic)
     Models/                  # Data models (Session, ChatMessage, StreamEvent, etc.)
     Services/                # Business logic (ClaudeService, GitService, ChatState, etc.)
-    Components/              # Blazor Razor components (Chat/, Dashboard/, Settings/, Sessions/, Hooks/, Rules/, Instructions/, Memory/, Sidebar/, etc.)
+    Components/              # Blazor Razor components (Accounts/, Chat/, Dashboard/, Files/, Hooks/, Instructions/, Layout/, Mcp/, Memory/, Notifications/, Onboarding/, Rules/, Sessions/, Settings/, Setup/, Shared/, Sidebar/, Tools/)
     CominomiConstants.cs     # Shared constants and limits
 tests/
   Cominomi.Shared.Tests/    # Unit tests (xUnit)
@@ -46,10 +46,19 @@ tests/
 - `ReleaseNotesService` - In-app release notes from changelog.json
 - `SessionReplayService` - Session timeline replay and navigation
 - `StatsCacheService` - Usage statistics caching and aggregation (stats-cache.json)
-- `GamificationService` - Achievement calculation, streaks, and level progression
+- `GamificationService` - Achievement calculation, streaks, and level progression (9 categories, 105 achievements)
 - `ClaudeSettingsService` - Claude CLI settings (permissions, env vars, MCP) management
 - `RulesService` - Project rules file CRUD
 - `InstructionsService` - Instruction file management
+- `ClaudeAccountService` - Multi-account management (switching, registration, deletion)
+- `McpService` - MCP server configuration and management (standalone page)
+- `MemoryService` - Persistent memory entry management (User/Feedback/Project/Reference)
+- `AttachmentService` - File attachment handling (auto-converts paste ≥500 chars to file)
+- `WorktreeSyncService` - Git worktree sync operations
+- `TaskService` - Task/todo management within sessions
+- `SkillRegistry` / `SkillFileStore` - Plugin skill discovery and execution
+- `ContextService` - Context item management (notes, todos, plans)
+- `PluginService` - Plugin loading and execution engine
 
 ## Key Constants (`CominomiConstants.cs`)
 - Max 20 active sessions per workspace
