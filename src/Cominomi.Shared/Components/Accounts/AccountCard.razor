@@ -1,6 +1,5 @@
 @inject IClaudeAccountService AccountService
 @inject ISnackbar Snackbar
-@inject IDialogService DialogService
 
 <div class="@($"acct-card{(Account.IsActive ? " acct-card--active" : "")}")">
 
@@ -90,10 +89,6 @@
                 </MudButton>
             </MudTooltip>
 
-            <MudTooltip Text="계정 내보내기">
-                <MudIconButton Icon="@Icons.Material.Filled.FileUpload" Size="Size.Small"
-                               OnClick="OpenExportDialog" Style="width:28px;height:28px;"/>
-            </MudTooltip>
             <MudTooltip Text="사용량 새로고침">
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                                OnClick="FetchUsage" Disabled="_fetchingUsage"
@@ -169,25 +164,6 @@
                 Snackbar.Add($"사용량 조회 오류: {ex.Message}", Severity.Error);
         }
         finally { _fetchingUsage = false; }
-    }
-
-    private async Task OpenExportDialog()
-    {
-        try
-        {
-            var parameters = new DialogParameters<ExportAccountDialog>
-            {
-                { x => x.Account, Account }
-            };
-            await DialogService.ShowAsync<ExportAccountDialog>(
-                "",
-                parameters,
-                new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true });
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"내보내기 다이얼로그 오류: {ex.Message}", Severity.Error);
-        }
     }
 
     private void StartEdit() { _editName = Account.ProfileName; _editingName = true; }

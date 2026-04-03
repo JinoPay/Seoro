@@ -14,12 +14,6 @@
             </div>
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0;">
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.FileDownload"
-                       OnClick="OpenImportDialog"
-                       Style="text-transform: none;">
-                계정 가져오기
-            </MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.PersonAdd"
                        OnClick="OpenAddDialog"
@@ -116,14 +110,6 @@
     private async Task OpenAddDialog()
     {
         var dialog = await DialogService.ShowAsync<AddAccountDialog>(
-            "",
-            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true });
-        await dialog.Result;
-    }
-
-    private async Task OpenImportDialog()
-    {
-        var dialog = await DialogService.ShowAsync<ImportAccountDialog>(
             "",
             new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true });
         await dialog.Result;
