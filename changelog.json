@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.6.8",
+    "date": "2026-04-03",
+    "changes": [
+      { "type": "feat", "description": "AI 모델 선택기 개선 — 최신 가격, 새 모델, 풍부한 UI" },
+      { "type": "feat", "description": "클립보드 붙여넣기 시 이미지와 텍스트 동시 처리" },
+      { "type": "refactor", "description": "AI 모델 설정 UI 배치 및 스타일 개선" }
+    ]
+  },
+  {
     "version": "1.6.7",
     "date": "2026-04-02",
     "changes": [
