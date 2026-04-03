@@ -4,23 +4,26 @@
 <div class="stack gap-3">
     <MudSelect T="string" @bind-Value="Settings.DefaultModel" Label="기본 모델"
                Variant="Variant.Outlined" Margin="Margin.Dense"
+               MaxHeight="400"
                HelperText="전역 기본값입니다. 워크스페이스별로 다른 모델을 지정할 수 있습니다.">
         @foreach (var model in ModelDefinitions.All)
         {
             <MudSelectItem T="string" Value="@model.Id">
                 <div class="model-select-option">
-                    <span class="model-select-name">@model.DisplayName</span>
-                    @if (model.Pricing != null)
-                    {
-                        <span class="model-select-price">$@model.Pricing.Input/$@model.Pricing.Output</span>
-                    }
-                    else if (model.IsAlias)
-                    {
-                        <span class="model-select-price" style="opacity: 0.5;">alias</span>
-                    }
+                    <div class="model-select-name">
+                        <span>@model.DisplayName</span>
+                        @if (model.Pricing != null)
+                        {
+                            <span class="model-select-price">$@model.Pricing.Input/$@model.Pricing.Output</span>
+                        }
+                        else if (model.IsAlias)
+                        {
+                            <span class="model-select-price" style="opacity: 0.5;">alias</span>
+                        }
+                    </div>
                     @if (!string.IsNullOrEmpty(model.Description))
                     {
-                        <span class="model-select-desc">@model.Description</span>
+                        <span class="model-select-desc" title="@model.Description">@model.Description</span>
                     }
                 </div>
             </MudSelectItem>
