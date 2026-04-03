@@ -169,12 +169,14 @@ public class McpService(
     {
         if (shellType == ShellType.Cmd)
         {
-            // cmd.exe: use double quotes, escape internal double quotes with backslash
-            var escaped = arg.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            // cmd.exe: use double quotes, escape internal double quotes by doubling
+            var escaped = arg.Replace("\"", "\"\"");
             return $"\"{escaped}\"";
         }
 
         // bash/zsh: use single quotes, escape embedded single quotes
+        // Single quotes preserve ALL characters literally (including backslashes),
+        // which is critical for Windows paths passed to bash on Windows.
         var bashEscaped = arg.Replace("'", "'\\''");
         return $"'{bashEscaped}'";
     }
@@ -221,7 +223,8 @@ public class McpService(
             return null;
         }
 
-        var shellCommand = $"{claudePath} {subCommand}";
+        var quotedClaudePath = QuoteForShell(claudePath, shell.Type);
+        var shellCommand = $"{quotedClaudePath} {subCommand}";
         var result = await processRunner.RunAsync(new ProcessRunOptions
         {
             FileName = shell.FileName,
