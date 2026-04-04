@@ -32,7 +32,7 @@
                 <MudIconButton Icon="@Icons.Material.Filled.Map"
                                Color="Color.Warning"
                                Size="Size.Small"
-                               OnClick="@(() => _planViewerOpen = true)"/>
+                               OnClick="@(() => OnViewPlan.InvokeAsync())"/>
             </MudTooltip>
         }
 
@@ -68,11 +68,6 @@
     </div>
 </div>
 
-<PlanViewerDialog IsOpen="_planViewerOpen"
-                  OnVisibleChanged="@(v => _planViewerOpen = v)"
-                  PlanContent="@PlanContent"
-                  PlanFilePath="@PlanFilePath"/>
-
 @code {
     [Parameter] public string PermissionMode { get; set; } = "bypassAll";
     [Parameter] public EventCallback<string> OnPermissionModeChanged { get; set; }
@@ -91,8 +86,7 @@
     [Parameter] public EventCallback OnModelMenuClosed { get; set; }
     [Parameter] public string? PlanFilePath { get; set; }
     [Parameter] public string? PlanContent { get; set; }
-
-    private bool _planViewerOpen;
+    [Parameter] public EventCallback OnViewPlan { get; set; }
 
     private static readonly string[] PermissionModes = ["bypassAll", "plan"];
     // EffortLevels removed — toggle targets are now model-dependent via GetMaxEffortLevel

@@ -50,7 +50,8 @@
                       OnPickFiles="PickFiles"
                       OnModelMenuClosed="RefocusTextarea"
                       PlanFilePath="@PlanFilePath"
-                      PlanContent="@PlanContent"/>
+                      PlanContent="@PlanContent"
+                      OnViewPlan="OpenPlanTab"/>
     </div>
 </div>
 
@@ -454,6 +455,12 @@
 
         await JSRuntime.InvokeVoidAsync("setSlashPopupState", "input-area", false);
         await JSRuntime.InvokeVoidAsync("replaceSlashCommand", "input-area", newText);
+    }
+
+    private void OpenPlanTab()
+    {
+        if (!string.IsNullOrEmpty(PlanFilePath) && !string.IsNullOrEmpty(PlanContent))
+            ChatState.Tabs.OpenFileContentTab(PlanFilePath, PlanContent);
     }
 
     [JSInvokable]
