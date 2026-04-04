@@ -38,8 +38,6 @@ jobs:
           --self-contained
           -p:Version=${{ steps.version.outputs.VERSION }}
           -o publish/win
-        env:
-          COMINOMI_GITHUB_TOKEN: ${{ secrets.COMINOMI_GITHUB_TOKEN }}
 
       - name: Download previous release (for delta updates)
         run: >
@@ -99,8 +97,6 @@ jobs:
           --self-contained
           -p:Version=${{ steps.version.outputs.VERSION }}
           -o publish/mac
-        env:
-          COMINOMI_GITHUB_TOKEN: ${{ secrets.COMINOMI_GITHUB_TOKEN }}
 
       - name: Create macOS .app bundle
         run: |
