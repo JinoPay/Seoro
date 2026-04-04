@@ -68,8 +68,6 @@ public class Session
 
     public string? PlanFilePath { get; set; }
 
-    [JsonIgnore] public string? ResolvedModel { get; set; }
-
     /// <summary>
     ///     Estimated token usage for the in-progress streaming turn.
     ///     Updated by MessageStartHandler / MessageDeltaHandler during streaming,
