@@ -189,6 +189,10 @@ public class ChatMessageOrchestrator(
         }
         finally
         {
+            // Ensure pending tokens are cleared even on cancellation or error
+            session.PendingInputTokens = 0;
+            session.PendingOutputTokens = 0;
+
             chatState.FinishMessage(assistantMsg);
             chatState.SetStreaming(false, session.Id);
 

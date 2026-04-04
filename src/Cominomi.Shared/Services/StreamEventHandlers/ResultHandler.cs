@@ -35,6 +35,10 @@ public class ResultHandler(IChatState chatState, ILogger<ResultHandler> logger) 
                 ctx.AccInputTokens, ctx.AccOutputTokens);
         }
 
+        // Clear pending tokens — committed values are now reflected in TotalInputTokens/TotalOutputTokens
+        session.PendingInputTokens = 0;
+        session.PendingOutputTokens = 0;
+
         // Fallback: populate Parts from result content if empty
         if (ctx.AssistantMessage.Parts.Count == 0)
         {

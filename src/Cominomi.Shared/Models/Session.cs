@@ -68,6 +68,18 @@ public class Session
 
     public string? PlanFilePath { get; set; }
 
+    [JsonIgnore] public string? ResolvedModel { get; set; }
+
+    /// <summary>
+    ///     Estimated token usage for the in-progress streaming turn.
+    ///     Updated by MessageStartHandler / MessageDeltaHandler during streaming,
+    ///     cleared by ResultHandler on completion (and by the orchestrator's finally block).
+    ///     Not persisted — transient UI state only.
+    /// </summary>
+    [JsonIgnore] public long PendingInputTokens { get; set; }
+
+    [JsonIgnore] public long PendingOutputTokens { get; set; }
+
     public List<ChatMessage> GetMessagesSnapshot()
     {
         lock (MessagesLock)

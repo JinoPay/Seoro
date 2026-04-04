@@ -16,6 +16,10 @@ public class MessageDeltaHandler(IChatState chatState) : IStreamEventHandler
             if (deltaUsage.CacheCreationInputTokens is > 0)
                 ctx.AccCacheCreation = deltaUsage.CacheCreationInputTokens.Value;
             if (deltaUsage.CacheReadInputTokens is > 0) ctx.AccCacheRead = deltaUsage.CacheReadInputTokens.Value;
+
+            // Mirror accumulators to session for real-time ring display
+            ctx.Session.PendingInputTokens = ctx.AccInputTokens;
+            ctx.Session.PendingOutputTokens = ctx.AccOutputTokens;
         }
 
         var stopReason = evt.Delta?.StopReason ?? evt.Message?.StopReason;

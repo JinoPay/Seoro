@@ -27,10 +27,13 @@ public record ModelInfo(string Id, string DisplayName)
 public record ModelPricing(
     [property: JsonPropertyName("input")] decimal Input,
     [property: JsonPropertyName("output")] decimal Output,
-    [property: JsonPropertyName("cacheWrite")]
-    decimal CacheWrite,
-    [property: JsonPropertyName("cacheRead")]
-    decimal CacheRead);
+    [property: JsonPropertyName("cacheWrite")] decimal CacheWrite,
+    [property: JsonPropertyName("cacheRead")] decimal CacheRead,
+    [property: JsonPropertyName("extendedInput")] decimal? ExtendedInput = null,
+    [property: JsonPropertyName("extendedOutput")] decimal? ExtendedOutput = null,
+    [property: JsonPropertyName("extendedCacheWrite")] decimal? ExtendedCacheWrite = null,
+    [property: JsonPropertyName("extendedCacheRead")] decimal? ExtendedCacheRead = null,
+    [property: JsonPropertyName("extendedThreshold")] int ExtendedThreshold = 200_000);
 
 public record ModelConfig
 {
@@ -120,6 +123,52 @@ public static class ModelDefinitions
         }
     }
 
+    /// <summary>
+    ///     Calculates the estimated cost using tiered pricing where applicable.
+    ///     For extended context models (e.g. opus[1m]), sessions with input tokens
+    ///     exceeding the threshold (200K) are split: the first 200K tokens use standard
+    ///     rates and the remainder use extended rates. This approximates Anthropic's
+    ///     per-request all-or-nothing billing at the session level.
+    /// </summary>
+    public static decimal CalculateTieredCost(
+        ModelPricing pricing,
+        long inputTokens,
+        long outputTokens,
+        long cacheCreationTokens = 0,
+        long cacheReadTokens = 0)
+    {
+        if (pricing.ExtendedInput == null || inputTokens <= pricing.ExtendedThreshold)
+        {
+            // Flat rate: standard models, or extended models still under threshold
+            return (inputTokens * pricing.Input
+                    + outputTokens * pricing.Output
+                    + cacheCreationTokens * pricing.CacheWrite
+                    + cacheReadTokens * pricing.CacheRead) / 1_000_000m;
+        }
+
+        // Tiered: split input at threshold
+        var stdInputTokens = (decimal)pricing.ExtendedThreshold;
+        var extInputTokens = (decimal)(inputTokens - pricing.ExtendedThreshold);
+        var totalInput = (decimal)inputTokens;
+
+        // Output/cache split is proportional to the fraction of input that is extended
+        var extRatio = extInputTokens / totalInput;
+        var stdRatio = 1m - extRatio;
+
+        var extOutput = pricing.ExtendedOutput ?? pricing.Output;
+        var extCacheWrite = pricing.ExtendedCacheWrite ?? pricing.CacheWrite;
+        var extCacheRead = pricing.ExtendedCacheRead ?? pricing.CacheRead;
+
+        return (stdInputTokens * pricing.Input
+                + extInputTokens * pricing.ExtendedInput.Value
+                + outputTokens * stdRatio * pricing.Output
+                + outputTokens * extRatio * extOutput
+                + cacheCreationTokens * stdRatio * pricing.CacheWrite
+                + cacheCreationTokens * extRatio * extCacheWrite
+                + cacheReadTokens * stdRatio * pricing.CacheRead
+                + cacheReadTokens * extRatio * extCacheRead) / 1_000_000m;
+    }
+
     /// <summary>Helper to retrieve only "real" (non-alias) models for popover display grouping.</summary>
     public static IEnumerable<IGrouping<string?, ModelInfo>> GetGroupedModels()
     {
@@ -139,6 +188,7 @@ public static class ModelDefinitions
                 {
                     Keywords = ["opus"],
                     Pricing = new ModelPricing(5.0m, 25.0m, 6.25m, 0.50m),
+                    ContextWindow = 200_000,
                     Description = "최고 지능, 적응형 사고",
                     SpeedTier = 1,
                     Category = "standard"
@@ -147,6 +197,7 @@ public static class ModelDefinitions
                 {
                     Keywords = ["sonnet"],
                     Pricing = new ModelPricing(3.0m, 15.0m, 3.75m, 0.30m),
+                    ContextWindow = 200_000,
                     Description = "속도와 지능의 균형",
                     SpeedTier = 2,
                     Category = "standard"
@@ -155,15 +206,21 @@ public static class ModelDefinitions
                 {
                     Keywords = ["haiku"],
                     Pricing = new ModelPricing(1.0m, 5.0m, 1.25m, 0.10m),
+                    ContextWindow = 200_000,
                     Description = "빠르고 가벼운 모델",
                     SpeedTier = 3,
                     Category = "standard"
                 },
                 // ── Extended Context (1M) ──
+                // Extended pricing per Anthropic pricing docs:
+                // Input >200K: 2x standard. Output >200K: 1.5x standard.
+                // Cache multipliers (1.25x write, 0.1x read) apply on top of extended base.
                 new ModelInfo("opus[1m]", "Opus (Extended 1M)")
                 {
                     Keywords = ["opus[1m]"],
-                    Pricing = new ModelPricing(5.0m, 25.0m, 6.25m, 0.50m),
+                    Pricing = new ModelPricing(5.0m, 25.0m, 6.25m, 0.50m,
+                        ExtendedInput: 10.0m, ExtendedOutput: 37.5m,
+                        ExtendedCacheWrite: 12.5m, ExtendedCacheRead: 1.0m),
                     ContextWindow = 1_000_000,
                     Description = "Opus + 1M 컨텍스트 윈도우",
                     SpeedTier = 1,
@@ -172,7 +229,9 @@ public static class ModelDefinitions
                 new ModelInfo("sonnet[1m]", "Sonnet (Extended 1M)")
                 {
                     Keywords = ["sonnet[1m]"],
-                    Pricing = new ModelPricing(3.0m, 15.0m, 3.75m, 0.30m),
+                    Pricing = new ModelPricing(3.0m, 15.0m, 3.75m, 0.30m,
+                        ExtendedInput: 6.0m, ExtendedOutput: 22.5m,
+                        ExtendedCacheWrite: 7.5m, ExtendedCacheRead: 0.60m),
                     ContextWindow = 1_000_000,
                     Description = "Sonnet + 1M 컨텍스트 윈도우",
                     SpeedTier = 2,

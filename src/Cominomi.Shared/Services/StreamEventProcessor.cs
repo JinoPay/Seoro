@@ -33,6 +33,9 @@ public class StreamEventProcessor : IStreamEventProcessor
                 ctx.Session.Id, ctx.AccInputTokens, ctx.AccOutputTokens);
         }
 
+        ctx.Session.PendingInputTokens = 0;
+        ctx.Session.PendingOutputTokens = 0;
+
         // Detect plan completion
         if (ctx.Session.PermissionMode == "plan")
         {

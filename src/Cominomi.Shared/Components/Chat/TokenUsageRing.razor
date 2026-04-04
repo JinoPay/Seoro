@@ -26,7 +26,14 @@
 
     private const double CircumferenceValue = 2 * Math.PI * 9; // ~56.549
 
-    private long TotalTokens => (CurrentSession?.TotalInputTokens ?? 0) + (CurrentSession?.TotalOutputTokens ?? 0);
+    // Committed tokens + in-progress pending tokens for real-time display during streaming
+    private long EffectiveInputTokens =>
+        (CurrentSession?.TotalInputTokens ?? 0) + (CurrentSession?.PendingInputTokens ?? 0);
+
+    private long EffectiveOutputTokens =>
+        (CurrentSession?.TotalOutputTokens ?? 0) + (CurrentSession?.PendingOutputTokens ?? 0);
+
+    private long TotalTokens => EffectiveInputTokens + EffectiveOutputTokens;
     private int ContextWindow => ModelDefinitions.GetContextWindow(Model);
     private double UsagePercent => ContextWindow > 0 ? Math.Min((double)TotalTokens / ContextWindow, 1.0) : 0;
 
@@ -59,8 +66,8 @@
 
     private string BuildTooltip()
     {
-        var input = CurrentSession?.TotalInputTokens ?? 0;
-        var output = CurrentSession?.TotalOutputTokens ?? 0;
+        var input = EffectiveInputTokens;
+        var output = EffectiveOutputTokens;
         var total = input + output;
         var pct = ContextWindow > 0 ? (double)total / ContextWindow * 100 : 0;
 
@@ -72,7 +79,7 @@
         var pricing = ModelDefinitions.GetPricing(Model);
         if (pricing != null)
         {
-            var cost = (input * pricing.Input + output * pricing.Output) / 1_000_000m;
+            var cost = ModelDefinitions.CalculateTieredCost(pricing, input, output);
             sb.Append($"\n예상 비용: ${cost:F4}");
         }
 

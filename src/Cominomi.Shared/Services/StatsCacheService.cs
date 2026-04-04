@@ -249,10 +249,9 @@ public class StatsCacheService(ILogger<StatsCacheService> logger) : IStatsCacheS
             mu.TotalTokens = mu.InputTokens + mu.OutputTokens + mu.CacheCreationTokens + mu.CacheReadTokens;
             var pricing = ModelDefinitions.GetPricing(mu.Model);
             if (pricing != null)
-                mu.TotalCost = (decimal)mu.InputTokens / 1_000_000m * pricing.Input
-                               + (decimal)mu.OutputTokens / 1_000_000m * pricing.Output
-                               + (decimal)mu.CacheCreationTokens / 1_000_000m * pricing.CacheWrite
-                               + (decimal)mu.CacheReadTokens / 1_000_000m * pricing.CacheRead;
+                mu.TotalCost = ModelDefinitions.CalculateTieredCost(
+                    pricing, mu.InputTokens, mu.OutputTokens,
+                    mu.CacheCreationTokens, mu.CacheReadTokens);
         }
 
         var grandTotal = modelMap.Values.Sum(m => m.TotalTokens);
@@ -303,10 +302,9 @@ public class StatsCacheService(ILogger<StatsCacheService> logger) : IStatsCacheS
                     var normalized = ModelDefinitions.NormalizeModelId(model);
                     var pricing = ModelDefinitions.GetPricing(normalized);
                     if (pricing != null)
-                        dayCost += (decimal)bd.InputTokens / 1_000_000m * pricing.Input
-                                   + (decimal)bd.OutputTokens / 1_000_000m * pricing.Output
-                                   + (decimal)bd.CacheCreationInputTokens / 1_000_000m * pricing.CacheWrite
-                                   + (decimal)bd.CacheReadInputTokens / 1_000_000m * pricing.CacheRead;
+                        dayCost += ModelDefinitions.CalculateTieredCost(
+                            pricing, bd.InputTokens, bd.OutputTokens,
+                            bd.CacheCreationInputTokens, bd.CacheReadInputTokens);
                 }
 
                 dtt.DailyCost = dayCost;
