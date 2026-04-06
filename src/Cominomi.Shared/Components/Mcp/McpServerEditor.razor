@@ -87,7 +87,7 @@
 
             @if (!IsNew && !string.IsNullOrEmpty(_originalName) && Scope != McpScope.Desktop)
             {
-                <McpToolPermissions ServerName="@_originalName" Scope="Scope" ProjectPath="ProjectPath"/>
+                <McpToolPermissions ServerName="@_originalName" Server="Server" Scope="Scope" ProjectPath="ProjectPath"/>
             }
         </div>
 

@@ -26,4 +26,7 @@ public interface IMcpService
     List<McpToolPermission> ExtractToolPermissions(string serverName, PermissionRules? permissions);
     PermissionRules ApplyToolPermission(PermissionRules? permissions, string serverName, string toolName, McpPermissionLevel level);
     PermissionRules RemoveToolPermission(PermissionRules? permissions, string rawPattern);
+
+    // ── Tool Discovery ────────────────────────────────────────────────────────
+    Task<McpToolListResult> ListToolsAsync(McpServer server, CancellationToken ct = default);
 }

@@ -719,6 +719,69 @@ public class McpService(
         return permissions;
     }
 
+    // ── Tool Discovery ────────────────────────────────────────────────────────
+
+    public async Task<McpToolListResult> ListToolsAsync(McpServer server, CancellationToken ct = default)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(15));
+
+        try
+        {
+            ModelContextProtocol.Client.IClientTransport transport;
+
+            if (server.Transport != "stdio" && !string.IsNullOrEmpty(server.Url))
+            {
+                transport = new ModelContextProtocol.Client.HttpClientTransport(
+                    new ModelContextProtocol.Client.HttpClientTransportOptions
+                    {
+                        Endpoint = new Uri(server.Url)
+                    });
+            }
+            else if (!string.IsNullOrEmpty(server.Command))
+            {
+                var options = new ModelContextProtocol.Client.StdioClientTransportOptions
+                {
+                    Command = server.Command,
+                    Arguments = server.Args.Count > 0 ? server.Args : null,
+                    Name = server.Name
+                };
+                if (server.Env.Count > 0)
+                    foreach (var (k, v) in server.Env)
+                        options.EnvironmentVariables[k] = v;
+
+                transport = new ModelContextProtocol.Client.StdioClientTransport(options);
+            }
+            else
+            {
+                return McpToolListResult.Fail("command 또는 URL이 없습니다.");
+            }
+
+            await using var client = await ModelContextProtocol.Client.McpClient.CreateAsync(
+                transport,
+                new ModelContextProtocol.Client.McpClientOptions
+                {
+                    ClientInfo = new ModelContextProtocol.Protocol.Implementation { Name = "Cominomi", Version = "1.0" }
+                },
+                cancellationToken: cts.Token);
+
+            var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
+            var result = tools.Select(t => new McpDiscoveredTool(t.Name, t.Description)).ToList();
+
+            logger.LogInformation("MCP '{Name}' 서버에서 도구 {Count}개 조회 완료", server.Name, result.Count);
+            return McpToolListResult.Ok(result);
+        }
+        catch (OperationCanceledException)
+        {
+            return McpToolListResult.Fail("도구 목록 조회 시간 초과 (15초)");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "MCP 서버 '{Name}' 도구 조회 실패", server.Name);
+            return McpToolListResult.Fail(ex.Message);
+        }
+    }
+
     // ── Private Scope Helpers ─────────────────────────────────────────────────
 
     private async Task<List<McpServer>> ListDesktopServersAsync()

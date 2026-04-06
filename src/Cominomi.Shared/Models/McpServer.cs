@@ -51,3 +51,11 @@ public record McpOperationResult(bool Success, string? Error = null)
     public static McpOperationResult Ok() => new(true);
     public static McpOperationResult Fail(string error) => new(false, error);
 }
+
+public record McpDiscoveredTool(string Name, string? Description);
+
+public record McpToolListResult(bool Success, List<McpDiscoveredTool> Tools, string? Error = null)
+{
+    public static McpToolListResult Ok(List<McpDiscoveredTool> tools) => new(true, tools);
+    public static McpToolListResult Fail(string error) => new(false, [], error);
+}

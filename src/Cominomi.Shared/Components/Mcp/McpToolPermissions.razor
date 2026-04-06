@@ -1,3 +1,4 @@
+@implements IDisposable
 @inject IClaudeSettingsService ClaudeSettingsService
 @inject IMcpService McpService
 @inject ISnackbar Snackbar
@@ -9,7 +10,30 @@
         <MudTooltip Text="Claude가 이 서버의 도구를 사용할 시기를 제어합니다">
             <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small" Style="opacity:0.5;"/>
         </MudTooltip>
+        @if (Server != null)
+        {
+            <MudTooltip Text="서버에 연결하여 도구 목록을 가져오고 전부 허용으로 설정합니다">
+                <MudButton StartIcon="@(_discovering ? null : Icons.Material.Filled.Sync)"
+                           Size="Size.Small" Variant="Variant.Text"
+                           OnClick="DiscoverAndAllowTools"
+                           Disabled="@_discovering"
+                           Class="ml-auto">
+                    @if (_discovering)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                             Style="width:14px;height:14px;margin-right:4px;"/>
+                    }
+                    도구 조회
+                </MudButton>
+            </MudTooltip>
+        }
     </div>
+
+    @if (_discoverError != null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="mt-1" ShowCloseIcon="true"
+                  CloseIconClicked="@(() => _discoverError = null)">@_discoverError</MudAlert>
+    }
 
     @if (_loading)
     {
@@ -91,6 +115,7 @@
 
 @code {
     [Parameter, EditorRequired] public string ServerName { get; set; } = "";
+    [Parameter] public McpServer? Server { get; set; }
     [Parameter] public McpScope Scope { get; set; }
     [Parameter] public string? ProjectPath { get; set; }
 
@@ -99,6 +124,9 @@
     private bool _addingNew;
     private string _newToolName = "";
     private McpPermissionLevel _newLevel = McpPermissionLevel.Allow;
+    private bool _discovering;
+    private string? _discoverError;
+    private CancellationTokenSource? _discoverCts;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -159,6 +187,68 @@
         _addingNew = false;
         Snackbar.Add("도구 권한이 추가되었습니다.", Severity.Success);
         await LoadPermissionsAsync();
+    }
+
+    private async Task DiscoverAndAllowTools()
+    {
+        if (Server == null) return;
+
+        _discovering = true;
+        _discoverError = null;
+        StateHasChanged();
+
+        _discoverCts?.Cancel();
+        _discoverCts?.Dispose();
+        _discoverCts = new CancellationTokenSource();
+
+        try
+        {
+            var result = await McpService.ListToolsAsync(Server, _discoverCts.Token);
+            if (!result.Success)
+            {
+                _discoverError = result.Error;
+                return;
+            }
+
+            // 현재 권한이 없는 도구만 Allow로 추가
+            var settingsScope = GetSettingsScope();
+            var settings = await ClaudeSettingsService.ReadAsync(settingsScope, ProjectPath);
+            var existing = McpService.ExtractToolPermissions(ServerName, settings.Permissions)
+                .Select(p => p.ToolName)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var newCount = 0;
+            foreach (var tool in result.Tools)
+            {
+                if (existing.Contains(tool.Name)) continue;
+                settings.Permissions = McpService.ApplyToolPermission(
+                    settings.Permissions, ServerName, tool.Name, McpPermissionLevel.Allow);
+                newCount++;
+            }
+
+            if (newCount > 0)
+            {
+                await ClaudeSettingsService.WriteAsync(settingsScope, settings, ProjectPath);
+                Snackbar.Add($"도구 {newCount}개를 허용으로 설정했습니다.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"도구 {result.Tools.Count}개 조회 완료 (이미 모두 권한 설정됨)", Severity.Info);
+            }
+
+            await LoadPermissionsAsync();
+        }
+        finally
+        {
+            _discovering = false;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        _discoverCts?.Cancel();
+        _discoverCts?.Dispose();
     }
 }
 
