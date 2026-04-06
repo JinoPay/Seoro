@@ -1,0 +1,209 @@
+@inject IClaudeSettingsService ClaudeSettingsService
+@inject IMcpService McpService
+@inject ISnackbar Snackbar
+
+@if (_integrations.Count > 0)
+{
+    <div class="mcp-builtin-section">
+        <div class="mcp-group-label">
+            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small" Style="opacity:0.6;"/>
+            CLAUDE.AI 내장 통합
+            <MudTooltip Text="Claude.ai에서 제공하는 내장 통합 도구입니다. 전역 권한에 저장됩니다.">
+                <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small" Style="opacity:0.35;"/>
+            </MudTooltip>
+        </div>
+
+        <div class="mcp-builtin-card">
+            @if (_loading)
+            {
+                <MudProgressLinear Indeterminate="true" Size="Size.Small"/>
+            }
+            else
+            {
+                @for (var i = 0; i < _integrations.Count; i++)
+                {
+                    var integration = _integrations[i];
+                    var state = GetState(integration);
+                    var isLast = i == _integrations.Count - 1;
+                    <div class="mcp-builtin-row @(isLast ? "" : "mcp-builtin-row--divider")">
+                        <div class="mcp-builtin-icon" style="background:@integration.IconBg;color:@integration.IconColor;">
+                            <MudIcon Icon="@integration.Icon" Size="Size.Small"/>
+                        </div>
+                        <span class="typo-body2" style="flex:1;min-width:0;">@integration.DisplayName</span>
+                        <span class="typo-caption text-secondary" style="white-space:nowrap;margin-right:8px;">
+                            @(integration.Tools.Count)개 도구
+                        </span>
+                        @if (state == IntegrationState.Partial)
+                        {
+                            <MudTooltip Text="일부만 허용됨 — 클릭하면 전체 허용">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                                         OnClick="@(() => AllowAll(integration))"
+                                         Style="height:20px;font-size:0.68rem;cursor:pointer;">일부</MudChip>
+                            </MudTooltip>
+                        }
+                        else
+                        {
+                            <MudTooltip Text="@(state == IntegrationState.AllAllowed ? "전체 허용 해제" : "전체 허용")">
+                                <MudToggleIconButton
+                                    Toggled="@(state == IntegrationState.AllAllowed)"
+                                    ToggledChanged="@(_ => ToggleIntegration(integration, state))"
+                                    Icon="@Icons.Material.Filled.ToggleOff"
+                                    ToggledIcon="@Icons.Material.Filled.ToggleOn"
+                                    Color="Color.Default"
+                                    ToggledColor="Color.Success"
+                                    Size="Size.Small"/>
+                            </MudTooltip>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private enum IntegrationState { None, Partial, AllAllowed }
+
+    private record ClaudeAiIntegration(
+        string DisplayName, string Icon, string ServerKey, List<string> Tools,
+        string IconBg, string IconColor);
+
+    private static readonly List<ClaudeAiIntegration> AllIntegrations =
+    [
+        new("Figma", Icons.Material.Filled.Brush, "claude_ai_Figma",
+        [
+            "add_code_connect_map", "create_design_system_rules", "create_new_file",
+            "generate_diagram", "get_code_connect_map", "get_code_connect_suggestions",
+            "get_context_for_code_connect", "get_design_context", "get_figjam",
+            "get_metadata", "get_screenshot", "get_variable_defs",
+            "search_design_system", "send_code_connect_mappings", "use_figma", "whoami"
+        ], "color-mix(in srgb, #a259ff 15%, transparent)", "#a259ff"),
+        new("Notion", Icons.Material.Filled.Notes, "claude_ai_Notion",
+        [
+            "notion-create-comment", "notion-create-database", "notion-create-pages",
+            "notion-create-view", "notion-duplicate-page", "notion-fetch",
+            "notion-get-comments", "notion-get-teams", "notion-get-users",
+            "notion-move-pages", "notion-query-database-view", "notion-query-meeting-notes",
+            "notion-search", "notion-update-data-source", "notion-update-page", "notion-update-view"
+        ], "color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent)", "var(--mud-palette-text-primary)"),
+        new("Gmail", Icons.Material.Filled.Email, "claude_ai_Gmail",
+            ["authenticate"],
+            "color-mix(in srgb, #ea4335 15%, transparent)", "#ea4335"),
+        new("Google Calendar", Icons.Material.Filled.CalendarMonth, "claude_ai_Google_Calendar",
+            ["authenticate"],
+            "color-mix(in srgb, #1a73e8 15%, transparent)", "#1a73e8"),
+    ];
+
+    private List<ClaudeAiIntegration> _integrations = [];
+    private bool _loading;
+    private PermissionRules? _permissions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+        try
+        {
+            var settings = await ClaudeSettingsService.ReadAsync(ClaudeSettingsScope.Global);
+            _permissions = settings.Permissions;
+            _integrations = AllIntegrations;
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private IntegrationState GetState(ClaudeAiIntegration integration)
+    {
+        if (_permissions == null) return IntegrationState.None;
+        var existing = McpService.ExtractToolPermissions(integration.ServerKey, _permissions);
+        var allowedSet = existing
+            .Where(p => p.Level == McpPermissionLevel.Allow)
+            .Select(p => p.ToolName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var allowedCount = integration.Tools.Count(t => allowedSet.Contains(t));
+        if (allowedCount == 0) return IntegrationState.None;
+        if (allowedCount == integration.Tools.Count) return IntegrationState.AllAllowed;
+        return IntegrationState.Partial;
+    }
+
+    private async Task ToggleIntegration(ClaudeAiIntegration integration, IntegrationState state)
+    {
+        if (state == IntegrationState.AllAllowed)
+            await RemoveAll(integration);
+        else
+            await AllowAll(integration);
+    }
+
+    private async Task AllowAll(ClaudeAiIntegration integration)
+    {
+        var settings = await ClaudeSettingsService.ReadAsync(ClaudeSettingsScope.Global);
+        foreach (var tool in integration.Tools)
+            settings.Permissions = McpService.ApplyToolPermission(
+                settings.Permissions, integration.ServerKey, tool, McpPermissionLevel.Allow);
+        await ClaudeSettingsService.WriteAsync(ClaudeSettingsScope.Global, settings);
+        _permissions = settings.Permissions;
+        Snackbar.Add($"{integration.DisplayName} 도구 {integration.Tools.Count}개를 허용했습니다.", Severity.Success);
+        StateHasChanged();
+    }
+
+    private async Task RemoveAll(ClaudeAiIntegration integration)
+    {
+        var settings = await ClaudeSettingsService.ReadAsync(ClaudeSettingsScope.Global);
+        foreach (var tool in integration.Tools)
+        {
+            var pattern = $"mcp__{integration.ServerKey}__{tool}";
+            settings.Permissions = McpService.RemoveToolPermission(settings.Permissions, pattern);
+        }
+        await ClaudeSettingsService.WriteAsync(ClaudeSettingsScope.Global, settings);
+        _permissions = settings.Permissions;
+        Snackbar.Add($"{integration.DisplayName} 권한을 제거했습니다.", Severity.Info);
+        StateHasChanged();
+    }
+}
+
+<style>
+    .mcp-builtin-section {
+        margin-bottom: 20px;
+    }
+
+    .mcp-builtin-card {
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .mcp-builtin-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        transition: background 0.15s;
+    }
+
+    .mcp-builtin-row:hover {
+        background: var(--mud-palette-action-default-hover);
+    }
+
+    .mcp-builtin-row--divider {
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .mcp-builtin-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+</style>

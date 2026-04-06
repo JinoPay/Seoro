@@ -54,6 +54,11 @@
         {
             <div class="mcp-page-layout">
                 <div class="mcp-list-panel">
+                    @if (_scope == McpScope.Global)
+                    {
+                        <McpBuiltinIntegrations/>
+                    }
+
                     @if (_cloudServers.Count > 0)
                     {
                         <div class="mcp-group-label">
