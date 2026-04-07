@@ -197,6 +197,7 @@ public static class Program
         appBuilder.Services.AddSingleton<ISessionService, SessionService>();
         appBuilder.Services.AddSingleton<IWorkspaceService, WorkspaceService>();
         appBuilder.Services.AddSingleton<ISettingsService, SettingsService>();
+        appBuilder.Services.AddSingleton<CominomiMigrationService>();
         appBuilder.Services.AddSingleton<IDependencyCheckService, DependencyCheckService>();
         appBuilder.Services.AddSingleton<ILauncherService, LauncherService>();
         appBuilder.Services.AddSingleton<IUpdateService, UpdateService>();

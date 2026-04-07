@@ -1,6 +1,9 @@
 @inject IFolderPickerService FolderPickerService
 @inject IJSRuntime JS
 @inject IChatState ChatState
+@inject CominomiMigrationService MigrationService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <div class="settings-section-title">일반</div>
 <div class="settings-section-desc">앱의 기본 동작을 설정합니다.</div>
@@ -91,15 +94,53 @@
             새로운 기능 보기
         </MudButton>
     </div>
+
+    @if (_cominomiSummary is { Exists: true, TotalFiles: > 0 })
+    {
+        <div class="settings-group-title mt">데이터 마이그레이션</div>
+        <div class="typo-caption text-secondary" style="margin-bottom: 8px;">
+            기존 Cominomi 데이터를 Seoro로 가져옵니다.
+        </div>
+
+        <div class="stack gap-1">
+            <div class="typo-body2">
+                발견된 데이터: 세션 @(_cominomiSummary.SessionCount)개,
+                워크스페이스 @(_cominomiSummary.WorkspaceCount)개,
+                메모리 @(_cominomiSummary.MemoryCount)개,
+                태스크 @(_cominomiSummary.TaskCount)개,
+                설정 파일 @(_cominomiSummary.SettingsFileCount)개
+            </div>
+
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       OnClick="ImportCominomiData"
+                       StartIcon="@Icons.Material.Filled.FileDownload"
+                       Disabled="_importing"
+                       Style="text-transform: none; align-self: flex-start;">
+                @if (_importing)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" Style="width:16px;height:16px;"/>
+                    <span>가져오는 중...</span>
+                }
+                else
+                {
+                    <span>Cominomi 데이터 가져오기</span>
+                }
+            </MudButton>
+        </div>
+    }
 </div>
 
 @code {
     [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
 
     private double _autoDefault = 1.0;
+    private CominomiDataSummary? _cominomiSummary;
+    private bool _importing;
 
     protected override async Task OnInitializedAsync()
     {
+        _cominomiSummary = MigrationService.GetDataSummary();
+
         try
         {
             _autoDefault = await JS.InvokeAsync<double>("getDefaultUiScale");
@@ -126,6 +167,45 @@
         if (!string.IsNullOrEmpty(path))
         {
             Settings.DefaultCloneDirectory = path;
+        }
+    }
+
+    private async Task ImportCominomiData()
+    {
+        var result = await DialogService.ShowMessageBoxAsync(
+            "Cominomi 데이터 가져오기",
+            $"기존 Cominomi 데이터 {_cominomiSummary!.TotalFiles}개 항목을 Seoro로 가져옵니다.\n" +
+            "이미 같은 파일이 있는 경우 처리 방법을 선택하세요.",
+            "기존 데이터 덮어쓰기", cancelText: "취소", noText: "기존 데이터 유지 (스킵)");
+
+        if (result is null) return; // cancelled
+
+        var overwrite = result == true;
+
+        _importing = true;
+        StateHasChanged();
+
+        try
+        {
+            var migrationResult = await MigrationService.ImportAsync(overwrite);
+            var deleted = MigrationService.DeleteCominomiFolder();
+
+            var msg = $"가져오기 완료: {migrationResult.Copied}개 복사, {migrationResult.Skipped}개 스킵";
+            if (migrationResult.Failed > 0)
+                msg += $", {migrationResult.Failed}개 실패";
+            if (!deleted)
+                msg += " (Cominomi 폴더 삭제 실패)";
+
+            Snackbar.Add(msg, migrationResult.Failed > 0 || !deleted ? Severity.Warning : Severity.Success);
+            _cominomiSummary = MigrationService.GetDataSummary();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"가져오기 실패: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _importing = false;
         }
     }
 

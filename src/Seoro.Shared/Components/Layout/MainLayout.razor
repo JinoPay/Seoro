@@ -14,6 +14,8 @@
 @inject INotificationService NotificationService
 @inject INotificationHistoryService NotificationHistory
 @inject IWindowCloseGuardService WindowCloseGuard
+@inject CominomiMigrationService CominomiMigration
+@inject IDialogService DialogService
 @using System.Diagnostics
 @using System.Reflection
 @using Microsoft.Extensions.Logging
@@ -444,6 +446,53 @@
         else
         {
             await TryShowWhatsNewAsync(settings);
+            _ = CheckCominomiMigrationAsync();
+        }
+    }
+
+    private async Task CheckCominomiMigrationAsync()
+    {
+        try
+        {
+            var summary = CominomiMigration.GetDataSummary();
+            if (!summary.Exists || summary.TotalFiles == 0) return;
+
+            await InvokeAsync(async () =>
+            {
+                var result = await DialogService.ShowMessageBoxAsync(
+                    "Cominomi 데이터 발견",
+                    $"기존 Cominomi 데이터가 발견되었습니다 ({summary.TotalFiles}개 항목).\n" +
+                    "Seoro로 데이터를 가져오시겠습니까?\n\n" +
+                    "가져오기를 선택하면 데이터가 복사된 후 기존 Cominomi 폴더가 삭제됩니다.",
+                    "가져오기", cancelText: "나중에", noText: "가져오지 않기");
+
+                if (result is null) return; // "나중에" - 다음 실행 시 다시 물어봄
+
+                if (result == true)
+                {
+                    var migrationResult = await CominomiMigration.ImportAsync(overwrite: false);
+                    var deleted = CominomiMigration.DeleteCominomiFolder();
+
+                    var msg = $"가져오기 완료: {migrationResult.Copied}개 복사, {migrationResult.Skipped}개 스킵";
+                    if (migrationResult.Failed > 0)
+                        msg += $", {migrationResult.Failed}개 실패";
+                    if (!deleted)
+                        msg += " (Cominomi 폴더 삭제 실패 - 수동으로 삭제해주세요)";
+
+                    Snackbar.Add(msg, migrationResult.Failed > 0 || !deleted ? Severity.Warning : Severity.Success);
+                }
+                else
+                {
+                    // "가져오지 않기" - Cominomi 폴더만 삭제
+                    var deleted = CominomiMigration.DeleteCominomiFolder();
+                    if (!deleted)
+                        Snackbar.Add("Cominomi 폴더 삭제에 실패했습니다. 수동으로 삭제해주세요.", Severity.Warning);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Cominomi migration check failed");
         }
     }
 
