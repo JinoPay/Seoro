@@ -20,7 +20,7 @@
     }
     else if (_viewMode == FileViewMode.Markdown)
     {
-        <div class="filecontent-markdown markdown-body">
+        <div id="@_elementId" class="filecontent-markdown markdown-body">
             @((MarkupString)_renderedHtml)
         </div>
     }
@@ -98,7 +98,7 @@
             _renderedHtml = Markdown.ToHtml(Content, MarkdownHelper.TrustedPipeline);
         }
 
-        _needsHighlight = _viewMode == FileViewMode.Code && !string.IsNullOrEmpty(Content);
+        _needsHighlight = (_viewMode == FileViewMode.Code || _viewMode == FileViewMode.Markdown) && !string.IsNullOrEmpty(Content);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -108,7 +108,10 @@
             _needsHighlight = false;
             try
             {
-                await JS.InvokeVoidAsync("highlightCodeBlock", _elementId);
+                if (_viewMode == FileViewMode.Markdown)
+                    await JS.InvokeVoidAsync("enhanceMarkdownCodeBlocks", _elementId, false);
+                else
+                    await JS.InvokeVoidAsync("highlightCodeBlock", _elementId);
             }
             catch
             {
