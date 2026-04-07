@@ -1,3 +1,4 @@
+@using System.Diagnostics
 @inject IFolderPickerService FolderPickerService
 @inject IJSRuntime JS
 @inject IChatState ChatState
@@ -190,13 +191,27 @@
             var migrationResult = await MigrationService.ImportAsync(overwrite);
             var deleted = MigrationService.DeleteCominomiFolder();
 
-            var msg = $"가져오기 완료: {migrationResult.Copied}개 복사, {migrationResult.Skipped}개 스킵";
+            if (migrationResult.Copied > 0)
+            {
+                await DialogService.ShowMessageBoxAsync(
+                    "가져오기 완료",
+                    $"{migrationResult.Copied}개 항목을 가져왔습니다. 변경사항을 반영하기 위해 앱을 다시 시작합니다.",
+                    "확인");
+
+                var exePath = Environment.ProcessPath;
+                if (!string.IsNullOrEmpty(exePath))
+                    Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
+                Environment.Exit(0);
+                return;
+            }
+
+            var msg = $"가져오기 완료: {migrationResult.Skipped}개 스킵 (변경 없음)";
             if (migrationResult.Failed > 0)
                 msg += $", {migrationResult.Failed}개 실패";
             if (!deleted)
                 msg += " (Cominomi 폴더 삭제 실패)";
 
-            Snackbar.Add(msg, migrationResult.Failed > 0 || !deleted ? Severity.Warning : Severity.Success);
+            Snackbar.Add(msg, migrationResult.Failed > 0 || !deleted ? Severity.Warning : Severity.Info);
             _cominomiSummary = MigrationService.GetDataSummary();
         }
         catch (Exception ex)

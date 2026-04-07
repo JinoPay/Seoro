@@ -18,6 +18,7 @@
 @inject IDialogService DialogService
 @using System.Diagnostics
 @using System.Reflection
+@using System.Runtime.InteropServices
 @using Microsoft.Extensions.Logging
 @implements IAsyncDisposable
 
@@ -473,6 +474,16 @@
                     var migrationResult = await CominomiMigration.ImportAsync(overwrite: false);
                     var deleted = CominomiMigration.DeleteCominomiFolder();
 
+                    if (migrationResult.Copied > 0)
+                    {
+                        await DialogService.ShowMessageBoxAsync(
+                            "가져오기 완료",
+                            $"{migrationResult.Copied}개 항목을 가져왔습니다. 변경사항을 반영하기 위해 앱을 다시 시작합니다.",
+                            "확인");
+                        RestartApp();
+                        return;
+                    }
+
                     var msg = $"가져오기 완료: {migrationResult.Copied}개 복사, {migrationResult.Skipped}개 스킵";
                     if (migrationResult.Failed > 0)
                         msg += $", {migrationResult.Failed}개 실패";
@@ -503,6 +514,7 @@
         settings.OnboardingCompleted = true;
         await SettingsService.SaveAsync(settings);
         await TryShowWhatsNewAsync(settings);
+        _ = CheckCominomiMigrationAsync();
         StateHasChanged();
     }
 
@@ -582,6 +594,14 @@
             _whatsNewOpen = true;
             StateHasChanged();
         });
+    }
+
+    private static void RestartApp()
+    {
+        var exePath = Environment.ProcessPath;
+        if (!string.IsNullOrEmpty(exePath))
+            Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
+        Environment.Exit(0);
     }
 
     private void HandleCloseRequested()

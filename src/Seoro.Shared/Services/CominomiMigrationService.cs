@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 
 namespace Seoro.Shared.Services;
@@ -77,6 +79,10 @@ public class CominomiMigrationService(ILogger<CominomiMigrationService> logger)
                 await File.WriteAllBytesAsync(dest, content);
                 copied++;
                 logger.LogInformation("Migrated root file: {File}", fileName);
+
+                // Reset onboarding fields so Seoro shows its own onboarding/WhatsNew
+                if (fileName == "settings.json")
+                    await ResetOnboardingFieldsAsync(dest);
             }
             catch (Exception ex)
             {
@@ -146,6 +152,27 @@ public class CominomiMigrationService(ILogger<CominomiMigrationService> logger)
         {
             logger.LogWarning(ex, "Failed to delete Cominomi folder: {Path}", CominomiBaseDir);
             return false;
+        }
+    }
+
+    private async Task ResetOnboardingFieldsAsync(string settingsPath)
+    {
+        try
+        {
+            var json = await File.ReadAllTextAsync(settingsPath);
+            var node = JsonNode.Parse(json);
+            if (node is JsonObject obj)
+            {
+                obj["OnboardingCompleted"] = false;
+                obj["LastSeenVersion"] = "";
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                await File.WriteAllTextAsync(settingsPath, node.ToJsonString(options));
+                logger.LogInformation("Reset onboarding fields in migrated settings.json");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to reset onboarding fields in settings.json");
         }
     }
 
