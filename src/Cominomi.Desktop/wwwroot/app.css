@@ -339,11 +339,7 @@ html *::after {
     animation: pulse-status 1.5s ease-in-out infinite;
 }
 
-/* Streaming accent on collapsed project header */
-.project-header.has-streaming {
-    border-left: 2px solid var(--color-success);
-    padding-left: calc(var(--space-3) - 2px);
-}
+/* Streaming accent on collapsed project header — border-left removed, streaming dot handles indicator */
 
 /* ===== Add Session Popover ===== */
 .add-session-anchor {
@@ -443,17 +439,52 @@ html *::after {
 
 .tree-session.active {
     background: var(--accent-dim);
-    border-left: 2px solid var(--accent);
-    padding-left: calc(42px - 2px);
 }
 
-.tree-session.streaming {
-    border-left: 2px solid var(--color-success);
-    padding-left: calc(42px - 2px);
+
+/* Streaming spinner — conic-gradient arc with glow pulse */
+.tree-session.streaming::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0%,
+        var(--color-success) 70%,
+        transparent 100%
+    );
+    animation: spinner-rotate 1s linear infinite;
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
 }
 
-.tree-session.active.streaming {
-    border-left-color: var(--color-success);
+.tree-session.streaming::after {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--color-success) 0%, transparent 70%);
+    opacity: 0.15;
+    pointer-events: none;
+    animation: spinner-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes spinner-rotate {
+    to { transform: translateY(-50%) rotate(360deg); }
+}
+
+@keyframes spinner-glow {
+    0%, 100% { opacity: 0.1; transform: translateY(-50%) scale(0.9); }
+    50%       { opacity: 0.25; transform: translateY(-50%) scale(1.1); }
 }
 
 .tree-session.archived {
