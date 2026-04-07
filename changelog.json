@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.16.16",
+    "date": "2026-04-07",
+    "changes": [
+      { "type": "feat", "description": "마크다운 렌더링에 syntax highlighting 및 코드 블록 개선" },
+      { "type": "feat", "description": "사이드바 스트리밍 인디케이터를 conic-gradient 스피너로 교체, 선택 선 제거" }
+    ]
+  },
+  {
     "version": "1.16.15",
     "date": "2026-04-06",
     "changes": [
