@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.17.1",
+    "date": "2026-04-08",
+    "changes": [
+      { "type": "feat", "description": "macOS 알림 처리 개선 및 백엔드 감지 통합" },
+      { "type": "style", "description": "랜딩 글로우 효과 숨김 및 미사용 키프레임 제거" }
+    ]
+  },
+  {
     "version": "1.17.0",
     "date": "2026-04-07",
     "changes": [
