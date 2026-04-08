@@ -14,6 +14,22 @@ public class NotificationService(ILogger<NotificationService> logger, IOptionsMo
 {
     private bool _initialized;
     private bool _nativeNotificationsAvailable;
+    private static bool _notificationAuthorized;
+
+    public NotificationBackend CurrentBackend
+    {
+        get
+        {
+            if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsWindows())
+                return NotificationBackend.Unavailable;
+            if (OperatingSystem.IsWindows())
+                return NotificationBackend.Native;
+            // macOS
+            if (_nativeNotificationsAvailable && _notificationAuthorized)
+                return NotificationBackend.Native;
+            return NotificationBackend.Script;
+        }
+    }
 
     public Task InitializeAsync()
     {
@@ -114,9 +130,9 @@ public class NotificationService(ILogger<NotificationService> logger, IOptionsMo
     private void SendMacNotification(string title, string body, bool playSound, string soundName)
     {
         // Try UNUserNotificationCenter first (proper native API, attributed to Seoro)
-        // Only available when running inside a .app bundle — otherwise the ObjC runtime
-        // throws NSInternalInconsistencyException (bundleProxyForCurrentProcess is nil)
-        if (_nativeNotificationsAvailable)
+        // Only available when running inside a .app bundle with notification authorization granted.
+        // Without authorization (e.g. unsigned app), the API silently drops notifications.
+        if (_nativeNotificationsAvailable && _notificationAuthorized)
             try
             {
                 SendMacNotificationNative(title, body, playSound, soundName);
@@ -306,6 +322,34 @@ public class NotificationService(ILogger<NotificationService> logger, IOptionsMo
             6, block);
 
         logger.LogInformation("Requested macOS notification authorization");
+
+        // Check current authorization status synchronously
+        // UNAuthorizationStatus: 0=notDetermined, 1=denied, 2=authorized, 3=provisional
+        CheckNotificationAuthorizationStatus(center);
+    }
+
+    private void CheckNotificationAuthorizationStatus(nint center)
+    {
+        try
+        {
+            // [center getNotificationSettingsWithCompletionHandler:] is async,
+            // so we poll the settings via a blocking approach using a semaphore-like ObjC block.
+            // Simpler approach: just try sending a test and see if it works.
+            // For now, give the authorization request a moment then check via settings.
+            var settingsBlock = CreateSettingsBlock();
+            ObjcMsgSendVoidIntPtr(center,
+                SelRegisterName("getNotificationSettingsWithCompletionHandler:"),
+                settingsBlock);
+
+            // The callback sets _notificationAuthorized; give it a brief moment
+            Thread.Sleep(500);
+
+            logger.LogInformation("macOS notification authorization status: {Authorized}", _notificationAuthorized);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to check notification authorization status");
+        }
     }
 
     #endregion
@@ -335,7 +379,13 @@ public class NotificationService(ILogger<NotificationService> logger, IOptionsMo
     private static extern void ObjcMsgSendVoidTwoIntPtr(nint receiver, nint selector, nint arg1, nint arg2);
 
     [DllImport("/usr/lib/libobjc.dylib", EntryPoint = "objc_msgSend")]
+    private static extern void ObjcMsgSendVoidIntPtr(nint receiver, nint selector, nint arg1);
+
+    [DllImport("/usr/lib/libobjc.dylib", EntryPoint = "objc_msgSend")]
     private static extern void ObjcMsgSendVoidNUIntIntPtr(nint receiver, nint selector, nuint arg1, nint arg2);
+
+    [DllImport("/usr/lib/libobjc.dylib", EntryPoint = "objc_msgSend")]
+    private static extern nint ObjcMsgSendNInt(nint receiver, nint selector);
 
     [DllImport("/usr/lib/libobjc.dylib", EntryPoint = "class_getInstanceMethod")]
     private static extern nint ClassGetInstanceMethod(nint cls, nint sel);
@@ -426,10 +476,58 @@ public class NotificationService(ILogger<NotificationService> logger, IOptionsMo
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void AuthCallbackDelegate(nint block, byte granted, nint error);
 
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void SettingsCallbackDelegate(nint block, nint settings);
+
     // prevent GC collection of the delegate and block memory
     private static AuthCallbackDelegate? _authCallback;
     private static nint _authBlockPtr;
     private static nint _authDescriptorPtr;
+
+    private static SettingsCallbackDelegate? _settingsCallback;
+    private static nint _settingsBlockPtr;
+    private static nint _settingsDescriptorPtr;
+
+    private nint CreateSettingsBlock()
+    {
+        if (_settingsBlockPtr != 0) return _settingsBlockPtr;
+
+        _settingsCallback = (block, settings) =>
+        {
+            try
+            {
+                // [settings authorizationStatus] returns NSInteger
+                // 0=notDetermined, 1=denied, 2=authorized, 3=provisional, 4=ephemeral
+                var status = ObjcMsgSendNInt(settings, SelRegisterName("authorizationStatus"));
+                _notificationAuthorized = status >= 2; // authorized, provisional, or ephemeral
+            }
+            catch
+            {
+                // ignored
+            }
+        };
+
+        var isa = DlSym(-2, "_NSConcreteGlobalBlock");
+
+        _settingsDescriptorPtr = Marshal.AllocHGlobal(Marshal.SizeOf<BlockDescriptor>());
+        Marshal.StructureToPtr(new BlockDescriptor
+        {
+            Reserved = 0,
+            Size = (nuint)Marshal.SizeOf<BlockLiteral>()
+        }, _settingsDescriptorPtr, false);
+
+        _settingsBlockPtr = Marshal.AllocHGlobal(Marshal.SizeOf<BlockLiteral>());
+        Marshal.StructureToPtr(new BlockLiteral
+        {
+            Isa = isa,
+            Flags = 1 << 28,
+            Reserved = 0,
+            Invoke = Marshal.GetFunctionPointerForDelegate(_settingsCallback),
+            Descriptor = _settingsDescriptorPtr
+        }, _settingsBlockPtr, false);
+
+        return _settingsBlockPtr;
+    }
 
     private static nint CreateAuthorizationBlock()
     {

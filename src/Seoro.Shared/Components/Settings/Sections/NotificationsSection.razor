@@ -51,9 +51,18 @@
 
     @if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
     {
-        <MudAlert Severity="Severity.Info" Dense="true" NoIcon="false" Class="mt-2">
-            알림이 보이지 않으면 시스템 설정 > 알림 > Seoro가 허용되어 있는지 확인하세요.
-        </MudAlert>
+        @if (NotificationService.CurrentBackend == NotificationBackend.Native)
+        {
+            <MudAlert Severity="Severity.Success" Dense="true" NoIcon="false" Class="mt-2">
+                Seoro 알림이 활성화되어 있습니다. 시스템 설정 > 알림에서 세부 설정을 변경할 수 있습니다.
+            </MudAlert>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" NoIcon="false" Class="mt-2">
+                알림 권한이 없어 스크립트 방식으로 전송됩니다. 시스템 설정 > 알림에 Seoro가 없다면 앱 재설치 또는 코드 서명이 필요합니다.
+            </MudAlert>
+        }
     }
 </div>
 
