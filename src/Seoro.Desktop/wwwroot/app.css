@@ -3181,31 +3181,11 @@ html *::after {
 }
 
 .landing-glow-ring {
-    position: absolute;
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    background: conic-gradient(
-        from var(--border-angle),
-        var(--accent) 0%,
-        transparent 30%,
-        transparent 70%,
-        var(--accent) 100%
-    );
-    opacity: 0.3;
-    filter: blur(16px);
-    animation: gradient-spin 4s linear infinite;
+    display: none;
 }
 
 .landing-logo {
     position: relative;
-    color: var(--accent);
-    animation: landing-logo-breathe 3s ease-in-out infinite;
-}
-
-@keyframes landing-logo-breathe {
-    0%, 100% { transform: scale(1); opacity: 0.8; }
-    50%      { transform: scale(1.05); opacity: 1; }
 }
 
 /* --- Landing: Text --- */
