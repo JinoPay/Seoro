@@ -1531,26 +1531,26 @@ html *::after {
 .scroll-to-bottom-btn {
     position: absolute;
     bottom: 120px;
-    left: 50%;
-    transform: translateX(-50%);
+    right: 24px;
     z-index: 10;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    background: var(--surface-2);
-    border: 1px solid var(--border-subtle);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    opacity: 0.85;
-    transition: opacity 0.15s ease;
+    background: var(--accent);
+    border: none;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0.9;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    color: #fff;
 }
 
 .scroll-to-bottom-btn:hover {
     opacity: 1;
-    background: var(--surface-3);
+    transform: scale(1.1);
 }
 
 .scroll-to-bottom-btn.askbar-active {
