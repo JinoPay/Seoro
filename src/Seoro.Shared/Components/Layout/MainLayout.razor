@@ -179,7 +179,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "MainLayout initialization failed");
+            Logger.LogError(ex, "MainLayout 초기화 실패");
         }
     }
 
@@ -314,7 +314,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogDebug(ex, "Version check failed silently");
+            Logger.LogDebug(ex, "버전 확인 실패 (무시됨)");
         }
     }
 
@@ -336,14 +336,14 @@
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogError(ex, "Update download failed");
+                        Logger.LogError(ex, "업데이트 다운로드 실패");
                     }
                 });
             });
         }
         catch (Exception ex)
         {
-            Logger.LogDebug(ex, "App update check failed silently");
+            Logger.LogDebug(ex, "앱 업데이트 확인 실패 (무시됨)");
         }
     }
 
@@ -385,7 +385,7 @@
                             }
                             catch (Exception ex)
                             {
-                                Logger.LogError(ex, "Update download failed");
+                                Logger.LogError(ex, "업데이트 다운로드 실패");
                             }
                         });
                     });
@@ -394,7 +394,7 @@
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogDebug(ex, "Periodic update check failed");
+                    Logger.LogDebug(ex, "주기적 업데이트 확인 실패");
                 }
             }
         }, ct);
@@ -503,7 +503,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogDebug(ex, "Cominomi migration check failed");
+            Logger.LogDebug(ex, "Cominomi 마이그레이션 확인 실패");
         }
     }
 

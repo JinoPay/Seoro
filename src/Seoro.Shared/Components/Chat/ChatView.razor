@@ -270,7 +270,7 @@
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "HandleStateChanged failed");
+                Logger.LogError(ex, "HandleStateChanged 실패");
             }
         });
     }
@@ -372,7 +372,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to rebase worktree");
+            Logger.LogError(ex, "워크트리 리베이스 실패");
         }
         finally
         {
@@ -531,7 +531,7 @@
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Unhandled exception in SendAsync for session {SessionId}", sessionId);
+                Logger.LogError(ex, "SendAsync에서 세션 {SessionId}의 처리되지 않은 예외", sessionId);
             }
             finally
             {
@@ -644,7 +644,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogDebug(ex, "Failed to send notification for session {SessionId}", session.Id);
+            Logger.LogDebug(ex, "세션 {SessionId}에 알림 전송 실패", session.Id);
         }
     }
 

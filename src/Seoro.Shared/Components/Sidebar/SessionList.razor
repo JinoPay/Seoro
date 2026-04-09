@@ -240,19 +240,19 @@
         DataService.OnDataChanged += OnDataServiceChanged;
         _branchChangedSub = EventBus.Subscribe<BranchChangedEvent>(evt =>
         {
-            Logger.LogWarning("[TRACE] SessionList received BranchChangedEvent: session={SessionId}, branch={Branch}", evt.SessionId, evt.BranchName);
+            Logger.LogWarning("[TRACE] SessionList가 BranchChangedEvent를 받음: session={SessionId}, branch={Branch}", evt.SessionId, evt.BranchName);
             Logger.LogWarning("[TRACE] ChatState.CurrentSession: id={Id}, title={Title}, branch={Branch}",
                 ChatState.CurrentSession?.Id, ChatState.CurrentSession?.Title, ChatState.CurrentSession?.Git.BranchName);
             InvokeAsync(() =>
             {
                 RebuildFlatRows();
-                Logger.LogWarning("[TRACE] SessionList: RebuildFlatRows done, calling StateHasChanged");
+                Logger.LogWarning("[TRACE] SessionList: RebuildFlatRows 완료, StateHasChanged 호출 중");
                 StateHasChanged();
             });
         });
         _titleChangedSub = EventBus.Subscribe<SessionTitleChangedEvent>(evt =>
         {
-            Logger.LogWarning("[TRACE] SessionList received SessionTitleChangedEvent: session={SessionId}, title={Title}", evt.SessionId, evt.Title);
+            Logger.LogWarning("[TRACE] SessionList가 SessionTitleChangedEvent를 받음: session={SessionId}, title={Title}", evt.SessionId, evt.Title);
             InvokeAsync(() =>
             {
                 RebuildFlatRows();
@@ -294,7 +294,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "SessionList initialization failed");
+            Logger.LogError(ex, "SessionList 초기화 실패");
         }
     }
 
