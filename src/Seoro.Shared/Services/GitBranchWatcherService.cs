@@ -195,14 +195,19 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
 
     private void DebouncedHeadUpdate(string fullPath)
     {
+        _logger.LogWarning("[TRACE] FileSystemWatcher triggered for HEAD: {Path}", fullPath);
         // Debounce: git operations can write HEAD multiple times in quick succession
         _debounceTimer?.Dispose();
         _debounceTimer = new Timer(_ =>
         {
             var session = _watchedSession;
             if (session == null)
+            {
+                _logger.LogWarning("[TRACE] DebouncedHeadUpdate: _watchedSession is NULL");
                 return;
+            }
 
+            _logger.LogWarning("[TRACE] DebouncedHeadUpdate: firing UpdateBranchFromHeadFile for session {SessionId}", session.Id);
             UpdateBranchFromHeadFile(fullPath, session);
         }, null, DebounceMs, Timeout.Infinite);
     }
@@ -231,13 +236,18 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
             else
                 return;
 
+            _logger.LogWarning("[TRACE] HEAD read: branch={Branch}, current={Current}, sessionId={SessionId}",
+                branch, session.Git.BranchName, session.Id);
+
             if (!string.IsNullOrEmpty(branch) && branch != session.Git.BranchName)
             {
+                var oldBranch = session.Git.BranchName;
                 session.Git.BranchName = branch;
                 ApplyDerivedTitle(session, branch);
                 _chatState.NotifyStateChanged();
                 _eventBus.Publish(new BranchChangedEvent(session.Id, branch));
-                _logger.LogDebug("Branch changed to {Branch} for session {SessionId}", branch, session.Id);
+                _logger.LogWarning("[TRACE] Branch CHANGED: {Old} -> {New}, title={Title}, titleLocked={Locked}, sessionId={SessionId}",
+                    oldBranch, branch, session.Title, session.TitleLocked, session.Id);
             }
         }
         catch (IOException)

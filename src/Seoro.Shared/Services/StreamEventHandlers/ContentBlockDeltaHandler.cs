@@ -1,8 +1,9 @@
 using Seoro.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Seoro.Shared.Services.StreamEventHandlers;
 
-public class ContentBlockDeltaHandler(IChatState chatState) : IStreamEventHandler
+public class ContentBlockDeltaHandler(IChatState chatState, IChatEventBus eventBus, ILogger<ContentBlockDeltaHandler> logger) : IStreamEventHandler
 {
     public string EventType => "content_block_delta";
 
@@ -43,7 +44,7 @@ public class ContentBlockDeltaHandler(IChatState chatState) : IStreamEventHandle
     /// 누적된 메시지 텍스트에서 타이틀 마커를 감지하여 즉시 세션 타이틀에 반영.
     /// 마커 제거(strip)는 스트리밍 종료 후 FinalizeAsync에서 처리.
     /// </summary>
-    private static void TryExtractTitleMarker(StreamProcessingContext ctx, IChatState chatState)
+    private void TryExtractTitleMarker(StreamProcessingContext ctx, IChatState chatState)
     {
         var text = ctx.AssistantMessage.Text;
         if (string.IsNullOrEmpty(text))
@@ -65,9 +66,11 @@ public class ContentBlockDeltaHandler(IChatState chatState) : IStreamEventHandle
         if (title.Length > 30)
             title = title[..30];
 
+        logger.LogWarning("[TRACE] TitleMarker detected: title={Title}, sessionId={SessionId}", title, ctx.Session.Id);
         ctx.Session.Title = title;
         ctx.Session.TitleLocked = true;
         chatState.Tabs.UpdateChatTabTitle(title);
-        // AppendText → SetPhase 경로에서 NotifyStateChanged가 이미 호출됨
+        eventBus.Publish(new SessionTitleChangedEvent(ctx.Session.Id, title));
+        logger.LogWarning("[TRACE] SessionTitleChangedEvent published for session {SessionId}", ctx.Session.Id);
     }
 }

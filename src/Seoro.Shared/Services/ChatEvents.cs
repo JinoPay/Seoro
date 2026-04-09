@@ -40,3 +40,5 @@ public sealed record MergeRequestedEvent(ChatInputMessage Input) : ChatEvent;
 public sealed record WindowCloseRequestedEvent : ChatEvent;
 
 public sealed record BranchChangedEvent(string SessionId, string BranchName) : ChatEvent;
+
+public sealed record SessionTitleChangedEvent(string SessionId, string Title) : ChatEvent;

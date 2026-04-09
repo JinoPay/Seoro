@@ -1,8 +1,9 @@
 using Seoro.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Seoro.Shared.Services.StreamEventHandlers;
 
-public class ContentBlockStartHandler(IChatState chatState, IGitBranchWatcherService branchWatcher)
+public class ContentBlockStartHandler(IChatState chatState, IGitBranchWatcherService branchWatcher, ILogger<ContentBlockStartHandler> logger)
     : IStreamEventHandler
 {
     public string EventType => "content_block_start";
@@ -54,11 +55,15 @@ public class ContentBlockStartHandler(IChatState chatState, IGitBranchWatcherSer
                         // Refresh branch from HEAD file after Bash tool completes
                         // Delay slightly to let git finish writing HEAD file
                         if (matchingTool.Name is "Bash" or "execute_bash")
+                        {
+                            logger.LogWarning("[TRACE] Bash tool completed, scheduling RefreshBranchFromHeadFile in 150ms for session {SessionId}", ctx.Session.Id);
                             _ = Task.Run(async () =>
                             {
                                 await Task.Delay(150);
+                                logger.LogWarning("[TRACE] RefreshBranchFromHeadFile firing now for session {SessionId}", ctx.Session.Id);
                                 branchWatcher.RefreshBranchFromHeadFile(ctx.Session);
                             });
+                        }
                     }
                 }
 

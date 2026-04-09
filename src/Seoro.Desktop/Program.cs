@@ -142,7 +142,7 @@ public static class Program
     private static void RunApp(string[] args)
     {
         var appBuilder = PhotinoBlazorAppBuilder.CreateDefault(args);
-
+        
         // Logging
         appBuilder.Services.AddLogging(lb =>
         {
@@ -253,6 +253,7 @@ public static class Program
 
         // Window configuration
         app.MainWindow
+            .SetLogVerbosity(0)
             .SetTitle("Seoro")
             .SetIconFile(GetIconPath())
             .SetSize(1400, 900)

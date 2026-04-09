@@ -151,6 +151,7 @@
     private string? _filterText;
     private DotNetObjectReference<SessionList>? _dotNetRef;
     private IDisposable? _branchChangedSub;
+    private IDisposable? _titleChangedSub;
     private List<SidebarRow> _flatRows = new();
     private List<(Session Session, Workspace Workspace)> _visibleSessions = new();
     private List<IdeInfo> _availableIdes = [];
@@ -211,11 +212,17 @@
 
                 if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
                 {
+                    var currentId = ChatState.CurrentSession?.Id;
                     foreach (var session in SessionListDataService.FilterSessions(sessions, _filterText))
                     {
+                        // Use the live session instance for the active session —
+                        // the cache entry is a stale clone from the last disk save
+                        var liveSession = (currentId == session.Id && ChatState.CurrentSession != null)
+                            ? ChatState.CurrentSession
+                            : session;
                         rows.Add(new SidebarRow(SidebarRowKind.Session,
-                            Session: session, Workspace: ws, SessionIndex: sessionIndex));
-                        visibleSessions.Add((session, ws));
+                            Session: liveSession, Workspace: ws, SessionIndex: sessionIndex));
+                        visibleSessions.Add((liveSession, ws));
                         sessionIndex++;
                     }
                 }
@@ -231,12 +238,27 @@
         ChatState.OnChange += OnStateChanged;
         ChatState.OnRequestCreateWorkspace += HandleCreateWorkspaceRequest;
         DataService.OnDataChanged += OnDataServiceChanged;
-        _branchChangedSub = EventBus.Subscribe<BranchChangedEvent>(_ =>
+        _branchChangedSub = EventBus.Subscribe<BranchChangedEvent>(evt =>
+        {
+            Logger.LogWarning("[TRACE] SessionList received BranchChangedEvent: session={SessionId}, branch={Branch}", evt.SessionId, evt.BranchName);
+            Logger.LogWarning("[TRACE] ChatState.CurrentSession: id={Id}, title={Title}, branch={Branch}",
+                ChatState.CurrentSession?.Id, ChatState.CurrentSession?.Title, ChatState.CurrentSession?.Git.BranchName);
+            InvokeAsync(() =>
+            {
+                RebuildFlatRows();
+                Logger.LogWarning("[TRACE] SessionList: RebuildFlatRows done, calling StateHasChanged");
+                StateHasChanged();
+            });
+        });
+        _titleChangedSub = EventBus.Subscribe<SessionTitleChangedEvent>(evt =>
+        {
+            Logger.LogWarning("[TRACE] SessionList received SessionTitleChangedEvent: session={SessionId}, title={Title}", evt.SessionId, evt.Title);
             InvokeAsync(() =>
             {
                 RebuildFlatRows();
                 StateHasChanged();
-            }));
+            });
+        });
 
         try
         {
@@ -590,6 +612,7 @@
         ChatState.OnRequestCreateWorkspace -= HandleCreateWorkspaceRequest;
         DataService.OnDataChanged -= OnDataServiceChanged;
         _branchChangedSub?.Dispose();
+        _titleChangedSub?.Dispose();
         _ = JS.InvokeVoidAsync("unregisterSessionShortcuts");
         _ = JS.InvokeVoidAsync("unregisterCtrlWatcher");
         _dotNetRef?.Dispose();

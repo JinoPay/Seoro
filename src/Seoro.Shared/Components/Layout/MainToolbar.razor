@@ -110,6 +110,7 @@
     private IDisposable? _syncStopSub;
     private IDisposable? _syncToggleSub;
     private IDisposable? _branchChangedSub;
+    private IDisposable? _titleChangedSub;
     private string? _prevTitle;
     private bool _titleChanged;
 
@@ -145,7 +146,27 @@
             if (ShowSyncButton && !_syncBusy && !IsSyncBlockedByOther)
                 await ToggleSync();
         }));
-        _branchChangedSub = EventBus.Subscribe<BranchChangedEvent>(_ => InvokeAsync(StateHasChanged));
+        _branchChangedSub = EventBus.Subscribe<BranchChangedEvent>(evt =>
+        {
+            System.Diagnostics.Debug.WriteLine($"[TRACE] MainToolbar received BranchChangedEvent: {evt.BranchName}");
+            InvokeAsync(() =>
+            {
+                var newTitle = ChatState.CurrentSession?.Title;
+                System.Diagnostics.Debug.WriteLine($"[TRACE] MainToolbar render: prevTitle={_prevTitle}, newTitle={newTitle}, branch={ChatState.CurrentSession?.Git.BranchName}");
+                if (_prevTitle != null && _prevTitle != newTitle)
+                    _titleChanged = true;
+                _prevTitle = newTitle;
+                StateHasChanged();
+            });
+        });
+        _titleChangedSub = EventBus.Subscribe<SessionTitleChangedEvent>(_ => InvokeAsync(() =>
+        {
+            var newTitle = ChatState.CurrentSession?.Title;
+            if (_prevTitle != null && _prevTitle != newTitle)
+                _titleChanged = true;
+            _prevTitle = newTitle;
+            StateHasChanged();
+        }));
         _availableIdes = await Launcher.GetAvailableIdesAsync();
     }
 
@@ -234,6 +255,7 @@
         _syncStopSub?.Dispose();
         _syncToggleSub?.Dispose();
         _branchChangedSub?.Dispose();
+        _titleChangedSub?.Dispose();
     }
 
 }
