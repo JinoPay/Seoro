@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.17.7",
+    "date": "2026-04-09",
+    "changes": [
+      { "type": "fix", "description": "릴리즈 빌드에서 CodeMirror JS 번들 누락 수정" },
+      { "type": "fix", "description": "CI 워크플로우에 Node.js 설정 추가" }
+    ]
+  },
+  {
     "version": "1.17.6",
     "date": "2026-04-09",
     "changes": [

@@ -21,6 +21,14 @@
     <Exec Command="npm ci &amp;&amp; node esbuild.mjs" WorkingDirectory="wwwroot/js" />
   </Target>
 
+  <!-- Ensure generated CodeMirror bundle is included in publish output -->
+  <Target Name="IncludeCodemirrorInPublish" DependsOnTargets="BuildCodemirror"
+          BeforeTargets="AssignTargetPaths;ResolveCurrentProjectStaticWebAssets">
+    <ItemGroup Condition="Exists('wwwroot/lib/codemirror/codemirror-interop.js')">
+      <Content Include="wwwroot/lib/codemirror/**" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <EmbeddedResource Include="../../changelog.json" LogicalName="changelog.json" />
   </ItemGroup>
