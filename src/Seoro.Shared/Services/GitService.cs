@@ -458,6 +458,11 @@ public class GitService(
                 var slashIdx = branch.IndexOf('/');
                 if (slashIdx <= 0) continue;
 
+                // Skip seoro/ worktree branches (e.g. origin/seoro/20260409-132932)
+                var branchName = branch[(slashIdx + 1)..];
+                if (branchName.StartsWith(SeoroConstants.BranchPrefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 var remoteName = branch[..slashIdx];
                 if (!groups.ContainsKey(remoteName))
                     groups[remoteName] = [];
@@ -471,7 +476,8 @@ public class GitService(
             localBranches = localResult.Output
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries)
                 .Select(b => b.Trim())
-                .Where(b => !string.IsNullOrEmpty(b))
+                .Where(b => !string.IsNullOrEmpty(b) &&
+                            !b.StartsWith(SeoroConstants.BranchPrefix, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
         // Build ordered result: origin first, then other remotes alphabetically, then local
