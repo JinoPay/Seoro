@@ -232,7 +232,11 @@
         ChatState.OnRequestCreateWorkspace += HandleCreateWorkspaceRequest;
         DataService.OnDataChanged += OnDataServiceChanged;
         _branchChangedSub = EventBus.Subscribe<BranchChangedEvent>(_ =>
-            InvokeAsync(StateHasChanged));
+            InvokeAsync(() =>
+            {
+                RebuildFlatRows();
+                StateHasChanged();
+            }));
 
         try
         {
@@ -518,8 +522,10 @@
                 && completedHash == _lastCompletedHash)
                 return;
 
-            // If streaming state changed, rebuild flat rows to update collapsed indicators
-            if (hasStreaming != _lastHasStreaming || streamingHash != _lastStreamingHash)
+            // Rebuild flat rows when streaming state or session title/branch changes
+            // Forces Virtualize to re-render items with updated data
+            if (hasStreaming != _lastHasStreaming || streamingHash != _lastStreamingHash
+                || sessionTitleHash != _lastSessionTitleHash)
             {
                 RebuildFlatRows();
             }

@@ -31,12 +31,12 @@
                 @if (!string.IsNullOrEmpty(Session.Git.BranchName))
                 {
                     <span class="tree-session-branch">
-                        <span class="local-badge">로컬</span> @Session.Git.BranchName
+                        <span class="local-badge" title="로컬 디렉터리">L</span> @Session.Git.BranchName
                     </span>
                 }
                 else
                 {
-                    <span class="tree-session-branch"><span class="local-badge">로컬</span></span>
+                    <span class="tree-session-branch"><span class="local-badge" title="로컬 디렉터리">L</span></span>
                 }
             }
             else if (!string.IsNullOrEmpty(Session.Git.BranchName))
