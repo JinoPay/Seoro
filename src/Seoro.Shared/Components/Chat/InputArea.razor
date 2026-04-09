@@ -87,6 +87,7 @@
 
     // Parameter tracking to prevent unnecessary re-renders (cursor jumping fix)
     private bool _prevIsStreaming;
+    private bool _lastDropDisabled;
     private bool _prevDisabled;
     private string _prevPermissionMode = "bypassAll";
     private string _prevModel = string.Empty;
@@ -258,6 +259,14 @@
             _dotNetRef = DotNetObjectReference.Create(this);
             await JSRuntime.InvokeVoidAsync("registerInputHandlers", "input-area", _dotNetRef);
             _handlersRegistered = true;
+            _lastDropDisabled = IsStreaming;
+            if (IsStreaming)
+                await JSRuntime.InvokeVoidAsync("setDropDisabled", "input-area", true);
+        }
+        else if (_handlersRegistered && _lastDropDisabled != IsStreaming)
+        {
+            _lastDropDisabled = IsStreaming;
+            await JSRuntime.InvokeVoidAsync("setDropDisabled", "input-area", IsStreaming);
         }
     }
 
@@ -277,6 +286,7 @@
     [JSInvokable]
     public void OnFileDropped(string fileName, string contentType, string base64Data)
     {
+        if (IsStreaming) return;
         AddPendingAttachmentFromBase64(fileName, contentType, base64Data);
     }
 

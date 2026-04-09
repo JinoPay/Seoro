@@ -340,16 +340,23 @@
 
             // Drop handlers on the container itself
             container._dragCounter = 0;
+            container._dropDisabled = false;
             container._dragEnterHandler = function(e) {
                 e.preventDefault();
+                if (container._dropDisabled) return;
                 container._dragCounter++;
                 container.classList.add('drop-active');
             };
             container._dragOverHandler = function(e) {
                 e.preventDefault();
+                if (container._dropDisabled) {
+                    e.dataTransfer.dropEffect = 'none';
+                    return;
+                }
                 e.dataTransfer.dropEffect = 'copy';
             };
             container._dragLeaveHandler = function(e) {
+                if (container._dropDisabled) return;
                 container._dragCounter--;
                 if (container._dragCounter <= 0) {
                     container._dragCounter = 0;
@@ -360,6 +367,7 @@
                 e.preventDefault();
                 container._dragCounter = 0;
                 container.classList.remove('drop-active');
+                if (container._dropDisabled) return;
                 var files = e.dataTransfer?.files;
                 if (!files || files.length === 0) return;
                 for (var i = 0; i < files.length; i++) {
@@ -400,6 +408,16 @@
             if (container._dragOverHandler) container.removeEventListener('dragover', container._dragOverHandler);
             if (container._dragLeaveHandler) container.removeEventListener('dragleave', container._dragLeaveHandler);
             if (container._dropHandler) container.removeEventListener('drop', container._dropHandler);
+        };
+
+        window.setDropDisabled = function(elementId, disabled) {
+            var container = document.getElementById(elementId);
+            if (!container) return;
+            container._dropDisabled = !!disabled;
+            if (disabled) {
+                container._dragCounter = 0;
+                container.classList.remove('drop-active');
+            }
         };
 
         window.clearInputArea = function(elementId) {

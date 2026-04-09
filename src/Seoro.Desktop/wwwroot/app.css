@@ -1423,39 +1423,39 @@ html *::after {
 .tok-invalid { color: #ff5647; }
 
 /* ===== CodeMirror Syntax Token Colors (Light — Rider Light) ===== */
-[data-theme="light"] .tok-keyword { color: #0033B3; }
-[data-theme="light"] .tok-string, [data-theme="light"] .tok-string2 { color: #067D17; }
-[data-theme="light"] .tok-comment { color: #8C8C8C; font-style: italic; }
-[data-theme="light"] .tok-number { color: #1750EB; }
-[data-theme="light"] .tok-typeName { color: #000000; }
-[data-theme="light"] .tok-function { color: #00627A; }
-[data-theme="light"] .tok-variableName { color: #000000; }
-[data-theme="light"] .tok-variableName2 { color: #871094; }
-[data-theme="light"] .tok-operator { color: #000000; }
-[data-theme="light"] .tok-propertyName { color: #871094; }
-[data-theme="light"] .tok-punctuation { color: #000000; }
-[data-theme="light"] .tok-meta { color: #BBB529; }
-[data-theme="light"] .tok-tagName { color: #0033B3; }
-[data-theme="light"] .tok-attributeName { color: #174AD4; }
-[data-theme="light"] .tok-attributeValue { color: #067D17; }
-[data-theme="light"] .tok-bool { color: #0033B3; }
-[data-theme="light"] .tok-definition { color: #00627A; }
-[data-theme="light"] .tok-className { color: #000000; }
-[data-theme="light"] .tok-labelName { color: #0033B3; }
-[data-theme="light"] .tok-namespace { color: #000000; }
-[data-theme="light"] .tok-macroName { color: #00627A; }
-[data-theme="light"] .tok-literal { color: #1750EB; }
-[data-theme="light"] .tok-separator { color: #0033B3; }
-[data-theme="light"] .tok-angleBracket { color: #000000; }
-[data-theme="light"] .tok-squareBracket { color: #000000; }
-[data-theme="light"] .tok-paren { color: #000000; }
-[data-theme="light"] .tok-brace { color: #000000; }
-[data-theme="light"] .tok-content { color: #000000; }
-[data-theme="light"] .tok-heading { color: #0033B3; font-weight: bold; }
-[data-theme="light"] .tok-link { color: #006DCF; text-decoration: underline; }
+[data-theme="light"] .tok-keyword { color: #0f54d6; }
+[data-theme="light"] .tok-string, [data-theme="light"] .tok-string2 { color: #8c6c41; }
+[data-theme="light"] .tok-comment { color: #248700; font-style: italic; }
+[data-theme="light"] .tok-number { color: #ab2f6b; }
+[data-theme="light"] .tok-typeName { color: #6b2fba; }
+[data-theme="light"] .tok-function { color: #00855f; }
+[data-theme="light"] .tok-variableName { color: #383838; }
+[data-theme="light"] .tok-variableName2 { color: #0093a1; }
+[data-theme="light"] .tok-operator { color: #383838; }
+[data-theme="light"] .tok-propertyName { color: #0093a1; }
+[data-theme="light"] .tok-punctuation { color: #383838; }
+[data-theme="light"] .tok-meta { color: #6b2fba; }
+[data-theme="light"] .tok-tagName { color: #6b2fba; }
+[data-theme="light"] .tok-attributeName { color: #248700; }
+[data-theme="light"] .tok-attributeValue { color: #8c6c41; }
+[data-theme="light"] .tok-bool { color: #0f54d6; }
+[data-theme="light"] .tok-definition { color: #00855f; }
+[data-theme="light"] .tok-className { color: #6b2fba; }
+[data-theme="light"] .tok-labelName { color: #000000; font-weight: bold; }
+[data-theme="light"] .tok-namespace { color: #6b2fba; }
+[data-theme="light"] .tok-macroName { color: #00855f; }
+[data-theme="light"] .tok-literal { color: #ab2f6b; }
+[data-theme="light"] .tok-separator { color: #383838; }
+[data-theme="light"] .tok-angleBracket { color: #383838; }
+[data-theme="light"] .tok-squareBracket { color: #383838; }
+[data-theme="light"] .tok-paren { color: #383838; }
+[data-theme="light"] .tok-brace { color: #383838; }
+[data-theme="light"] .tok-content { color: #202020; }
+[data-theme="light"] .tok-heading { color: #0f54d6; font-weight: bold; }
+[data-theme="light"] .tok-link { color: #0f54d6; text-decoration: underline; }
 [data-theme="light"] .tok-emphasis { font-style: italic; }
 [data-theme="light"] .tok-strong { font-weight: bold; }
-[data-theme="light"] .tok-invalid { color: #FF0000; }
+[data-theme="light"] .tok-invalid { color: #ff0000; }
 
 /* ===== Markdown File View ===== */
 .filecontent-markdown {

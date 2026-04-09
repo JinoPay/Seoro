@@ -118,7 +118,7 @@ const baseThemeDark = EditorView.theme({
     backgroundColor: 'transparent',
     color: '#d0d0d0',
     fontSize: '13px',
-    fontFamily: 'var(--font-mono)',
+    fontFamily: "'JetBrains Mono', var(--font-mono)",
     fontWeight: '500',
   },
   '.cm-content': {
@@ -134,7 +134,7 @@ const baseThemeDark = EditorView.theme({
   '.cm-lineNumbers .cm-gutterElement': {
     padding: '0 8px 0 4px',
     minWidth: '32px',
-    fontSize: '12px',
+    fontSize: '13px',
   },
   '.cm-activeLine': {
     backgroundColor: 'transparent',
@@ -153,25 +153,25 @@ const baseThemeDark = EditorView.theme({
 const baseThemeLight = EditorView.theme({
   '&': {
     backgroundColor: 'transparent',
-    color: '#000000',
+    color: '#202020',
     fontSize: '13px',
-    fontFamily: 'var(--font-mono)',
+    fontFamily: "'JetBrains Mono', var(--font-mono)",
     fontWeight: '500',
   },
   '.cm-content': {
-    caretColor: '#000000',
+    caretColor: '#202020',
     padding: '8px 0',
   },
   '.cm-gutters': {
     backgroundColor: 'transparent',
-    color: 'var(--text-tertiary, #8c959f)',
+    color: '#888888',
     border: 'none',
     minWidth: '40px',
   },
   '.cm-lineNumbers .cm-gutterElement': {
     padding: '0 8px 0 4px',
     minWidth: '32px',
-    fontSize: '12px',
+    fontSize: '13px',
   },
   '.cm-activeLine': {
     backgroundColor: 'transparent',
