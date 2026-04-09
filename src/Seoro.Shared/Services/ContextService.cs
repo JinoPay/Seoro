@@ -55,7 +55,7 @@ public class ContextService(ILogger<ContextService> logger) : IContextService
         Directory.CreateDirectory(destContext);
 
         await CopyDirectoryAsync(sourceContext, destContext);
-        logger.LogInformation("Context archived from {WorktreePath} to {ArchivePath}", worktreePath, archivePath);
+        logger.LogInformation("컨텍스트가 {WorktreePath}에서 {ArchivePath}로 아카이브됨", worktreePath, archivePath);
     }
 
     public Task DeletePlanAsync(string worktreePath, string planName)
@@ -65,7 +65,7 @@ public class ContextService(ILogger<ContextService> logger) : IContextService
         if (File.Exists(path))
         {
             File.Delete(path);
-            logger.LogDebug("Plan deleted: {PlanName}", planName);
+            logger.LogDebug("계획 삭제됨: {PlanName}", planName);
         }
 
         return Task.CompletedTask;
@@ -109,7 +109,7 @@ public class ContextService(ILogger<ContextService> logger) : IContextService
         await EnsureContextDirectoryAsync(worktreePath);
         var path = Path.Combine(worktreePath, ContextDir, NotesFile);
         await AtomicFileWriter.WriteAsync(path, content);
-        logger.LogDebug("Notes saved for {WorktreePath}", worktreePath);
+        logger.LogDebug("노트가 {WorktreePath}에 저장됨", worktreePath);
     }
 
     public async Task SavePlanAsync(string worktreePath, string planName, string content)
@@ -125,7 +125,7 @@ public class ContextService(ILogger<ContextService> logger) : IContextService
         var fileName = planName.EndsWith(".md") ? planName : $"{planName}.md";
         var path = Path.Combine(plansPath, fileName);
         await AtomicFileWriter.WriteAsync(path, content);
-        logger.LogDebug("Plan saved: {PlanName} in {WorktreePath}", planName, worktreePath);
+        logger.LogDebug("계획 저장됨: {PlanName} in {WorktreePath}", planName, worktreePath);
     }
 
     public async Task SaveTodosAsync(string worktreePath, string content)
@@ -136,7 +136,7 @@ public class ContextService(ILogger<ContextService> logger) : IContextService
         await EnsureContextDirectoryAsync(worktreePath);
         var path = Path.Combine(worktreePath, ContextDir, TodosFile);
         await AtomicFileWriter.WriteAsync(path, content);
-        logger.LogDebug("Todos saved for {WorktreePath}", worktreePath);
+        logger.LogDebug("할 일이 {WorktreePath}에 저장됨", worktreePath);
     }
 
     public async Task<ContextInfo> LoadContextAsync(string worktreePath)

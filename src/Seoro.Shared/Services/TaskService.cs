@@ -116,7 +116,7 @@ public class TaskService(ILogger<TaskService> logger) : ITaskService
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Skipping corrupted task file: {File}", file);
+                logger.LogWarning(ex, "손상된 작업 파일 건너뜀: {File}", file);
             }
 
         return tasks.OrderBy(t => t.CreatedAt).ToList();

@@ -161,7 +161,7 @@ public class StatsCacheService(ILogger<StatsCacheService> logger) : IStatsCacheS
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to compute live activity stats");
+                logger.LogWarning(ex, "라이브 활동 통계 계산 실패");
                 return null;
             }
 
@@ -444,7 +444,7 @@ public class StatsCacheService(ILogger<StatsCacheService> logger) : IStatsCacheS
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to read stats session file: {File}", file);
+                logger.LogWarning(ex, "통계 세션 파일 읽기 실패: {File}", file);
             }
 
         // Safety: don't overwrite existing data with empty results
@@ -469,7 +469,7 @@ public class StatsCacheService(ILogger<StatsCacheService> logger) : IStatsCacheS
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to write stats cache to disk");
+            logger.LogWarning(ex, "통계 캐시를 디스크에 쓰기 실패");
         }
     }
 
@@ -485,7 +485,7 @@ public class StatsCacheService(ILogger<StatsCacheService> logger) : IStatsCacheS
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to read stats cache file");
+            logger.LogWarning(ex, "통계 캐시 파일 읽기 실패");
             return null;
         }
     }

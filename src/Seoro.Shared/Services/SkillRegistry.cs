@@ -201,8 +201,8 @@ public class SkillRegistry : ISkillRegistry
             _skills.AddRange(projectSkills);
         }
 
-        _logger.LogInformation("Loaded {Count} custom skills (project: {ProjectPath})",
-            userSkills.Count + projectSkills.Count, projectPath ?? "(none)");
+        _logger.LogInformation("사용자 정의 스킬 {Count}개 로드됨 (프로젝트: {ProjectPath})",
+            userSkills.Count + projectSkills.Count, projectPath ?? "(없음)");
     }
 
     public async Task SaveCommandAsync(SkillDefinition command)

@@ -45,11 +45,11 @@ public class ClaudeSettingsService(ILogger<ClaudeSettingsService> logger) : ICla
         {
             var json = JsonSerializer.Serialize(settings, JsonOptions);
             await AtomicFileWriter.WriteAsync(filePath, json);
-            logger.LogDebug("Wrote Claude settings to {Path}", filePath);
+            logger.LogDebug("Claude 설정을 {Path}에 작성함", filePath);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to write Claude settings to {Path}", filePath);
+            logger.LogError(ex, "Claude 설정을 {Path}에 쓰기 실패", filePath);
             throw;
         }
         finally
@@ -75,7 +75,7 @@ public class ClaudeSettingsService(ILogger<ClaudeSettingsService> logger) : ICla
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to read Claude settings from {Path}", filePath);
+            logger.LogWarning(ex, "Claude 설정을 {Path}에서 읽기 실패", filePath);
             return new ClaudeSettings();
         }
         finally

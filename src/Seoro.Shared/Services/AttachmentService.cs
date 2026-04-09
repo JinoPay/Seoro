@@ -63,12 +63,12 @@ public class AttachmentService(ILogger<AttachmentService> logger) : IAttachmentS
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to copy attachment: {SourcePath}", sourceFilePath);
+            logger.LogError(ex, "첨부파일 복사 실패: {SourcePath}", sourceFilePath);
             throw;
         }
 
         var fileInfo = new FileInfo(destPath);
-        logger.LogDebug("Attachment copied: {OriginalName} -> {StoredName} ({SizeBytes} bytes)", originalName,
+        logger.LogDebug("첨부파일 복사됨: {OriginalName} -> {StoredName} ({SizeBytes} 바이트)", originalName,
             storedName, fileInfo.Length);
         return new FileAttachment
         {
@@ -113,11 +113,11 @@ public class AttachmentService(ILogger<AttachmentService> logger) : IAttachmentS
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to save attachment bytes: {FileName}", fileName);
+            logger.LogError(ex, "첨부파일 저장 실패: {FileName}", fileName);
             throw;
         }
 
-        logger.LogDebug("Attachment saved: {FileName} ({Size} bytes)", fileName, data.Length);
+        logger.LogDebug("첨부파일 저장됨: {FileName} ({Size} 바이트)", fileName, data.Length);
         return new FileAttachment
         {
             OriginalFileName = fileName,

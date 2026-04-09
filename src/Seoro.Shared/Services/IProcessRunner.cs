@@ -63,7 +63,7 @@ public sealed class StreamingProcess : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _logger?.LogDebug(ex, "StreamingProcess: failed to kill process (likely already exited)");
+            _logger?.LogDebug(ex, "StreamingProcess: 프로세스 종료 실패 (이미 종료됨)");
         }
 
         // Drain stderr to avoid deadlock
@@ -73,7 +73,7 @@ public sealed class StreamingProcess : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "StreamingProcess: stderr reading failed — error details may have been lost");
+            _logger?.LogWarning(ex, "StreamingProcess: stderr 읽기 실패 — 오류 세부 정보가 손실될 수 있음");
         }
 
         _process.Dispose();

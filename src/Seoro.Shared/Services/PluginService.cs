@@ -70,11 +70,11 @@ public class PluginService(
             try
             {
                 Directory.CreateDirectory(PluginsDirectory);
-                logger.LogInformation("Created plugins directory at {Path}", PluginsDirectory);
+                logger.LogInformation("플러그인 디렉터리가 {Path}에 생성됨", PluginsDirectory);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to create plugins directory at {Path}", PluginsDirectory);
+                logger.LogWarning(ex, "플러그인 디렉터리 생성 실패 {Path}", PluginsDirectory);
             }
     }
 
@@ -91,7 +91,7 @@ public class PluginService(
             settings.DisabledPlugins.Add(pluginId);
 
         await settingsService.SaveAsync(settings);
-        logger.LogInformation("Plugin '{PluginId}' {State}", pluginId, enabled ? "enabled" : "disabled");
+        logger.LogInformation("플러그인 '{PluginId}'이 {State}됨", pluginId, enabled ? "활성화" : "비활성화");
     }
 
     public async Task UnloadPluginAsync(string pluginId)
@@ -104,7 +104,7 @@ public class PluginService(
     {
         if (_executionEngine == null)
         {
-            logger.LogWarning("Plugin execution engine not available");
+            logger.LogWarning("플러그인 실행 엔진을 사용할 수 없습니다");
             return false;
         }
 
@@ -123,7 +123,7 @@ public class PluginService(
         try
         {
             Directory.Delete(pluginDir, true);
-            logger.LogInformation("Removed plugin '{PluginId}'", pluginId);
+            logger.LogInformation("플러그인 '{PluginId}' 제거됨", pluginId);
 
             // Clean up settings
             var settings = appSettings.CurrentValue;
@@ -134,7 +134,7 @@ public class PluginService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to remove plugin '{PluginId}'", pluginId);
+            logger.LogError(ex, "플러그인 '{PluginId}' 제거 실패", pluginId);
             return false;
         }
     }
@@ -162,7 +162,7 @@ public class PluginService(
 
         if (errors.Count > 0)
         {
-            logger.LogWarning("Plugin '{PluginId}' validation failed: {Errors}", pluginId, string.Join("; ", errors));
+            logger.LogWarning("플러그인 '{PluginId}' 유효성 검사 실패: {Errors}", pluginId, string.Join("; ", errors));
             return false;
         }
 
@@ -194,7 +194,7 @@ public class PluginService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to enumerate plugins directory");
+            logger.LogWarning(ex, "플러그인 디렉터리 열거 실패");
         }
 
         return plugins;
@@ -285,7 +285,7 @@ public class PluginService(
         {
             plugin.Status = PluginStatus.Error;
             plugin.Error = $"매니페스트 파싱 실패: {ex.Message}";
-            logger.LogDebug(ex, "Failed to read plugin manifest at {Path}", manifestPath);
+            logger.LogDebug(ex, "플러그인 매니페스트 읽기 실패 {Path}", manifestPath);
         }
 
         return plugin;

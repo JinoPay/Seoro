@@ -180,7 +180,7 @@ public class MemoryService : IMemoryService, IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Skipping corrupted memory file: {File}", file);
+                _logger.LogWarning(ex, "손상된 메모리 파일 건너뜀: {File}", file);
             }
 
         return entries.OrderByDescending(e => e.UpdatedAt).ToList();
@@ -206,7 +206,7 @@ public class MemoryService : IMemoryService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to initialize memory file watcher");
+            _logger.LogWarning(ex, "메모리 파일 감시자 초기화 실패");
         }
     }
 

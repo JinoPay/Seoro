@@ -48,12 +48,12 @@ public class McpService(
 
             config.McpServers[server.Name] = ToEntry(server);
             await WriteConfigAsync(configPath, config);
-            logger.LogInformation("MCP server '{Name}' added to scope '{Scope}'", server.Name, server.Scope);
+            logger.LogInformation("MCP 서버 '{Name}'이 스코프 '{Scope}'에 추가됨", server.Name, server.Scope);
             return McpOperationResult.Ok();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to add MCP server {Name}", server.Name);
+            logger.LogError(ex, "MCP 서버 {Name} 추가 실패", server.Name);
             return McpOperationResult.Fail(ex.Message);
         }
         finally
@@ -74,12 +74,12 @@ public class McpService(
 
             config.McpServers.Remove(name);
             await WriteConfigAsync(configPath, config);
-            logger.LogInformation("MCP server '{Name}' removed from scope '{Scope}'", name, scope);
+            logger.LogInformation("MCP 서버 '{Name}'이 스코프 '{Scope}'에서 제거됨", name, scope);
             return McpOperationResult.Ok();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to remove MCP server {Name}", name);
+            logger.LogError(ex, "MCP 서버 {Name} 제거 실패", name);
             return McpOperationResult.Fail(ex.Message);
         }
         finally
@@ -132,12 +132,12 @@ public class McpService(
                 await WriteConfigAsync(newConfigPath, newConfig);
             }
 
-            logger.LogInformation("MCP server '{OldName}' updated to '{Name}'", oldName, server.Name);
+            logger.LogInformation("MCP 서버 '{OldName}'이 '{Name}'으로 업데이트됨", oldName, server.Name);
             return McpOperationResult.Ok();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to update MCP server {OldName} -> {Name}", oldName, server.Name);
+            logger.LogError(ex, "MCP 서버 {OldName} -> {Name} 업데이트 실패", oldName, server.Name);
             return McpOperationResult.Fail(ex.Message);
         }
         finally
@@ -160,7 +160,7 @@ public class McpService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to list MCP servers");
+            logger.LogError(ex, "MCP 서버 목록 조회 실패");
         }
 
         return servers;
@@ -188,12 +188,12 @@ public class McpService(
         }
         catch (JsonException ex)
         {
-            logger.LogError(ex, "Failed to parse Claude Desktop config");
+            logger.LogError(ex, "Claude Desktop 설정 파싱 실패");
             return McpOperationResult.Fail($"설정 파일 파싱 실패: {ex.Message}");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to import from Claude Desktop");
+            logger.LogError(ex, "Claude Desktop에서 가져오기 실패");
             return McpOperationResult.Fail(ex.Message);
         }
     }
@@ -210,12 +210,12 @@ public class McpService(
         }
         catch (JsonException ex)
         {
-            logger.LogError(ex, "Failed to parse MCP JSON");
+            logger.LogError(ex, "MCP JSON 파싱 실패");
             return McpOperationResult.Fail($"JSON 파싱 실패: {ex.Message}");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to import MCP from JSON");
+            logger.LogError(ex, "JSON에서 MCP 가져오기 실패");
             return McpOperationResult.Fail(ex.Message);
         }
     }
@@ -301,7 +301,7 @@ public class McpService(
         }
         catch (JsonException ex)
         {
-            logger.LogWarning(ex, "Failed to parse MCP config at {Path}, starting fresh", configPath);
+            logger.LogWarning(ex, "MCP 설정 파싱 실패 {Path}, 새로 시작", configPath);
             return new McpConfigFile();
         }
     }
@@ -340,7 +340,7 @@ public class McpService(
         }
         catch (JsonException ex)
         {
-            logger.LogWarning(ex, "Failed to parse MCP config at {Path}", configPath);
+            logger.LogWarning(ex, "MCP 설정 파싱 실패 {Path}", configPath);
         }
     }
 
@@ -374,7 +374,7 @@ public class McpService(
             if (skipped.Count > 0)
                 message += $" {skipped.Count}개 건너뜀 (이미 존재): {string.Join(", ", skipped)}";
 
-            logger.LogInformation("MCP import: {Imported} added, {Skipped} skipped", imported, skipped.Count);
+            logger.LogInformation("MCP 가져오기: {Imported}개 추가됨, {Skipped}개 건너뜀", imported, skipped.Count);
             return imported == 0 && skipped.Count > 0
                 ? McpOperationResult.Fail($"모든 서버가 이미 존재합니다: {string.Join(", ", skipped)}")
                 : new McpOperationResult(true, message);
@@ -475,7 +475,7 @@ public class McpService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to list MCP servers for scope {Scope}", scope);
+            logger.LogError(ex, "스코프 {Scope}의 MCP 서버 목록 조회 실패", scope);
             return [];
         }
     }
@@ -509,12 +509,12 @@ public class McpService(
                 await claudeSettingsService.WriteAsync(settingsScope, settings, projectPath);
             }
 
-            logger.LogInformation("MCP server '{Name}' added to scope '{Scope}'", server.Name, scope);
+            logger.LogInformation("MCP 서버 '{Name}'이 스코프 '{Scope}'에 추가됨", server.Name, scope);
             return McpOperationResult.Ok();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to add MCP server {Name} to scope {Scope}", server.Name, scope);
+            logger.LogError(ex, "스코프 {Scope}에 MCP 서버 {Name} 추가 실패", server.Name, scope);
             return McpOperationResult.Fail(ex.Message);
         }
         finally
@@ -550,12 +550,12 @@ public class McpService(
                 await claudeSettingsService.WriteAsync(settingsScope, settings, projectPath);
             }
 
-            logger.LogInformation("MCP server '{Name}' removed from scope '{Scope}'", name, scope);
+            logger.LogInformation("MCP 서버 '{Name}'이 스코프 '{Scope}'에서 제거됨", name, scope);
             return McpOperationResult.Ok();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to remove MCP server {Name} from scope {Scope}", name, scope);
+            logger.LogError(ex, "스코프 {Scope}에서 MCP 서버 {Name} 제거 실패", name, scope);
             return McpOperationResult.Fail(ex.Message);
         }
         finally
@@ -599,12 +599,12 @@ public class McpService(
                 await claudeSettingsService.WriteAsync(settingsScope, settings, projectPath);
             }
 
-            logger.LogInformation("MCP server '{OldName}' updated to '{Name}' in scope '{Scope}'", oldName, server.Name, scope);
+            logger.LogInformation("MCP 서버 '{OldName}'이 스코프 '{Scope}'에서 '{Name}'으로 업데이트됨", oldName, server.Name, scope);
             return McpOperationResult.Ok();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to update MCP server {OldName} in scope {Scope}", oldName, scope);
+            logger.LogError(ex, "스코프 {Scope}에서 MCP 서버 {OldName} 업데이트 실패", oldName, scope);
             return McpOperationResult.Fail(ex.Message);
         }
         finally
@@ -646,7 +646,7 @@ public class McpService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to read cloud MCP cache at {Path}", cachePath);
+            logger.LogWarning(ex, "클라우드 MCP 캐시 읽기 실패 {Path}", cachePath);
             return [];
         }
     }
@@ -810,7 +810,7 @@ public class McpService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to read Claude Desktop config");
+            logger.LogWarning(ex, "Claude Desktop 설정 읽기 실패");
             return [];
         }
     }

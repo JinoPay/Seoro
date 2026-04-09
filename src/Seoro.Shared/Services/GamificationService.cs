@@ -102,7 +102,7 @@ public class GamificationService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Error computing dashboard stats");
+            logger.LogWarning(ex, "대시보드 통계 계산 오류");
         }
 
         _cachedStats = stats;

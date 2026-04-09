@@ -23,7 +23,7 @@ public partial class RulesService(ILogger<RulesService> logger) : IRulesService
         if (File.Exists(filePath))
         {
             File.Delete(filePath);
-            logger.LogDebug("Deleted rule file: {Path}", filePath);
+            logger.LogDebug("규칙 파일 삭제됨: {Path}", filePath);
         }
 
         return Task.CompletedTask;
@@ -36,7 +36,7 @@ public partial class RulesService(ILogger<RulesService> logger) : IRulesService
             Directory.CreateDirectory(dir);
 
         await AtomicFileWriter.WriteAsync(rule.FilePath, rule.Content);
-        logger.LogDebug("Saved rule file: {Path}", rule.FilePath);
+        logger.LogDebug("규칙 파일 저장됨: {Path}", rule.FilePath);
     }
 
     public Task<List<RuleFile>> ListAsync(ClaudeSettingsScope scope, string? projectPath = null)
@@ -64,7 +64,7 @@ public partial class RulesService(ILogger<RulesService> logger) : IRulesService
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to read rule file: {Path}", file);
+                logger.LogWarning(ex, "규칙 파일 읽기 실패: {Path}", file);
             }
 
         return Task.FromResult(rules);

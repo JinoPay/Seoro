@@ -44,7 +44,7 @@ public class ClaudeAccountService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to read accounts store, starting fresh");
+            logger.LogWarning(ex, "계정 저장소 읽기 실패, 새로 시작");
             _store = new ClaudeAccountStore();
         }
 
@@ -121,7 +121,7 @@ public class ClaudeAccountService(
             store.Accounts.Add(account);
             await SaveStoreAsync(store);
 
-            logger.LogInformation("Registered account {Email} as '{Profile}' ({Id})",
+            logger.LogInformation("계정 {Email}을 '{Profile}'로 등록됨 ({Id})",
                 email, profileName, account.Id);
 
             OnAccountsChanged?.Invoke();
@@ -149,7 +149,7 @@ public class ClaudeAccountService(
             await credentialService.DeleteBackupAsync(accountId);
             await SaveStoreAsync(store);
 
-            logger.LogInformation("Removed account {Id}", accountId);
+            logger.LogInformation("계정 {Id} 제거됨", accountId);
             OnAccountsChanged?.Invoke();
         }
         finally
@@ -183,7 +183,7 @@ public class ClaudeAccountService(
     {
         if (!CanSwitch())
         {
-            logger.LogWarning("Cannot switch accounts while a session is streaming");
+            logger.LogWarning("세션 스트리밍 중에는 계정을 전환할 수 없음");
             return false;
         }
 
@@ -194,7 +194,7 @@ public class ClaudeAccountService(
             var target = store.Accounts.FirstOrDefault(a => a.Id == targetAccountId);
             if (target == null)
             {
-                logger.LogWarning("Account {Id} not found", targetAccountId);
+                logger.LogWarning("계정 {Id}을 찾을 수 없음", targetAccountId);
                 return false;
             }
 
@@ -225,7 +225,7 @@ public class ClaudeAccountService(
             var backup = await credentialService.LoadBackupAsync(targetAccountId);
             if (backup == null)
             {
-                logger.LogError("Backup for account {Id} is missing or corrupt — aborting switch", targetAccountId);
+                logger.LogError("계정 {Id}의 백업이 누락되었거나 손상됨 - 전환 중단", targetAccountId);
                 return false;
             }
 
@@ -240,7 +240,7 @@ public class ClaudeAccountService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Failed to write credentials for {Id}, attempting rollback", targetAccountId);
+                logger.LogError(ex, "계정 {Id}의 자격증명 쓰기 실패, 롤백 시도", targetAccountId);
 
                 // ── Rollback ───────────────────────────────────────────────
                 try
@@ -252,7 +252,7 @@ public class ClaudeAccountService(
                 }
                 catch (Exception rbEx)
                 {
-                    logger.LogCritical(rbEx, "Rollback failed — credentials may be in inconsistent state");
+                    logger.LogCritical(rbEx, "롤백 실패 - 자격증명이 불일치 상태일 수 있음");
                 }
 
                 return false;
@@ -271,7 +271,7 @@ public class ClaudeAccountService(
 
             await SaveStoreAsync(store);
 
-            logger.LogInformation("Switched to account {Email} ({Id})", target.EmailAddress, targetAccountId);
+            logger.LogInformation("계정 {Email} ({Id})로 전환됨", target.EmailAddress, targetAccountId);
             OnAccountsChanged?.Invoke();
             return true;
         }
@@ -315,7 +315,7 @@ public class ClaudeAccountService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to fetch usage for account {Id}", accountId);
+            logger.LogWarning(ex, "계정 {Id}의 사용량 가져오기 실패", accountId);
             return null;
         }
     }
@@ -329,7 +329,7 @@ public class ClaudeAccountService(
         // 401 — try to refresh
         if (refreshToken == null) return (null, null, null);
 
-        logger.LogDebug("Access token expired for {Id}, attempting refresh", accountId);
+        logger.LogDebug("계정 {Id}의 접근 토큰 만료, 갱신 시도", accountId);
         var (newAccessToken, newRefreshToken) = await RefreshAccessTokenAsync(refreshToken);
         if (newAccessToken == null) return (null, null, null);
 
@@ -377,7 +377,7 @@ public class ClaudeAccountService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Token refresh failed");
+            logger.LogWarning(ex, "토큰 갱신 실패");
         }
 
         return (null, null);
@@ -419,7 +419,7 @@ public class ClaudeAccountService(
 
             if (!updated)
             {
-                logger.LogWarning("Could not locate accessToken field in credentials JSON for {Id}", accountId);
+                logger.LogWarning("계정 {Id}의 자격증명 JSON에서 accessToken 필드를 찾을 수 없음", accountId);
                 return;
             }
 
@@ -434,7 +434,7 @@ public class ClaudeAccountService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to persist refreshed token for {Id}", accountId);
+            logger.LogWarning(ex, "계정 {Id}의 갱신된 토큰 저장 실패", accountId);
         }
     }
 
@@ -544,7 +544,7 @@ public class ClaudeAccountService(
             var refreshToken = ExtractToken(credJson, "refreshToken", "refresh_token");
             if (refreshToken == null)
             {
-                logger.LogWarning("No refresh token found for account {Id}", accountId);
+                logger.LogWarning("계정 {Id}의 갱신 토큰을 찾을 수 없음", accountId);
                 return false;
             }
 
@@ -552,12 +552,12 @@ public class ClaudeAccountService(
             if (newAccessToken == null) return false;
 
             await UpdateStoredTokenAsync(accountId, account.IsActive, credJson, newAccessToken, newRefreshToken);
-            logger.LogInformation("Manually refreshed token for account {Id}", accountId);
+            logger.LogInformation("계정 {Id}의 토큰을 수동으로 갱신함", accountId);
             return true;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Manual token refresh failed for account {Id}", accountId);
+            logger.LogWarning(ex, "계정 {Id}의 수동 토큰 갱신 실패", accountId);
             return false;
         }
     }
@@ -595,7 +595,7 @@ public class ClaudeAccountService(
             await credentialService.ClearCredentialsAsync();
             await credentialService.ClearConfigOAuthAsync();
 
-            logger.LogInformation("Prepared for new login (backed up {Id})", active?.Id ?? "none");
+            logger.LogInformation("새 로그인 준비 완료 (백업: {Id})", active?.Id ?? "none");
             return active?.Id;
         }
         finally
@@ -612,7 +612,7 @@ public class ClaudeAccountService(
             var backup = await credentialService.LoadBackupAsync(accountId);
             if (backup == null)
             {
-                logger.LogWarning("No backup found for account {Id} — cannot restore", accountId);
+                logger.LogWarning("계정 {Id}의 백업을 찾을 수 없음 - 복원 불가", accountId);
                 return;
             }
 
@@ -633,12 +633,12 @@ public class ClaudeAccountService(
                 await SaveStoreAsync(store);
             }
 
-            logger.LogInformation("Restored account {Id} after cancel", accountId);
+            logger.LogInformation("취소 후 계정 {Id} 복원됨", accountId);
             OnAccountsChanged?.Invoke();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to restore account {Id} after cancel", accountId);
+            logger.LogError(ex, "취소 후 계정 {Id} 복원 실패", accountId);
         }
         finally
         {
@@ -680,12 +680,12 @@ public class ClaudeAccountService(
             store.ActiveAccountId = matched.Id;
 
             await SaveStoreAsync(store);
-            logger.LogInformation("Synced active account to {Email} ({Id})", matched.EmailAddress, matched.Id);
+            logger.LogInformation("활성 계정을 {Email} ({Id})로 동기화됨", matched.EmailAddress, matched.Id);
             OnAccountsChanged?.Invoke();
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "SyncActiveAccount failed — ignoring");
+            logger.LogWarning(ex, "SyncActiveAccount 실패 - 무시");
         }
         finally
         {

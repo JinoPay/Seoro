@@ -67,12 +67,12 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
                 ApplyDerivedTitle(session, branch);
                 _chatState.NotifyStateChanged();
                 _eventBus.Publish(new BranchChangedEvent(session.Id, branch));
-                _logger.LogDebug("Branch refreshed to {Branch} for session {SessionId}", branch, session.Id);
+                _logger.LogDebug("브랜치가 {Branch}로 새로고침됨 (세션 {SessionId})", branch, session.Id);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to refresh branch for session {SessionId}", session.Id);
+            _logger.LogWarning(ex, "세션 {SessionId}의 브랜치 새로고침 실패", session.Id);
         }
     }
 
@@ -140,11 +140,11 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
             _watcher.Created += OnHeadChanged;
             _watcher.Renamed += OnHeadRenamed;
 
-            _logger.LogDebug("Watching git HEAD at {GitDir} for session {SessionId}", gitDir, session.Id);
+            _logger.LogDebug("세션 {SessionId}의 git HEAD 감시 중 {GitDir}", gitDir, session.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to initialize git HEAD watcher for {GitDir}", gitDir);
+            _logger.LogWarning(ex, "git HEAD 감시자 초기화 실패 {GitDir}", gitDir);
         }
     }
 
@@ -195,7 +195,7 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
 
     private void DebouncedHeadUpdate(string fullPath)
     {
-        _logger.LogWarning("[TRACE] FileSystemWatcher triggered for HEAD: {Path}", fullPath);
+        _logger.LogWarning("[TRACE] FileSystemWatcher가 HEAD에 대해 작동됨: {Path}", fullPath);
         // Debounce: git operations can write HEAD multiple times in quick succession
         _debounceTimer?.Dispose();
         _debounceTimer = new Timer(_ =>
@@ -203,11 +203,11 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
             var session = _watchedSession;
             if (session == null)
             {
-                _logger.LogWarning("[TRACE] DebouncedHeadUpdate: _watchedSession is NULL");
+                _logger.LogWarning("[TRACE] DebouncedHeadUpdate: _watchedSession이 NULL입니다");
                 return;
             }
 
-            _logger.LogWarning("[TRACE] DebouncedHeadUpdate: firing UpdateBranchFromHeadFile for session {SessionId}", session.Id);
+            _logger.LogWarning("[TRACE] DebouncedHeadUpdate: 세션 {SessionId}에 대해 UpdateBranchFromHeadFile 실행 중", session.Id);
             UpdateBranchFromHeadFile(fullPath, session);
         }, null, DebounceMs, Timeout.Infinite);
     }
@@ -236,7 +236,7 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
             else
                 return;
 
-            _logger.LogWarning("[TRACE] HEAD read: branch={Branch}, current={Current}, sessionId={SessionId}",
+            _logger.LogWarning("[TRACE] HEAD 읽음: branch={Branch}, current={Current}, sessionId={SessionId}",
                 branch, session.Git.BranchName, session.Id);
 
             if (!string.IsNullOrEmpty(branch) && branch != session.Git.BranchName)
@@ -246,7 +246,7 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
                 ApplyDerivedTitle(session, branch);
                 _chatState.NotifyStateChanged();
                 _eventBus.Publish(new BranchChangedEvent(session.Id, branch));
-                _logger.LogWarning("[TRACE] Branch CHANGED: {Old} -> {New}, title={Title}, titleLocked={Locked}, sessionId={SessionId}",
+                _logger.LogWarning("[TRACE] 브랜치 변경됨: {Old} -> {New}, title={Title}, titleLocked={Locked}, sessionId={SessionId}",
                     oldBranch, branch, session.Title, session.TitleLocked, session.Id);
             }
         }
@@ -256,7 +256,7 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to read HEAD file at {HeadPath}", headPath);
+            _logger.LogWarning(ex, "HEAD 파일 읽기 실패 {HeadPath}", headPath);
         }
     }
 

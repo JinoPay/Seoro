@@ -59,7 +59,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                 }
                 catch (Exception ex)
                 {
-                    logger.LogDebug(ex, "Cannot access project directory: {Dir}", projectDir);
+                    logger.LogDebug(ex, "프로젝트 디렉토리에 액세스할 수 없음: {Dir}", projectDir);
                     continue;
                 }
 
@@ -433,7 +433,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Error loading session events: {Path}", filePath);
+                logger.LogWarning(ex, "세션 이벤트 로드 오류: {Path}", filePath);
             }
 
             return new SessionLoadResult
@@ -534,7 +534,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Error exporting session: {Path}", filePath);
+                logger.LogWarning(ex, "세션 내보내기 오류: {Path}", filePath);
             }
 
             md += $"\n---\n*{userCount} messages, {toolCount} tool calls*\n";
@@ -870,7 +870,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to write session index file");
+            logger.LogWarning(ex, "세션 인덱스 파일 쓰기 실패");
         }
     }
 

@@ -82,12 +82,12 @@ public class SkillFileStore(ILogger logger)
                 }
                 catch (Exception ex)
                 {
-                    logger.LogWarning(ex, "Failed to parse command file: {File}", file);
+                    logger.LogWarning(ex, "명령어 파일 파싱 실패: {File}", file);
                 }
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to scan command directory: {Dir}", directory);
+            logger.LogWarning(ex, "명령어 디렉터리 스캔 실패: {Dir}", directory);
         }
 
         return skills;

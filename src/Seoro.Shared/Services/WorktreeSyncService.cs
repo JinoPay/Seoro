@@ -49,7 +49,7 @@ public class WorktreeSyncService : IWorktreeSyncService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to restore during dispose");
+                _logger.LogError(ex, "dispose 중 복원 실패");
             }
 
         StopWatching();
@@ -76,7 +76,7 @@ public class WorktreeSyncService : IWorktreeSyncService
             if (!File.Exists(stateFile))
                 continue;
 
-            _logger.LogWarning("Found orphaned sync state at {Path}, recovering...", stateFile);
+            _logger.LogWarning("고아 상태의 동기화 상태를 발견함 {Path}, 복구 중...", stateFile);
             try
             {
                 var json = await File.ReadAllTextAsync(stateFile);
@@ -89,7 +89,7 @@ public class WorktreeSyncService : IWorktreeSyncService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to recover sync state from {Path}", stateFile);
+                _logger.LogError(ex, "동기화 상태 복구 실패 {Path}", stateFile);
                 // Best effort: delete the orphaned state
                 try
                 {
@@ -123,7 +123,7 @@ public class WorktreeSyncService : IWorktreeSyncService
         {
             if (_state != null)
             {
-                _logger.LogWarning("Sync already active for session {SessionId}", _state.SessionId);
+                _logger.LogWarning("세션 {SessionId}에서 동기화가 이미 활성화됨", _state.SessionId);
                 return false;
             }
 
@@ -131,14 +131,14 @@ public class WorktreeSyncService : IWorktreeSyncService
                 string.IsNullOrEmpty(session.Git.WorktreePath) ||
                 !Directory.Exists(session.Git.WorktreePath))
             {
-                _logger.LogWarning("Session {SessionId} is not in a valid state for sync", session.Id);
+                _logger.LogWarning("세션 {SessionId}이 동기화에 유효한 상태가 아님", session.Id);
                 return false;
             }
 
             var repoLocal = workspace.RepoLocalPath;
             if (string.IsNullOrEmpty(repoLocal) || !Directory.Exists(repoLocal))
             {
-                _logger.LogWarning("Workspace RepoLocalPath not found: {Path}", repoLocal);
+                _logger.LogWarning("워크스페이스 RepoLocalPath를 찾을 수 없음: {Path}", repoLocal);
                 return false;
             }
 
@@ -175,13 +175,13 @@ public class WorktreeSyncService : IWorktreeSyncService
             StartWatching(state);
 
             _state = state;
-            _logger.LogInformation("Sync started: session {SessionId} → {RepoLocal}", session.Id, repoLocal);
+            _logger.LogInformation("동기화 시작됨: 세션 {SessionId} → {RepoLocal}", session.Id, repoLocal);
             _eventBus.Publish(new WorktreeSyncStartedEvent(session.Id, workspace.Id));
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start sync for session {SessionId}", session.Id);
+            _logger.LogError(ex, "세션 {SessionId}의 동기화 시작 실패", session.Id);
             // Attempt to restore on failure
             try
             {
@@ -189,7 +189,7 @@ public class WorktreeSyncService : IWorktreeSyncService
             }
             catch (Exception restoreEx)
             {
-                _logger.LogError(restoreEx, "Failed to restore after sync start failure");
+                _logger.LogError(restoreEx, "동기화 시작 실패 후 복원 실패");
             }
 
             return false;
@@ -307,7 +307,7 @@ public class WorktreeSyncService : IWorktreeSyncService
             });
         }
 
-        _logger.LogDebug("Backed up {Count} files from local dir", state.BackedUpFiles.Count);
+        _logger.LogDebug("로컬 디렉터리에서 {Count}개 파일 백업됨", state.BackedUpFiles.Count);
     }
 
     // ────────────────────── Internal: Clean ──────────────────────
@@ -350,7 +350,7 @@ public class WorktreeSyncService : IWorktreeSyncService
             }
             catch (IOException ex)
             {
-                _logger.LogWarning(ex, "Failed to copy file after {Retries} retries: {Source} → {Dest}", FileRetryCount,
+                _logger.LogWarning(ex, "{Retries}회 재시도 후 파일 복사 실패: {Source} → {Dest}", FileRetryCount,
                     source, destination);
             }
     }
@@ -376,7 +376,7 @@ public class WorktreeSyncService : IWorktreeSyncService
                 var info = new FileInfo(srcPath);
                 if (info.Length > MaxFileSizeBytes)
                 {
-                    _logger.LogWarning("Skipping large file during initial sync: {Path} ({Size} bytes)", relativePath,
+                    _logger.LogWarning("초기 동기화 중 큰 파일 건너뜀: {Path} ({Size} 바이트)", relativePath,
                         info.Length);
                     continue;
                 }
@@ -405,7 +405,7 @@ public class WorktreeSyncService : IWorktreeSyncService
             }
         }
 
-        _logger.LogDebug("Initial sync: copied {Count} files from worktree to local dir", copied);
+        _logger.LogDebug("초기 동기화: 워크트리에서 로컬 디렉터리로 {Count}개 파일 복사됨", copied);
     }
 
     private async Task OnFullResyncAsync()
@@ -514,7 +514,7 @@ public class WorktreeSyncService : IWorktreeSyncService
                 await CopyFileWithRetryAsync(backupPath, restorePath);
             }
 
-            _logger.LogInformation("Sync stopped and local dir restored for session {SessionId}", sessionId);
+            _logger.LogInformation("세션 {SessionId}의 동기화 중지 및 로컬 디렉터리 복원됨", sessionId);
         }
         finally
         {
@@ -529,7 +529,7 @@ public class WorktreeSyncService : IWorktreeSyncService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to clean up backup dir: {Path}", state.BackupDir);
+                    _logger.LogWarning(ex, "백업 디렉터리 정리 실패: {Path}", state.BackupDir);
                 }
 
             // Clean up empty parent directories
@@ -564,7 +564,7 @@ public class WorktreeSyncService : IWorktreeSyncService
                 var info = new FileInfo(srcPath);
                 if (info.Length > MaxFileSizeBytes)
                 {
-                    _logger.LogWarning("Skipping large file during live sync: {Path} ({Size} bytes)", relativePath,
+                    _logger.LogWarning("라이브 동기화 중 큰 파일 건너뜀: {Path} ({Size} 바이트)", relativePath,
                         info.Length);
                     continue;
                 }
@@ -593,7 +593,7 @@ public class WorktreeSyncService : IWorktreeSyncService
         }
 
         if (synced > 0)
-            _logger.LogDebug("Live-synced {Count} files from worktree to local dir", synced);
+            _logger.LogDebug("워크트리에서 로컬 디렉터리로 {Count}개 파일 라이브 동기화됨", synced);
     }
 
     private void DeleteFileWithRetry(string path)
@@ -613,7 +613,7 @@ public class WorktreeSyncService : IWorktreeSyncService
             }
             catch (IOException ex)
             {
-                _logger.LogWarning(ex, "Failed to delete file after {Retries} retries: {Path}", FileRetryCount, path);
+                _logger.LogWarning(ex, "{Retries}회 재시도 후 파일 삭제 실패: {Path}", FileRetryCount, path);
             }
     }
 
@@ -644,7 +644,7 @@ public class WorktreeSyncService : IWorktreeSyncService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error during live sync");
+                _logger.LogWarning(ex, "라이브 동기화 중 오류");
             }
         };
 
@@ -686,14 +686,14 @@ public class WorktreeSyncService : IWorktreeSyncService
         _watcher.Renamed += OnFsRename;
         _watcher.Error += async (_, e) =>
         {
-            _logger.LogWarning(e.GetException(), "FileSystemWatcher buffer overflow, triggering full re-sync");
+            _logger.LogWarning(e.GetException(), "FileSystemWatcher 버퍼 오버플로우, 전체 재동기화 시작");
             try
             {
                 await OnFullResyncAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error during full re-sync fallback");
+                _logger.LogWarning(ex, "전체 재동기화 폴백 중 오류");
             }
         };
     }

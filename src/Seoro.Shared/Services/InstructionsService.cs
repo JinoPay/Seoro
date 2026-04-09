@@ -31,7 +31,7 @@ public partial class InstructionsService : IInstructionsService
     {
         var filePath = GetFilePath(scope, projectPath);
         await AtomicFileWriter.WriteAsync(filePath, content);
-        _logger.LogDebug("Saved instructions: {Path}", filePath);
+        _logger.LogDebug("명령어 저장됨: {Path}", filePath);
     }
 
     public Task<InstructionFile> ReadAsync(ClaudeSettingsScope scope, string? projectPath = null)
