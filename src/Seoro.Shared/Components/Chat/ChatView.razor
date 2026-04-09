@@ -34,11 +34,13 @@
                             <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Color="Color.Primary"
                                      Style="opacity: 0.4;"/>
                             <span class="welcome-title">무엇을 도와드릴까요?</span>
-                            @if (session.Status == SessionStatus.Pending)
+                            @if (!session.Git.IsLocalDir &&
+                                 (session.Status is SessionStatus.Pending or SessionStatus.Initializing ||
+                                  (session.Status == SessionStatus.Ready && session.Messages.Count == 0)))
                             {
                                 <BranchSelector BranchGroups="_branchGroups"
                                                 SelectedBranch="@_selectedBranch"
-                                                SelectedBranchChanged="@(b => _selectedBranch = b)"
+                                                SelectedBranchChanged="HandleBranchChanged"
                                                 IsLoading="_isLoadingBranches"/>
                             }
                         </div>
@@ -83,7 +85,7 @@
             {
                 <InputArea OnSend="HandleSend" OnCancel="HandleCancel"
                            IsStreaming="ChatState.IsStreaming"
-                           Disabled="@(session.Status == SessionStatus.Archived)"
+                           Disabled="@(session.Status is SessionStatus.Archived or SessionStatus.Pending or SessionStatus.Initializing)"
                            PermissionMode="@(session.PermissionMode ?? "bypassAll")"
                            PermissionModeChanged="HandlePermissionModeChanged"
                            EffortLevel="@(session.EffortLevel ?? "auto")"
@@ -160,8 +162,12 @@
         {
             try
             {
-                var needsBranches = ChatState.CurrentSession?.Status == SessionStatus.Pending
-                                    && ChatState.CurrentSession?.Id != _branchesForSessionId
+                var cs = ChatState.CurrentSession;
+                var needsBranches = cs != null
+                                    && !cs.Git.IsLocalDir
+                                    && cs.Messages.Count == 0
+                                    && cs.Status is SessionStatus.Pending or SessionStatus.Initializing or SessionStatus.Ready
+                                    && cs.Id != _branchesForSessionId
                                     && !_isLoadingBranches;
 
                 var pendingMsg = ChatState.ConsumePendingMessage();
@@ -329,8 +335,44 @@
 
             var (groups, defaultBranch) = await SessionInitializer.LoadBranchesAsync(ws.RepoLocalPath);
             _branchGroups = groups;
-            _selectedBranch = defaultBranch;
+
+            // If the session already has a base branch (from eager worktree init), use it
+            var sessionBaseBranch = ChatState.CurrentSession?.Git.BaseBranch;
+            _selectedBranch = !string.IsNullOrEmpty(sessionBaseBranch) ? sessionBaseBranch : defaultBranch;
+
             _branchesForSessionId = ChatState.CurrentSession?.Id;
+        }
+        finally
+        {
+            _isLoadingBranches = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task HandleBranchChanged(string newBranch)
+    {
+        _selectedBranch = newBranch;
+        var session = ChatState.CurrentSession;
+        if (session == null || session.Messages.Count > 0
+                            || session.Status != SessionStatus.Ready
+                            || session.Git.BaseBranch == newBranch)
+            return;
+
+        _isLoadingBranches = true;
+        StateHasChanged();
+        try
+        {
+            var updated = await SessionService.RebaseWorktreeAsync(session.Id, newBranch);
+            session.Git.WorktreePath = updated.Git.WorktreePath;
+            session.Git.BranchName = updated.Git.BranchName;
+            session.Git.BaseBranch = updated.Git.BaseBranch;
+            session.Git.BaseCommit = updated.Git.BaseCommit;
+            session.SetInitialStatus(updated.Status);
+            session.Error = updated.Error;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to rebase worktree");
         }
         finally
         {

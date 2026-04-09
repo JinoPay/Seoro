@@ -41,40 +41,11 @@ public class ChatMessageOrchestrator(
         Workspace? workspace,
         CancellationToken ct = default)
     {
-        // --- Worktree init (Pending sessions) ---
-        if (session.Status == SessionStatus.Pending)
+        // --- Guard: session must be Ready (worktree already created on session creation) ---
+        if (session.Status != SessionStatus.Ready)
         {
-            if (string.IsNullOrEmpty(selectedBranch))
-                return new StreamResult();
-
-            try
-            {
-                chatState.SetStreaming(true, session.Id);
-                chatState.SetPhase(StreamingPhase.Preparing, sessionId: session.Id);
-
-                var updated = await sessionService.InitializeWorktreeAsync(session.Id, selectedBranch);
-                session.Git.WorktreePath = updated.Git.WorktreePath;
-                session.Git.BranchName = updated.Git.BranchName;
-                session.Git.BaseBranch = updated.Git.BaseBranch;
-                session.Git.BaseCommit = updated.Git.BaseCommit;
-                session.SetInitialStatus(updated.Status);
-                session.Error = updated.Error;
-
-                if (session.Status == SessionStatus.Error)
-                {
-                    chatState.SetStreaming(false, session.Id);
-                    chatState.NotifyStateChanged();
-                    return new StreamResult();
-                }
-            }
-            catch (Exception ex)
-            {
-                session.TransitionStatus(SessionStatus.Error);
-                session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
-                chatState.SetStreaming(false, session.Id);
-                chatState.NotifyStateChanged();
-                return new StreamResult();
-            }
+            logger.LogWarning("Cannot send message: session {SessionId} status is {Status}", session.Id, session.Status);
+            return new StreamResult();
         }
 
         ct.ThrowIfCancellationRequested();

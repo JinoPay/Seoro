@@ -15,4 +15,5 @@ public interface ISessionService
     Task<Session> CreatePendingSessionAsync(string model, string workspaceId);
     Task<Session> CreateSessionAsync(string model, string workspaceId, string baseBranch);
     Task<Session> InitializeWorktreeAsync(string sessionId, string baseBranch);
+    Task<Session> RebaseWorktreeAsync(string sessionId, string newBaseBranch);
 }

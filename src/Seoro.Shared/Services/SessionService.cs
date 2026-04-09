@@ -525,6 +525,88 @@ public partial class SessionService(
         }
     }
 
+    public async Task<Session> RebaseWorktreeAsync(string sessionId, string newBaseBranch)
+    {
+        Guard.NotNullOrWhiteSpace(sessionId, nameof(sessionId));
+        Guard.NotNullOrWhiteSpace(newBaseBranch, nameof(newBaseBranch));
+
+        var semaphore = _worktreeInitLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync();
+        try
+        {
+            _sessionCache.TryRemove(sessionId, out _);
+
+            var session = await LoadSessionAsync(sessionId);
+            if (session == null)
+                throw new InvalidOperationException($"Session '{sessionId}' not found.");
+
+            if (session.Status != SessionStatus.Ready)
+            {
+                logger.LogDebug("Skipping worktree rebase for session {SessionId}: status is {Status}", sessionId,
+                    session.Status);
+                return session;
+            }
+
+            // No-op if already on the requested base branch
+            if (session.Git.BaseBranch == newBaseBranch)
+                return session;
+
+            var workspace = await workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
+            if (workspace == null)
+                throw new InvalidOperationException($"Workspace '{session.WorkspaceId}' not found.");
+
+            // Tear down existing worktree and branch
+            var oldWorktreePath = session.Git.WorktreePath;
+            var oldBranchName = session.Git.BranchName;
+
+            if (!string.IsNullOrEmpty(oldWorktreePath))
+                await gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, oldWorktreePath);
+            if (!string.IsNullOrEmpty(oldBranchName))
+                await gitService.DeleteBranchAsync(workspace.RepoLocalPath, oldBranchName);
+
+            // Create new worktree on the new base branch
+            var branchName = $"{SeoroConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
+            var worktreesDir = await workspaceService.GetWorktreesDirAsync();
+
+            session.Git.BranchName = branchName;
+            session.Git.BaseBranch = newBaseBranch;
+            session.Git.WorktreePath = Path.Combine(worktreesDir, session.Id);
+
+            try
+            {
+                var result = await gitService.AddWorktreeAsync(
+                    workspace.RepoLocalPath, session.Git.WorktreePath, branchName, newBaseBranch);
+
+                if (!result.Success)
+                {
+                    session.TransitionStatus(SessionStatus.Error);
+                    session.Error = AppError.WorktreeCreation(result.Error);
+                }
+                else
+                {
+                    session.Git.BaseCommit =
+                        await gitService.ResolveCommitHashAsync(workspace.RepoLocalPath, newBaseBranch) ?? "";
+                    await contextService.EnsureContextDirectoryAsync(session.Git.WorktreePath);
+                    logger.LogInformation(
+                        "Worktree rebased for session {SessionId} to branch {BaseBranch}", sessionId, newBaseBranch);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to rebase worktree for session {SessionId}", sessionId);
+                session.TransitionStatus(SessionStatus.Error);
+                session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
+            }
+
+            await SaveSessionAsync(session);
+            return session;
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
     private static List<ChatMessage> TruncateToolOutputs(List<ChatMessage> messages)
     {
         return messages.Select(msg =>

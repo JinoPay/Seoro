@@ -1,4 +1,5 @@
 using Seoro.Shared.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MudBlazor;
 
@@ -15,7 +16,9 @@ public class SessionListFacade(
     ISkillRegistry skillRegistry,
     IClaudeService claudeService,
     INotificationHistoryService notificationHistory,
-    IWorkspaceService workspaceService)
+    IWorkspaceService workspaceService,
+    IGitService gitService,
+    ILogger<SessionListFacade> logger)
     : ISessionListFacade
 {
     public async Task CleanupSessionAsync(Session session)
@@ -165,7 +168,37 @@ public class SessionListFacade(
         await SaveLastSelectionAsync(ws.Id, session.Id);
 
         dataService.RebuildOrderedSessions();
+
+        // Eagerly create worktree in background for non-localDir sessions
+        if (!localDir)
+            _ = InitializeWorktreeInBackgroundAsync(session, ws);
+
         return session;
+    }
+
+    private async Task InitializeWorktreeInBackgroundAsync(Session session, Workspace ws)
+    {
+        try
+        {
+            var defaultBranch = await gitService.DetectDefaultBranchAsync(ws.RepoLocalPath) ?? "main";
+            var updated = await sessionService.InitializeWorktreeAsync(session.Id, defaultBranch);
+
+            session.Git.WorktreePath = updated.Git.WorktreePath;
+            session.Git.BranchName = updated.Git.BranchName;
+            session.Git.BaseBranch = updated.Git.BaseBranch;
+            session.Git.BaseCommit = updated.Git.BaseCommit;
+            session.SetInitialStatus(updated.Status);
+            session.Error = updated.Error;
+
+            chatState.NotifyStateChanged();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Background worktree init failed for session {SessionId}", session.Id);
+            session.TransitionStatus(SessionStatus.Error);
+            session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
+            chatState.NotifyStateChanged();
+        }
     }
 
     private async Task SaveLastSelectionAsync(string workspaceId, string sessionId)
