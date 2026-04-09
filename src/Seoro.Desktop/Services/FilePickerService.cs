@@ -1,4 +1,3 @@
-using Seoro.Shared.Models;
 using Seoro.Shared.Services;
 
 namespace Seoro.Desktop.Services;

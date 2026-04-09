@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using Seoro.Shared.Models;
 
 namespace Seoro.Shared.Services.Migration;
 

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Velopack;
 using Velopack.Sources;
 
-using AppUpdateInfo = Seoro.Shared.Services.UpdateInfo;
+using AppUpdateInfo = Seoro.Shared.Services.Platform.UpdateInfo;
 
 namespace Seoro.Desktop.Services;
 
