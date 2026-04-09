@@ -1314,28 +1314,38 @@ html *::after {
     user-select: none;
     opacity: 0.25;
     border-right: 1px solid var(--border-subtle);
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--bg-surface, #1e1e1e);
 }
 
 .filecontent-gutter-line {
     padding-right: var(--space-3);
+    line-height: 1.6;
+    font-size: var(--text-xs);
+    font-family: var(--font-mono);
 }
 
 .filecontent-pre {
     flex: 1;
     margin: 0;
     padding: var(--space-2) var(--space-3);
-    overflow-x: auto;
+    overflow: visible;
     background: transparent !important;
 }
 
 .filecontent-pre code {
+    display: block;
     font-family: var(--font-mono);
     font-size: var(--text-xs);
     line-height: 1.6;
+    padding: 0 !important;
     background: transparent !important;
 }
 
 .filecontent-code-container .hljs {
+    padding: 0 !important;
     background: transparent;
 }
 
@@ -1343,8 +1353,11 @@ html *::after {
 .filecontent-markdown {
     flex: 1;
     overflow-y: auto;
-    padding: var(--space-4) var(--space-6);
+}
+
+.filecontent-markdown-inner {
     max-width: 800px;
+    padding: var(--space-4) var(--space-6);
 }
 
 /* ===== Embedded Diff Panel ===== */

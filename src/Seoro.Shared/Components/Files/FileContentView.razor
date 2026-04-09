@@ -20,8 +20,10 @@
     }
     else if (_viewMode == FileViewMode.Markdown)
     {
-        <div id="@_elementId" class="filecontent-markdown markdown-body">
-            @((MarkupString)_renderedHtml)
+        <div class="filecontent-markdown">
+            <div id="@_elementId" class="filecontent-markdown-inner markdown-body">
+                @((MarkupString)_renderedHtml)
+            </div>
         </div>
     }
     else if (_viewMode == FileViewMode.Code)
