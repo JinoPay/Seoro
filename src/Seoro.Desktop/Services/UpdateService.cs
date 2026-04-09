@@ -26,7 +26,7 @@ public class UpdateService : IUpdateService
     {
         if (!IsInstalled)
         {
-            _logger.LogDebug("Update check skipped: app not installed via Velopack");
+            _logger.LogDebug("업데이트 확인 건너뜀: Velopack을 통해 설치된 앱이 아님");
             return null;
         }
 
@@ -35,18 +35,18 @@ public class UpdateService : IUpdateService
             _pendingUpdate = await _updateManager.CheckForUpdatesAsync();
             if (_pendingUpdate == null)
             {
-                _logger.LogDebug("No updates available");
+                _logger.LogDebug("사용 가능한 업데이트 없음");
                 return null;
             }
 
             var target = _pendingUpdate.TargetFullRelease;
             var version = target.Version.ToString();
-            _logger.LogInformation("Update available: {Version}", version);
+            _logger.LogInformation("업데이트 사용 가능: {Version}", version);
             return new AppUpdateInfo(version, target.Size);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Update check failed");
+            _logger.LogWarning(ex, "업데이트 확인 실패");
             return null;
         }
     }
@@ -57,13 +57,13 @@ public class UpdateService : IUpdateService
 
         try
         {
-            _logger.LogInformation("Downloading update {Version}...", _pendingUpdate.TargetFullRelease.Version);
+            _logger.LogInformation("업데이트 다운로드 중 {Version}...", _pendingUpdate.TargetFullRelease.Version);
             await _updateManager.DownloadUpdatesAsync(_pendingUpdate);
-            _logger.LogInformation("Update download complete");
+            _logger.LogInformation("업데이트 다운로드 완료");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Update download failed");
+            _logger.LogError(ex, "업데이트 다운로드 실패");
             throw;
         }
     }
@@ -72,7 +72,7 @@ public class UpdateService : IUpdateService
     {
         if (_pendingUpdate == null) return;
 
-        _logger.LogInformation("Applying update and restarting...");
+        _logger.LogInformation("업데이트 적용 및 재시작 중...");
         _updateManager.ApplyUpdatesAndRestart(_pendingUpdate.TargetFullRelease);
     }
 }
