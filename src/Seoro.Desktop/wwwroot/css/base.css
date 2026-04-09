@@ -1,0 +1,59 @@
+html, body {
+    font-family: var(--font-sans);
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* ===== Theme Transition ===== */
+html {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html *,
+html *::before,
+html *::after {
+    transition-property: background-color, border-color, color, box-shadow, opacity;
+    transition-duration: 0.2s;
+    transition-timing-function: ease;
+}
+
+/* Exclude animated elements from theme transition */
+.panel-resizer,
+.panel-resizer *,
+.streaming-indicator,
+.streaming-indicator *,
+.tool-card.running,
+.tool-card.running *,
+@keyframes * {
+    transition-property: none !important;
+}
+
+#app {
+    height: 100%;
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.2);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(128, 128, 128, 0.4);
+}
+

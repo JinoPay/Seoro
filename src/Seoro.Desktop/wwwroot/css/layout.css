@@ -1,0 +1,73 @@
+/* ===== 3-Panel Shell Layout ===== */
+.seoro-shell {
+    --sidebar-width: 260px;
+    display: grid;
+    grid-template-columns: var(--sidebar-width) auto 1fr;
+    height: 100%;
+    overflow: hidden;
+}
+
+.seoro-shell.sidebar-collapsed {
+    --sidebar-width: 48px;
+    grid-template-columns: 48px 1fr;
+}
+
+/* ===== Panel Resizer ===== */
+.panel-resizer {
+    width: 5px;
+    cursor: col-resize;
+    background: transparent;
+    position: relative;
+    flex-shrink: 0;
+    z-index: 10;
+    transition: background 150ms ease;
+}
+
+.panel-resizer:hover,
+.panel-resizer.dragging {
+    background: var(--accent);
+}
+
+.panel-resizer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -3px;
+    right: -3px;
+}
+
+.seoro-shell.sidebar-collapsed .seoro-sidebar {
+    overflow: hidden;
+}
+
+/* ===== Right Panel Vertical Split ===== */
+.right-panel-top {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.right-panel-bottom {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ===== Vertical Resizer ===== */
+.vertical-resizer {
+    height: 5px;
+    cursor: row-resize;
+    flex-shrink: 0;
+    background: transparent;
+    transition: background 150ms;
+}
+
+.vertical-resizer:hover,
+.vertical-resizer.dragging {
+    background: var(--accent);
+}
+
