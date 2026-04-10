@@ -27,6 +27,41 @@ public class TabManager
         OnTabChanged?.Invoke();
     }
 
+    public void CloseOtherTabs(string tabId)
+    {
+        var target = OpenTabs.FirstOrDefault(t => t.Id == tabId);
+        if (target == null) return;
+
+        OpenTabs.RemoveAll(t => t.Type != MainTabType.Chat && t.Id != tabId);
+        ActiveTab = target;
+        RecalculateDisambiguatedTitles();
+        OnTabChanged?.Invoke();
+    }
+
+    public void CloseTabsToTheRight(string tabId)
+    {
+        var idx = OpenTabs.FindIndex(t => t.Id == tabId);
+        if (idx < 0) return;
+
+        var toRemove = OpenTabs.Skip(idx + 1).ToList();
+        foreach (var tab in toRemove)
+            OpenTabs.Remove(tab);
+
+        if (ActiveTab != null && toRemove.Contains(ActiveTab))
+            ActiveTab = OpenTabs.ElementAtOrDefault(idx) ?? OpenTabs.FirstOrDefault();
+
+        RecalculateDisambiguatedTitles();
+        OnTabChanged?.Invoke();
+    }
+
+    public void CloseAllFileTabs()
+    {
+        OpenTabs.RemoveAll(t => t.Type != MainTabType.Chat);
+        ActiveTab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.Chat);
+        RecalculateDisambiguatedTitles();
+        OnTabChanged?.Invoke();
+    }
+
     public void EnsureChatTab(string? sessionTitle = null)
     {
         if (OpenTabs.All(t => t.Type != MainTabType.Chat))
