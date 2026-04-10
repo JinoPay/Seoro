@@ -5,7 +5,9 @@
     @foreach (var tab in ChatState.Tabs.OpenTabs)
     {
         <div class="main-tab @(ChatState.Tabs.ActiveTab?.Id == tab.Id ? "active" : "")"
-             @onclick="@(() => ChatState.Tabs.SetActiveTab(tab.Id))">
+             @onclick="@(() => ChatState.Tabs.SetActiveTab(tab.Id))"
+             @oncontextmenu="@(() => OpenContextMenu(tab))"
+             @oncontextmenu:preventDefault="true">
             <MudIcon Icon="@GetTabIcon(tab)" Size="Size.Small" Style="width: 14px; height: 14px;"/>
             <span class="main-tab-title">@(tab.DisambiguatedTitle ?? tab.Title)</span>
             @if (tab.Type != MainTabType.Chat)
@@ -19,7 +21,38 @@
     }
 </div>
 
+<MudMenu @ref="_contextMenu"
+         ActivationEvent="@MouseEvent.RightClick"
+         PositionAtCursor="true"
+         Dense="true"
+         Style="position: absolute; visibility: hidden; width: 0; height: 0;">
+    <MudMenuItem OnClick="@HandleCloseTab"
+                 Icon="@Icons.Material.Filled.Close"
+                 Disabled="@(_contextTab?.Type == MainTabType.Chat)">
+        탭 닫기
+    </MudMenuItem>
+    <MudMenuItem OnClick="@HandleCloseOtherTabs"
+                 Icon="@Icons.Material.Filled.FilterNone"
+                 Disabled="@(ChatState.Tabs.OpenTabs.Count(t => t.Type != MainTabType.Chat) <= 1)">
+        다른 탭 모두 닫기
+    </MudMenuItem>
+    <MudMenuItem OnClick="@HandleCloseTabsToRight"
+                 Icon="@Icons.Material.Filled.LastPage"
+                 Disabled="@IsNoTabsToRight()">
+        오른쪽 탭 닫기
+    </MudMenuItem>
+    <MudDivider/>
+    <MudMenuItem OnClick="@HandleCloseAllTabs"
+                 Icon="@Icons.Material.Filled.ClearAll"
+                 Disabled="@(ChatState.Tabs.OpenTabs.All(t => t.Type == MainTabType.Chat))">
+        모든 탭 닫기
+    </MudMenuItem>
+</MudMenu>
+
 @code {
+
+    private MudMenu? _contextMenu;
+    private MainTab? _contextTab;
 
     protected override void OnInitialized()
     {
@@ -29,6 +62,43 @@
     private void HandleTabChanged()
     {
         InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OpenContextMenu(MainTab tab)
+    {
+        _contextTab = tab;
+        if (_contextMenu != null)
+            await _contextMenu.OpenMenuAsync(EventArgs.Empty);
+    }
+
+    private void HandleCloseTab()
+    {
+        if (_contextTab != null)
+            ChatState.Tabs.CloseTab(_contextTab.Id);
+    }
+
+    private void HandleCloseOtherTabs()
+    {
+        if (_contextTab != null)
+            ChatState.Tabs.CloseOtherTabs(_contextTab.Id);
+    }
+
+    private void HandleCloseTabsToRight()
+    {
+        if (_contextTab != null)
+            ChatState.Tabs.CloseTabsToTheRight(_contextTab.Id);
+    }
+
+    private void HandleCloseAllTabs()
+    {
+        ChatState.Tabs.CloseAllFileTabs();
+    }
+
+    private bool IsNoTabsToRight()
+    {
+        if (_contextTab == null) return true;
+        var idx = ChatState.Tabs.OpenTabs.IndexOf(_contextTab);
+        return idx < 0 || idx == ChatState.Tabs.OpenTabs.Count - 1;
     }
 
     private static string GetTabIcon(MainTab tab)
