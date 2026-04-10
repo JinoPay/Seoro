@@ -93,7 +93,7 @@ public partial class WorkspaceService(
                 logger.LogWarning(ex, "손상된 워크스페이스 파일 건너뜀: {File}", file);
             }
 
-        return workspaces.OrderByDescending(w => w.UpdatedAt).ToList();
+        return workspaces.OrderBy(w => w.SortIndex).ThenByDescending(w => w.UpdatedAt).ToList();
     }
 
     public async Task<string> GetWorktreesDirAsync()

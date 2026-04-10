@@ -232,6 +232,20 @@
     opacity: 0.7;
 }
 
+/* Drag and drop */
+.project-header[draggable="true"] {
+    cursor: grab;
+}
+
+.project-header.dragging {
+    opacity: 0.35;
+}
+
+.project-header.drop-target {
+    border-top: 2px solid var(--mud-palette-primary);
+    margin-top: -2px;
+}
+
 /* Session count badge (collapsed state) */
 .project-session-count {
     font-size: var(--text-2xs);
