@@ -140,6 +140,7 @@ public class AttachmentService(ILogger<AttachmentService> logger) : IAttachmentS
             ".json" => "application/json",
             ".csv" => "text/csv",
             ".md" => "text/markdown",
+            ".yaml" or ".yml" => "text/yaml",
             _ => "application/octet-stream"
         };
     }
