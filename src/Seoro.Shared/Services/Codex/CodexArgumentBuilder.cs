@@ -169,9 +169,6 @@ public static class CodexArgumentBuilder
         if (opts.Last)
             sb.Append("--last ");
 
-        if (!string.IsNullOrWhiteSpace(opts.WorkingDir))
-            sb.Append($"--cd \"{opts.WorkingDir}\" ");
-
         if (opts.AdditionalDirs is { Count: > 0 })
             foreach (var dir in opts.AdditionalDirs)
                 sb.Append($"--add-dir \"{dir}\" ");
