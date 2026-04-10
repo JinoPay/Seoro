@@ -75,9 +75,10 @@ public class CodexService(
         var approvalPolicy = options.PermissionMode == "plan" ? "on-request" : settings.CodexApprovalPolicy;
         var sandboxMode = options.PermissionMode == "plan" ? "read-only" : settings.CodexSandboxMode;
 
-        // 재개 모드 vs 일반 메시지
+        // ConversationId가 있으면 항상 exec resume 사용 (세션 컨텍스트 유지)
+        // ContinueMode 여부와 무관하게, thread_id가 존재하는 한 이전 대화를 이어간다.
         string arguments;
-        if (options.ContinueMode && !string.IsNullOrEmpty(options.ConversationId))
+        if (!string.IsNullOrEmpty(options.ConversationId))
             arguments = CodexArgumentBuilder.BuildResume(new CodexResumeBuildOptions
             {
                 BaseArgs = baseArgs,
