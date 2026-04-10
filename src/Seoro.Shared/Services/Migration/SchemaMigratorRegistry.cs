@@ -19,7 +19,7 @@ public static class SchemaMigratorRegistry
 
         // All other models start at v1 with no migrations yet.
         // When a schema change is needed, bump the version and add migrations.
-        Register<Workspace>(new SchemaMigrator(1));
+        Register<Workspace>(new SchemaMigrator(2, [new WorkspaceV1ToV2Migration()]));
         Register<AppSettings>(new SchemaMigrator(1));
         Register<MemoryEntry>(new SchemaMigrator(1));
         Register<TaskItem>(new SchemaMigrator(1));

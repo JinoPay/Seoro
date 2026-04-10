@@ -16,6 +16,7 @@ public class Workspace
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int SchemaVersion { get; set; } = 1;
+    public int SortIndex { get; set; } = int.MaxValue;
     public string DefaultModel { get; set; } = "";
     public string DefaultRemote { get; set; } = "origin";
     public string Id { get; init; } = Guid.NewGuid().ToString();

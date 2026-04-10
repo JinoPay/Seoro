@@ -31,7 +31,15 @@
                     case SidebarRowKind.ProjectHeader:
                         var isExpanded = _expandedProjects.Contains(row.ProjectName!);
                         <div @key="@($"ph-{row.ProjectName}")"
-                             class="project-header @(row.HasStreamingSession && !isExpanded ? "has-streaming" : "")"
+                             class="project-header @(row.HasStreamingSession && !isExpanded ? "has-streaming" : "") @(_draggedProject == row.ProjectName ? "dragging" : "") @(_dropTargetProject == row.ProjectName ? "drop-target" : "")"
+                             draggable="true"
+                             @ondragstart="@(() => OnProjectDragStart(row.ProjectName!))"
+                             @ondragover="@(() => OnProjectDragOver(row.ProjectName!))"
+                             @ondragover:preventDefault="true"
+                             @ondragleave="OnProjectDragLeave"
+                             @ondrop="@(() => OnProjectDrop(row.ProjectName!))"
+                             @ondrop:preventDefault="true"
+                             @ondragend="OnProjectDragEnd"
                              @onclick="@(() => ToggleProject(row.ProjectName!))">
                             <MudIcon
                                 Icon="@(isExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
@@ -156,6 +164,10 @@
     private List<(Session Session, Workspace Workspace)> _visibleSessions = new();
     private List<IdeInfo> _availableIdes = [];
 
+    // 드래그 앤 드롭 상태
+    private string? _draggedProject;
+    private string? _dropTargetProject;
+
     private enum SidebarRowKind
     {
         ProjectHeader,
@@ -180,10 +192,12 @@
         var sessionIndex = 0;
 
         foreach (var group in DataService.GetFilteredWorkspaces(_filterText)
-                     .GroupBy(SessionListDataService.GetProjectName))
+                     .GroupBy(SessionListDataService.GetProjectName)
+                     .OrderBy(g => g.Min(w => w.SortIndex))
+                     .ThenByDescending(g => g.Max(w => w.UpdatedAt)))
         {
             var projectName = group.Key;
-            var workspacesInGroup = group.OrderByDescending(w => w.UpdatedAt).ToList();
+            var workspacesInGroup = group.OrderBy(w => w.SortIndex).ThenByDescending(w => w.UpdatedAt).ToList();
 
             var sessionCount = 0;
             var hasStreaming = false;
@@ -231,6 +245,58 @@
 
         _flatRows = rows;
         _visibleSessions = visibleSessions;
+    }
+
+    private void OnProjectDragStart(string projectName)
+    {
+        _draggedProject = projectName;
+    }
+
+    private void OnProjectDragOver(string projectName)
+    {
+        if (_draggedProject != null && _draggedProject != projectName)
+            _dropTargetProject = projectName;
+    }
+
+    private void OnProjectDragLeave()
+    {
+        _dropTargetProject = null;
+    }
+
+    private async Task OnProjectDrop(string targetProject)
+    {
+        if (_draggedProject == null || _draggedProject == targetProject)
+        {
+            ResetDragState();
+            return;
+        }
+
+        var projectNames = DataService.GetFilteredWorkspaces(null)
+            .GroupBy(SessionListDataService.GetProjectName)
+            .OrderBy(g => g.Min(w => w.SortIndex))
+            .ThenByDescending(g => g.Max(w => w.UpdatedAt))
+            .Select(g => g.Key)
+            .ToList();
+
+        projectNames.Remove(_draggedProject);
+        var targetIdx = projectNames.IndexOf(targetProject);
+        if (targetIdx >= 0)
+            projectNames.Insert(targetIdx, _draggedProject);
+
+        ResetDragState();
+        await DataService.ReorderProjectGroupsAsync(projectNames);
+        RebuildFlatRows();
+    }
+
+    private void OnProjectDragEnd()
+    {
+        ResetDragState();
+    }
+
+    private void ResetDragState()
+    {
+        _draggedProject = null;
+        _dropTargetProject = null;
     }
 
     protected override async Task OnInitializedAsync()

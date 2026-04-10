@@ -203,12 +203,32 @@ public class SessionListDataService : IDisposable
         OrderedSessions.Clear();
         foreach (var group in Workspaces.GroupBy(GetProjectName))
         {
-            var workspacesInGroup = group.OrderByDescending(w => w.UpdatedAt).ToList();
+            var workspacesInGroup = group.OrderBy(w => w.SortIndex).ThenByDescending(w => w.UpdatedAt).ToList();
             foreach (var ws in workspacesInGroup)
                 if (SessionCache.TryGetValue(ws.Id, out var sessions))
                     foreach (var s in sessions)
                         OrderedSessions.Add((s, ws));
         }
+    }
+
+    public async Task ReorderProjectGroupsAsync(List<string> projectNameOrder)
+    {
+        var index = 0;
+        foreach (var projectName in projectNameOrder)
+        {
+            var workspacesInGroup = Workspaces.Where(w => GetProjectName(w) == projectName);
+            foreach (var ws in workspacesInGroup)
+            {
+                ws.SortIndex = index;
+                await _workspaceService.SaveWorkspaceAsync(ws);
+            }
+
+            index++;
+        }
+
+        Workspaces = Workspaces.OrderBy(w => w.SortIndex).ThenByDescending(w => w.UpdatedAt).ToList();
+        RebuildOrderedSessions();
+        OnDataChanged?.Invoke();
     }
 
     private void HandleWorkspaceSaved(Workspace updated)
