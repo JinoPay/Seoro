@@ -41,3 +41,10 @@ public sealed record WindowCloseRequestedEvent : ChatEvent;
 public sealed record BranchChangedEvent(string SessionId, string BranchName) : ChatEvent;
 
 public sealed record SessionTitleChangedEvent(string SessionId, string Title) : ChatEvent;
+
+/// <summary>
+///     워크트리의 머지 충돌 진입/해제 이벤트. <see cref="ConflictWatcherService"/>가 발행.
+///     <see cref="WorkingDir"/> 는 충돌이 감지된 경로(세션 워크트리 또는 향후 Alt B 의 임시 클론).
+///     <see cref="Entered"/> 가 true 면 충돌 시작, false 면 해제 (.git/MERGE_HEAD 삭제 감지).
+/// </summary>
+public sealed record ConflictDetectedEvent(string WorkingDir, bool Entered) : ChatEvent;

@@ -822,6 +822,405 @@ public class GitService(
         return summary;
     }
 
+    // ────────────────────────────────────────────────
+    //  Phase 1: 원격 URL·푸시·충돌·시뮬레이션·스쿼시 머지
+    // ────────────────────────────────────────────────
+
+    public async Task<string?> GetRemoteUrlAsync(string repoDir, string remoteName = "origin",
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(repoDir) || !Directory.Exists(repoDir))
+            return null;
+
+        // git remote get-url <name> — 실패 시 exit code 2 + stderr.
+        // 원격이 없거나 저장소가 아니면 null 을 돌려 호출자가 None 으로 폴백할 수 있게 한다.
+        var result = await RunGitAsync(repoDir, ct, "remote", "get-url", remoteName);
+        if (!result.Success)
+        {
+            logger.LogDebug("원격 URL 조회 실패: repo={Repo} remote={Remote} err={Err}",
+                repoDir, remoteName, result.Error);
+            return null;
+        }
+
+        var url = result.Output.Trim();
+        if (string.IsNullOrEmpty(url))
+            return null;
+
+        logger.LogDebug("원격 URL 감지: repo={Repo} remote={Remote} url={Url}",
+            repoDir, remoteName, GitHubUrlHelper.MaskCredentials(url));
+        return url;
+    }
+
+    public async Task<GitResult> PushAsync(string workingDir, string remote, string branch,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(workingDir) || string.IsNullOrWhiteSpace(remote)
+                                                  || string.IsNullOrWhiteSpace(branch))
+            return new GitResult(false, string.Empty, "push 파라미터가 비어 있습니다.");
+
+        logger.LogInformation("git push 시작: workdir={Dir} remote={Remote} branch={Branch}",
+            workingDir, remote, branch);
+
+        var result = await RunGitAsync(workingDir, ct, "push", remote, branch);
+        if (result.Success)
+            logger.LogInformation("git push 완료: {Branch} → {Remote}", branch, remote);
+        else
+            logger.LogWarning("git push 실패: {Branch} → {Remote}: {Error}", branch, remote, result.Error);
+
+        return result;
+    }
+
+    public async Task<bool> HasUnresolvedConflictsAsync(string workingDir, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(workingDir) || !Directory.Exists(workingDir))
+            return false;
+
+        // 1) .git/MERGE_HEAD 존재 확인. 워크트리의 경우 .git 은 파일(gitdir: ...) 이라
+        //    rev-parse --git-dir 로 실제 경로를 물어본다.
+        var gitDirResult = await RunGitAsync(workingDir, ct, "rev-parse", "--git-dir");
+        if (!gitDirResult.Success)
+            return false;
+
+        var relativeGitDir = gitDirResult.Output.Trim();
+        var gitDir = Path.IsPathRooted(relativeGitDir)
+            ? relativeGitDir
+            : Path.GetFullPath(Path.Combine(workingDir, relativeGitDir));
+
+        if (!File.Exists(Path.Combine(gitDir, "MERGE_HEAD")))
+            return false;
+
+        // 2) git status --porcelain 의 UU/AA/DD/AU/UA/DU/UD 마커 확인.
+        var status = await GetStatusPorcelainAsync(workingDir, ct);
+        return status.Any(line => line.Length >= 2 && IsConflictMarker(line.AsSpan(0, 2)));
+    }
+
+    private static bool IsConflictMarker(ReadOnlySpan<char> code)
+    {
+        // git status --porcelain 의 2자리 충돌 표기. 자세한 정의는 `git status --help` 참조.
+        return code is "UU" or "AA" or "DD" or "AU" or "UA" or "DU" or "UD";
+    }
+
+    public async Task<(int Ahead, int Behind)?> FetchAndCompareAsync(string repoDir,
+        string sourceRef, string targetRef, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(repoDir) || !Directory.Exists(repoDir))
+            return null;
+
+        logger.LogDebug("fetch + ahead/behind 계산 시작: repo={Repo} source={Src} target={Tgt}",
+            repoDir, sourceRef, targetRef);
+
+        // 10초 타임아웃 — 네트워크 지연으로 UI 가 굳지 않도록.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(10));
+
+        try
+        {
+            // 타겟 ref 에서 리모트 접두사를 벗겨 fetch 대상 브랜치 이름을 추출한다.
+            var normalizedTarget = BranchRefNormalizer.Normalize(targetRef);
+            var fetchResult = await RunGitAsync(repoDir, timeout.Token, "fetch", "origin", normalizedTarget);
+            if (!fetchResult.Success)
+            {
+                logger.LogWarning("fetch 실패 (오프라인 가능성): repo={Repo} err={Err}", repoDir, fetchResult.Error);
+                return null;
+            }
+
+            // git rev-list --count --left-right <source>...<target>
+            //  → "<source-only> <target-only>" 출력 (source ahead, target ahead)
+            var revList = await RunGitAsync(repoDir, timeout.Token, "rev-list", "--count", "--left-right",
+                $"{sourceRef}...{targetRef}");
+            if (!revList.Success || string.IsNullOrWhiteSpace(revList.Output))
+            {
+                logger.LogWarning("rev-list 실패: repo={Repo} err={Err}", repoDir, revList.Error);
+                return null;
+            }
+
+            var parts = revList.Output.Trim().Split('\t', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 2)
+            {
+                // 공백 기반 구분일 수도 있음
+                parts = revList.Output.Trim().Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+            }
+            if (parts.Length != 2 || !int.TryParse(parts[0], out var ahead) || !int.TryParse(parts[1], out var behind))
+                return null;
+
+            logger.LogDebug("ahead/behind 계산 완료: ahead={Ahead} behind={Behind}", ahead, behind);
+            return (ahead, behind);
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            logger.LogWarning("FetchAndCompareAsync 타임아웃: repo={Repo}", repoDir);
+            return null;
+        }
+    }
+
+    public async Task<MergeSimulationResult> SimulateMergeAsync(string repoDir,
+        string sourceRef, string targetRef, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(repoDir) || !Directory.Exists(repoDir))
+            return MergeSimulationResult.Failed("저장소 경로가 유효하지 않습니다.");
+
+        logger.LogDebug("머지 시뮬레이션 시작: repo={Repo} source={Src} target={Tgt}",
+            repoDir, sourceRef, targetRef);
+
+        // 1) ahead/behind 는 네트워크 없이 계산 가능하지만, 정확도를 위해 fetch 결과에 의존한다.
+        //    호출자가 FetchAndCompareAsync 를 먼저 부르는 것이 권장되나 이 메서드 자체는 fetch 를 하지 않아
+        //    캐시된 리모트 상태로 동작할 수 있다.
+        var revList = await RunGitAsync(repoDir, ct, "rev-list", "--count", "--left-right",
+            $"{sourceRef}...{targetRef}");
+        int ahead = 0, behind = 0;
+        if (revList.Success && !string.IsNullOrWhiteSpace(revList.Output))
+        {
+            var parts = revList.Output.Trim().Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2)
+            {
+                int.TryParse(parts[0], out ahead);
+                int.TryParse(parts[1], out behind);
+            }
+        }
+
+        // 2) git merge-tree --write-tree <target> <source>
+        //    종료 코드: 0 = 충돌 없음, 1 = 충돌 있음, 그 외 = 에러 (git < 2.38 에서는 인자 해석 실패)
+        var mergeTree = await RunGitAsync(repoDir, ct, "merge-tree", "--write-tree",
+            "--name-only", "-z", targetRef, sourceRef);
+
+        // --write-tree 미지원 버전 폴백: 에러 텍스트로 감지.
+        if (!mergeTree.Success && mergeTree.Error.Contains("write-tree", StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("git merge-tree --write-tree 미지원 (git 2.38+ 필요). repo={Repo}", repoDir);
+            return new MergeSimulationResult(false, false, [], ahead, behind,
+                "git 2.38 이상이 필요합니다 (merge-tree --write-tree).");
+        }
+
+        // 종료 코드가 0 이면 충돌 없음, 1 이면 충돌. 그 외는 실패.
+        var conflicts = new List<string>();
+        var wouldConflict = false;
+
+        if (mergeTree.Success)
+        {
+            wouldConflict = false;
+        }
+        else
+        {
+            // merge-tree 는 충돌 시 exit 1 을 반환하고 stdout 에 트리 해시 + 충돌 파일 목록을 쓴다.
+            // 우리 RunGitAsync 는 exit!=0 이면 Success=false 로 돌리므로 stdout 이 비었는지 확인.
+            wouldConflict = !string.IsNullOrWhiteSpace(mergeTree.Output);
+            if (wouldConflict)
+            {
+                // --name-only -z: NUL 구분된 파일 경로 목록. 첫 줄은 트리 해시라 건너뛴다.
+                var lines = mergeTree.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                for (var i = 1; i < lines.Length; i++)
+                {
+                    foreach (var file in lines[i].Split('\0', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        if (!string.IsNullOrWhiteSpace(file))
+                            conflicts.Add(file.Trim());
+                    }
+                }
+            }
+            else
+            {
+                logger.LogWarning("merge-tree 실패: repo={Repo} err={Err}", repoDir, mergeTree.Error);
+                return new MergeSimulationResult(false, false, [], ahead, behind, mergeTree.Error);
+            }
+        }
+
+        logger.LogDebug("머지 시뮬레이션 완료: conflict={Conflict} files={Count} ahead={Ahead} behind={Behind}",
+            wouldConflict, conflicts.Count, ahead, behind);
+        return new MergeSimulationResult(true, wouldConflict, conflicts, ahead, behind, null);
+    }
+
+    public async Task<List<string>> GetUncommittedChangesAsync(string workingDir,
+        CancellationToken ct = default)
+    {
+        // staged + unstaged + untracked 전부 — 사용자에게 "미커밋 변경 N개" 라는 단일 지표로 보여주기 위함.
+        var porcelain = await GetStatusPorcelainAsync(workingDir, ct);
+        var files = new List<string>();
+        foreach (var line in porcelain)
+        {
+            if (line.Length < 3) continue;
+            // porcelain 형식: XY <path> (또는 renames 는 arrow 포함). 첫 2자가 상태 코드, 이후 공백, 이후 경로.
+            var path = line[3..].Trim();
+            // rename 은 "old -> new" 형태라 오른쪽만 취한다.
+            var arrowIdx = path.IndexOf(" -> ", StringComparison.Ordinal);
+            if (arrowIdx > 0)
+                path = path[(arrowIdx + 4)..];
+            if (!string.IsNullOrWhiteSpace(path))
+                files.Add(path);
+        }
+        return files;
+    }
+
+    public async Task<SquashMergeResult> SquashMergeViaTempCloneAsync(
+        string mainRepoDir,
+        string sourceWorktreePath,
+        string sourceBranchName,
+        string targetBranchName,
+        string commitMessage,
+        IProgress<string>? progress = null,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(mainRepoDir) || !Directory.Exists(mainRepoDir))
+            return SquashMergeResult.Failed("메인 레포 경로가 유효하지 않습니다.");
+        if (string.IsNullOrWhiteSpace(sourceWorktreePath) || !Directory.Exists(sourceWorktreePath))
+            return SquashMergeResult.Failed("소스 워크트리 경로가 유효하지 않습니다.");
+        if (string.IsNullOrWhiteSpace(sourceBranchName) || string.IsNullOrWhiteSpace(targetBranchName))
+            return SquashMergeResult.Failed("브랜치 이름이 비어 있습니다.");
+        if (string.IsNullOrWhiteSpace(commitMessage))
+            return SquashMergeResult.Failed("커밋 메시지가 비어 있습니다.");
+
+        var tempDir = Path.Combine(AppPaths.MergeStaging, Guid.NewGuid().ToString("N"));
+        logger.LogInformation("스쿼시 머지 시작: source={Src} target={Tgt} temp={Temp}",
+            sourceBranchName, targetBranchName, tempDir);
+
+        try
+        {
+            // 1) 임시 클론 디렉터리 생성 후 git clone --no-hardlinks.
+            //    --no-hardlinks 는 하드링크 기반 .git 객체 공유를 끄고 실제 복사를 강제한다.
+            //    이유: 임시 클론에서 write 가 일어나면 하드링크 때문에 메인 레포의 객체에 영향을 줄 수 있다.
+            progress?.Report("임시 클론 생성 중...");
+            Directory.CreateDirectory(AppPaths.MergeStaging);
+            var cloneResult = await RunGitAsync(AppPaths.MergeStaging, ct,
+                "clone", "--no-hardlinks", mainRepoDir, tempDir);
+            if (!cloneResult.Success)
+            {
+                logger.LogError("임시 클론 실패: {Err}", cloneResult.Error);
+                return SquashMergeResult.Failed($"임시 클론 실패: {cloneResult.Error}");
+            }
+
+            // 2) 임시 클론에서 타겟 브랜치를 fetch 후 체크아웃.
+            //    임시 클론의 origin = mainRepoDir 이므로 타겟 브랜치는 origin/<target> 으로 가져온다.
+            progress?.Report($"타겟 브랜치 `{targetBranchName}` 체크아웃 중...");
+            var normalizedTarget = BranchRefNormalizer.Normalize(targetBranchName);
+            var fetchTarget = await RunGitAsync(tempDir, ct, "fetch", "origin", normalizedTarget);
+            if (!fetchTarget.Success)
+            {
+                logger.LogError("타겟 브랜치 fetch 실패: {Err}", fetchTarget.Error);
+                return SquashMergeResult.Failed($"타겟 브랜치 fetch 실패: {fetchTarget.Error}");
+            }
+
+            var checkoutResult = await RunGitAsync(tempDir, ct, "checkout", "-B", normalizedTarget,
+                $"origin/{normalizedTarget}");
+            if (!checkoutResult.Success)
+            {
+                logger.LogError("타겟 브랜치 체크아웃 실패: {Err}", checkoutResult.Error);
+                return SquashMergeResult.Failed($"타겟 브랜치 체크아웃 실패: {checkoutResult.Error}");
+            }
+
+            // 3) 소스 브랜치를 원본 워크트리에서 직접 fetch 해 로컬 ref refs/seoro/source 로 저장.
+            //    이 방식은 메인 레포를 통하지 않고 워크트리가 쓰던 최신 커밋을 그대로 가져온다.
+            progress?.Report($"소스 브랜치 `{sourceBranchName}` 가져오는 중...");
+            var fetchSource = await RunGitAsync(tempDir, ct, "fetch", sourceWorktreePath,
+                $"{sourceBranchName}:refs/seoro/source");
+            if (!fetchSource.Success)
+            {
+                logger.LogError("소스 브랜치 fetch 실패: {Err}", fetchSource.Error);
+                return SquashMergeResult.Failed($"소스 브랜치 fetch 실패: {fetchSource.Error}");
+            }
+
+            // 4) squash merge 수행.
+            progress?.Report("스쿼시 머지 실행 중...");
+            var mergeResult = await RunGitAsync(tempDir, ct, "merge", "--squash", "refs/seoro/source");
+            if (!mergeResult.Success)
+            {
+                // 충돌 여부 판정: .git/MERGE_HEAD 또는 porcelain UU 마커.
+                var hasConflict = await HasUnresolvedConflictsAsync(tempDir, ct);
+                if (hasConflict)
+                {
+                    logger.LogWarning("머지 충돌 감지. merge --abort 후 임시 클론 삭제 (Alt A)");
+                    var conflictFiles = await GetConflictingFilesAsync(tempDir, ct);
+                    await RunGitAsync(tempDir, ct, "merge", "--abort");
+                    return SquashMergeResult.ConflictDetected(conflictFiles);
+                }
+                // squash 머지는 MERGE_HEAD 를 만들지 않고 index 에만 변경을 반영하므로
+                // HasUnresolvedConflictsAsync 가 false 여도 충돌이 있을 수 있다. porcelain 으로 재확인.
+                var porcelain = await GetStatusPorcelainAsync(tempDir, ct);
+                var conflicts = porcelain
+                    .Where(l => l.Length >= 2 && IsConflictMarker(l.AsSpan(0, 2)))
+                    .Select(l => l.Length >= 3 ? l[3..].Trim() : l)
+                    .ToList();
+                if (conflicts.Count > 0)
+                {
+                    logger.LogWarning("squash 머지 충돌 감지: {Count}개 파일", conflicts.Count);
+                    await RunGitAsync(tempDir, ct, "reset", "--hard", "HEAD");
+                    return SquashMergeResult.ConflictDetected(conflicts);
+                }
+
+                logger.LogError("머지 실패 (충돌 아님): {Err}", mergeResult.Error);
+                return SquashMergeResult.Failed($"머지 실패: {mergeResult.Error}");
+            }
+
+            // 5) squash 결과를 커밋 (squash 는 index 만 갱신하므로 별도 커밋 필요).
+            progress?.Report("커밋 생성 중...");
+            var commitResult = await RunGitAsync(tempDir, ct, "commit", "-m", commitMessage);
+            if (!commitResult.Success)
+            {
+                // "nothing to commit" 은 squash 가 사실상 no-op 인 경우로, 에러로 취급.
+                logger.LogError("커밋 실패: {Err}", commitResult.Error);
+                return SquashMergeResult.Failed($"커밋 실패: {commitResult.Error}");
+            }
+
+            // 6) origin(=mainRepoDir) 에 push. temp clone 의 origin 은 로컬 메인 레포 경로이므로
+            //    네트워크 없이 즉시 업데이트된다.
+            progress?.Report("메인 레포에 반영 중...");
+            var pushResult = await RunGitAsync(tempDir, ct, "push", "origin", normalizedTarget);
+            if (!pushResult.Success)
+            {
+                logger.LogError("메인 레포 push 실패: {Err}", pushResult.Error);
+                return SquashMergeResult.Failed($"메인 레포에 반영 실패: {pushResult.Error}");
+            }
+
+            // 메인 레포의 브랜치 캐시를 무효화해 UI 가 즉시 새 ref 를 반영하도록 한다.
+            InvalidateBranchCaches(mainRepoDir);
+
+            logger.LogInformation("스쿼시 머지 완료: {Source} → {Target}", sourceBranchName, targetBranchName);
+            return SquashMergeResult.Succeeded(commitResult.Output);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogWarning("스쿼시 머지 취소됨: temp={Temp}", tempDir);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "스쿼시 머지 예외: temp={Temp}", tempDir);
+            return SquashMergeResult.Failed(ex.Message);
+        }
+        finally
+        {
+            // 성공·실패·취소 무관하게 임시 클론 디렉터리를 정리한다.
+            // (Alt A 전용 — Alt B 가 도입되면 이 finally 블록을 수정해야 한다.)
+            try
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                    logger.LogDebug("임시 클론 삭제: {Temp}", tempDir);
+                }
+            }
+            catch (Exception cleanupEx)
+            {
+                logger.LogWarning(cleanupEx, "임시 클론 삭제 실패: {Temp}", tempDir);
+            }
+        }
+    }
+
+    public Task InvalidateBranchCacheAsync(string repoDir)
+    {
+        InvalidateBranchCaches(repoDir);
+        logger.LogDebug("브랜치 캐시 수동 무효화: {Repo}", repoDir);
+        return Task.CompletedTask;
+    }
+
+    private async Task<List<string>> GetConflictingFilesAsync(string workingDir, CancellationToken ct)
+    {
+        var porcelain = await GetStatusPorcelainAsync(workingDir, ct);
+        return porcelain
+            .Where(line => line.Length >= 2 && IsConflictMarker(line.AsSpan(0, 2)))
+            .Select(line => line.Length >= 3 ? line[3..].Trim() : line.Trim())
+            .Where(p => !string.IsNullOrEmpty(p))
+            .ToList();
+    }
+
     private async Task<GitResult> RunGitAsync(string workingDir, CancellationToken ct, params string[] args)
     {
         return await RunGitCoreAsync(workingDir, null, ct, args);

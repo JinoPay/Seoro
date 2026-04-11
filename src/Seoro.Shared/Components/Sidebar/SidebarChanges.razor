@@ -1,7 +1,6 @@
 @inject IChatState ChatState
 @inject IGitService GitService
-@inject IClaudeService ClaudeService
-@inject ISnackbar Snackbar
+@inject IMergeStatusService MergeStatusService
 @using System.Timers
 @implements IDisposable
 
@@ -69,10 +68,19 @@
                 {
                     @foreach (var file in group.Files)
                     {
-                        <div @key="file.FilePath" class="sidebar-file-item file" @onclick="@(() => OpenFileDiff(file))">
+                        var conflictPredicted = _conflictPredictedFiles.Contains(file.FilePath);
+                        <div @key="file.FilePath"
+                             class="sidebar-file-item file @(conflictPredicted ? "file-conflict-predicted" : "")"
+                             title="@(conflictPredicted ? $"이 파일은 타겟 브랜치와 머지 시 충돌이 예상됩니다: {file.FilePath}" : file.FilePath)"
+                             @onclick="@(() => OpenFileDiff(file))">
                             <MudIcon Icon="@GetFileIcon(file.ChangeType)" Size="Size.Small"
                                      Style="@($"width: 14px; height: 14px; {GetFileIconStyle(file.ChangeType)}")"/>
                             <span class="sidebar-file-name">@GetFileName(file.FilePath)</span>
+                            @if (conflictPredicted)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
+                                         Style="width: 12px; height: 12px; color: var(--color-error); flex-shrink: 0; margin-left: 4px;"/>
+                            }
                             <div class="diff-stats" style="margin-left: auto;">
                                 @if (!file.IsBinary)
                                 {
@@ -92,27 +100,6 @@
             }
         </div>
 
-        <div class="sidebar-commit-section">
-            <div class="commit-input-wrap">
-                <MudTextField T="string" @bind-Value="_commitMessage" Placeholder="커밋 메시지..."
-                              Variant="Variant.Text" Lines="2" Class="commit-message-field"
-                              Style="font-size: 0.8rem;"/>
-                <MudTooltip Text="AI로 커밋 메시지 생성" Placement="Placement.Top">
-                    <MudIconButton Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small"
-                                   Class="commit-ai-btn" Disabled="@(_generating || _diff == null)"
-                                   OnClick="GenerateCommitMessage"/>
-                </MudTooltip>
-            </div>
-            @if (_generating)
-            {
-                <MudProgressLinear Indeterminate="true" Color="Color.Secondary" Class="commit-progress"/>
-            }
-            <MudButton OnClick="CommitChanges" Variant="Variant.Filled" Color="Color.Primary"
-                       Size="Size.Small" FullWidth="true" Disabled="@(!CanCommit)"
-                       Class="commit-btn">
-                @(_committing ? "커밋 중..." : "커밋")
-            </MudButton>
-        </div>
     }
 </div>
 
@@ -130,12 +117,10 @@
     private readonly HashSet<FileChangeType> _collapsedGroups = [];
     private (int Ahead, int Behind)? _aheadBehind;
 
-    // 커밋 필드
-    private string _commitMessage = "";
-    private bool _committing;
-    private bool _generating;
-
-    private bool CanCommit => !_committing && !string.IsNullOrWhiteSpace(_commitMessage) && _diff?.Files.Count > 0;
+    // Phase 5-post: MergeStatusService 가 계산한 충돌 예상 파일 집합.
+    // 이 집합에 포함된 파일은 빨간 배경 + 경고 아이콘으로 하이라이트된다.
+    // 주의: 이것은 "현재 실제 충돌" 이 아니라 "타겟 브랜치와 머지 시 충돌이 예상되는" 파일이다.
+    private HashSet<string> _conflictPredictedFiles = new(StringComparer.OrdinalIgnoreCase);
 
     private record FileGroup(FileChangeType Type, List<FileDiff> Files);
 
@@ -158,8 +143,40 @@
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += HandleStateChanged;
+        MergeStatusService.StatusChanged += HandleMergeStatusChanged;
+        RefreshConflictPredictions();
         await LoadDiffAsync();
         StartWatching();
+    }
+
+    /// <summary>
+    ///     MergeStatusService 에서 현재 세션의 최신 <see cref="MergeStatus"/> 를 읽어
+    ///     충돌 예상 파일 집합을 갱신한다. 경로는 대소문자 무시 비교.
+    /// </summary>
+    private void RefreshConflictPredictions()
+    {
+        var sessionId = ChatState.CurrentSession?.Id;
+        if (string.IsNullOrEmpty(sessionId))
+        {
+            _conflictPredictedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            return;
+        }
+
+        var status = MergeStatusService.GetCurrent(sessionId);
+        _conflictPredictedFiles = status.ConflictingFiles is { Count: > 0 }
+            ? new HashSet<string>(status.ConflictingFiles, StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void HandleMergeStatusChanged(string sessionId)
+    {
+        if (ChatState.CurrentSession?.Id != sessionId)
+            return;
+        _ = InvokeAsync(() =>
+        {
+            RefreshConflictPredictions();
+            StateHasChanged();
+        });
     }
 
     protected override async Task OnParametersSetAsync()
@@ -170,6 +187,16 @@
             _lastSessionId = sessionId;
             _previousFileCount = 0;
             _initialLoaded = false;
+
+            // 버그 #3 수정: 세션 전환 시 이전 세션의 diff가 새 LoadDiffAsync 완료까지
+            // 화면에 잔존하는 문제(사용자 제보 "changes 없는데 커밋 버튼 떠 있음") 해결.
+            // _diff를 즉시 null 로 밀고 로딩 UI를 먼저 한 프레임 표시한 뒤 비동기 로드를 시작한다.
+            _diff = null;
+            _error = null;
+            _aheadBehind = null;
+            _loading = true;
+            StateHasChanged();
+
             await LoadDiffAsync();
             StartWatching();
         }
@@ -297,92 +324,6 @@
         }
     }
 
-    private async Task GenerateCommitMessage()
-    {
-        if (_generating || _diff == null || _diff.Files.Count == 0)
-            return;
-
-        var session = ChatState.CurrentSession;
-        if (session == null || string.IsNullOrEmpty(session.Git.WorktreePath))
-            return;
-
-        _generating = true;
-        StateHasChanged();
-
-        try
-        {
-            var diffText = string.Join("\n", _diff.Files
-                .Where(f => !string.IsNullOrEmpty(f.UnifiedDiff))
-                .Select(f => f.UnifiedDiff));
-
-            if (string.IsNullOrWhiteSpace(diffText))
-            {
-                Snackbar.Add("diff 내용이 없습니다", Severity.Warning);
-                return;
-            }
-
-            var message = await ClaudeService.GenerateCommitMessageAsync(diffText, session.Git.WorktreePath);
-            if (!string.IsNullOrEmpty(message))
-            {
-                _commitMessage = message;
-            }
-            else
-            {
-                Snackbar.Add("메시지 생성 실패", Severity.Warning);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"생성 오류: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _generating = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task CommitChanges()
-    {
-        var session = ChatState.CurrentSession;
-        if (session == null || string.IsNullOrEmpty(session.Git.WorktreePath) || !CanCommit)
-            return;
-
-        _committing = true;
-        StateHasChanged();
-
-        try
-        {
-            var stageResult = await GitService.StageAllAsync(session.Git.WorktreePath);
-            if (!stageResult.Success)
-            {
-                Snackbar.Add($"스테이징 실패: {stageResult.Error}", Severity.Error);
-                return;
-            }
-
-            var commitResult = await GitService.CommitAsync(session.Git.WorktreePath, _commitMessage);
-            if (commitResult.Success)
-            {
-                Snackbar.Add("커밋 완료", Severity.Success);
-                _commitMessage = "";
-                await LoadDiffAsync();
-            }
-            else
-            {
-                Snackbar.Add($"커밋 실패: {commitResult.Error}", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"오류: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _committing = false;
-            StateHasChanged();
-        }
-    }
-
     private void ToggleGroup(FileChangeType type)
     {
         if (!_collapsedGroups.Remove(type))
@@ -462,19 +403,26 @@
             if (sessionId != _lastSessionId)
             {
                 _lastSessionId = sessionId;
+
+                // 버그 #3 수정: 세션 전환 감지 즉시 이전 세션의 diff/ahead-behind 를 밀어내고
+                // 로딩 프레임을 먼저 렌더한 뒤 비동기 로드를 시작한다. 이렇게 해야
+                // 새 세션에 잠깐이라도 이전 세션의 변경사항이 노출되지 않는다.
+                _diff = null;
+                _error = null;
+                _previousFileCount = 0;
+                _initialLoaded = false;
+                _aheadBehind = null;
+
                 if (sessionId != null)
                 {
-                    _initialLoaded = false;
+                    _loading = true;
+                    StateHasChanged();
                     await LoadDiffAsync();
                     StartWatching();
                 }
                 else
                 {
-                    _diff = null;
-                    _error = null;
-                    _previousFileCount = 0;
-                    _initialLoaded = false;
-                    _aheadBehind = null;
+                    _loading = false;
                     StopWatching();
                     StateHasChanged();
                 }
@@ -489,6 +437,7 @@
     public void Dispose()
     {
         ChatState.OnChange -= HandleStateChanged;
+        MergeStatusService.StatusChanged -= HandleMergeStatusChanged;
         StopWatching();
     }
 
@@ -535,77 +484,14 @@
         color: var(--color-warning);
     }
 
-    .sidebar-commit-section {
-        padding: 8px 8px 10px;
-        border-top: 1px solid var(--mud-palette-lines-default);
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
+    /* Phase 5-post: MergeStatusService 가 감지한 충돌 예상 파일 하이라이트.
+       실제 충돌이 아니라 "이 파일로 머지하면 충돌이 예상됨" 을 의미한다. */
+    .file-conflict-predicted {
+        background: var(--color-error-bg, rgba(239, 68, 68, 0.08));
+        border-left: 2px solid var(--color-error, #ef4444);
     }
 
-    .commit-input-wrap {
-        position: relative;
-        display: flex;
-        align-items: flex-start;
-        background: var(--mud-palette-surface);
-        border: 1px solid var(--mud-palette-lines-default);
-        border-radius: 6px;
-        padding: 4px 4px 4px 8px;
-        transition: border-color 0.15s;
-    }
-
-    .commit-input-wrap:focus-within {
-        border-color: var(--mud-palette-primary);
-    }
-
-    .commit-input-wrap ::deep .mud-input-slot,
-    .commit-input-wrap ::deep .mud-input-root {
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    .commit-input-wrap ::deep .mud-input-underline::before,
-    .commit-input-wrap ::deep .mud-input-underline::after {
-        display: none !important;
-    }
-
-    .commit-input-wrap ::deep textarea {
-        font-size: 0.78rem !important;
-        line-height: 1.35 !important;
-        padding: 2px 0 !important;
-    }
-
-    .commit-message-field {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .commit-ai-btn {
-        flex-shrink: 0;
-        width: 28px !important;
-        height: 28px !important;
-        margin-top: 1px;
-        color: var(--mud-palette-primary) !important;
-        opacity: 0.7;
-        transition: opacity 0.15s;
-    }
-
-    .commit-ai-btn:hover {
-        opacity: 1;
-        background: var(--mud-palette-action-default-hover) !important;
-    }
-
-    .commit-progress {
-        height: 2px !important;
-        border-radius: 1px;
-    }
-
-    .commit-btn {
-        font-size: 0.75rem !important;
-        font-weight: 600 !important;
-        letter-spacing: 0.02em;
-        border-radius: 6px !important;
-        height: 30px !important;
-        text-transform: none !important;
+    .file-conflict-predicted:hover {
+        background: var(--color-error-bg, rgba(239, 68, 68, 0.15));
     }
 </style>

@@ -150,7 +150,12 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
     [GeneratedRegex(@"^\d{8}-\d{6}$")]
     private static partial Regex TimestampBranchRegex();
 
-    private static string? ResolveGitDir(string worktreePath)
+    /// <summary>
+    ///     워크트리 경로에서 실제 .git 디렉터리 경로를 해석한다.
+    ///     일반 저장소면 <c>&lt;worktree&gt;/.git</c>, 워크트리면 <c>.git</c> 파일의 gitdir 포인터를 따라간다.
+    ///     <see cref="ConflictWatcherService"/>와 <see cref="GitService.HasUnresolvedConflictsAsync"/>가 재사용한다.
+    /// </summary>
+    internal static string? ResolveGitDir(string worktreePath)
     {
         var dotGit = Path.Combine(worktreePath, ".git");
 

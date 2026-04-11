@@ -24,11 +24,6 @@ public interface IClaudeService : IDisposable
     Task<(bool found, string resolvedPath)> DetectCliAsync();
 
     /// <summary>
-    ///     Generate a commit message from a unified diff using Haiku.
-    /// </summary>
-    Task<string?> GenerateCommitMessageAsync(string diff, string workingDir);
-
-    /// <summary>
     ///     Returns the detected Claude CLI version string, or null if not yet detected.
     /// </summary>
     Task<string?> GetDetectedVersionAsync();

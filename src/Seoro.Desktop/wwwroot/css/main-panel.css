@@ -41,6 +41,58 @@
     gap: var(--space-2);
 }
 
+/* ─────────────────────────────────────────────
+   MergeStatus 라이브 아이콘 (Phase 4)
+   MergeStatusKind → CSS 클래스 매핑:
+     Clean          → status-clean       (초록 체크)
+     BehindTarget   → status-behind      (주황 경고 + ↓N 뱃지)
+     ConflictExpected → status-conflict  (빨강 X + N 뱃지)
+     UncommittedDirty → status-uncommitted (파랑 연필 + N 뱃지)
+     InConflict     → status-in-conflict (실제 머지 중 — 빨강)
+     NetworkError   → status-offline     (회색 wifi-off)
+     Unknown        → status-unknown     (회색 점점)
+   ───────────────────────────────────────────── */
+.merge-status-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--text-xs);
+    padding: 0 6px;
+    height: 22px;
+    border-radius: var(--radius-full);
+    opacity: 0.85;
+    cursor: help;
+}
+
+.merge-status-icon.status-clean { color: var(--color-success); }
+.merge-status-icon.status-behind { color: var(--color-warning); }
+.merge-status-icon.status-conflict { color: var(--color-error); }
+.merge-status-icon.status-uncommitted { color: var(--color-info); }
+.merge-status-icon.status-in-conflict {
+    color: var(--color-error);
+    background: var(--color-error-bg);
+}
+.merge-status-icon.status-offline { color: var(--mud-palette-text-secondary); }
+.merge-status-icon.status-unknown { color: var(--mud-palette-text-secondary); opacity: 0.5; }
+
+.merge-status-badge {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.merge-action-conflict {
+    background: var(--color-error-bg) !important;
+    border-color: var(--color-error) !important;
+    color: var(--color-error) !important;
+    font-weight: 600;
+}
+
+.merge-action-conflict:hover:not(.disabled) {
+    background: var(--color-error) !important;
+    color: #fff !important;
+}
+
 .merge-branch-selector-wrap {
     position: relative;
 }

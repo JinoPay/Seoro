@@ -7,6 +7,13 @@ public class AppSettings
     public bool NotificationsEnabled { get; set; } = true;
     public bool NotificationSound { get; set; } = true;
 
+    /// <summary>
+    ///     스쿼시 머지가 성공하면 해당 세션을 자동으로 Archived 상태로 전환한다.
+    ///     기본 false — 사용자가 설정에서 명시적으로 켜야 동작.
+    ///     컨덕터 스타일 자동화 옵션 (Phase 5).
+    /// </summary>
+    public bool AutoArchiveOnMergeSuccess { get; set; }
+
     // 온보딩
     public bool OnboardingCompleted { get; set; }
     public decimal? DefaultMaxBudgetUsd { get; set; }
