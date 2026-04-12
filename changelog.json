@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.17.12",
+    "date": "2026-04-13",
+    "changes": [
+      { "type": "refactor", "description": "아이콘 버튼 전반에 툴팁 적용으로 UX 개선" },
+      { "type": "chore", "description": "MudBlazor v9.3.0 업그레이드" },
+      { "type": "chore", "description": "Microsoft.NET.Test.Sdk v18.4.0 업그레이드" }
+    ]
+  },
+  {
     "version": "1.17.11",
     "date": "2026-04-10",
     "changes": [
