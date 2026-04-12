@@ -296,10 +296,18 @@
             _targetBranch = matched;
 
             // MergeStatusService 에 타겟을 알려 라이브 상태 계산에 반영.
+            // targetBranchOverride 를 명시해 debounce 를 우회 — 세션 전환 직후
+            // MergeStatusService 가 target 없이 먼저 refresh 해 debounce 를 소모하기 때문.
             if (!string.IsNullOrEmpty(_targetBranch))
-                MergeStatusService.SetTargetBranch(session.Id, BranchRefNormalizer.Normalize(_targetBranch));
-
-            await MergeStatusService.RefreshAsync(session.Id);
+            {
+                var normalized = BranchRefNormalizer.Normalize(_targetBranch);
+                MergeStatusService.SetTargetBranch(session.Id, normalized);
+                await MergeStatusService.RefreshAsync(session.Id, normalized);
+            }
+            else
+            {
+                await MergeStatusService.RefreshAsync(session.Id);
+            }
         }
         catch (Exception ex)
         {
