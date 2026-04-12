@@ -11,19 +11,21 @@
                        Style="text-transform: none;">
                 템플릿
             </MudButton>
-            <MudMenu Icon="@Icons.Material.Filled.FileDownload" Size="Size.Small"
-                     Variant="Variant.Outlined" Dense="true"
-                     TooltipText="가져오기" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                <MudMenuItem Icon="@Icons.Material.Filled.DesktopWindows"
-                             OnClick="ImportFromDesktop"
-                             Disabled="@(_scope == McpScope.Desktop)">
-                    Claude Desktop에서 가져오기
-                </MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.Code"
-                             OnClick="@(() => _importJsonOpen = true)">
-                    JSON으로 가져오기
-                </MudMenuItem>
-            </MudMenu>
+            <MudTooltip Text="가져오기">
+                <MudMenu Icon="@Icons.Material.Filled.FileDownload" Size="Size.Small"
+                         Variant="Variant.Outlined" Dense="true"
+                         AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                    <MudMenuItem Icon="@Icons.Material.Filled.DesktopWindows"
+                                 OnClick="ImportFromDesktop"
+                                 Disabled="@(_scope == McpScope.Desktop)">
+                        Claude Desktop에서 가져오기
+                    </MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Code"
+                                 OnClick="@(() => _importJsonOpen = true)">
+                        JSON으로 가져오기
+                    </MudMenuItem>
+                </MudMenu>
+            </MudTooltip>
             @if (_scope != McpScope.Desktop)
             {
                 <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"

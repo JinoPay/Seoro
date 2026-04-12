@@ -107,15 +107,15 @@ public class CodexEventConverterTests
     // ── item.completed + agent_message ──
 
     [Fact]
-    public void ItemCompleted_AgentMessage_EmitsBlockStopAndAssistant()
+    public void ItemCompleted_AgentMessage_EmitsDeltaAndBlockStop()
     {
         var converter = CreateConverter();
         converter.Convert(Parse("""{"type":"item.started","item":{"id":"i1","type":"agent_message","text":"Hi"}}""")).ToList();
 
         var events = converter.Convert(Parse("""{"type":"item.completed","item":{"id":"i1","type":"agent_message","text":"Hi"}}""")).ToList();
 
+        Assert.Contains(events, e => e.Type == "content_block_delta" && e.Delta?.Text == "Hi");
         Assert.Contains(events, e => e.Type == "content_block_stop");
-        Assert.Contains(events, e => e.Type == "assistant");
     }
 
     // ── turn.completed ──

@@ -131,10 +131,10 @@ public class CodexArgumentBuilderTests
     }
 
     [Fact]
-    public void BuildResume_IncludesWorkingDir()
+    public void BuildResume_DoesNotIncludeWorkingDir()
     {
         var result = CodexArgumentBuilder.BuildResume("", "tid", "o4-mini", "bypassAll", "/my/project");
-        Assert.Contains("--cd \"/my/project\"", result);
+        Assert.DoesNotContain("--cd", result);
     }
 
     // ── CodexBuildOptions 기반 테스트 ──

@@ -11,10 +11,11 @@
             {
                 <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="width: 20px; height: 20px;"/>
             }
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                           Disabled="_refreshing || _loading"
-                           OnClick="OnRefreshClick"
-                           Title="통계 새로고침"/>
+            <MudTooltip Text="통계 새로고침">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                               Disabled="_refreshing || _loading"
+                               OnClick="OnRefreshClick"/>
+            </MudTooltip>
         </div>
     </div>
     <div class="settings-content-body">
