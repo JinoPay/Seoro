@@ -37,6 +37,15 @@
         var noTarget = string.IsNullOrEmpty(_targetBranch);
         var blocked = isStreaming || _busy;
 
+        // 새 워크트리처럼 푸시할 커밋도, 미커밋 변경도 없는 상태에서는
+        // 머지 액션을 노출할 이유가 없다 — 44px 빈 줄만 남겨 "공간은 있되 비어있는" 첫인상.
+        // 실제 머지 진행 중(InConflict)은 반드시 충돌 해결 버튼을 노출해야 하므로 예외.
+        var isEmpty = status.Kind != MergeStatusKind.InConflict
+                      && (status.AheadCount ?? 0) == 0
+                      && status.UncommittedChangeCount == 0;
+
+        if (!isEmpty)
+        {
         @* ─── 왼쪽: 타겟 브랜치 선택기 + 새로고침 + 상태 아이콘 ─── *@
         <div class="merge-flow">
             <div class="merge-branch-selector-wrap">
@@ -190,6 +199,7 @@
                     </button>
                 </MudTooltip>
             </div>
+        }
         }
     }
 </div>

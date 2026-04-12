@@ -112,7 +112,7 @@
     opacity: 0.65;
     transition: opacity 0.15s;
     white-space: nowrap;
-    max-width: 150px;
+    max-width: 120px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -131,13 +131,15 @@
     align-items: center;
     gap: var(--space-1);
     min-width: 0;
-    flex: 1;
+    flex: 1 1 auto;
+    overflow: hidden;
 }
 
 .merge-actions {
     display: flex;
     align-items: center;
     gap: 2px;
+    flex-shrink: 0;
 }
 
 .merge-action-btn {
