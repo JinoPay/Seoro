@@ -6,10 +6,11 @@
     <div class="replay-page-header">
         <span class="typo-h6">세션 히스토리</span>
         <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@_totalCount 세션</MudChip>
-        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       Style="width: 22px; height: 22px; opacity: 0.5;"
-                       OnClick="RefreshSessionsAsync" Disabled="_loading"
-                       Title="새로고침"/>
+        <MudTooltip Text="새로고침">
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                           Style="width: 22px; height: 22px; opacity: 0.5;"
+                           OnClick="RefreshSessionsAsync" Disabled="_loading"/>
+        </MudTooltip>
         <button class="replay-nav-link" @onclick="@(() => ChatState.SetSettingsSection("usage"))">
             <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Small"/>
             사용량 분석 →
