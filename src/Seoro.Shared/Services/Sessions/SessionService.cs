@@ -31,6 +31,8 @@ public partial class SessionService(
 
     // In-memory metadata cache: avoids re-reading all files on every call
     private readonly ConcurrentDictionary<string, Session> _metadataCache = new();
+    // Guard: prevents fire-and-forget SaveSessionAsync from re-creating deleted files
+    private readonly ConcurrentDictionary<string, byte> _deletedIds = new();
     private readonly string _archiveDir = AppPaths.ArchivedContexts;
     private readonly string _sessionsDir = AppPaths.Sessions;
     private volatile bool _cacheInitialized;
@@ -114,6 +116,9 @@ public partial class SessionService(
 
     public async Task DeleteSessionAsync(string sessionId)
     {
+        // Mark as deleted first to prevent concurrent fire-and-forget saves from re-creating files
+        _deletedIds[sessionId] = 0;
+
         // Clean up worktree/branch before deleting
         var session = await LoadSessionAsync(sessionId);
         if (session != null && session.Status is SessionStatus.Ready)
@@ -175,10 +180,18 @@ public partial class SessionService(
 
     public async Task SaveSessionAsync(Session session)
     {
+        // Skip saving if this session has been deleted (race with fire-and-forget saves)
+        if (_deletedIds.ContainsKey(session.Id))
+            return;
+
         var semaphore = _sessionLocks.GetOrAdd(session.Id, _ => new SemaphoreSlim(1, 1));
         await semaphore.WaitAsync();
         try
         {
+            // Re-check after acquiring the lock — deletion may have happened while waiting
+            if (_deletedIds.ContainsKey(session.Id))
+                return;
+
             logger.LogDebug("세션 {SessionId} ({Title}) 저장 중", session.Id, session.Title);
             session.UpdatedAt = DateTime.UtcNow;
 
