@@ -568,9 +568,10 @@
 /* Keyboard shortcut badge — visible only while Ctrl/⌘ held */
 .tree-session-shortcuts {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 2px;
     flex-shrink: 0;
     align-self: center;
 }
@@ -579,20 +580,20 @@
     font-family: var(--font-mono);
     font-size: 0.6rem;
     opacity: 0;
-    max-width: 0;
+    max-height: 0;
     overflow: hidden;
-    transform: translateX(4px);
-    transition: opacity 200ms ease, transform 200ms ease, max-width 200ms ease;
+    transform: translateY(4px);
+    transition: opacity 200ms ease, transform 200ms ease, max-height 200ms ease;
     color: var(--text-secondary);
     pointer-events: none;
     white-space: nowrap;
+    line-height: 1;
 }
 
 .tree-session-shortcut.visible {
     opacity: 0.25;
-    max-width: 4rem;
-    margin-left: var(--space-1);
-    transform: translateX(0);
+    max-height: 1rem;
+    transform: translateY(0);
 }
 
 .tree-session-shortcut.delete.visible {
@@ -741,4 +742,3 @@
     font-size: var(--text-xs);
     color: var(--text-muted);
 }
-
