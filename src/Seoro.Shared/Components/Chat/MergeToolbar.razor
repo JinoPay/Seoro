@@ -98,7 +98,7 @@
                             @onclick="ToggleBranchMenu" disabled="@blocked">
                         <MudIcon Icon="@Icons.Material.Filled.CallMerge"
                                  Style="width: 12px; height: 12px;"/>
-                        <span>@(_targetBranch ?? "브랜치 선택")</span>
+                        <span>@(_targetBranch != null ? BranchRefNormalizer.Normalize(_targetBranch) : "브랜치 선택")</span>
                         <MudIcon Icon="@Icons.Material.Filled.ExpandMore"
                                  Style="width: 12px; height: 12px; opacity: 0.5;"/>
                     </button>
@@ -768,7 +768,8 @@
     private static string BuildPrTooltip(bool noTarget, string? target)
     {
         if (noTarget) return "먼저 타겟 브랜치를 선택하세요";
-        return $"AI 에게 위임 — {target} 를 base 로 PR 생성";
+        var displayName = BranchRefNormalizer.Normalize(target);
+        return $"AI 에게 위임 — {displayName} 를 base 로 PR 생성";
     }
 
     // ─────────────────────────────────────────────
