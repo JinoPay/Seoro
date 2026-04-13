@@ -58,6 +58,13 @@ public static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        // macOS: prevent SIGSEGV when Process.Start() falls back to fork() in a
+        // multi-threaded process (Photino/AppKit/WebKit threads).  The Objective-C
+        // runtime's +initialize dispatch in the forked child can hit corrupted state;
+        // this env var disables that dispatch (safe because exec() follows immediately).
+        if (OperatingSystem.IsMacOS())
+            Environment.SetEnvironmentVariable("OBJC_DISABLE_INITIALIZE_FORK_SAFETY", "YES");
+
         // Velopack auto-update hook (must run before anything else)
         VelopackApp.Build().Run();
 

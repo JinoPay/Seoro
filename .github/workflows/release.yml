@@ -142,6 +142,11 @@ jobs:
             <string>12.0</string>
             <key>NSUserNotificationAlertStyle</key>
             <string>alert</string>
+            <key>LSEnvironment</key>
+            <dict>
+              <key>OBJC_DISABLE_INITIALIZE_FORK_SAFETY</key>
+              <string>YES</string>
+            </dict>
           </dict>
           </plist>
           PLIST
