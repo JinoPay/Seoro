@@ -176,7 +176,8 @@ public class NotificationService(ILogger<NotificationService> logger, IOptionsMo
         psi.ArgumentList.Add("-e");
         psi.ArgumentList.Add(script);
 
-        using var process = Process.Start(psi);
+        // macOS: keep fork() off the AppKit main thread to avoid SIGSEGV
+        using var process = Task.Run(() => Process.Start(psi)).GetAwaiter().GetResult();
         if (process != null)
         {
             process.WaitForExit(5000);

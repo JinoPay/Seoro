@@ -21,7 +21,15 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
 
         try
         {
-            process.Start();
+            // macOS: Start() must run off the AppKit main thread.  When .NET's
+            // Process.Start() falls back to fork(), the child inherits the main
+            // thread's dispatch-queue state and crashes (SIGSEGV) before exec().
+            // Task.Run() ensures fork() happens on a ThreadPool thread whose
+            // Thread-0 copy in the child has no AppKit run-loop to drain.
+            if (OperatingSystem.IsMacOS())
+                await Task.Run(() => process.Start());
+            else
+                process.Start();
 
             // 표준 입력이 제공되면 작성한 후 스트림 닫기
             if (options.StandardInput != null)
@@ -61,7 +69,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         }
     }
 
-    public Task<StreamingProcess> RunStreamingAsync(ProcessRunOptions options, CancellationToken ct = default)
+    public async Task<StreamingProcess> RunStreamingAsync(ProcessRunOptions options, CancellationToken ct = default)
     {
         logger.LogDebug("실행 중 (스트리밍): {FileName} {Args}", options.FileName,
             string.Join(" ", options.Arguments));
@@ -70,12 +78,17 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         {
             var psi = CreateProcessStartInfo(options);
             var process = new Process { StartInfo = psi };
-            process.Start();
+
+            // macOS: keep fork() off the AppKit main thread (see RunAsync comment).
+            if (OperatingSystem.IsMacOS())
+                await Task.Run(() => process.Start());
+            else
+                process.Start();
 
             // 호출자가 표준 출력만 읽으면 되도록 백그라운드에서 stderr 캡처
             var stderrTask = process.StandardError.ReadToEndAsync(ct);
 
-            return Task.FromResult(new StreamingProcess(process, stderrTask, options.KillEntireProcessTree, logger));
+            return new StreamingProcess(process, stderrTask, options.KillEntireProcessTree, logger);
         }
         catch (FileNotFoundException ex)
         {

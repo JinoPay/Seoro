@@ -36,14 +36,12 @@ public class LauncherService(IShellService shell, ILogger<LauncherService> logge
                     UseShellExecute = true
                 });
             else if (OperatingSystem.IsMacOS())
-                Process.Start(new ProcessStartInfo
+                await Task.Run(() => Process.Start(new ProcessStartInfo
                 {
                     FileName = "open",
                     Arguments = $"\"{folderPath}\"",
                     UseShellExecute = false
-                });
-
-            await Task.CompletedTask;
+                }));
         }
         catch (Exception ex)
         {
@@ -59,24 +57,30 @@ public class LauncherService(IShellService shell, ILogger<LauncherService> logge
 
             if ((ide?.LaunchMode ?? IdeLaunchMode.Cli) == IdeLaunchMode.MacApp && OperatingSystem.IsMacOS())
             {
-                Process.Start(new ProcessStartInfo
+                // macOS: keep fork() off the AppKit main thread
+                await Task.Run(() => Process.Start(new ProcessStartInfo
                 {
                     FileName = "open",
                     Arguments = $"-a \"{ideCommand}\" \"{folderPath}\"",
                     UseShellExecute = false
-                });
+                }));
                 return;
             }
 
             var resolved = await shell.WhichAsync(ideCommand);
             var command = resolved ?? ideCommand;
 
-            Process.Start(new ProcessStartInfo
+            var psi = new ProcessStartInfo
             {
                 FileName = command,
                 Arguments = $"\"{folderPath}\"",
                 UseShellExecute = OperatingSystem.IsWindows()
-            });
+            };
+
+            if (OperatingSystem.IsMacOS())
+                await Task.Run(() => Process.Start(psi));
+            else
+                Process.Start(psi);
         }
         catch (Exception ex)
         {
