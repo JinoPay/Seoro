@@ -21,6 +21,7 @@ public class LauncherService(IShellService shell, ILogger<LauncherService> logge
         new("Sublime Text", "sublime", "subl", "subl", "Sublime Text")
     ];
 
+    private readonly SemaphoreSlim _ideDetectionLock = new(1, 1);
     private List<IdeInfo>? _cachedIdes;
 
     public async Task OpenFolderAsync(string folderPath)
@@ -88,22 +89,33 @@ public class LauncherService(IShellService shell, ILogger<LauncherService> logge
         if (_cachedIdes != null)
             return _cachedIdes;
 
-        var result = new List<IdeInfo>();
+        await _ideDetectionLock.WaitAsync();
+        try
+        {
+            if (_cachedIdes != null)
+                return _cachedIdes;
 
-        foreach (var def in IdeDefinitions)
-            try
-            {
-                var detected = await TryDetectIdeAsync(def);
-                if (detected != null)
-                    result.Add(detected);
-            }
-            catch (Exception ex)
-            {
-                logger.LogDebug(ex, "IDE detection skipped: {Name}", def.Name);
-            }
+            var result = new List<IdeInfo>();
 
-        _cachedIdes = result;
-        return result;
+            foreach (var def in IdeDefinitions)
+                try
+                {
+                    var detected = await TryDetectIdeAsync(def);
+                    if (detected != null)
+                        result.Add(detected);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogDebug(ex, "IDE detection skipped: {Name}", def.Name);
+                }
+
+            _cachedIdes = result;
+            return result;
+        }
+        finally
+        {
+            _ideDetectionLock.Release();
+        }
     }
 
     private async Task<IdeInfo?> TryDetectIdeAsync(IdeDefinition def)

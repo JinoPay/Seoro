@@ -13,6 +13,25 @@ public class DependencyCheckService(
         // Invalidate cached shell so re-check picks up newly installed tools
         shellService.InvalidateCache();
 
+        if (OperatingSystem.IsMacOS())
+        {
+            // Photino/macOS startup is sensitive to bursts of fork/exec calls from multiple threads.
+            // Run initial dependency probes serially to avoid launch-time child-side fork crashes.
+            return
+            [
+                await CheckToolAsync("git", "Git version control",
+                    "https://git-scm.com/downloads",
+                    "winget install Git.Git",
+                    "brew install git"),
+                await CheckClaudeAsync(),
+                await CheckToolAsync("gh", "GitHub CLI",
+                    "https://cli.github.com/",
+                    "winget install GitHub.cli",
+                    "brew install gh"),
+                await CheckCodexAsync()
+            ];
+        }
+
         var tasks = new[]
         {
             CheckToolAsync("git", "Git version control",
