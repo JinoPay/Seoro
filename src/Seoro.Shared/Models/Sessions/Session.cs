@@ -82,6 +82,7 @@ public class Session
     public string? PendingAskUserQuestionInput { get; set; }
 
     public string? PlanFilePath { get; set; }
+    public string? PlanContent { get; set; }
 
     /// <summary>
     ///     세션 전환이나 앱 재진입 후에도 입력창 초안을 복원하기 위한 임시 저장 텍스트.

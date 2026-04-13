@@ -36,8 +36,16 @@ public class SystemPromptBuilder(
 
         var provider = cliProviderFactory.GetProviderForSession(session);
         if (provider.Capabilities.SupportsPlanMode && session.PermissionMode == "plan")
-            parts.Add(
-                @"You are in Plan mode. Your goal is to explore the codebase thoroughly and create a detailed implementation plan.
+            parts.Add(session.IsCodex
+                ? @"You are in Plan mode. Your goal is to explore the codebase thoroughly and return a detailed implementation plan in your final response.
+
+Rules:
+- Use read-only tools to explore the codebase
+- Do NOT modify any source files
+- Do NOT create or update plan files unless the user explicitly asks for that
+- Do NOT call ExitPlanMode
+- Structure your final response with: Context, Changes (specific files and what to change), and Verification steps"
+                : @"You are in Plan mode. Your goal is to explore the codebase thoroughly and create a detailed implementation plan.
 
 Rules:
 - Use read-only tools (Read, Grep, Glob, Bash for read-only commands) to explore the codebase

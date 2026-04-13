@@ -90,6 +90,7 @@ public class SessionJsonConverter : JsonConverter<Session>
 
         if (root.TryGet("conversationId", out var cid)) session.ConversationId = cid;
         if (root.TryGet("planFilePath", out var pfp)) session.PlanFilePath = pfp;
+        if (root.TryGet("planContent", out var pcnt)) session.PlanContent = pcnt;
         if (root.TryGet("draftInputText", out var dit)) session.DraftInputText = dit;
         if (root.TryGetProperty("draftAttachments", out var da) && da.ValueKind == JsonValueKind.Array)
             session.DraftAttachments = JsonSerializer.Deserialize<List<PendingAttachment>>(da.GetRawText(), options) ?? [];
@@ -177,6 +178,7 @@ public class SessionJsonConverter : JsonConverter<Session>
         writer.WriteBoolean("titleLocked", value.TitleLocked);
         writer.WriteBoolean("planCompleted", value.PlanCompleted);
         if (value.PlanFilePath != null) writer.WriteString("planFilePath", value.PlanFilePath);
+        if (value.PlanContent != null) writer.WriteString("planContent", value.PlanContent);
         if (!string.IsNullOrEmpty(value.DraftInputText))
             writer.WriteString("draftInputText", value.DraftInputText);
         if (value.DraftAttachments.Count > 0)

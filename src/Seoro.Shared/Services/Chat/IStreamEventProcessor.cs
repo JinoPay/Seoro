@@ -37,7 +37,7 @@ public class StreamProcessingContext
     public string? CurrentParentToolUseId { get; set; }
 
     /// <summary>
-    ///     Plan file path detected from Write/Edit tool calls targeting .claude/plans/.
+    ///     Plan file path detected from Write/Edit tool calls targeting worktree-local plan directories.
     ///     Used to avoid picking up unrelated plan files from other sessions.
     /// </summary>
     public string? DetectedPlanFilePath { get; set; }

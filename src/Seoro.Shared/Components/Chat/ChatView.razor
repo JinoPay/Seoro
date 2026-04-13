@@ -215,7 +215,10 @@
                         _planFilePath = ChatState.CurrentSession.PlanFilePath;
 
                         if (!string.IsNullOrEmpty(ChatState.CurrentSession.Git.WorktreePath))
-                            _ = RestorePlanContentAsync(ChatState.CurrentSession.Git.WorktreePath, ChatState.CurrentSession.PlanFilePath);
+                            _ = RestorePlanContentAsync(
+                                ChatState.CurrentSession.Git.WorktreePath,
+                                ChatState.CurrentSession.PlanFilePath,
+                                ChatState.CurrentSession.PlanContent);
                     }
                 }
                 else if (!_askUserBarVisible)
@@ -234,7 +237,13 @@
                         {
                             _ = RestorePlanContentAsync(
                                 ChatState.CurrentSession.Git.WorktreePath,
-                                ChatState.CurrentSession.PlanFilePath);
+                                ChatState.CurrentSession.PlanFilePath,
+                                ChatState.CurrentSession.PlanContent);
+                        }
+                        else if (!string.IsNullOrEmpty(ChatState.CurrentSession?.PlanContent))
+                        {
+                            _lastPlanFilePath = ChatState.CurrentSession.PlanFilePath;
+                            _lastPlanContent = ChatState.CurrentSession.PlanContent;
                         }
                         else
                         {
@@ -277,33 +286,29 @@
         });
     }
 
-    private async Task RestorePlanContentAsync(string worktreePath, string? savedPlanFilePath = null)
+    private async Task RestorePlanContentAsync(
+        string worktreePath,
+        string? savedPlanFilePath = null,
+        string? savedPlanContent = null)
     {
         // 비동기 I/O 중 스위치 감지를 위해 호출 시점의 세션 ID 캡처
         var targetSessionId = ChatState.CurrentSession?.Id;
 
         string? filePath = null;
-        string? content = null;
+        var content = savedPlanContent;
 
-        if (!string.IsNullOrEmpty(savedPlanFilePath) && File.Exists(savedPlanFilePath))
+        if (content == null && !string.IsNullOrEmpty(savedPlanFilePath) && File.Exists(savedPlanFilePath))
         {
             filePath = savedPlanFilePath;
             content = await File.ReadAllTextAsync(savedPlanFilePath);
         }
-        else
+        else if (content == null)
         {
-            // ~/.claude/plans/(CLI가 저장하는 위치)와 worktree .claude/plans/ 모두 확인
-            var dirs = new List<string>();
-
-            var homePlansDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".claude", "plans");
-            if (Directory.Exists(homePlansDir))
-                dirs.Add(homePlansDir);
-
-            var worktreePlansDir = Path.Combine(worktreePath, ".claude", "plans");
-            if (Directory.Exists(worktreePlansDir))
-                dirs.Add(worktreePlansDir);
+            var dirs = new[]
+            {
+                Path.Combine(worktreePath, ".claude", "plans"),
+                Path.Combine(worktreePath, ".context", "plans")
+            }.Where(Directory.Exists).ToList();
 
             var planFile = dirs
                 .SelectMany(d => Directory.GetFiles(d, "*.md"))
@@ -451,8 +456,8 @@
             case PlanReviewAction.Approve:
                 await HandlePermissionModeChanged("bypassAll");
                 var planRef = !string.IsNullOrEmpty(_planFilePath)
-                    ? ".claude/plans/ 에 저장된 플랜 파일을 참고하여 "
-                    : "";
+                    ? "저장된 플랜 파일을 참고하여 "
+                    : "방금 검토한 플랜 내용을 참고하여 ";
                 await HandleSend(new ChatInputMessage
                 {
                     Text = $"플랜을 승인합니다. {planRef}구현을 진행해주세요. 플랜의 각 단계를 순서대로 실행하세요."

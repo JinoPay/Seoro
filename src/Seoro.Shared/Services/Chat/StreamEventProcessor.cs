@@ -38,67 +38,73 @@ public class StreamEventProcessor : IStreamEventProcessor
         // Detect plan completion
         if (ctx.Session.PermissionMode == "plan")
         {
-            // Layer 1: detect plan file path from Write/Edit tool calls (must run first)
-            if (ctx.DetectedPlanFilePath == null)
-                DetectPlanFileFromToolCalls(ctx);
-
-            // Persist detected path on session so it survives across turns
-            if (ctx.DetectedPlanFilePath != null)
-                ctx.Session.PlanFilePath = ctx.DetectedPlanFilePath;
-
-            // Restore from session if this turn didn't detect (Write and ExitPlanMode in different turns)
-            if (ctx.DetectedPlanFilePath == null && ctx.Session.PlanFilePath != null
-                                                 && File.Exists(ctx.Session.PlanFilePath))
-                ctx.DetectedPlanFilePath = ctx.Session.PlanFilePath;
-
-            // Layer 2: text-based detection
-            if (!ctx.ExitPlanModeDetected)
-            {
-                var text = ctx.AssistantMessage.Text ?? "";
-                if (text.Contains("ExitPlanMode", StringComparison.OrdinalIgnoreCase))
-                    ctx.ExitPlanModeDetected = true;
-            }
-
-            // Layer 3: file system detection (now uses DetectedPlanFilePath first)
-            if (!ctx.ExitPlanModeDetected && !string.IsNullOrEmpty(ctx.Session.Git.WorktreePath))
-            {
-                await DetectPlanFileAsync(ctx);
-                if (ctx.PlanContent != null)
-                    ctx.ExitPlanModeDetected = true;
-            }
-
-            if (ctx.ExitPlanModeDetected)
-            {
-                if (ctx.PlanContent == null)
-                    await DetectPlanFileAsync(ctx);
-
-                // Fallback: use assistant message text as plan content
-                if (ctx.PlanContent == null && !string.IsNullOrEmpty(ctx.AssistantMessage.Text))
-                    ctx.PlanContent = ctx.AssistantMessage.Text;
-
-                ctx.Session.PlanCompleted = true;
-                ctx.Session.PlanFilePath = ctx.PlanFilePath;
-                ctx.PlanReviewVisible = true;
-                _logger.LogInformation("세션 {SessionId}의 플랜 완료, 플랜 파일: {PlanFile}",
-                    ctx.Session.Id, ctx.PlanFilePath);
-                ctx.QuickResponseVisible = false;
-                ctx.QuickResponseOptions = [];
-            }
+            if (ctx.Session.IsCodex)
+                await FinalizeCodexPlanAsync(ctx);
             else
             {
-                ctx.PlanReviewVisible = false;
-                ctx.QuickResponseVisible = false;
-                ctx.QuickResponseOptions = [];
-            }
+                // Layer 1: detect plan file path from Write/Edit tool calls (must run first)
+                if (ctx.DetectedPlanFilePath == null)
+                    DetectPlanFileFromToolCalls(ctx);
 
-            // AskUserQuestion takes priority over plan review
-            if (HasAskUserQuestionToolCall(ctx))
-            {
-                ctx.PlanReviewVisible = false;
-                ctx.Session.PlanCompleted = false; // AskUserQuestion supersedes plan review
-                ctx.Session.PendingAskUserQuestionInput = ctx.AskUserQuestionInput;
-                ctx.QuickResponseVisible = false;
-                ctx.QuickResponseOptions = [];
+                // Persist detected path on session so it survives across turns
+                if (ctx.DetectedPlanFilePath != null)
+                    ctx.Session.PlanFilePath = ctx.DetectedPlanFilePath;
+
+                // Restore from session if this turn didn't detect (Write and ExitPlanMode in different turns)
+                if (ctx.DetectedPlanFilePath == null && ctx.Session.PlanFilePath != null
+                                                     && File.Exists(ctx.Session.PlanFilePath))
+                    ctx.DetectedPlanFilePath = ctx.Session.PlanFilePath;
+
+                // Layer 2: text-based detection
+                if (!ctx.ExitPlanModeDetected)
+                {
+                    var text = ctx.AssistantMessage.Text ?? "";
+                    if (text.Contains("ExitPlanMode", StringComparison.OrdinalIgnoreCase))
+                        ctx.ExitPlanModeDetected = true;
+                }
+
+                // Layer 3: file system detection (now uses DetectedPlanFilePath first)
+                if (!ctx.ExitPlanModeDetected && !string.IsNullOrEmpty(ctx.Session.Git.WorktreePath))
+                {
+                    await DetectPlanFileAsync(ctx);
+                    if (ctx.PlanContent != null)
+                        ctx.ExitPlanModeDetected = true;
+                }
+
+                if (ctx.ExitPlanModeDetected)
+                {
+                    if (ctx.PlanContent == null)
+                        await DetectPlanFileAsync(ctx);
+
+                    // Fallback: use assistant message text as plan content
+                    if (ctx.PlanContent == null && !string.IsNullOrEmpty(ctx.AssistantMessage.Text))
+                        ctx.PlanContent = ctx.AssistantMessage.Text;
+
+                    ctx.Session.PlanCompleted = true;
+                    ctx.Session.PlanFilePath = ctx.PlanFilePath;
+                    ctx.Session.PlanContent = ctx.PlanContent;
+                    ctx.PlanReviewVisible = true;
+                    _logger.LogInformation("세션 {SessionId}의 플랜 완료, 플랜 파일: {PlanFile}",
+                        ctx.Session.Id, ctx.PlanFilePath);
+                    ctx.QuickResponseVisible = false;
+                    ctx.QuickResponseOptions = [];
+                }
+                else
+                {
+                    ctx.PlanReviewVisible = false;
+                    ctx.QuickResponseVisible = false;
+                    ctx.QuickResponseOptions = [];
+                }
+
+                // AskUserQuestion takes priority over plan review
+                if (HasAskUserQuestionToolCall(ctx))
+                {
+                    ctx.PlanReviewVisible = false;
+                    ctx.Session.PlanCompleted = false; // AskUserQuestion supersedes plan review
+                    ctx.Session.PendingAskUserQuestionInput = ctx.AskUserQuestionInput;
+                    ctx.QuickResponseVisible = false;
+                    ctx.QuickResponseOptions = [];
+                }
             }
         }
         else
@@ -161,22 +167,20 @@ public class StreamEventProcessor : IStreamEventProcessor
             return;
         }
 
-        // Fallback: scan filesystem for recent plan files
+        // Fallback: scan worktree-local plan directories for recent plan files
         var candidates = new List<string>();
 
-        // Primary: ~/.claude/plans/ (where Claude CLI actually saves plan files)
-        var homePlansDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".claude", "plans");
-        if (Directory.Exists(homePlansDir))
-            candidates.AddRange(Directory.GetFiles(homePlansDir, "*.md"));
-
-        // Secondary: {WorktreePath}/.claude/plans/ (in case system prompt directed here)
         if (!string.IsNullOrEmpty(ctx.Session.Git.WorktreePath))
         {
-            var worktreePlansDir = Path.Combine(ctx.Session.Git.WorktreePath, ".claude", "plans");
-            if (Directory.Exists(worktreePlansDir))
-                candidates.AddRange(Directory.GetFiles(worktreePlansDir, "*.md"));
+            var worktreePlanDirs = new[]
+            {
+                Path.Combine(ctx.Session.Git.WorktreePath, ".claude", "plans"),
+                Path.Combine(ctx.Session.Git.WorktreePath, ".context", "plans")
+            };
+
+            foreach (var dir in worktreePlanDirs)
+                if (Directory.Exists(dir))
+                    candidates.AddRange(Directory.GetFiles(dir, "*.md"));
         }
 
         if (candidates.Count == 0) return;
@@ -196,8 +200,8 @@ public class StreamEventProcessor : IStreamEventProcessor
     }
 
     /// <summary>
-    ///     Scans the assistant message's tool calls for Write/Edit operations targeting .claude/plans/*.md
-    ///     to precisely identify which plan file belongs to this session.
+    ///     Scans the assistant message's tool calls for Write/Edit operations targeting worktree-local
+    ///     plan files to precisely identify which plan file belongs to this session.
     /// </summary>
     private void DetectPlanFileFromToolCalls(StreamProcessingContext ctx)
     {
@@ -222,7 +226,7 @@ public class StreamEventProcessor : IStreamEventProcessor
                     if (path != null)
                     {
                         var normalized = path.Replace('\\', '/');
-                        if (normalized.Contains(".claude/plans/") && normalized.EndsWith(".md"))
+                        if (IsPlanFilePath(normalized))
                         {
                             ctx.DetectedPlanFilePath = path;
                             _logger.LogDebug("도구 호출에서 플랜 파일 감지됨: {PlanFilePath}", path);
@@ -236,6 +240,59 @@ public class StreamEventProcessor : IStreamEventProcessor
                 _logger.LogDebug(ex, "플랜 감지를 위한 도구 호출 입력 파싱 실패");
             }
         }
+    }
+
+    private async Task FinalizeCodexPlanAsync(StreamProcessingContext ctx)
+    {
+        // AskUserQuestion takes priority over plan review
+        if (HasAskUserQuestionToolCall(ctx))
+        {
+            ctx.PlanReviewVisible = false;
+            ctx.Session.PlanCompleted = false;
+            ctx.Session.PendingAskUserQuestionInput = ctx.AskUserQuestionInput;
+            ctx.QuickResponseVisible = false;
+            ctx.QuickResponseOptions = [];
+            return;
+        }
+
+        if (ctx.DetectedPlanFilePath == null)
+            DetectPlanFileFromToolCalls(ctx);
+
+        if (ctx.DetectedPlanFilePath != null)
+            ctx.Session.PlanFilePath = ctx.DetectedPlanFilePath;
+
+        if (ctx.DetectedPlanFilePath == null && ctx.Session.PlanFilePath != null
+                                             && File.Exists(ctx.Session.PlanFilePath))
+            ctx.DetectedPlanFilePath = ctx.Session.PlanFilePath;
+
+        if (ctx.PlanContent == null)
+            await DetectPlanFileAsync(ctx);
+
+        if (ctx.PlanContent == null && !string.IsNullOrWhiteSpace(ctx.AssistantMessage.Text))
+            ctx.PlanContent = ctx.AssistantMessage.Text;
+
+        if (string.IsNullOrWhiteSpace(ctx.PlanContent))
+        {
+            ctx.PlanReviewVisible = false;
+            ctx.QuickResponseVisible = false;
+            ctx.QuickResponseOptions = [];
+            return;
+        }
+
+        ctx.PlanFilePath ??= ctx.DetectedPlanFilePath;
+        ctx.Session.PlanCompleted = true;
+        ctx.Session.PlanFilePath = ctx.PlanFilePath;
+        ctx.Session.PlanContent = ctx.PlanContent;
+        ctx.PlanReviewVisible = true;
+        ctx.QuickResponseVisible = false;
+        ctx.QuickResponseOptions = [];
+    }
+
+    private static bool IsPlanFilePath(string normalizedPath)
+    {
+        return normalizedPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase)
+               && (normalizedPath.Contains(".claude/plans/", StringComparison.OrdinalIgnoreCase)
+                   || normalizedPath.Contains(".context/plans/", StringComparison.OrdinalIgnoreCase));
     }
 
     private void ExtractAndApplyTitleMarker(StreamProcessingContext ctx)

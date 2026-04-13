@@ -25,7 +25,7 @@ public class UserMessageHandler(
             if (path != null)
             {
                 var normalized = path.Replace('\\', '/');
-                if (normalized.Contains(".claude/plans/") && normalized.EndsWith(".md"))
+                if (IsPlanFilePath(normalized))
                 {
                     ctx.DetectedPlanFilePath = path;
                     ctx.Session.PlanFilePath = path;
@@ -80,5 +80,12 @@ public class UserMessageHandler(
         chatState.NotifyStateChanged();
 
         return Task.CompletedTask;
+    }
+
+    private static bool IsPlanFilePath(string normalizedPath)
+    {
+        return normalizedPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase)
+               && (normalizedPath.Contains(".claude/plans/", StringComparison.OrdinalIgnoreCase)
+                   || normalizedPath.Contains(".context/plans/", StringComparison.OrdinalIgnoreCase));
     }
 }
