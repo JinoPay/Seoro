@@ -105,7 +105,17 @@ public class SessionServiceTests : IDisposable
             Title = "Test Session",
             Model = "sonnet",
             WorkspaceId = "ws-1",
-            CityName = "Seoul"
+            CityName = "Seoul",
+            DraftInputText = "draft message",
+            DraftAttachments =
+            [
+                new PendingAttachment
+                {
+                    FileName = "image.png",
+                    ContentType = "image/png",
+                    Data = [1, 2, 3]
+                }
+            ]
         };
         session.SetInitialStatus(SessionStatus.Ready);
         session.Messages.Add(new ChatMessage
@@ -127,6 +137,10 @@ public class SessionServiceTests : IDisposable
         Assert.Equal("Test Session", loaded.Title);
         Assert.Single(loaded.Messages);
         Assert.Equal("Hello!", loaded.Messages[0].Text);
+        Assert.Equal("draft message", loaded.DraftInputText);
+        Assert.Single(loaded.DraftAttachments);
+        Assert.Equal("image.png", loaded.DraftAttachments[0].FileName);
+        Assert.Equal([1, 2, 3], loaded.DraftAttachments[0].Data);
     }
 
     [Fact]
