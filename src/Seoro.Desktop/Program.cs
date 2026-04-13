@@ -193,6 +193,7 @@ public static class Program
         appBuilder.Services.AddSingleton<IChatState, ChatState>();
         appBuilder.Services.AddSingleton<LightboxService>();
         appBuilder.Services.AddSingleton<IGitService, GitService>();
+        appBuilder.Services.AddSingleton<IPullRequestService, PullRequestService>();
         appBuilder.Services.AddSingleton<IGitBranchWatcherService, GitBranchWatcherService>();
         appBuilder.Services.AddSingleton<IConflictWatcherService, ConflictWatcherService>();
         appBuilder.Services.AddSingleton<IMergeStatusService, MergeStatusService>();

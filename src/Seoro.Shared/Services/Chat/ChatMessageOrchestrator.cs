@@ -7,6 +7,7 @@ public class ChatMessageOrchestrator(
     IClaudeService claudeService,
     ICliProviderFactory cliProviderFactory,
     ISessionService sessionService,
+    IPullRequestService pullRequestService,
     IAttachmentService attachmentService,
     IStreamEventProcessor streamProcessor,
     ISystemPromptBuilder systemPromptBuilder,
@@ -151,6 +152,18 @@ public class ChatMessageOrchestrator(
             }
 
             await streamProcessor.FinalizeAsync(streamCtx);
+
+            try
+            {
+                if (session.Git.TrackedPr != null)
+                    await pullRequestService.RefreshAsync(session, ct);
+                else
+                    await pullRequestService.TryCaptureCreatedPrAsync(session, assistantMsg, ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "세션 {SessionId} PR 추적 갱신 실패", session.Id);
+            }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

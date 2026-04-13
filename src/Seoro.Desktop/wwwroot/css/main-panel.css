@@ -180,6 +180,42 @@
     color: var(--accent);
 }
 
+.merge-pr-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: var(--text-xs);
+    border: 1px solid var(--border-default);
+    white-space: nowrap;
+}
+
+.merge-pr-chip.pr-open {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.merge-pr-chip.pr-draft {
+    color: var(--color-warning);
+    border-color: color-mix(in srgb, var(--color-warning) 40%, transparent);
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+}
+
+.merge-pr-chip.pr-blocked {
+    color: var(--color-error);
+    border-color: color-mix(in srgb, var(--color-error) 40%, transparent);
+    background: color-mix(in srgb, var(--color-error) 10%, transparent);
+}
+
+.merge-pr-chip.pr-merged {
+    color: var(--color-success);
+    border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
+    background: color-mix(in srgb, var(--color-success) 10%, transparent);
+}
+
 /* GitHub 스타일 스플릿 버튼 */
 .merge-split-wrap {
     position: relative;
@@ -642,4 +678,3 @@
     right: 0.75rem;
     top: 0.5rem;
 }
-

@@ -166,9 +166,13 @@ public class SessionJsonConverter : JsonConverter<Session>
         writer.WriteBoolean("isLocalDir", value.Git.IsLocalDir);
         writer.WritePropertyName("additionalDirs");
         JsonSerializer.Serialize(writer, value.Git.AdditionalDirs, options);
-        // v4 신규: LastPrUrl 은 null 이면 필드 자체를 생략해 구버전 호환성을 유지한다.
         if (!string.IsNullOrEmpty(value.Git.LastPrUrl))
             writer.WriteString("lastPrUrl", value.Git.LastPrUrl);
+        if (value.Git.TrackedPr != null)
+        {
+            writer.WritePropertyName("trackedPr");
+            JsonSerializer.Serialize(writer, value.Git.TrackedPr, options);
+        }
         writer.WriteEndObject();
 
         if (value.MaxTurns != null) writer.WriteNumber("maxTurns", value.MaxTurns.Value);
@@ -205,9 +209,12 @@ public class SessionJsonConverter : JsonConverter<Session>
             git.IsLocalDir = ild.GetBoolean();
         if (el.TryGetProperty("additionalDirs", out var ad) && ad.ValueKind == JsonValueKind.Array)
             git.AdditionalDirs = JsonSerializer.Deserialize<List<string>>(ad.GetRawText(), options) ?? [];
-        // v4 신규: 사용자가 수동으로 붙여넣은 PR 링크. 누락되면 null 유지.
         if (el.TryGetProperty("lastPrUrl", out var lpu) && lpu.ValueKind == JsonValueKind.String)
             git.LastPrUrl = lpu.GetString();
+        if (el.TryGetProperty("trackedPr", out var tp) && tp.ValueKind == JsonValueKind.Object)
+            git.TrackedPr = JsonSerializer.Deserialize<TrackedPullRequest>(tp.GetRawText(), options);
+        else if (!string.IsNullOrWhiteSpace(git.LastPrUrl))
+            git.TrackedPr = new TrackedPullRequest { Url = git.LastPrUrl! };
         return git;
     }
 }
