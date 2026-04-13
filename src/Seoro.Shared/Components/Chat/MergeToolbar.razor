@@ -1,7 +1,27 @@
 @inject IChatState ChatState
 @inject IChatEventBus EventBus
 @inject ISessionInitializer SessionInitializer
+@inject IGitService GitService
+@inject IWorkspaceService WorkspaceService
+@inject IMergeStatusService MergeStatusService
+@inject IConflictWatcherService ConflictWatcher
+@inject ISessionService SessionService
+@inject ISettingsService SettingsService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject ILogger<MergeToolbar> Logger
+@using Microsoft.Extensions.Logging
+@using System.Diagnostics
+@using System.Runtime.InteropServices
 @implements IDisposable
+
+@*
+    컨덕터 스타일 자동화 MergeToolbar.
+    - 모든 머지/푸시는 Seoro 가 GitService 를 통해 직접 실행 (AI 위임 X, 격리 규칙 위배 방지).
+    - 상태는 IMergeStatusService 를 구독해 라이브로 반영 (아이콘/뱃지).
+    - 충돌 발생 시 [충돌 해결] 버튼만 `MergeRequestedEvent` 경로로 AI 에게 위임
+      (시스템 프롬프트가 이미 워크트리 격리를 강제하므로 안전).
+*@
 
 <div class="merge-toolbar">
     @{
@@ -11,233 +31,373 @@
 
     @if (session != null && session.Status != SessionStatus.Pending)
     {
-        var isWorktree = !session.Git.IsLocalDir;
-        var hasRemote = !string.IsNullOrEmpty(workspace?.RepoUrl);
         var isStreaming = ChatState.IsSessionStreaming(session.Id);
-        var noTarget = string.IsNullOrEmpty(_targetBranch);
+        var remoteInfo = workspace != null ? WorkspaceService.GetRemoteInfo(workspace.Id) : RemoteInfo.None;
+        var status = MergeStatusService.GetCurrent(session.Id);
+        var blocked = isStreaming || _busy;
 
-        @if (isWorktree)
+        @* ─── 로컬 디렉토리 세션: 간단한 푸시 버튼만 표시 ─── *@
+        @if (session.Git.IsLocalDir)
         {
-            @* 타겟 브랜치 선택기 (왼쪽) *@
-            <div class="merge-flow">
-                <div class="merge-branch-selector-wrap">
-                    <MudTooltip Text="머지할 대상 브랜치 선택" Placement="Placement.Bottom">
-                        <button class="merge-target-badge @(isStreaming ? "disabled" : "")"
-                                @onclick="ToggleBranchMenu" disabled="@isStreaming">
-                            <MudIcon Icon="@Icons.Material.Filled.CallMerge"
-                                     Style="width: 12px; height: 12px;"/>
-                            <span>@(_targetBranch ?? "브랜치 선택")</span>
-                            <MudIcon Icon="@Icons.Material.Filled.ExpandMore"
-                                     Style="width: 12px; height: 12px; opacity: 0.5;"/>
+            var localHasChanges = (status.AheadCount ?? 0) > 0 || status.UncommittedChangeCount > 0;
+            if (localHasChanges && remoteInfo.Mode == RemoteMode.GitHub)
+            {
+                <div class="merge-flow" style="justify-content: flex-end;">
+                    <MudTooltip Text="@BuildLocalDirPushTooltip(status, _diffStats)" Placement="Placement.Bottom">
+                        <span class="merge-status-icon @StatusCssClass(status.Kind)">
+                            <MudIcon Icon="@StatusIcon(status.Kind)" Style="width: 14px; height: 14px;"/>
+                            @if (_diffStats is { Additions: > 0 } or { Deletions: > 0 })
+                            {
+                                <span class="merge-status-badge">
+                                    <span class="diff-add">+@(_diffStats!.Value.Additions)</span>
+                                    <span class="diff-del">-@(_diffStats!.Value.Deletions)</span>
+                                </span>
+                            }
+                            else if ((status.AheadCount ?? 0) > 0)
+                            {
+                                <span class="merge-status-badge">↑@status.AheadCount</span>
+                            }
+                            else if (status.UncommittedChangeCount > 0)
+                            {
+                                <span class="merge-status-badge">@status.UncommittedChangeCount</span>
+                            }
+                        </span>
+                    </MudTooltip>
+                </div>
+                <div class="merge-actions">
+                    <MudTooltip Text="@($"origin/{session.Git.BranchName} 으로 푸시")" Placement="Placement.Bottom">
+                        <button class="merge-action-btn @(blocked ? "disabled" : "")"
+                                @onclick="HandlePush"
+                                disabled="@blocked">
+                            <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Style="width: 13px; height: 13px;"/>
+                            <span>푸시</span>
                         </button>
                     </MudTooltip>
-
-                    <MudPopover Open="@_branchMenuOpen" AnchorOrigin="Origin.BottomLeft"
-                                TransformOrigin="Origin.TopLeft" Class="branch-popover">
-                        <div class="branch-search-container">
-                            <MudTextField T="string" @bind-Value="_branchSearchText"
-                                          Placeholder="브랜치 검색..."
-                                          Variant="Variant.Text"
-                                          Immediate="true"
-                                          Adornment="Adornment.Start"
-                                          AdornmentIcon="@Icons.Material.Filled.Search"
-                                          Style="font-size: var(--text-sm);"/>
-                        </div>
-                        <MudList T="string" Dense="true" Class="branch-list">
-                            @foreach (var group in FilteredBranchGroups)
-                            {
-                                <div class="branch-group-header">@group.Name</div>
-                                @foreach (var branch in group.Branches)
-                                {
-                                    <MudListItem T="string" OnClick="@(() => SelectTargetBranch(branch))"
-                                                 Class="@(branch == _targetBranch ? "branch-item-active" : "")">
-                                        <div class="branch-item-content">
-                                            <MudIcon Icon="@Icons.Material.Filled.AccountTree"
-                                                     Style="font-size: 14px; opacity: 0.5;"/>
-                                            <span class="branch-item-name">@branch</span>
-                                            @if (branch == _targetBranch)
-                                            {
-                                                <MudIcon Icon="@Icons.Material.Filled.Check"
-                                                         Style="font-size: 14px; color: var(--accent);"/>
-                                            }
-                                        </div>
-                                    </MudListItem>
-                                }
-                            }
-                            @if (!FilteredBranchGroups.Any())
-                            {
-                                <div class="branch-no-results">일치하는 브랜치 없음</div>
-                            }
-                        </MudList>
-                    </MudPopover>
-
-                    @if (_branchMenuOpen)
-                    {
-                        <MudOverlay Visible="true" OnClick="CloseBranchMenu" DarkBackground="false" ZIndex="1"/>
-                    }
                 </div>
-            </div>
+            }
+        }
+        else
+        {
 
-            @* GitHub 스타일 스플릿 버튼 (오른쪽) *@
-            <div class="merge-split-wrap">
-                <MudTooltip Text="@(noTarget ? "대상 브랜치를 선택하세요" : (_isSquash ? $"{_targetBranch}에 스쿼시 머지" : $"{_targetBranch}에 일반 머지"))"
-                            Placement="Placement.Bottom">
-                    <button class="merge-split-primary @(isStreaming || noTarget ? "disabled" : "")"
-                            @onclick="ExecuteSelected"
-                            disabled="@(isStreaming || noTarget)">
-                        <MudIcon Icon="@(_isSquash ? Icons.Material.Outlined.Compress : Icons.Material.Outlined.MergeType)"
-                                 Style="width: 13px; height: 13px;"/>
-                        <span>@(_isSquash ? "스쿼시 머지" : "머지")</span>
+        var noTarget = string.IsNullOrEmpty(_targetBranch);
+
+        // 새 워크트리처럼 푸시할 커밋도, 미커밋 변경도 없는 상태에서는
+        // 머지 액션을 노출할 이유가 없다 — 44px 빈 줄만 남겨 "공간은 있되 비어있는" 첫인상.
+        // 실제 머지 진행 중(InConflict)은 반드시 충돌 해결 버튼을 노출해야 하므로 예외.
+        var isEmpty = status.Kind != MergeStatusKind.InConflict
+                      && (status.AheadCount ?? 0) == 0
+                      && status.UncommittedChangeCount == 0;
+
+        if (!isEmpty)
+        {
+        @* ─── 왼쪽: 타겟 브랜치 선택기 + 새로고침 + 상태 아이콘 ─── *@
+        <div class="merge-flow">
+            <div class="merge-branch-selector-wrap">
+                <MudTooltip Text="머지 대상 브랜치 선택" Placement="Placement.Bottom">
+                    <button class="merge-target-badge @(blocked ? "disabled" : "")"
+                            @onclick="ToggleBranchMenu" disabled="@blocked">
+                        <MudIcon Icon="@Icons.Material.Filled.CallMerge"
+                                 Style="width: 12px; height: 12px;"/>
+                        <span>@(_targetBranch ?? "브랜치 선택")</span>
+                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore"
+                                 Style="width: 12px; height: 12px; opacity: 0.5;"/>
                     </button>
                 </MudTooltip>
-                <button class="merge-split-chevron @(isStreaming ? "disabled" : "")"
-                        @onclick="ToggleStrategyMenu"
-                        disabled="@isStreaming">
-                    <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Style="width: 13px; height: 13px;"/>
-                </button>
 
-                <MudPopover Open="@_strategyMenuOpen" AnchorOrigin="Origin.BottomRight"
-                            TransformOrigin="Origin.TopRight" Class="strategy-popover">
-                    <div class="strategy-menu">
-                        <div class="strategy-item @(_isSquash ? "selected" : "")"
-                             @onclick="@(() => SelectStrategy(true))">
-                            <MudIcon Icon="@Icons.Material.Outlined.Compress"
-                                     Style="width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0;"/>
-                            <div class="strategy-item-body">
-                                <div class="strategy-item-title">스쿼시 머지</div>
-                                <div class="strategy-item-desc">커밋을 하나로 합쳐 병합</div>
-                            </div>
-                            @if (_isSquash)
-                            {
-                                <MudIcon Icon="@Icons.Material.Filled.Check"
-                                         Style="width: 14px; height: 14px; color: var(--accent); flex-shrink: 0;"/>
-                            }
-                        </div>
-                        <div class="strategy-item @(!_isSquash ? "selected" : "")"
-                             @onclick="@(() => SelectStrategy(false))">
-                            <MudIcon Icon="@Icons.Material.Outlined.MergeType"
-                                     Style="width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0;"/>
-                            <div class="strategy-item-body">
-                                <div class="strategy-item-title">일반 머지</div>
-                                <div class="strategy-item-desc">머지 커밋으로 이력 유지</div>
-                            </div>
-                            @if (!_isSquash)
-                            {
-                                <MudIcon Icon="@Icons.Material.Filled.Check"
-                                         Style="width: 14px; height: 14px; color: var(--accent); flex-shrink: 0;"/>
-                            }
-                        </div>
-                        @if (hasRemote)
-                        {
-                            <div class="strategy-divider"/>
-                            <div class="strategy-item" @onclick="HandlePrFromMenu">
-                                <MudIcon Icon="@Icons.Material.Outlined.OpenInNew"
-                                         Style="width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0;"/>
-                                <div class="strategy-item-body">
-                                    <div class="strategy-item-title">PR 올리기</div>
-                                    <div class="strategy-item-desc">GitHub Pull Request 생성</div>
-                                </div>
-                            </div>
-                        }
+                <MudPopover Open="@_branchMenuOpen" AnchorOrigin="Origin.BottomLeft"
+                            TransformOrigin="Origin.TopLeft" Class="branch-popover">
+                    <div class="branch-search-container">
+                        <MudTextField T="string" @bind-Value="_branchSearchText"
+                                      Placeholder="브랜치 검색..."
+                                      Variant="Variant.Text"
+                                      Immediate="true"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Style="font-size: var(--text-sm);"/>
                     </div>
+                    <MudList T="string" Dense="true" Class="branch-list">
+                        @foreach (var group in FilteredBranchGroups)
+                        {
+                            <div class="branch-group-header">@group.Name</div>
+                            @foreach (var branch in group.Branches)
+                            {
+                                <MudListItem T="string" OnClick="@(() => SelectTargetBranch(branch))"
+                                             Class="@(branch == _targetBranch ? "branch-item-active" : "")">
+                                    <div class="branch-item-content">
+                                        <MudIcon Icon="@Icons.Material.Filled.AccountTree"
+                                                 Style="font-size: 14px; opacity: 0.5;"/>
+                                        <span class="branch-item-name">@branch</span>
+                                        @if (branch == _targetBranch)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Check"
+                                                     Style="font-size: 14px; color: var(--accent);"/>
+                                        }
+                                    </div>
+                                </MudListItem>
+                            }
+                        }
+                        @if (!FilteredBranchGroups.Any())
+                        {
+                            <div class="branch-no-results">일치하는 브랜치 없음</div>
+                        }
+                    </MudList>
                 </MudPopover>
 
-                @if (_strategyMenuOpen)
+                @if (_branchMenuOpen)
                 {
-                    <MudOverlay Visible="true" OnClick="CloseStrategyMenu" DarkBackground="false" ZIndex="1"/>
+                    <MudOverlay Visible="true" OnClick="CloseBranchMenu" DarkBackground="false" ZIndex="1"/>
                 }
             </div>
-        }
-        else if (hasRemote)
+
+            <MudTooltip Text="브랜치 목록 · 머지 상태 새로고침" Placement="Placement.Bottom">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Size="Size.Small" Disabled="@blocked"
+                               OnClick="HandleManualRefresh"
+                               Style="width: 22px; height: 22px; opacity: 0.55;"/>
+            </MudTooltip>
+
+            <MudTooltip Text="@BuildStatusTooltip(status)" Placement="Placement.Bottom">
+                <span class="merge-status-icon @StatusCssClass(status.Kind)">
+                    <MudIcon Icon="@StatusIcon(status.Kind)" Style="width: 14px; height: 14px;"/>
+                    @if (status.Kind == MergeStatusKind.BehindTarget && status.BehindCount is > 0)
+                    {
+                        <span class="merge-status-badge">↓@status.BehindCount</span>
+                    }
+                    else if (status.Kind == MergeStatusKind.UncommittedDirty && status.UncommittedChangeCount > 0)
+                    {
+                        @if (_diffStats is { Additions: > 0 } or { Deletions: > 0 })
+                        {
+                            <span class="merge-status-badge">
+                                <span class="diff-add">+@(_diffStats!.Value.Additions)</span>
+                                <span class="diff-del">-@(_diffStats!.Value.Deletions)</span>
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="merge-status-badge">@status.UncommittedChangeCount</span>
+                        }
+                    }
+                    else if (status.Kind == MergeStatusKind.ConflictExpected && status.ConflictingFiles is { Count: > 0 })
+                    {
+                        <span class="merge-status-badge">@status.ConflictingFiles.Count</span>
+                    }
+                </span>
+            </MudTooltip>
+
+            @* LastPrUrl 이 있으면 PR 블록 노출 *@
+            @if (!string.IsNullOrEmpty(session.Git.LastPrUrl))
+            {
+                <MudTooltip Text="@($"PR 열기: {session.Git.LastPrUrl}")" Placement="Placement.Bottom">
+                    <button class="merge-action-btn merge-action-pr"
+                            @onclick="OpenSavedPr"
+                            disabled="@blocked">
+                        <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Style="width: 13px; height: 13px;"/>
+                        <span>PR</span>
+                    </button>
+                </MudTooltip>
+                <MudTooltip Text="저장된 PR 링크 지우기" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                                   Size="Size.Small" Disabled="@blocked"
+                                   OnClick="ClearSavedPr"
+                                   Style="width: 22px; height: 22px; opacity: 0.5;"/>
+                </MudTooltip>
+            }
+        </div>
+
+        @* ─── 오른쪽: 액션 버튼 (충돌 우선 → 일반 액션) ─── *@
+        @if (status.Kind == MergeStatusKind.InConflict)
         {
-            <div style="flex: 1;"></div>
             <div class="merge-actions">
-                <button class="merge-action-btn merge-action-pr @(isStreaming ? "disabled" : "")"
-                        @onclick="SendCreatePrPrompt"
-                        disabled="@isStreaming">
-                    <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Style="width: 14px; height: 14px;"/>
-                    <span>PR 올리기</span>
-                </button>
+                <MudTooltip Text="워크트리 충돌을 AI 에게 위임해 해결" Placement="Placement.Bottom">
+                    <button class="merge-action-btn merge-action-conflict @(blocked ? "disabled" : "")"
+                            @onclick="HandleResolveConflict"
+                            disabled="@blocked">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Style="width: 13px; height: 13px;"/>
+                        <span>충돌 해결</span>
+                    </button>
+                </MudTooltip>
             </div>
         }
+        else
+        {
+            <div class="merge-actions">
+                <MudTooltip Text="@BuildPrTooltip(noTarget, _targetBranch)" Placement="Placement.Bottom">
+                    <button class="merge-split-primary @(blocked || noTarget ? "disabled" : "")"
+                            @onclick="HandleCreatePrViaAi"
+                            disabled="@(blocked || noTarget)">
+                        <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
+                        <span>PR 생성 요청</span>
+                    </button>
+                </MudTooltip>
+            </div>
+        }
+        } @* closes if (!isEmpty) *@
+        } @* closes else (worktree session block) *@
     }
 </div>
 
 @code {
     private List<BranchGroup> _branchGroups = [];
     private string? _targetBranch;
-    private string? _lastSessionId;
     private bool _branchMenuOpen;
     private string _branchSearchText = "";
-    private bool _isSquash = true;
-    private bool _strategyMenuOpen;
+    private bool _busy;
+    private (int Additions, int Deletions)? _diffStats; // 로컬 디렉토리 & 워크트리 공용
 
+    private IDisposable? _sessionChangedSub;
+    private IDisposable? _streamingStoppedSub;
+    private IDisposable? _branchChangedSub;
+    private IDisposable? _conflictSub;
+
+    private readonly string _mod = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "\u2318" : "Ctrl";
+
+    // PR 대상은 리모트 브랜치만 의미가 있으므로 "로컬" 그룹 제외
     private IEnumerable<BranchGroup> FilteredBranchGroups =>
-        string.IsNullOrWhiteSpace(_branchSearchText)
-            ? _branchGroups
-            : _branchGroups
-                .Select(g => new BranchGroup(g.Name,
+        _branchGroups
+            .Where(g => !g.Name.Equals("로컬", StringComparison.OrdinalIgnoreCase))
+            .Select(g => string.IsNullOrWhiteSpace(_branchSearchText)
+                ? g
+                : new BranchGroup(g.Name,
                     g.Branches.Where(b => b.Contains(_branchSearchText, StringComparison.OrdinalIgnoreCase)).ToList()))
-                .Where(g => g.Branches.Count > 0)
-                .ToList();
+            .Where(g => g.Branches.Count > 0)
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += HandleStateChanged;
-        await LoadBranchesIfNeededAsync();
+
+        // 세션 전환을 명시적으로 트리거로 다룬다 (β 버그 #4 수정).
+        _sessionChangedSub = EventBus.Subscribe<SessionChangedEvent>(evt =>
+            InvokeAsync(async () => await OnSessionChangedAsync()));
+
+        // 스트림이 끝났을 때 브랜치 목록도 같이 리프레시 (사용자가 외부에서 푸시했을 수 있음).
+        // targetBranchOverride 를 넘겨 debounce 를 우회 — 커밋이 새로 생겼을 수 있으므로 반드시 재계산.
+        _streamingStoppedSub = EventBus.Subscribe<StreamingStoppedEvent>(_ =>
+            InvokeAsync(async () =>
+            {
+                await ReloadBranchesAsync(forceCacheInvalidate: false);
+                var sess = ChatState.CurrentSession;
+                if (sess != null && !string.IsNullOrEmpty(_targetBranch))
+                    await MergeStatusService.RefreshAsync(
+                        sess.Id,
+                        BranchRefNormalizer.Normalize(_targetBranch));
+            }));
+
+        _branchChangedSub = EventBus.Subscribe<BranchChangedEvent>(_ =>
+            InvokeAsync(StateHasChanged));
+
+        // MergeStatusService.StatusChanged 구독해 상태 아이콘이 라이브로 바뀌도록.
+        MergeStatusService.StatusChanged += HandleMergeStatusChanged;
+
+        // 충돌 진입/해제 시 즉시 재렌더.
+        _conflictSub = EventBus.Subscribe<ConflictDetectedEvent>(_ =>
+            InvokeAsync(StateHasChanged));
+
+        await OnSessionChangedAsync();
     }
 
-    protected override async Task OnParametersSetAsync()
+    private async Task OnSessionChangedAsync()
     {
-        await LoadBranchesIfNeededAsync();
+        _targetBranch = null;
+        _branchGroups = [];
+        _branchMenuOpen = false;
+        _branchSearchText = "";
+        await ReloadBranchesAsync(forceCacheInvalidate: false);
+        StateHasChanged();
     }
 
-    private async Task LoadBranchesIfNeededAsync()
+    private async Task ReloadBranchesAsync(bool forceCacheInvalidate)
     {
         var session = ChatState.CurrentSession;
         var workspace = ChatState.CurrentWorkspace;
-
-        if (session == null || session.Status == SessionStatus.Pending || session.Git.IsLocalDir)
-            return;
-        if (session.Id == _lastSessionId)
+        if (session == null || workspace == null || string.IsNullOrEmpty(workspace.RepoLocalPath))
             return;
 
-        _lastSessionId = session.Id;
-        _branchGroups = [];
-        _targetBranch = null;
-
-        var repoPath = workspace?.RepoLocalPath;
-        if (string.IsNullOrEmpty(repoPath))
+        // 로컬 디렉토리 세션은 브랜치 선택기가 불필요 — 상태 + diff stats 새로고침.
+        if (session.Git.IsLocalDir)
+        {
+            await MergeStatusService.RefreshAsync(session.Id);
+            await LoadLocalDiffStatsAsync(session);
             return;
+        }
+
+        // β 버그 #1·#5 수정: 새로고침 요청이 오면 캐시를 수동 무효화해 최신을 보장한다.
+        if (forceCacheInvalidate)
+            await GitService.InvalidateBranchCacheAsync(workspace.RepoLocalPath);
 
         try
         {
-            var (groups, defaultBranch) = await SessionInitializer.LoadBranchesAsync(repoPath);
+            var (groups, defaultBranch) = await SessionInitializer.LoadBranchesAsync(workspace.RepoLocalPath);
             _branchGroups = groups;
 
-            var baseBranch = session.Git.BaseBranch;
-            if (!string.IsNullOrEmpty(baseBranch) && _branchGroups.SelectMany(g => g.Branches).Contains(baseBranch))
-                _targetBranch = baseBranch;
-            else
-                _targetBranch = defaultBranch;
-        }
-        catch
-        {
-            // 브랜치 로드 실패는 무시 — 빈 상태 유지
-        }
+            // PR 대상은 리모트 브랜치여야 하므로 로컬 그룹을 제외한 리모트 전용 목록으로 매칭.
+            // (로컬 그룹 포함 시 MatchInGroups 가 로컬 "main" 을 먼저 반환해 PR 드롭다운에 없는 브랜치가 선택됨)
+            var remoteGroups = groups
+                .Where(g => !g.Name.Equals("로컬", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var storedBase = session.Git.BaseBranch;
+            var matched = BranchRefNormalizer.MatchInGroups(storedBase, remoteGroups)
+                          ?? BranchRefNormalizer.MatchInGroups(defaultBranch, remoteGroups);
+            _targetBranch = matched;
 
-        StateHasChanged();
+            // MergeStatusService 에 타겟을 알려 라이브 상태 계산에 반영.
+            // targetBranchOverride 를 명시해 debounce 를 우회 — 세션 전환 직후
+            // MergeStatusService 가 target 없이 먼저 refresh 해 debounce 를 소모하기 때문.
+            if (!string.IsNullOrEmpty(_targetBranch))
+            {
+                var normalized = BranchRefNormalizer.Normalize(_targetBranch);
+                MergeStatusService.SetTargetBranch(session.Id, normalized);
+                await MergeStatusService.RefreshAsync(session.Id, normalized);
+            }
+            else
+            {
+                await MergeStatusService.RefreshAsync(session.Id);
+            }
+
+            await LoadLocalDiffStatsAsync(session);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "브랜치 목록 로드 실패: workspace={Ws}", workspace.Id);
+        }
+    }
+
+    private void HandleMergeStatusChanged(string sessionId)
+    {
+        var current = ChatState.CurrentSession;
+        if (current == null || current.Id != sessionId)
+            return;
+        InvokeAsync(async () =>
+        {
+            await LoadLocalDiffStatsAsync(current);
+            StateHasChanged();
+        });
     }
 
     private void HandleStateChanged()
     {
-        _ = InvokeAsync(async () =>
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleManualRefresh()
+    {
+        _busy = true;
+        try
         {
+            await ReloadBranchesAsync(forceCacheInvalidate: true);
+
+            // 수동 새로고침은 debounce 를 우회하기 위해 targetBranchOverride 를 넘긴다.
             var session = ChatState.CurrentSession;
-            if (session?.Id != _lastSessionId)
-                await LoadBranchesIfNeededAsync();
+            if (session != null && !string.IsNullOrEmpty(_targetBranch))
+                await MergeStatusService.RefreshAsync(
+                    session.Id,
+                    BranchRefNormalizer.Normalize(_targetBranch));
+        }
+        finally
+        {
+            _busy = false;
             StateHasChanged();
-        });
+        }
     }
 
     private void ToggleBranchMenu()
@@ -252,105 +412,397 @@
         _branchSearchText = "";
     }
 
-    private void SelectTargetBranch(string branch)
+    private async Task SelectTargetBranch(string branch)
     {
         _targetBranch = branch;
         _branchMenuOpen = false;
         _branchSearchText = "";
+
+        var session = ChatState.CurrentSession;
+        if (session != null)
+        {
+            MergeStatusService.SetTargetBranch(session.Id, BranchRefNormalizer.Normalize(branch));
+            // 수동 선택 시 debounce 우회.
+            await MergeStatusService.RefreshAsync(session.Id, BranchRefNormalizer.Normalize(branch));
+        }
     }
 
-    private void ToggleStrategyMenu()
-    {
-        _strategyMenuOpen = !_strategyMenuOpen;
-    }
+    // ─────────────────────────────────────────────
+    //  액션 핸들러
+    // ─────────────────────────────────────────────
 
-    private void CloseStrategyMenu()
-    {
-        _strategyMenuOpen = false;
-    }
-
-    private void SelectStrategy(bool squash)
-    {
-        _isSquash = squash;
-        _strategyMenuOpen = false;
-    }
-
-    private void ExecuteSelected()
-    {
-        SendMergePrompt(_isSquash);
-    }
-
-    private void HandlePrFromMenu()
-    {
-        _strategyMenuOpen = false;
-        SendCreatePrPrompt();
-    }
-
-    private void SendMergePrompt(bool squash)
+    private async Task HandleSquashMerge()
     {
         var session = ChatState.CurrentSession;
         var workspace = ChatState.CurrentWorkspace;
+        if (session == null || workspace == null || string.IsNullOrEmpty(_targetBranch))
+            return;
+
+        var normalizedTarget = BranchRefNormalizer.Normalize(_targetBranch);
+        _busy = true;
+        StateHasChanged();
+        try
+        {
+            // 1) MergeStatus 최신화 (debounce 우회)
+            await MergeStatusService.RefreshAsync(session.Id, normalizedTarget);
+            var status = MergeStatusService.GetCurrent(session.Id);
+
+            if (status.Kind == MergeStatusKind.NetworkError)
+            {
+                Snackbar.Add("오프라인 상태입니다. 네트워크 확인 후 다시 시도하세요.", Severity.Warning);
+                return;
+            }
+
+            // 2) 미커밋 경고 (UncommittedDirty 외에 Clean 이어도 Uncommitted count > 0 가능)
+            if (status.UncommittedChangeCount > 0)
+            {
+                var ok = await ConfirmAsync(
+                    "미커밋 변경 있음",
+                    $"워크트리에 미커밋 변경이 {status.UncommittedChangeCount}개 있습니다. 먼저 커밋 또는 stash 를 권장합니다. 그래도 머지할까요?");
+                if (!ok) return;
+            }
+
+            // 3) 충돌 예상 경고
+            if (status.Kind == MergeStatusKind.ConflictExpected)
+            {
+                var files = status.ConflictingFiles?.Count ?? 0;
+                var ok = await ConfirmAsync(
+                    "충돌 예상",
+                    $"{files}개 파일에서 타겟 브랜치와 충돌이 예상됩니다. 충돌이 발생하면 머지가 중단되고 세션 내 해결이 필요합니다. 계속할까요?");
+                if (!ok) return;
+            }
+
+            // 4) stale 경고
+            if (status.Kind == MergeStatusKind.BehindTarget && (status.BehindCount ?? 0) > 0)
+            {
+                var ok = await ConfirmAsync(
+                    "타겟이 앞섰습니다",
+                    $"타겟 브랜치가 {status.BehindCount}커밋 앞서 있습니다. 구버전 기반으로 머지하면 일부 변경이 묻힐 수 있습니다. 계속할까요?");
+                if (!ok) return;
+            }
+
+            // 5) 커밋 메시지 입력 다이얼로그
+            var defaultMessage = $"Squash merge '{session.Git.BranchName}' into '{normalizedTarget}'";
+            var commitMessage = await PromptTextAsync(
+                "커밋 메시지",
+                "스쿼시 머지 커밋 메시지를 입력하세요.",
+                defaultMessage);
+            if (string.IsNullOrWhiteSpace(commitMessage))
+                return;
+
+            // 6) 실행
+            Snackbar.Add("스쿼시 머지 진행 중...", Severity.Info);
+            Logger.LogInformation("MergeToolbar 스쿼시 머지 시작: session={Id} source={Src} target={Tgt}",
+                session.Id, session.Git.BranchName, normalizedTarget);
+
+            var result = await GitService.SquashMergeViaTempCloneAsync(
+                workspace.RepoLocalPath,
+                session.Git.WorktreePath,
+                session.Git.BranchName,
+                normalizedTarget,
+                commitMessage);
+
+            if (result.Success)
+            {
+                Snackbar.Add(
+                    $"스쿼시 머지 완료: 메인 레포의 {normalizedTarget} 브랜치에 반영되었습니다.",
+                    Severity.Success);
+
+                // 자동 아카이브 옵션 (결정 9의 g)
+                var settings = await SettingsService.LoadAsync();
+                if (settings.AutoArchiveOnMergeSuccess)
+                {
+                    try
+                    {
+                        await SessionService.CleanupSessionAsync(session.Id);
+                        Snackbar.Add("세션이 자동으로 아카이브되었습니다.", Severity.Info);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "자동 아카이브 실패: session={Id}", session.Id);
+                    }
+                }
+
+                // 머지 후 상태 재계산
+                await MergeStatusService.RefreshAsync(session.Id, normalizedTarget);
+            }
+            else if (result.Conflict)
+            {
+                Snackbar.Add(
+                    $"충돌 발생: {result.ConflictingFiles.Count}개 파일. 세션 채팅에 '머지 충돌을 해결해줘'라고 입력해 AI 에게 도움을 요청하세요.",
+                    Severity.Warning);
+                Logger.LogWarning("스쿼시 머지 충돌: session={Id} files={Files}", session.Id,
+                    string.Join(", ", result.ConflictingFiles));
+            }
+            else
+            {
+                Snackbar.Add($"머지 실패: {result.Error}", Severity.Error);
+                Logger.LogError("스쿼시 머지 실패: session={Id} err={Err}", session.Id, result.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"머지 처리 중 예외: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "HandleSquashMerge 예외");
+        }
+        finally
+        {
+            _busy = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandlePush()
+    {
+        var session = ChatState.CurrentSession;
+        var workspace = ChatState.CurrentWorkspace;
+        if (session == null || workspace == null) return;
+
+        // 로컬 디렉토리 세션: 미커밋 파일이 많을 수 있고 remote HEAD 확인도 필요하므로 AI 에게 위임.
+        if (session.Git.IsLocalDir)
+            HandleLocalDirPushViaAi(session);
+    }
+
+    private Task OpenSavedPr()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || string.IsNullOrEmpty(session.Git.LastPrUrl))
+            return Task.CompletedTask;
+        OpenUrlInBrowser(session.Git.LastPrUrl);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    ///     외부 URL 을 기본 브라우저에서 연다. Photino 웹뷰의 context 를 벗어나기 위해
+    ///     OS 의 shell-execute 로 위임. 안전성을 위해 http/https 만 허용.
+    /// </summary>
+    private void OpenUrlInBrowser(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
+        if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            Logger.LogWarning("브라우저 오픈 거부 — http/https 가 아님: {Url}", url);
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "브라우저 오픈 실패: {Url}", url);
+            Snackbar.Add("브라우저를 열 수 없습니다. URL 을 직접 복사해 사용하세요.", Severity.Warning);
+        }
+    }
+
+    private async Task ClearSavedPr()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || string.IsNullOrEmpty(session.Git.LastPrUrl))
+            return;
+
+        var ok = await ConfirmAsync("PR 링크 삭제", "저장된 PR 링크를 이 세션에서 지우시겠어요?");
+        if (!ok) return;
+        session.Git.LastPrUrl = null;
+        await SessionService.SaveSessionAsync(session);
+        StateHasChanged();
+    }
+
+    private void HandleResolveConflict()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null) return;
+        var status = MergeStatusService.GetCurrent(session.Id);
+        var conflictFiles = status.ConflictingFiles is { Count: > 0 }
+            ? string.Join("\n- ", status.ConflictingFiles)
+            : "(상태 재확인 필요)";
+
+        var prompt =
+            $"""
+             현재 워크트리에 머지 충돌이 있습니다 (`.git/MERGE_HEAD` 가 존재합니다).
+             충돌 파일 목록:
+             - {conflictFiles}
+
+             이 파일들의 충돌을 해결한 뒤 `git merge --continue` (또는 커밋)까지 완료해주세요.
+             **중요**: 워크트리 경로 바깥은 절대 읽거나 쓰지 마세요.
+             """;
+
+        EventBus.Publish(new MergeRequestedEvent(new ChatInputMessage
+        {
+            Text = prompt,
+            ModelOverride = "haiku"
+        }));
+        Snackbar.Add("AI 에게 충돌 해결을 요청했습니다.", Severity.Info);
+    }
+
+    private void HandleCreatePrViaAi()
+    {
+        var session = ChatState.CurrentSession;
         if (session == null || string.IsNullOrEmpty(_targetBranch)) return;
 
-        var strategy = squash ? "스쿼시 머지 (`git merge --squash`)" : "일반 머지 (`git merge --no-ff`)";
+        var branch = session.Git.BranchName;
+        var target = BranchRefNormalizer.Normalize(_targetBranch);
+        var status = MergeStatusService.GetCurrent(session.Id);
+
+        var uncommittedNote = status.UncommittedChangeCount > 0
+            ? $"\n- 미커밋 변경이 {status.UncommittedChangeCount}개 있습니다. 먼저 변경 내용을 요약한 메시지로 커밋하세요."
+            : "";
+
         var prompt =
             $"""
-             다음 git 머지 작업을 수행해줘:
+             현재 워크트리 브랜치(`{branch}`)의 변경사항으로 GitHub PR 을 생성해주세요. 순서대로 진행하세요:
 
-             - 소스 브랜치: `{session.Git.BranchName}`
-             - 타겟 브랜치: `{_targetBranch}`
-             - 머지 전략: {strategy}
-             - 워크트리 경로: `{session.Git.WorktreePath}`
-             - 메인 레포 경로: `{workspace?.RepoLocalPath}`
+             1. `git status` 로 현재 상태를 확인하세요.{uncommittedNote}
+             2. 커밋되지 않은 변경이 있으면 변경 내용을 요약한 커밋 메시지로 커밋하세요.
+             3. `git push origin {branch}` 로 원격에 푸시하세요 (필요 시 `--set-upstream` 추가).
+             4. `gh pr create --base {target} --head {branch} --title "..." --body "..."` 로 PR 을 생성하세요.
+                - 제목과 본문은 변경 내용을 보고 자동으로 작성하세요.
+             5. 생성된 PR URL 을 알려주세요.
 
-             순서:
-             1. 워크트리(`{session.Git.WorktreePath}`)에 미커밋 변경사항이 있으면 스테이징 후 커밋
-             2. 메인 레포(`{workspace?.RepoLocalPath}`)에서 `{_targetBranch}` 브랜치로 체크아웃
-             3. {(squash ? $"`git merge --squash {session.Git.BranchName}` 실행 후 적절한 메시지로 커밋" : $"`git merge --no-ff {session.Git.BranchName}` 실행")}
-             4. 충돌 발생 시 `git merge --abort` 실행 후 충돌 내용 보고
-             5. 완료 결과 보고
+             **중요**: 워크트리 경로 바깥은 절대 읽거나 쓰지 마세요.
              """;
 
-        EventBus.Publish(new MergeRequestedEvent(new ChatInputMessage
-        {
-            Text = prompt,
-            ModelOverride = "haiku"
-        }));
+        EventBus.Publish(new MergeRequestedEvent(new ChatInputMessage { Text = prompt }));
+        Snackbar.Add("AI 에게 PR 생성을 요청했습니다.", Severity.Info);
     }
 
-    private void SendCreatePrPrompt()
+    private async Task LoadLocalDiffStatsAsync(Session session)
     {
-        var session = ChatState.CurrentSession;
-        var workspace = ChatState.CurrentWorkspace;
-        if (session == null) return;
+        if (string.IsNullOrEmpty(session.Git.WorktreePath))
+            return;
+        try
+        {
+            var diff = await GitService.GetDiffSummaryAsync(session.Git.WorktreePath, session.Git.GetDiffBase());
+            _diffStats = diff != null
+                ? (diff.TotalAdditions, diff.TotalDeletions)
+                : null;
+        }
+        catch
+        {
+            _diffStats = null;
+        }
+    }
 
-        var targetBranch = _targetBranch ?? session.Git.BaseBranch;
+    private void HandleLocalDirPushViaAi(Session session)
+    {
+        var branch = session.Git.BranchName;
         var prompt =
             $"""
-             다음 PR 생성 작업을 수행해줘:
+             현재 브랜치(`{branch}`)의 변경사항을 origin 에 푸시해주세요. 순서대로 진행하세요:
 
-             - 소스 브랜치: `{session.Git.BranchName}`
-             - 타겟 브랜치: `{targetBranch}`
-             - 워크트리 경로: `{session.Git.WorktreePath}`
-
-             순서:
-             1. `git push -u origin {session.Git.BranchName}` 로 소스 브랜치를 원격에 푸시
-             2. 변경사항 diff를 분석해서 적절한 PR 제목과 설명을 작성
-             3. `gh pr create --base {targetBranch} --title "..." --body "..."` 로 PR 생성
-             4. PR URL 보고
-
-             gh CLI가 없으면 브라우저에서 바로 열 수 있는 GitHub PR 생성 URL을 제공해줘.
+             1. `git status`로 현재 상태를 확인하세요.
+             2. 스테이지되지 않은 변경이 있으면 `git add -A` 로 전부 스테이지하세요.
+             3. 커밋되지 않은 변경이 있으면 변경 내용을 요약한 커밋 메시지로 커밋하세요.
+             4. `git fetch origin {branch}` 로 원격 상태를 확인하고,
+                원격이 앞서 있으면 `git pull --rebase origin {branch}` 로 rebase 하세요.
+                rebase 중 충돌이 발생하면 충돌을 해결한 뒤 `git rebase --continue` 하세요.
+             5. `git push origin {branch}` 로 푸시하세요.
              """;
 
-        EventBus.Publish(new MergeRequestedEvent(new ChatInputMessage
-        {
-            Text = prompt,
-            ModelOverride = "haiku"
-        }));
+        EventBus.Publish(new MergeRequestedEvent(new ChatInputMessage { Text = prompt }));
+        Snackbar.Add("AI 에게 커밋 및 푸시를 요청했습니다.", Severity.Info);
+    }
+
+    // ─────────────────────────────────────────────
+    //  상태 아이콘 / 툴팁 헬퍼
+    // ─────────────────────────────────────────────
+
+    private static string StatusIcon(MergeStatusKind kind) => kind switch
+    {
+        MergeStatusKind.Clean => Icons.Material.Filled.CheckCircle,
+        MergeStatusKind.BehindTarget => Icons.Material.Filled.Warning,
+        MergeStatusKind.ConflictExpected => Icons.Material.Filled.Error,
+        MergeStatusKind.UncommittedDirty => Icons.Material.Outlined.EditNote,
+        MergeStatusKind.InConflict => Icons.Material.Filled.Warning,
+        MergeStatusKind.NetworkError => Icons.Material.Filled.WifiOff,
+        _ => Icons.Material.Outlined.HourglassEmpty
+    };
+
+    private static string StatusCssClass(MergeStatusKind kind) => kind switch
+    {
+        MergeStatusKind.Clean => "status-clean",
+        MergeStatusKind.BehindTarget => "status-behind",
+        MergeStatusKind.ConflictExpected => "status-conflict",
+        MergeStatusKind.UncommittedDirty => "status-uncommitted",
+        MergeStatusKind.InConflict => "status-in-conflict",
+        MergeStatusKind.NetworkError => "status-offline",
+        _ => "status-unknown"
+    };
+
+    private static string BuildStatusTooltip(MergeStatus status) => status.Kind switch
+    {
+        MergeStatusKind.Unknown => "머지 상태 계산 대기 중",
+        MergeStatusKind.Clean =>
+            $"머지 가능 (ahead {status.AheadCount ?? 0}, behind {status.BehindCount ?? 0})",
+        MergeStatusKind.BehindTarget =>
+            $"타겟이 {status.BehindCount ?? 0}커밋 앞섰습니다 — stale 경고",
+        MergeStatusKind.ConflictExpected =>
+            $"머지 시 {status.ConflictingFiles?.Count ?? 0}개 파일 충돌이 예상됩니다",
+        MergeStatusKind.UncommittedDirty =>
+            $"미커밋 변경 {status.UncommittedChangeCount}개 — PR 생성 요청 시 AI가 자동 커밋",
+        MergeStatusKind.InConflict =>
+            "현재 머지 진행 중 — 충돌 해결 버튼을 사용하세요",
+        MergeStatusKind.NetworkError =>
+            $"오프라인 또는 fetch 실패 — 마지막 확인 {status.LastCheckedAt:HH:mm:ss}",
+        _ => ""
+    };
+
+    private static string BuildLocalDirPushTooltip(MergeStatus status, (int Additions, int Deletions)? diffStats)
+    {
+        var parts = new List<string>();
+
+        if (diffStats is { } s && (s.Additions > 0 || s.Deletions > 0))
+            parts.Add($"+{s.Additions} -{s.Deletions}");
+        else if (status.UncommittedChangeCount > 0)
+            parts.Add($"변경 {status.UncommittedChangeCount}개");
+
+        if ((status.AheadCount ?? 0) > 0)
+            parts.Add($"커밋 {status.AheadCount}개 미푸시");
+
+        var info = parts.Count > 0 ? string.Join(" · ", parts) + " — " : "";
+        return $"{info}AI 가 커밋하고 origin 에 푸시합니다";
+    }
+
+    private static string BuildPrTooltip(bool noTarget, string? target)
+    {
+        if (noTarget) return "먼저 타겟 브랜치를 선택하세요";
+        return $"AI 에게 위임 — {target} 를 base 로 PR 생성";
+    }
+
+    // ─────────────────────────────────────────────
+    //  Dialog 헬퍼
+    // ─────────────────────────────────────────────
+
+    private async Task<bool> ConfirmAsync(string title, string message,
+        string yesText = "계속", string noText = "취소")
+    {
+        var result = await DialogService.ShowMessageBoxAsync(title, message, yesText: yesText, cancelText: noText);
+        return result == true;
+    }
+
+    private async Task<string?> PromptTextAsync(string title, string message, string defaultValue)
+    {
+        // MudBlazor 에는 기본 텍스트 프롬프트가 없으므로 현재 스코프에서는
+        // "기본값 사용 / 취소" 2지 선택만 제공한다.
+        // 추후 커스텀 InputDialog 컴포넌트를 붙이는 것이 개선 방향 (별도 티켓).
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            title,
+            $"{message}\n\n기본값: {defaultValue}",
+            yesText: "기본값 사용",
+            cancelText: "취소");
+
+        return confirmed == true ? defaultValue : null;
     }
 
     public void Dispose()
     {
         ChatState.OnChange -= HandleStateChanged;
+        MergeStatusService.StatusChanged -= HandleMergeStatusChanged;
+        _sessionChangedSub?.Dispose();
+        _streamingStoppedSub?.Dispose();
+        _branchChangedSub?.Dispose();
+        _conflictSub?.Dispose();
     }
 }

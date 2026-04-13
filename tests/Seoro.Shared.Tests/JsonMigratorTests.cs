@@ -147,11 +147,32 @@ public class SchemaMigrationTests
     }
 
     [Fact]
-    public void SchemaMigratorRegistry_SessionVersionIs3()
+    public void SchemaMigratorRegistry_SessionVersionIs4()
     {
+        // v4: git.lastPrUrl 필드가 도입됨 (사용자 수동 입력 PR 링크).
         var migrator = SchemaMigratorRegistry.GetMigrator<Session>();
         Assert.NotNull(migrator);
-        Assert.Equal(3, migrator!.CurrentVersion);
+        Assert.Equal(4, migrator!.CurrentVersion);
+    }
+
+    [Fact]
+    public void SessionV3ToV4Migration_AddsLastPrUrlAsNull()
+    {
+        var doc = new System.Text.Json.Nodes.JsonObject
+        {
+            ["$schemaVersion"] = 3,
+            ["git"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["worktreePath"] = "/tmp/wt",
+                ["branchName"] = "seoro/foo"
+            }
+        };
+        var migration = new SessionV3ToV4Migration();
+        var migrated = migration.Migrate(doc);
+        Assert.True(migrated["git"] is System.Text.Json.Nodes.JsonObject);
+        var git = (System.Text.Json.Nodes.JsonObject)migrated["git"]!;
+        Assert.True(git.ContainsKey("lastPrUrl"));
+        Assert.Null(git["lastPrUrl"]);
     }
 
     // Test helpers

@@ -41,6 +41,8 @@ public static class Program
             services.GetService<IWorktreeSyncService>()?.Dispose();
             services.GetService<IClaudeService>()?.Dispose();
             services.GetService<IGitBranchWatcherService>()?.Dispose();
+            services.GetService<IConflictWatcherService>()?.Dispose();
+            services.GetService<IMergeStatusService>()?.Dispose();
             (services.GetService<ChatState>() as IDisposable)?.Dispose();
             (services.GetService<SessionListDataService>() as IDisposable)?.Dispose();
 
@@ -185,6 +187,8 @@ public static class Program
         appBuilder.Services.AddSingleton<LightboxService>();
         appBuilder.Services.AddSingleton<IGitService, GitService>();
         appBuilder.Services.AddSingleton<IGitBranchWatcherService, GitBranchWatcherService>();
+        appBuilder.Services.AddSingleton<IConflictWatcherService, ConflictWatcherService>();
+        appBuilder.Services.AddSingleton<IMergeStatusService, MergeStatusService>();
         appBuilder.Services.AddSingleton<IWorktreeSyncService, WorktreeSyncService>();
         appBuilder.Services.AddSingleton<ClaudeService>();
         appBuilder.Services.AddSingleton<IClaudeService>(sp => sp.GetRequiredService<ClaudeService>());

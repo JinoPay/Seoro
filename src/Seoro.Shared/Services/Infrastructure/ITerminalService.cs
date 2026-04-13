@@ -15,7 +15,8 @@ public interface ITerminalService : IAsyncDisposable
     ///     Start a new shell process. WorkingDirectory = session worktree.
     ///     When <paramref name="shell" /> is null, uses the user's preferred terminal shell from settings.
     /// </summary>
-    Task StartAsync(string sessionKey, string workingDirectory, ShellInfo? shell = null);
+    Task StartAsync(string sessionKey, string workingDirectory, ShellInfo? shell = null, int? cols = null,
+        int? rows = null);
 
     /// <summary>Kill the shell process for the given session.</summary>
     Task StopAsync(string sessionKey);

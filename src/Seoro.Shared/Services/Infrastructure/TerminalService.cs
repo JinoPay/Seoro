@@ -28,7 +28,8 @@ public class TerminalService(IShellService shellService, ILogger<TerminalService
         return _sessions.TryGetValue(sessionKey, out var s) && s.IsAlive;
     }
 
-    public async Task StartAsync(string sessionKey, string workingDirectory, ShellInfo? shell = null)
+    public async Task StartAsync(string sessionKey, string workingDirectory, ShellInfo? shell = null, int? cols = null,
+        int? rows = null)
     {
         // Stop existing session if any
         await StopAsync(sessionKey);
@@ -57,14 +58,21 @@ public class TerminalService(IShellService shellService, ILogger<TerminalService
             ["TERM"] = "xterm-256color"
         };
 
+        var loginPath = await shellService.GetLoginShellPathAsync();
+        if (!string.IsNullOrWhiteSpace(loginPath))
+            env["PATH"] = loginPath;
+
+        var initialCols = Math.Max(cols ?? 120, 20);
+        var initialRows = Math.Max(rows ?? 30, 5);
+
         var options = new PtyOptions
         {
             Name = "Seoro Terminal",
             App = shell.FileName,
             CommandLine = args.ToArray(),
             Cwd = workingDirectory,
-            Cols = 120,
-            Rows = 30,
+            Cols = initialCols,
+            Rows = initialRows,
             Environment = env
         };
 
@@ -154,7 +162,6 @@ public class TerminalService(IShellService shellService, ILogger<TerminalService
     private async Task ReadPtyOutputAsync(string sessionKey, IPtyConnection pty, CancellationToken ct)
     {
         var buffer = new byte[4096];
-        var isFirstChunk = true;
         try
         {
             while (!ct.IsCancellationRequested)
@@ -163,15 +170,6 @@ public class TerminalService(IShellService shellService, ILogger<TerminalService
                 if (bytesRead == 0) break;
 
                 var text = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-
-                // Strip leading blank lines from the first output (Git Bash PS1 starts with \n)
-                if (isFirstChunk)
-                {
-                    text = text.TrimStart('\r', '\n');
-                    isFirstChunk = false;
-                    if (text.Length == 0) continue;
-                }
-
                 OnOutput?.Invoke(sessionKey, text);
             }
         }

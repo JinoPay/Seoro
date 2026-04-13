@@ -297,6 +297,23 @@ public class SessionServiceTests : IDisposable
             => Task.FromResult(NextResult);
         public Task<string?> ResolveCommitHashAsync(string repoDir, string refName, CancellationToken ct = default)
             => Task.FromResult<string?>("abc123def456");
+
+        // Phase 1 신규 API — 테스트에서는 기본값만 반환
+        public Task<string?> GetRemoteUrlAsync(string repoDir, string remoteName = "origin", CancellationToken ct = default)
+            => Task.FromResult<string?>(null);
+        public Task<GitResult> PushAsync(string workingDir, string remote, string branch, CancellationToken ct = default)
+            => Task.FromResult(NextResult);
+        public Task<bool> HasUnresolvedConflictsAsync(string workingDir, CancellationToken ct = default)
+            => Task.FromResult(false);
+        public Task<(int Ahead, int Behind)?> FetchAndCompareAsync(string repoDir, string sourceRef, string targetRef, CancellationToken ct = default)
+            => Task.FromResult<(int, int)?>((0, 0));
+        public Task<MergeSimulationResult> SimulateMergeAsync(string repoDir, string sourceRef, string targetRef, CancellationToken ct = default)
+            => Task.FromResult(new MergeSimulationResult(true, false, [], 0, 0, null));
+        public Task<List<string>> GetUncommittedChangesAsync(string workingDir, CancellationToken ct = default)
+            => Task.FromResult<List<string>>([]);
+        public Task<SquashMergeResult> SquashMergeViaTempCloneAsync(string mainRepoDir, string sourceWorktreePath, string sourceBranchName, string targetBranchName, string commitMessage, IProgress<string>? progress = null, CancellationToken ct = default)
+            => Task.FromResult(SquashMergeResult.Succeeded(""));
+        public Task InvalidateBranchCacheAsync(string repoDir) => Task.CompletedTask;
     }
 
     private class FakeWorkspaceService : IWorkspaceService
@@ -327,6 +344,9 @@ public class SessionServiceTests : IDisposable
         public Task<GitRepoInfo?> FindExistingRepoAsync(string remoteUrl)
             => Task.FromResult<GitRepoInfo?>(null);
         public Task<string> GetWorktreesDirAsync() => Task.FromResult("/tmp/worktrees");
+        public RemoteInfo GetRemoteInfo(string workspaceId) => RemoteInfo.None;
+        public Task<RemoteInfo> RefreshRemoteInfoAsync(string workspaceId, CancellationToken ct = default)
+            => Task.FromResult(RemoteInfo.None);
     }
 
     private class FakeOptionsMonitor : IOptionsMonitor<AppSettings>

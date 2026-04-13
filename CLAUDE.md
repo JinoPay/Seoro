@@ -37,7 +37,7 @@ src/
       Chat/                         # 채팅 & 스트리밍 (15개)
         StreamEventHandlers/          # 스트림 이벤트 핸들러 파이프라인 (12개)
       Sessions/                     # 세션 관리 (12개)
-      Git/                          # Git 통합 (6개)
+      Git/                          # Git 통합 (13개)
       Settings/                     # 설정 관리 (8개)
       Knowledge/                    # 컨텐츠 & 지식 (12개)
       Account/                      # 계정 관리 (4개)
@@ -105,10 +105,14 @@ tests/
 - `StatsCacheService` - 사용량 통계 캐싱 및 집계 (stats-cache.json)
 
 ### Git
-- `GitService` - Git 작업 (clone, diff, branches) + 캐싱
+- `GitService` / `IGitService` - Git 작업 (clone, diff, branches, merge-tree 시뮬레이션) + 캐싱
 - `GitBranchWatcherService` - 실시간 Git 브랜치 추적 및 변경 감지
 - `WorktreeSyncService` - Git 워크트리 동기화
 - `DiffParser` - Diff 출력 파싱
+- `MergeStatusService` - 세션별 머지 상태 계산 (`MergeStatusKind`: Unknown / Clean / BehindTarget / ConflictExpected / UncommittedDirty / InConflict / FetchFailed)
+- `ConflictWatcherService` - `.git/MERGE_HEAD` FSW 감시로 실제 충돌 상태 실시간 발행
+- `BranchRefNormalizer` - git ref 표기 정규화 (`refs/heads/`, `origin/` 등 → 순수 브랜치명)
+- `GitHubUrlHelper` - GitHub 원격 URL 파싱 및 PR·비교 웹 URL 생성 (순수 함수, DI 없음)
 
 ### Configuration & Settings
 - `SettingsService` - 앱 설정 CRUD
@@ -193,6 +197,9 @@ tests/
 - `StatsCacheModels` - 통계 캐시
 - `SessionReplayModels` - 리플레이
 - `GitContext` / `GitRepoInfo` / `BranchInfo` / `DiffInfo` - Git
+- `RemoteInfo` - 원격 저장소 URL 및 리모트 모드 (GitHub / Other)
+- `MergeSimulationResult` - `git merge-tree` 시뮬레이션 결과 (충돌 예상 여부)
+- `SquashMergeResult` - 스쿼시 머지 실행 결과
 - `FileNode` / `FileAttachment` - 파일
 - `McpServer` - MCP 서버
 - `MemoryEntry` - 메모리 항목

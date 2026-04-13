@@ -769,9 +769,16 @@
             }
         };
 
+        window.terminalGetSize = function(elementId) {
+            var t = window._terminals[elementId];
+            if (!t) return null;
+            try { t.fitAddon.fit(); } catch(_) {}
+            return [t.term.cols, t.term.rows];
+        };
+
         window.terminalClear = function(elementId) {
             var t = window._terminals[elementId];
-            if (t) { t.term.clear(); t.term.reset(); }
+            if (t) { t.term.reset(); }
         };
 
         window.disposeTerminal = function(elementId) {

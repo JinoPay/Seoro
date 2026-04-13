@@ -80,6 +80,24 @@
             TerminalService.Resize(_currentSessionKey, cols, rows);
     }
 
+    private async Task<(int? Cols, int? Rows)> GetTerminalSizeAsync()
+    {
+        if (!_initialized) return (null, null);
+
+        try
+        {
+            var size = await JS.InvokeAsync<int[]?>("terminalGetSize", _elementId);
+            if (size is { Length: >= 2 } && size[0] > 0 && size[1] > 0)
+                return (size[0], size[1]);
+        }
+        catch
+        {
+            /* JS 런타임이 아직 준비되지 않았을 수 있음 */
+        }
+
+        return (null, null);
+    }
+
     /// <summary>부모 패널 크기가 조정될 때 호출됨 — xterm을 컨테이너에 맞춤.</summary>
     public async Task FitAsync()
     {
@@ -165,10 +183,11 @@
         }
 
         var workDir = ResolveWorkDir(session);
+        var terminalSize = await GetTerminalSizeAsync();
 
         try
         {
-            await TerminalService.StartAsync(key, workDir);
+            await TerminalService.StartAsync(key, workDir, cols: terminalSize.Cols, rows: terminalSize.Rows);
             _isRunning = TerminalService.IsRunning(key);
         }
         catch (Exception ex)
@@ -194,10 +213,12 @@
         }
 
         var workDir = ResolveWorkDir(ChatState.CurrentSession);
+        var terminalSize = await GetTerminalSizeAsync();
 
         try
         {
-            await TerminalService.StartAsync(_currentSessionKey, workDir);
+            await TerminalService.StartAsync(_currentSessionKey, workDir, cols: terminalSize.Cols,
+                rows: terminalSize.Rows);
             _isRunning = TerminalService.IsRunning(_currentSessionKey);
         }
         catch (Exception ex)
@@ -225,10 +246,11 @@
         }
 
         var workDir = ResolveWorkDir(ChatState.CurrentSession);
+        var terminalSize = await GetTerminalSizeAsync();
 
         try
         {
-            await TerminalService.StartAsync(_currentSessionKey, workDir, shell);
+            await TerminalService.StartAsync(_currentSessionKey, workDir, shell, terminalSize.Cols, terminalSize.Rows);
             _isRunning = TerminalService.IsRunning(_currentSessionKey);
         }
         catch (Exception ex)
