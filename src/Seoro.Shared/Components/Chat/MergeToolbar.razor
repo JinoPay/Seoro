@@ -251,14 +251,16 @@
 
     private readonly string _mod = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "\u2318" : "Ctrl";
 
+    // PR 대상은 리모트 브랜치만 의미가 있으므로 "로컬" 그룹 제외
     private IEnumerable<BranchGroup> FilteredBranchGroups =>
-        string.IsNullOrWhiteSpace(_branchSearchText)
-            ? _branchGroups
-            : _branchGroups
-                .Select(g => new BranchGroup(g.Name,
+        _branchGroups
+            .Where(g => !g.Name.Equals("로컬", StringComparison.OrdinalIgnoreCase))
+            .Select(g => string.IsNullOrWhiteSpace(_branchSearchText)
+                ? g
+                : new BranchGroup(g.Name,
                     g.Branches.Where(b => b.Contains(_branchSearchText, StringComparison.OrdinalIgnoreCase)).ToList()))
-                .Where(g => g.Branches.Count > 0)
-                .ToList();
+            .Where(g => g.Branches.Count > 0)
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -328,11 +330,14 @@
             var (groups, defaultBranch) = await SessionInitializer.LoadBranchesAsync(workspace.RepoLocalPath);
             _branchGroups = groups;
 
-            // β 버그 #2 수정: 저장된 BaseBranch 를 정규화해서 매칭하고
-            // 없으면 defaultBranch 를 (역시 정규화해서) 폴백.
+            // PR 대상은 리모트 브랜치여야 하므로 로컬 그룹을 제외한 리모트 전용 목록으로 매칭.
+            // (로컬 그룹 포함 시 MatchInGroups 가 로컬 "main" 을 먼저 반환해 PR 드롭다운에 없는 브랜치가 선택됨)
+            var remoteGroups = groups
+                .Where(g => !g.Name.Equals("로컬", StringComparison.OrdinalIgnoreCase))
+                .ToList();
             var storedBase = session.Git.BaseBranch;
-            var matched = BranchRefNormalizer.MatchInGroups(storedBase, groups)
-                          ?? BranchRefNormalizer.MatchInGroups(defaultBranch, groups);
+            var matched = BranchRefNormalizer.MatchInGroups(storedBase, remoteGroups)
+                          ?? BranchRefNormalizer.MatchInGroups(defaultBranch, remoteGroups);
             _targetBranch = matched;
 
             // MergeStatusService 에 타겟을 알려 라이브 상태 계산에 반영.

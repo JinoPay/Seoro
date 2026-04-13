@@ -194,7 +194,7 @@
     gap: 5px;
     padding: 0 10px;
     height: 26px;
-    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    border-radius: var(--radius-md);
     background: var(--accent);
     border: none;
     cursor: pointer;
