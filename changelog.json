@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.17.14",
+    "date": "2026-04-13",
+    "changes": [
+      { "type": "feat", "description": "세션별 첨부파일 초안 상태 저장으로 채팅 입력 중인 파일 유지" },
+      { "type": "fix", "description": "Codex 플랜 모드 처리 안정화 및 plan 전환 상태 저장 개선" },
+      { "type": "fix", "description": "Codex 재개 시 인수 전달 보정 및 플랜 세션 컨텍스트 전달 개선" },
+      { "type": "style", "description": "세션 단축키 힌트를 세로 스택 레이아웃으로 정리" }
+    ]
+  },
+  {
     "version": "1.17.13",
     "date": "2026-04-13",
     "changes": [
