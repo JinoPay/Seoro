@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Seoro.Shared.Models.Files;
 using Seoro.Shared.Services;
 
 namespace Seoro.Shared.Models.Sessions;
@@ -82,6 +83,16 @@ public class Session
 
     public string? PlanFilePath { get; set; }
     public string? PlanContent { get; set; }
+
+    /// <summary>
+    ///     세션 전환이나 앱 재진입 후에도 입력창 초안을 복원하기 위한 임시 저장 텍스트.
+    /// </summary>
+    public string DraftInputText { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     전송 전 첨부파일 초안을 세션 단위로 임시 저장합니다.
+    /// </summary>
+    public List<PendingAttachment> DraftAttachments { get; set; } = [];
 
     /// <summary>
     ///     진행 중인 스트리밍 턴의 예상 토큰 사용량.

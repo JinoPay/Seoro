@@ -2,6 +2,7 @@
 @inject ISkillRegistry SkillRegistry
 @inject IJSRuntime JSRuntime
 @inject IChatState ChatState
+@inject ISessionService SessionService
 @inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
@@ -77,10 +78,14 @@
 
     private string _inputText = string.Empty;
     private readonly List<PendingAttachment> _pendingAttachments = [];
+    private const int DraftSaveDebounceMs = 400;
     private DotNetObjectReference<InputArea>? _dotNetRef;
     private bool _handlersRegistered;
     private bool _suppressInputUpdates;
     private string? _trackedSessionId;
+    private Session? _trackedSession;
+    private CancellationTokenSource? _draftSaveCts;
+    private Task? _draftSaveTask;
 
     // 로컬 도구 모음 상태 복사본 — 부모 파라미터와 사용자 클릭 모두에서 업데이트됨 (낙관적 업데이트)
     // 도구 모음 렌더링을 부모 리렌더 사이클과 분리하여 ShouldRender가 업데이트를 무시하지 않도록 함
@@ -115,18 +120,18 @@
         var newSessionId = CurrentSession?.Id;
         if (_trackedSessionId != newSessionId)
         {
-            if (_trackedSessionId != null && !string.IsNullOrEmpty(_inputText))
-                ChatState.SetInputDraft(_trackedSessionId, _inputText);
+            PersistDraftState(_trackedSession, _inputText, _pendingAttachments, immediate: true);
 
-            if (_trackedSessionId != null)
-                ChatState.SetAttachmentDraft(_trackedSessionId, _pendingAttachments);
-
-            _inputText = newSessionId != null ? ChatState.GetInputDraft(newSessionId) : string.Empty;
-
+            _inputText = string.Empty;
             _pendingAttachments.Clear();
-            if (newSessionId != null)
-                _pendingAttachments.AddRange(ChatState.GetAttachmentDraft(newSessionId));
+            if (CurrentSession != null)
+            {
+                _inputText = GetRestoredInputDraft(CurrentSession);
+                _pendingAttachments.AddRange(GetRestoredAttachmentDraft(CurrentSession));
+                SyncDraftState(CurrentSession, _inputText, _pendingAttachments);
+            }
 
+            _trackedSession = CurrentSession;
             _trackedSessionId = newSessionId;
 
             // 세션 변경 시 로컬 복사본을 부모 파라미터에서 무조건 동기화 (stale optimistic state 방지)
@@ -246,7 +251,7 @@
         var isEmpty = string.IsNullOrWhiteSpace(_inputText);
 
         if (_trackedSessionId != null)
-            ChatState.SetInputDraft(_trackedSessionId, _inputText);
+            PersistDraftState(_trackedSession, _inputText, _pendingAttachments);
 
         UpdateSlashPopupState();
 
@@ -325,6 +330,7 @@
         }
 
         _pendingAttachments.Add(attachment);
+        PersistDraftState(_trackedSession, _inputText, _pendingAttachments);
         _forceRender = true;
         StateHasChanged();
     }
@@ -342,6 +348,7 @@
             file.FileName = GetUniqueFileName(file.FileName);
 
         _pendingAttachments.AddRange(files);
+        PersistDraftState(_trackedSession, _inputText, _pendingAttachments);
         _forceRender = true;
         StateHasChanged();
         await RefocusTextarea();
@@ -350,6 +357,7 @@
     private async Task RemoveAttachment(PendingAttachment attachment)
     {
         _pendingAttachments.Remove(attachment);
+        PersistDraftState(_trackedSession, _inputText, _pendingAttachments);
         _forceRender = true;
         await RefocusTextarea();
     }
@@ -541,6 +549,7 @@
             ChatState.SetInputDraft(_trackedSessionId, string.Empty);
             ChatState.SetAttachmentDraft(_trackedSessionId, []);
         }
+        PersistDraftState(_trackedSession, string.Empty, [], immediate: true);
         _pendingAttachments.Clear();
         StateHasChanged();
         await OnSend.InvokeAsync(input);
@@ -560,6 +569,10 @@
 
     public async ValueTask DisposeAsync()
     {
+        PersistDraftState(_trackedSession, _inputText, _pendingAttachments, immediate: true);
+        if (_draftSaveTask != null)
+            await _draftSaveTask;
+
         if (_handlersRegistered)
         {
             try
@@ -573,6 +586,101 @@
         }
 
         _dotNetRef?.Dispose();
+        _draftSaveCts?.Dispose();
+    }
+
+    private string GetRestoredInputDraft(Session session)
+    {
+        var draft = ChatState.GetInputDraft(session.Id);
+        return string.IsNullOrEmpty(draft) ? session.DraftInputText : draft;
+    }
+
+    private List<PendingAttachment> GetRestoredAttachmentDraft(Session session)
+    {
+        var draft = ChatState.GetAttachmentDraft(session.Id);
+        if (draft.Count > 0)
+            return CloneAttachments(draft);
+
+        return CloneAttachments(session.DraftAttachments);
+    }
+
+    private void PersistDraftState(Session? session, string text, List<PendingAttachment> attachments, bool immediate = false)
+    {
+        if (session == null) return;
+
+        SyncDraftState(session, text, attachments);
+
+        if (immediate)
+        {
+            CancelDraftSave();
+            _draftSaveTask = PersistDraftAsync(session);
+            return;
+        }
+
+        QueueDraftSave(session);
+    }
+
+    private void SyncDraftState(Session session, string text, List<PendingAttachment> attachments)
+    {
+        ChatState.SetInputDraft(session.Id, text);
+        ChatState.SetAttachmentDraft(session.Id, attachments);
+        session.DraftInputText = text;
+        session.DraftAttachments = CloneAttachments(attachments);
+    }
+
+    private void QueueDraftSave(Session session)
+    {
+        CancelDraftSave();
+        var cts = new CancellationTokenSource();
+        _draftSaveCts = cts;
+        _draftSaveTask = PersistDraftLaterAsync(session, cts.Token);
+    }
+
+    private async Task PersistDraftLaterAsync(Session session, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(DraftSaveDebounceMs, cancellationToken);
+            await PersistDraftAsync(session);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private Task PersistDraftAsync(Session session)
+    {
+        return SessionService.SaveSessionAsync(session);
+    }
+
+    private void CancelDraftSave()
+    {
+        if (_draftSaveCts == null) return;
+        _draftSaveCts.Cancel();
+        _draftSaveCts.Dispose();
+        _draftSaveCts = null;
+    }
+
+    private static List<PendingAttachment> CloneAttachments(IEnumerable<PendingAttachment> attachments)
+    {
+        return attachments.Select(CloneAttachment).ToList();
+    }
+
+    private static PendingAttachment CloneAttachment(PendingAttachment attachment)
+    {
+        var clone = new PendingAttachment
+        {
+            FileName = attachment.FileName,
+            ContentType = attachment.ContentType,
+            FilePath = attachment.FilePath,
+            Data = [..attachment.Data],
+            PreviewDataUrl = attachment.PreviewDataUrl
+        };
+
+        if (clone.IsImage && clone.PreviewDataUrl == null && clone.Data.Length > 0)
+            clone.PreviewDataUrl = $"data:{clone.ContentType};base64,{Convert.ToBase64String(clone.Data)}";
+
+        return clone;
     }
 
 }
