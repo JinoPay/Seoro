@@ -6,6 +6,7 @@
 @inject IMergeStatusService MergeStatusService
 @inject IConflictWatcherService ConflictWatcher
 @inject ISessionService SessionService
+@inject ISessionListFacade SessionListFacade
 @inject ISettingsService SettingsService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -611,8 +612,7 @@
                 {
                     try
                     {
-                        await SessionService.DeleteSessionAsync(session.Id);
-                        Snackbar.Add("세션이 자동으로 삭제되었습니다.", Severity.Info);
+                        await SessionListFacade.RemoveSessionAsync(session);
                     }
                     catch (Exception ex)
                     {
@@ -815,8 +815,7 @@
 
         try
         {
-            await SessionService.DeleteSessionAsync(session.Id);
-            Snackbar.Add("세션이 삭제되었습니다.", Severity.Info);
+            await SessionListFacade.RemoveSessionAsync(session);
         }
         catch (Exception ex)
         {

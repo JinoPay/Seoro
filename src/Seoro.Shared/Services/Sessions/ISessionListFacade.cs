@@ -28,6 +28,12 @@ public interface ISessionListFacade
     Task<bool> DeleteSessionAsync(Session session);
 
     /// <summary>
+    ///     Deletes session, cleans up caches, and refreshes UI without showing a confirmation dialog.
+    ///     Use when the caller has already obtained user confirmation.
+    /// </summary>
+    Task RemoveSessionAsync(Session session);
+
+    /// <summary>
     ///     Shows confirmation dialog, deletes all sessions and the workspace, cleans up caches, notifies user.
     ///     Returns true if the workspace was actually deleted.
     /// </summary>

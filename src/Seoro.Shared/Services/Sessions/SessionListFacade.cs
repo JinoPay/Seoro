@@ -96,6 +96,26 @@ public class SessionListFacade(
         return true;
     }
 
+    public async Task RemoveSessionAsync(Session session)
+    {
+        cliProviderFactory.GetProviderForSession(session).Cancel(session.Id);
+
+        await sessionService.DeleteSessionAsync(session.Id);
+        notificationHistory.MarkSessionAsRead(session.Id);
+
+        if (dataService.SessionCache.TryGetValue(session.WorkspaceId, out var sessions))
+            sessions.RemoveAll(s => s.Id == session.Id);
+
+        if (chatState.CurrentSession?.Id == session.Id)
+            chatState.SetSession(null!);
+        else
+            chatState.NotifyStateChanged();
+
+        dataService.DiffStatsCache.Remove(session.Id);
+        dataService.RebuildOrderedSessions();
+        snackbar.SessionDeleted();
+    }
+
     public async Task<bool> DeleteWorkspaceAsync(Workspace workspace)
     {
         var result = await dialogService.ShowMessageBoxAsync(
