@@ -12,6 +12,7 @@
 
 @code {
     private readonly string _mod = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "\u2318" : "Ctrl";
+    private readonly string _planKey = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "P" : "O";
 
     private List<(string Action, string Keys)> _shortcuts => [
         ("세션 1~5 전환", $"<kbd>{_mod}+1</kbd> ~ <kbd>{_mod}+5</kbd>"),
@@ -21,7 +22,8 @@
         ("사이드바 토글", $"<kbd>{_mod}+B</kbd>"),
         ("입력창 포커스", $"<kbd>{_mod}+Shift+L</kbd>"),
         ("테마 전환 (라이트/다크)", $"<kbd>{_mod}+Shift+T</kbd>"),
-        ("플랜 모드 전환", $"<kbd>{_mod}+Shift+P</kbd>"),
+        ("플랜 모드 전환", $"<kbd>{_mod}+Shift+{_planKey}</kbd>"),
+        ("플랜 승인", $"<kbd>{_mod}+Enter</kbd>"),
         ("Effort 레벨 전환", $"<kbd>{_mod}+Shift+M</kbd>"),
         ("동기화 토글", $"<kbd>{_mod}+Shift+S</kbd>"),
         ("메시지 전송", "<kbd>Enter</kbd>"),
