@@ -10,6 +10,6 @@ public interface ISkillRegistry
     string? TryParseSkillCommand(string input, out string? args);
     Task DeleteCommandAsync(string name, string scope, string? projectPath);
     Task LoadCustomCommandsAsync(string? projectPath);
-    Task SaveCommandAsync(SkillDefinition command);
+    Task SaveCommandAsync(SkillDefinition command, string? projectPath = null);
     void Register(SkillDefinition skill);
 }

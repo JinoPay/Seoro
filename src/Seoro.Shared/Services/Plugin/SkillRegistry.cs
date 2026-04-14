@@ -204,9 +204,9 @@ public class SkillRegistry : ISkillRegistry
             userSkills.Count + projectSkills.Count, projectPath ?? "(없음)");
     }
 
-    public async Task SaveCommandAsync(SkillDefinition command)
+    public async Task SaveCommandAsync(SkillDefinition command, string? projectPath = null)
     {
-        await _fileStore.SaveAsync(command);
+        await _fileStore.SaveAsync(command, projectPath);
         Register(command);
     }
 

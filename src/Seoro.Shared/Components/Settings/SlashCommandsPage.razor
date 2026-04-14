@@ -1,44 +1,55 @@
 @inject ISkillRegistry SkillRegistry
+@inject IChatState ChatState
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
 <div class="settings-content-area wide">
-    <div class="settings-content-header">
-        <span class="typo-h6">슬래시 명령어</span>
-        <div style="flex: 1;"></div>
-        @if (_editingCommand == null)
-        {
-            <MudTextField @bind-Value="_searchText" Placeholder="명령어 검색..."
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true" Style="max-width: 220px;"/>
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
-                       StartIcon="@Icons.Material.Filled.AutoAwesome"
-                       OnClick="OpenTemplates" Size="Size.Small">
-                템플릿
-            </MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="CreateNew" Size="Size.Small">
-                새 명령어
-            </MudButton>
-            <MudButton StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       Variant="Variant.Text" OnClick="RefreshCommands">
-                새로고침
-            </MudButton>
-        }
-    </div>
+    @if (_editingCommand == null)
+    {
+        <ClaudeSettingScopeHeader Scope="_scope" ScopeChanged="OnScopeChanged"
+                                  ProjectPath="@_projectPath" ProjectPathChanged="OnProjectPathChanged"
+                                  ShowLocalScope="false"
+                                  ShowSaveButton="false"
+                                  Saving="false" OnSave="@(() => Task.CompletedTask)">
+            <ExtraActions>
+                <MudTextField @bind-Value="_searchText" Placeholder="명령어 검색..."
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Immediate="true" Style="max-width: 200px;"/>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.AutoAwesome"
+                           OnClick="OpenTemplates" Size="Size.Small"
+                           Style="text-transform: none;">
+                    템플릿
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="CreateNew" Size="Size.Small"
+                           Style="text-transform: none;">
+                    새 명령어
+                </MudButton>
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                           Variant="Variant.Text" OnClick="RefreshCommands">
+                    새로고침
+                </MudButton>
+            </ExtraActions>
+        </ClaudeSettingScopeHeader>
+    }
+    else
+    {
+        <div class="settings-content-header">
+            <div class="stack-row items-center gap-2">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"
+                               OnClick="CancelEdit"/>
+                <span class="typo-subtitle1">@GetEditTitle()</span>
+            </div>
+        </div>
+    }
 
     <div class="settings-content-body">
         @if (_editingCommand != null)
         {
             <div class="stack gap-3 pa-3">
-                <div class="stack-row items-center gap-2">
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"
-                                   OnClick="CancelEdit"/>
-                    <span class="typo-subtitle1">@GetEditTitle()</span>
-                </div>
-
                 <MudTextField @bind-Value="_editName" Label="명령어 이름"
                               Variant="Variant.Outlined" Margin="Margin.Dense"
                               Placeholder="my-command" Required="true"
@@ -54,7 +65,9 @@
                            Variant="Variant.Outlined" Margin="Margin.Dense"
                            Disabled="_isViewOnly">
                     <MudSelectItem T="string" Value="@("user")">사용자 (전역)</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("project")">프로젝트</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("project")" Disabled="@(string.IsNullOrEmpty(_projectPath))">
+                        프로젝트@(string.IsNullOrEmpty(_projectPath) ? " (워크스페이스 없음)" : "")
+                    </MudSelectItem>
                 </MudSelect>
 
                 <MudTextField @bind-Value="_editContent" Label="명령어 내용 (Markdown)"
@@ -182,6 +195,8 @@
     private bool _loading;
     private string _searchText = "";
     private bool _showTemplates;
+    private ClaudeSettingsScope _scope = ClaudeSettingsScope.Global;
+    private string? _projectPath;
 
     // 편집 양식 상태
     private SkillDefinition? _editingCommand;
@@ -195,15 +210,29 @@
 
     private static readonly string[] _availableTools = ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent", "WebFetch", "WebSearch"];
 
-    private IEnumerable<SkillDefinition> FilteredCommands =>
-        string.IsNullOrWhiteSpace(_searchText)
-            ? SkillRegistry.GetAll()
-            : SkillRegistry.GetAll().Where(c =>
+    private IEnumerable<SkillDefinition> FilteredCommands
+    {
+        get
+        {
+            var all = SkillRegistry.GetAll();
+
+            // 스코프 탭 필터: 글로벌 탭 = 내장+사용자, 프로젝트 탭 = 내장+프로젝트
+            IEnumerable<SkillDefinition> scoped = _scope == ClaudeSettingsScope.Project
+                ? all.Where(c => c.Scope is "default" or "project")
+                : all.Where(c => c.Scope is "default" or "user");
+
+            if (string.IsNullOrWhiteSpace(_searchText))
+                return scoped;
+
+            return scoped.Where(c =>
                 c.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
                 c.Description.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
+        _projectPath = ChatState.CurrentWorkspace?.RepoLocalPath;
         await RefreshCommands();
     }
 
@@ -211,17 +240,32 @@
     {
         _loading = true;
         StateHasChanged();
-        await SkillRegistry.LoadCustomCommandsAsync(null);
+        await SkillRegistry.LoadCustomCommandsAsync(_projectPath);
         _loading = false;
         StateHasChanged();
+    }
+
+    private async Task OnScopeChanged(ClaudeSettingsScope scope)
+    {
+        _scope = scope;
+        StateHasChanged();
+    }
+
+    private async Task OnProjectPathChanged(string? path)
+    {
+        _projectPath = path;
+        await RefreshCommands();
     }
 
     private void CreateNew()
     {
         ResetEditForm();
-        _editScope = "user";
+        // 현재 탭에 맞는 스코프로 기본값 설정
+        _editScope = _scope == ClaudeSettingsScope.Project && !string.IsNullOrEmpty(_projectPath)
+            ? "project"
+            : "user";
         _isNewCommand = true;
-        _editingCommand = new SkillDefinition { IsBuiltIn = false, Scope = "user" };
+        _editingCommand = new SkillDefinition { IsBuiltIn = false, Scope = _editScope };
         StateHasChanged();
     }
 
@@ -260,7 +304,7 @@
 
         if (result != true) return;
 
-        await SkillRegistry.DeleteCommandAsync(cmd.Name, cmd.Scope, null);
+        await SkillRegistry.DeleteCommandAsync(cmd.Name, cmd.Scope, _projectPath);
         Snackbar.Add($"명령어 '/{cmd.Name}'이 삭제되었습니다.", Severity.Success);
         StateHasChanged();
     }
@@ -280,8 +324,10 @@
             IsBuiltIn = false
         };
 
-        await SkillRegistry.SaveCommandAsync(command);
-        Snackbar.Add($"명령어 '/{_editName}'이 저장되었습니다.", Severity.Success);
+        await SkillRegistry.SaveCommandAsync(command, _projectPath);
+
+        var savedScope = _editScope == "project" ? "프로젝트" : "사용자 (전역)";
+        Snackbar.Add($"명령어 '/{_editName}'이 {savedScope} 범위로 저장되었습니다.", Severity.Success);
         ResetEditForm();
         StateHasChanged();
     }
@@ -333,9 +379,11 @@
         _editName = template.Name.ToLowerInvariant().Replace(' ', '-');
         _editDescription = template.Description;
         _editContent = template.Content;
-        _editScope = "user";
+        _editScope = _scope == ClaudeSettingsScope.Project && !string.IsNullOrEmpty(_projectPath)
+            ? "project"
+            : "user";
         _isNewCommand = true;
-        _editingCommand = new SkillDefinition { IsBuiltIn = false, Scope = "user" };
+        _editingCommand = new SkillDefinition { IsBuiltIn = false, Scope = _editScope };
         StateHasChanged();
     }
 

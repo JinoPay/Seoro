@@ -427,7 +427,7 @@ public class PluginExecutionEngineTests
         public bool TryParseSkillChain(string input, Session session, out List<SkillChainStep> steps) { steps = []; return false; }
         public void Register(SkillDefinition skill) => RegisteredSkills.Add(skill);
         public Task LoadCustomCommandsAsync(string? projectPath) => Task.CompletedTask;
-        public Task SaveCommandAsync(SkillDefinition command) => Task.CompletedTask;
+        public Task SaveCommandAsync(SkillDefinition command, string? projectPath = null) => Task.CompletedTask;
         public Task DeleteCommandAsync(string name, string scope, string? projectPath)
         {
             _deleted.Add((name, scope));

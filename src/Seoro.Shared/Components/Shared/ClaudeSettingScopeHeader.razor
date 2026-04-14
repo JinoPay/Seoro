@@ -42,10 +42,13 @@
         {
             @ExtraActions
         }
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OnSave"
-                   Size="Size.Small" Style="text-transform: none;" Disabled="Saving">
-            @(Saving ? "저장 중..." : "저장")
-        </MudButton>
+        @if (ShowSaveButton)
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OnSave"
+                       Size="Size.Small" Style="text-transform: none;" Disabled="Saving">
+                @(Saving ? "저장 중..." : "저장")
+            </MudButton>
+        }
     </div>
 </div>
 
@@ -55,6 +58,7 @@
     [Parameter] public string? ProjectPath { get; set; }
     [Parameter] public EventCallback<string?> ProjectPathChanged { get; set; }
     [Parameter] public bool ShowLocalScope { get; set; } = true;
+    [Parameter] public bool ShowSaveButton { get; set; } = true;
     [Parameter] public string? LocalScopeLabel { get; set; }
     [Parameter] public bool Saving { get; set; }
     [Parameter] public EventCallback OnSave { get; set; }

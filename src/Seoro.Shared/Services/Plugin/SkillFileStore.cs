@@ -5,21 +5,27 @@ namespace Seoro.Shared.Services.Plugin;
 
 public class SkillFileStore(ILogger logger)
 {
-    public async Task SaveAsync(SkillDefinition command)
+    public async Task SaveAsync(SkillDefinition command, string? projectPath = null)
     {
-        var dir = command.Scope == "project"
-            ? null
-            : Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".claude", "commands");
-
-        if (dir == null && !string.IsNullOrEmpty(command.FilePath))
-            dir = Path.GetDirectoryName(command.FilePath);
-
-        if (dir == null)
+        string? dir;
+        if (command.Scope == "project")
+        {
+            // 신규 프로젝트 명령어: projectPath 우선, 기존 FilePath 차순, 그 외 user 폴백
+            if (!string.IsNullOrEmpty(projectPath))
+                dir = Path.Combine(projectPath, ".claude", "commands");
+            else if (!string.IsNullOrEmpty(command.FilePath))
+                dir = Path.GetDirectoryName(command.FilePath);
+            else
+                dir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    ".claude", "commands");
+        }
+        else
+        {
             dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                 ".claude", "commands");
+        }
 
         Directory.CreateDirectory(dir);
 
