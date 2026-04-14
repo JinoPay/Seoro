@@ -9,6 +9,7 @@ namespace Seoro.Shared.Services.Settings;
 public static class SettingsValidator
 {
     private static readonly HashSet<string> ValidEffortLevels = ["auto", "low", "medium", "high", "max"];
+    private static readonly HashSet<string> ValidMergeStrategies = ["Merge", "Squash", "Rebase"];
 
     private static readonly HashSet<string> ValidPermissionModes =
         ["default", "plan", "acceptEdits", "dontAsk", "bypassPermissions", "bypassAll"];
@@ -42,6 +43,10 @@ public static class SettingsValidator
         // Terminal shell
         if (settings.TerminalShell != null && !ValidTerminalShells.Contains(settings.TerminalShell))
             settings.TerminalShell = null;
+
+        // Merge strategy
+        if (!ValidMergeStrategies.Contains(settings.DefaultMergeStrategy))
+            settings.DefaultMergeStrategy = "Squash";
 
         // Clamp optional numeric values
         if (settings.DefaultMaxTurns is < 1)
@@ -91,6 +96,11 @@ public static class SettingsValidator
         if (settings.TerminalShell != null && !ValidTerminalShells.Contains(settings.TerminalShell))
             issues.Add(
                 $"Invalid terminal shell '{settings.TerminalShell}'. Must be one of: {string.Join(", ", ValidTerminalShells)}");
+
+        // Merge strategy
+        if (!ValidMergeStrategies.Contains(settings.DefaultMergeStrategy))
+            issues.Add(
+                $"Invalid merge strategy '{settings.DefaultMergeStrategy}'. Must be one of: {string.Join(", ", ValidMergeStrategies)}");
 
         // Path validation (only if set)
         ValidatePath(settings.ClaudePath, "ClaudePath", issues);

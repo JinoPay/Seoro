@@ -352,6 +352,7 @@
     private bool _prMerging;
     private PullRequestMergeStrategy _selectedMergeStrategy = PullRequestMergeStrategy.Squash;
     private (int Additions, int Deletions)? _diffStats;
+    private AppSettings? _appSettings;
 
     private IDisposable? _sessionChangedSub;
     private IDisposable? _streamingStoppedSub;
@@ -394,6 +395,11 @@
 
         _conflictSub = EventBus.Subscribe<ConflictDetectedEvent>(_ =>
             InvokeAsync(StateHasChanged));
+
+        _appSettings = await SettingsService.LoadAsync();
+        _selectedMergeStrategy = Enum.TryParse<PullRequestMergeStrategy>(_appSettings.DefaultMergeStrategy, out var parsed)
+            ? parsed
+            : PullRequestMergeStrategy.Squash;
 
         await OnSessionChangedAsync();
     }
@@ -828,21 +834,12 @@
             ? string.Join("\n- ", status.ConflictingFiles)
             : "(상태 재확인 필요)";
 
-        var prompt =
-            $"""
-             현재 워크트리에 머지 충돌이 있습니다 (`.git/MERGE_HEAD` 가 존재합니다).
-             충돌 파일 목록:
-             - {conflictFiles}
+        var template = _appSettings?.MergePromptResolveConflict ?? SeoroConstants.DefaultMergePromptResolveConflict;
+        var prompt = template.Replace("{conflictFiles}", conflictFiles);
 
-             이 파일들의 충돌을 해결한 뒤 `git merge --continue` (또는 커밋)까지 완료해주세요.
-             **중요**: 워크트리 경로 바깥은 절대 읽거나 쓰지 마세요.
-             """;
-
-        EventBus.Publish(new MergeRequestedEvent(new ChatInputMessage
-        {
-            Text = prompt,
-            ModelOverride = "haiku"
-        }));
+        // 충돌 해결은 세션 현재 모델 사용 (ModelOverride 없음)
+        var msg = BuildPromptMessage("첨부된 프롬프트를 읽고 머지 충돌을 해결해주세요.", prompt, "merge-resolve-conflict.txt");
+        EventBus.Publish(new MergeRequestedEvent(msg));
         Snackbar.Add("AI에게 충돌 해결을 요청했습니다.", Severity.Info);
     }
 
@@ -851,7 +848,7 @@
         var session = ChatState.CurrentSession;
         if (session == null || string.IsNullOrEmpty(_targetBranch)) return;
 
-        var branch = session.Git.BranchName;
+        var branch = session.Git.BranchName ?? "";
         var target = BranchRefNormalizer.Normalize(_targetBranch);
         var status = MergeStatusService.GetCurrent(session.Id);
 
@@ -859,21 +856,15 @@
             ? $"\n- 미커밋 변경이 {status.UncommittedChangeCount}개 있습니다. 먼저 변경 내용을 요약한 메시지로 커밋하세요."
             : "";
 
-        var prompt =
-            $"""
-             현재 워크트리 브랜치(`{branch}`)의 변경사항으로 GitHub PR을 생성해주세요. 순서대로 진행하세요:
+        var template = _appSettings?.MergePromptCreatePr ?? SeoroConstants.DefaultMergePromptCreatePr;
+        var prompt = template
+            .Replace("{branch}", branch)
+            .Replace("{target}", target)
+            .Replace("{uncommittedNote}", uncommittedNote);
 
-             1. `git status`로 현재 상태를 확인하세요.{uncommittedNote}
-             2. 커밋되지 않은 변경이 있으면 변경 내용을 요약한 커밋 메시지로 커밋하세요.
-             3. `git push origin {branch}`로 원격에 푸시하세요 (필요 시 `--set-upstream` 추가).
-             4. `gh pr create --base {target} --head {branch} --title "..." --body "..."`로 PR을 생성하세요.
-                - 제목과 본문은 변경 내용을 보고 자동으로 작성하세요.
-             5. 생성된 PR URL을 알려주세요.
-
-             **중요**: 워크트리 경로 바깥은 절대 읽거나 쓰지 마세요.
-             """;
-
-        EventBus.Publish(new MergeRequestedEvent(new ChatInputMessage { Text = prompt }));
+        var msg = BuildPromptMessage("첨부된 프롬프트를 읽고 PR을 생성해주세요.", prompt, "merge-create-pr.txt");
+        msg.ModelOverride = "haiku";
+        EventBus.Publish(new MergeRequestedEvent(msg));
         Snackbar.Add("AI에게 PR 생성을 요청했습니다.", Severity.Info);
     }
 
@@ -896,22 +887,33 @@
 
     private void HandleLocalDirPushViaAi(Session session)
     {
-        var branch = session.Git.BranchName;
-        var prompt =
-            $"""
-             현재 브랜치(`{branch}`)의 변경사항을 origin에 푸시해주세요. 순서대로 진행하세요:
+        var branch = session.Git.BranchName ?? "";
 
-             1. `git status`로 현재 상태를 확인하세요.
-             2. 스테이지되지 않은 변경이 있으면 `git add -A`로 전부 스테이지하세요.
-             3. 커밋되지 않은 변경이 있으면 변경 내용을 요약한 커밋 메시지로 커밋하세요.
-             4. `git fetch origin {branch}`로 원격 상태를 확인하고,
-                원격이 앞서 있으면 `git pull --rebase origin {branch}`로 rebase 하세요.
-                rebase 중 충돌이 발생하면 충돌을 해결한 뒤 `git rebase --continue` 하세요.
-             5. `git push origin {branch}`로 푸시하세요.
-             """;
+        var template = _appSettings?.MergePromptPush ?? SeoroConstants.DefaultMergePromptPush;
+        var prompt = template.Replace("{branch}", branch);
 
-        EventBus.Publish(new MergeRequestedEvent(new ChatInputMessage { Text = prompt }));
+        var msg = BuildPromptMessage("첨부된 프롬프트를 읽고 커밋 후 푸시해주세요.", prompt, "merge-push.txt");
+        msg.ModelOverride = "haiku";
+        EventBus.Publish(new MergeRequestedEvent(msg));
         Snackbar.Add("AI에게 커밋 및 푸시를 요청했습니다.", Severity.Info);
+    }
+
+    private static ChatInputMessage BuildPromptMessage(string chatText, string promptContent, string fileName)
+    {
+        var data = System.Text.Encoding.UTF8.GetBytes(promptContent);
+        return new ChatInputMessage
+        {
+            Text = chatText,
+            Attachments =
+            [
+                new PendingAttachment
+                {
+                    FileName = fileName,
+                    ContentType = "text/plain",
+                    Data = data
+                }
+            ]
+        };
     }
 
     // ─────────────────────────────────────────────

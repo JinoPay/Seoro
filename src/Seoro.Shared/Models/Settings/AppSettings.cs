@@ -55,4 +55,16 @@ public class AppSettings
 
     // 터미널
     public string? TerminalShell { get; set; } // null = 자동 감지
+
+    // 머지 설정
+    /// <summary>기본 PR 머지 전략. "Merge" | "Squash" | "Rebase"</summary>
+    public string DefaultMergeStrategy { get; set; } = "Squash";
+
+    // AI 프롬프트 템플릿 (null = SeoroConstants 기본값 사용)
+    /// <summary>PR 생성 시 AI에게 전달하는 프롬프트. {branch}, {target}, {uncommittedNote} 변수 지원.</summary>
+    public string? MergePromptCreatePr { get; set; }
+    /// <summary>커밋·푸시 시 AI에게 전달하는 프롬프트. {branch} 변수 지원.</summary>
+    public string? MergePromptPush { get; set; }
+    /// <summary>충돌 해결 시 AI에게 전달하는 프롬프트. {conflictFiles} 변수 지원.</summary>
+    public string? MergePromptResolveConflict { get; set; }
 }

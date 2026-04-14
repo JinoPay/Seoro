@@ -62,6 +62,47 @@ public static class SeoroConstants
 
     public const string TitleMarkerPrefix = "<!-- seoro:title ";
     public const string TitleMarkerSuffix = " -->";
+
+    // ─── 머지 AI 프롬프트 기본 템플릿 ───────────────────────────────────────
+    // 변수: {branch}, {target}, {uncommittedNote}, {conflictFiles}
+    // AppSettings.MergePrompt* 가 null 이면 이 상수를 사용.
+
+    public const string DefaultMergePromptCreatePr =
+        """
+        현재 워크트리 브랜치(`{branch}`)의 변경사항으로 GitHub PR을 생성해주세요. 순서대로 진행하세요:
+
+        1. `git status`로 현재 상태를 확인하세요.{uncommittedNote}
+        2. 커밋되지 않은 변경이 있으면 변경 내용을 요약한 커밋 메시지로 커밋하세요.
+        3. `git push origin {branch}`로 원격에 푸시하세요 (필요 시 `--set-upstream` 추가).
+        4. `gh pr create --base {target} --head {branch} --title "..." --body "..."`로 PR을 생성하세요.
+           - 제목과 본문은 변경 내용을 보고 자동으로 작성하세요.
+        5. 생성된 PR URL을 알려주세요.
+
+        **중요**: 워크트리 경로 바깥은 절대 읽거나 쓰지 마세요.
+        """;
+
+    public const string DefaultMergePromptPush =
+        """
+        현재 브랜치(`{branch}`)의 변경사항을 origin에 푸시해주세요. 순서대로 진행하세요:
+
+        1. `git status`로 현재 상태를 확인하세요.
+        2. 스테이지되지 않은 변경이 있으면 `git add -A`로 전부 스테이지하세요.
+        3. 커밋되지 않은 변경이 있으면 변경 내용을 요약한 커밋 메시지로 커밋하세요.
+        4. `git fetch origin {branch}`로 원격 상태를 확인하고,
+           원격이 앞서 있으면 `git pull --rebase origin {branch}`로 rebase 하세요.
+           rebase 중 충돌이 발생하면 충돌을 해결한 뒤 `git rebase --continue` 하세요.
+        5. `git push origin {branch}`로 푸시하세요.
+        """;
+
+    public const string DefaultMergePromptResolveConflict =
+        """
+        현재 워크트리에 머지 충돌이 있습니다 (`.git/MERGE_HEAD` 가 존재합니다).
+        충돌 파일 목록:
+        - {conflictFiles}
+
+        이 파일들의 충돌을 해결한 뒤 `git merge --continue` (또는 커밋)까지 완료해주세요.
+        **중요**: 워크트리 경로 바깥은 절대 읽거나 쓰지 마세요.
+        """;
     public const string TruncationMarker = "\n\n[...truncated, {0:N0} tokens total]";
     public static readonly TimeSpan ShellCacheTtl = TimeSpan.FromMinutes(10);
 

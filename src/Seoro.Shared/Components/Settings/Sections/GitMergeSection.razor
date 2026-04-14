@@ -1,0 +1,102 @@
+@* Git / 머지 설정 섹션 *@
+
+<div class="settings-section-title">Git / 머지</div>
+<div class="settings-section-desc">MergePanel 동작과 AI 위임 프롬프트를 설정합니다.</div>
+
+<div class="stack gap-3">
+
+    @* ── 기본 머지 전략 ── *@
+    <div>
+        <div class="settings-field-label">기본 PR 머지 전략</div>
+        <div class="settings-segmented">
+            <button class="settings-seg-item @(Settings.DefaultMergeStrategy == "Merge" ? "active" : "")"
+                    @onclick="@(() => Settings.DefaultMergeStrategy = "Merge")">Merge</button>
+            <button class="settings-seg-item @(Settings.DefaultMergeStrategy == "Squash" ? "active" : "")"
+                    @onclick="@(() => Settings.DefaultMergeStrategy = "Squash")">Squash</button>
+            <button class="settings-seg-item @(Settings.DefaultMergeStrategy == "Rebase" ? "active" : "")"
+                    @onclick="@(() => Settings.DefaultMergeStrategy = "Rebase")">Rebase</button>
+        </div>
+        <div class="settings-field-hint">MergePanel에서 PR 머지 버튼의 기본 선택값입니다.</div>
+    </div>
+
+    @* ── 머지 성공 시 자동 아카이브 ── *@
+    <div class="stack-row items-center gap-2" style="padding: 2px 0;">
+        <MudSwitch T="bool" @bind-Value="Settings.AutoArchiveOnMergeSuccess" Color="Color.Primary"
+                   Style="margin: 0;"/>
+        <div>
+            <div class="settings-field-label" style="margin-bottom: 0;">머지 성공 시 세션 자동 아카이브</div>
+            <div class="settings-field-hint" style="margin-top: 2px;">스쿼시 머지가 성공하면 해당 세션을 자동으로 삭제합니다.</div>
+        </div>
+    </div>
+
+    <div class="settings-group-title mt">AI 위임 프롬프트</div>
+    <div class="settings-section-desc" style="margin-top: -8px;">
+        MergePanel 버튼 클릭 시 AI에게 전달되는 지시 파일입니다.
+        비워두면 기본 프롬프트를 사용합니다.
+    </div>
+
+    @* ── PR 생성 프롬프트 ── *@
+    <div>
+        <div class="stack-row items-center gap-1" style="margin-bottom: 4px;">
+            <div class="settings-field-label" style="flex: 1; margin-bottom: 0;">PR 생성 프롬프트</div>
+            <div class="settings-field-hint" style="margin: 0;">변수: <code>{branch}</code> <code>{target}</code> <code>{uncommittedNote}</code></div>
+            @if (!string.IsNullOrEmpty(Settings.MergePromptCreatePr))
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+                           OnClick="@(() => Settings.MergePromptCreatePr = null)"
+                           Style="text-transform: none; padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
+                    기본값으로
+                </MudButton>
+            }
+        </div>
+        <MudTextField T="string" @bind-Value="Settings.MergePromptCreatePr"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="6"
+                      Placeholder="@SeoroConstants.DefaultMergePromptCreatePr"
+                      Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
+    </div>
+
+    @* ── 커밋·푸시 프롬프트 ── *@
+    <div>
+        <div class="stack-row items-center gap-1" style="margin-bottom: 4px;">
+            <div class="settings-field-label" style="flex: 1; margin-bottom: 0;">커밋·푸시 프롬프트</div>
+            <div class="settings-field-hint" style="margin: 0;">변수: <code>{branch}</code></div>
+            @if (!string.IsNullOrEmpty(Settings.MergePromptPush))
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+                           OnClick="@(() => Settings.MergePromptPush = null)"
+                           Style="text-transform: none; padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
+                    기본값으로
+                </MudButton>
+            }
+        </div>
+        <MudTextField T="string" @bind-Value="Settings.MergePromptPush"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="6"
+                      Placeholder="@SeoroConstants.DefaultMergePromptPush"
+                      Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
+    </div>
+
+    @* ── 충돌 해결 프롬프트 ── *@
+    <div>
+        <div class="stack-row items-center gap-1" style="margin-bottom: 4px;">
+            <div class="settings-field-label" style="flex: 1; margin-bottom: 0;">충돌 해결 프롬프트</div>
+            <div class="settings-field-hint" style="margin: 0;">변수: <code>{conflictFiles}</code></div>
+            @if (!string.IsNullOrEmpty(Settings.MergePromptResolveConflict))
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+                           OnClick="@(() => Settings.MergePromptResolveConflict = null)"
+                           Style="text-transform: none; padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
+                    기본값으로
+                </MudButton>
+            }
+        </div>
+        <MudTextField T="string" @bind-Value="Settings.MergePromptResolveConflict"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="6"
+                      Placeholder="@SeoroConstants.DefaultMergePromptResolveConflict"
+                      Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
+    </div>
+
+</div>
+
+@code {
+    [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
+}
