@@ -147,12 +147,11 @@ public class SchemaMigrationTests
     }
 
     [Fact]
-    public void SchemaMigratorRegistry_SessionVersionIs4()
+    public void SchemaMigratorRegistry_SessionVersionIs5()
     {
-        // v4: git.lastPrUrl 필드가 도입됨 (사용자 수동 입력 PR 링크).
         var migrator = SchemaMigratorRegistry.GetMigrator<Session>();
         Assert.NotNull(migrator);
-        Assert.Equal(4, migrator!.CurrentVersion);
+        Assert.Equal(5, migrator!.CurrentVersion);
     }
 
     [Fact]
@@ -173,6 +172,45 @@ public class SchemaMigrationTests
         var git = (System.Text.Json.Nodes.JsonObject)migrated["git"]!;
         Assert.True(git.ContainsKey("lastPrUrl"));
         Assert.Null(git["lastPrUrl"]);
+    }
+
+    [Fact]
+    public void SessionV4ToV5Migration_PromotesLastPrUrlToTrackedPr()
+    {
+        var doc = new System.Text.Json.Nodes.JsonObject
+        {
+            ["$schemaVersion"] = 4,
+            ["git"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["worktreePath"] = "/tmp/wt",
+                ["branchName"] = "seoro/bar",
+                ["lastPrUrl"] = "https://github.com/acme/repo/pull/10"
+            }
+        };
+        var migration = new SessionV4ToV5Migration();
+        var migrated = migration.Migrate(doc);
+        var git = (System.Text.Json.Nodes.JsonObject)migrated["git"]!;
+        Assert.True(git.ContainsKey("trackedPr"));
+        var trackedPr = (System.Text.Json.Nodes.JsonObject)git["trackedPr"]!;
+        Assert.Equal("https://github.com/acme/repo/pull/10", trackedPr["url"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void SessionV4ToV5Migration_CreatesEmptyTrackedPrWhenNoPrUrl()
+    {
+        var doc = new System.Text.Json.Nodes.JsonObject
+        {
+            ["$schemaVersion"] = 4,
+            ["git"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["worktreePath"] = "/tmp/wt",
+                ["branchName"] = "seoro/baz"
+            }
+        };
+        var migration = new SessionV4ToV5Migration();
+        var migrated = migration.Migrate(doc);
+        var git = (System.Text.Json.Nodes.JsonObject)migrated["git"]!;
+        Assert.True(git.ContainsKey("trackedPr"));
     }
 
     // Test helpers

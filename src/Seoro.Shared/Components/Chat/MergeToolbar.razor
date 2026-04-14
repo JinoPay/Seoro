@@ -9,6 +9,8 @@
 @inject ISettingsService SettingsService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IPullRequestService PullRequestService
+@inject IHooksEngine HooksEngine
 @inject ILogger<MergeToolbar> Logger
 @using Microsoft.Extensions.Logging
 @using System.Diagnostics
@@ -184,16 +186,14 @@
                 </span>
             </MudTooltip>
 
-            @* LastPrUrl 이 있으면 PR 블록 노출 *@
-            @if (!string.IsNullOrEmpty(session.Git.LastPrUrl))
+            @* TrackedPr 이 있으면 PR 뱃지 노출 *@
+            @if (session.Git.TrackedPr != null)
             {
-                <MudTooltip Text="@($"PR 열기: {session.Git.LastPrUrl}")" Placement="Placement.Bottom">
-                    <button class="merge-action-btn merge-action-pr"
-                            @onclick="OpenSavedPr"
-                            disabled="@blocked">
-                        <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Style="width: 13px; height: 13px;"/>
-                        <span>PR</span>
-                    </button>
+                <MudTooltip Text="@BuildTrackedPrTooltip(session.Git.TrackedPr)" Placement="Placement.Bottom">
+                    <span class="pr-badge @PrBadgeCssClass(session.Git.TrackedPr)">
+                        <MudIcon Icon="@PrStatusIcon(session.Git.TrackedPr)" Style="width: 12px; height: 12px;"/>
+                        <span>#@session.Git.TrackedPr.Number</span>
+                    </span>
                 </MudTooltip>
                 <MudTooltip Text="저장된 PR 링크 지우기" Placement="Placement.Bottom">
                     <MudIconButton Icon="@Icons.Material.Outlined.Close"
@@ -204,7 +204,7 @@
             }
         </div>
 
-        @* ─── 오른쪽: 액션 버튼 (충돌 우선 → 일반 액션) ─── *@
+        @* ─── 오른쪽: 액션 버튼 (충돌 우선 → PR 상태별 → 일반 액션) ─── *@
         @if (status.Kind == MergeStatusKind.InConflict)
         {
             <div class="merge-actions">
@@ -218,8 +218,85 @@
                 </MudTooltip>
             </div>
         }
+        else if (session.Git.TrackedPr is { IsMerged: true })
+        {
+            @* ─── PR 이 이미 머지된 상태 ─── *@
+            <div class="merge-actions">
+                <span class="pr-badge pr-badge-merged">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="width: 12px; height: 12px;"/>
+                    <span>#@session.Git.TrackedPr.Number 머지됨</span>
+                </span>
+                <MudTooltip Text="이 세션을 아카이브" Placement="Placement.Bottom">
+                    <button class="merge-action-btn @(blocked ? "disabled" : "")"
+                            @onclick="HandleArchiveAfterMerge"
+                            disabled="@blocked">
+                        <MudIcon Icon="@Icons.Material.Outlined.Archive" Style="width: 13px; height: 13px;"/>
+                        <span>아카이브</span>
+                    </button>
+                </MudTooltip>
+                <MudTooltip Text="PR 열기" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Outlined.OpenInNew"
+                                   Size="Size.Small" Disabled="@blocked"
+                                   OnClick="OpenSavedPr"
+                                   Style="width: 22px; height: 22px; opacity: 0.7;"/>
+                </MudTooltip>
+            </div>
+        }
+        else if (session.Git.TrackedPr is { State: PullRequestLifecycleState.Open })
+        {
+            @* ─── PR Open — 머지 가능/불가 표시 ─── *@
+            <div class="merge-actions">
+                @* PR 머지 버튼 + 머지 방법 드롭다운 *@
+                <div class="merge-split-group">
+                    <MudTooltip Text="@PrMergeButtonTooltip(session.Git.TrackedPr)" Placement="Placement.Bottom">
+                        <button class="merge-split-primary @(!session.Git.TrackedPr.CanMerge || blocked || _prMerging ? "disabled" : "")"
+                                @onclick="HandleMergePr"
+                                disabled="@(!session.Git.TrackedPr.CanMerge || blocked || _prMerging)">
+                            @if (_prMerging)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                     Style="width: 13px; height: 13px;"/>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
+                            }
+                            <span>@MergeMethodLabel(_selectedMergeStrategy)</span>
+                        </button>
+                    </MudTooltip>
+                    <MudMenu Icon="@Icons.Material.Filled.ExpandMore"
+                             Size="Size.Small" Dense="true"
+                             AnchorOrigin="Origin.BottomRight"
+                             TransformOrigin="Origin.TopRight">
+                        <MudMenuItem OnClick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Merge">
+                            Merge commit
+                        </MudMenuItem>
+                        <MudMenuItem OnClick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Squash">
+                            Squash and merge
+                        </MudMenuItem>
+                        <MudMenuItem OnClick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Rebase">
+                            Rebase and merge
+                        </MudMenuItem>
+                    </MudMenu>
+                </div>
+
+                <MudTooltip Text="PR 열기" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Outlined.OpenInNew"
+                                   Size="Size.Small" Disabled="@blocked"
+                                   OnClick="OpenSavedPr"
+                                   Style="width: 22px; height: 22px; opacity: 0.7;"/>
+                </MudTooltip>
+                <MudTooltip Text="PR 상태 새로고침" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Size="Size.Small" Disabled="@(blocked || _prLoading)"
+                                   OnClick="HandleRefreshPr"
+                                   Style="width: 22px; height: 22px; opacity: 0.55;"/>
+                </MudTooltip>
+            </div>
+        }
         else
         {
+            @* ─── PR 없음 또는 닫힌 상태 — PR 생성 요청 + PR 확인 ─── *@
             <div class="merge-actions">
                 <MudTooltip Text="@BuildPrTooltip(noTarget, _targetBranch)" Placement="Placement.Bottom">
                     <button class="merge-split-primary @(blocked || noTarget ? "disabled" : "")"
@@ -229,6 +306,25 @@
                         <span>PR 생성 요청</span>
                     </button>
                 </MudTooltip>
+                @if (remoteInfo.Mode == RemoteMode.GitHub)
+                {
+                    <MudTooltip Text="이 브랜치에 연결된 PR 을 GitHub 에서 조회" Placement="Placement.Bottom">
+                        <button class="merge-action-btn @(blocked || _prLoading ? "disabled" : "")"
+                                @onclick="HandleCheckPr"
+                                disabled="@(blocked || _prLoading)">
+                            @if (_prLoading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                     Style="width: 13px; height: 13px;"/>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Outlined.Search" Style="width: 13px; height: 13px;"/>
+                            }
+                            <span>PR 확인</span>
+                        </button>
+                    </MudTooltip>
+                }
             </div>
         }
         } @* closes if (!isEmpty) *@
@@ -242,6 +338,9 @@
     private bool _branchMenuOpen;
     private string _branchSearchText = "";
     private bool _busy;
+    private bool _prLoading;
+    private bool _prMerging;
+    private PullRequestMergeStrategy _selectedMergeStrategy = PullRequestMergeStrategy.Squash;
     private (int Additions, int Deletions)? _diffStats; // 로컬 디렉토리 & 워크트리 공용
 
     private IDisposable? _sessionChangedSub;
@@ -566,9 +665,10 @@
     private Task OpenSavedPr()
     {
         var session = ChatState.CurrentSession;
-        if (session == null || string.IsNullOrEmpty(session.Git.LastPrUrl))
+        var url = session?.Git.TrackedPr?.Url ?? session?.Git.LastPrUrl;
+        if (string.IsNullOrEmpty(url))
             return Task.CompletedTask;
-        OpenUrlInBrowser(session.Git.LastPrUrl);
+        OpenUrlInBrowser(url);
         return Task.CompletedTask;
     }
 
@@ -600,14 +700,142 @@
     private async Task ClearSavedPr()
     {
         var session = ChatState.CurrentSession;
-        if (session == null || string.IsNullOrEmpty(session.Git.LastPrUrl))
+        if (session?.Git.TrackedPr == null)
             return;
 
-        var ok = await ConfirmAsync("PR 링크 삭제", "저장된 PR 링크를 이 세션에서 지우시겠어요?");
+        var ok = await ConfirmAsync("PR 링크 삭제", "추적 중인 PR 연결을 이 세션에서 해제하시겠어요?");
         if (!ok) return;
-        session.Git.LastPrUrl = null;
+        session.Git.TrackedPr = null;
         await SessionService.SaveSessionAsync(session);
         StateHasChanged();
+    }
+
+    private async Task HandleCheckPr()
+    {
+        var session = ChatState.CurrentSession;
+        var workspace = ChatState.CurrentWorkspace;
+        if (session == null || workspace == null) return;
+
+        _prLoading = true;
+        StateHasChanged();
+        try
+        {
+            var pr = await PullRequestService.GetPrForBranchAsync(session);
+            if (pr != null)
+            {
+                await SessionService.SaveSessionAsync(session);
+                Snackbar.Add($"PR #{pr.Number} 발견: {pr.Title}", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("이 브랜치에 연결된 PR 이 없습니다.", Severity.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "PR 확인 실패");
+            if (ex.Message.Contains("gh CLI", StringComparison.OrdinalIgnoreCase))
+                Snackbar.Add("gh CLI 를 찾을 수 없습니다. GitHub CLI 를 설치하세요.", Severity.Error);
+            else
+                Snackbar.Add($"PR 확인 실패: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _prLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleRefreshPr()
+    {
+        var session = ChatState.CurrentSession;
+        if (session?.Git.TrackedPr == null) return;
+
+        _prLoading = true;
+        StateHasChanged();
+        try
+        {
+            var pr = await PullRequestService.RefreshAsync(session);
+            if (pr != null)
+            {
+                await SessionService.SaveSessionAsync(session);
+                Snackbar.Add($"PR #{pr.Number}: {pr.MergeStateStatus}", Severity.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "PR 새로고침 실패");
+            Snackbar.Add($"PR 새로고침 실패: {ex.Message}", Severity.Warning);
+        }
+        finally
+        {
+            _prLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleMergePr()
+    {
+        var session = ChatState.CurrentSession;
+        if (session?.Git.TrackedPr is not { CanMerge: true }) return;
+
+        var methodLabel = MergeMethodLabel(_selectedMergeStrategy);
+        var ok = await ConfirmAsync(
+            "PR 머지",
+            $"PR #{session.Git.TrackedPr.Number} 을 '{methodLabel}' 방식으로 머지합니다. 계속할까요?");
+        if (!ok) return;
+
+        _prMerging = true;
+        StateHasChanged();
+        try
+        {
+            var result = await PullRequestService.MergeAsync(session, _selectedMergeStrategy);
+            if (result.Success)
+            {
+                await SessionService.SaveSessionAsync(session);
+                Snackbar.Add($"PR #{session.Git.TrackedPr.Number} 머지 완료!", Severity.Success);
+
+                var archive = await ConfirmAsync(
+                    "PR 머지 완료",
+                    "세션을 아카이브할까요?",
+                    yesText: "아카이브",
+                    noText: "나중에");
+                if (archive)
+                    await HandleArchiveAfterMerge();
+            }
+            else
+            {
+                Snackbar.Add($"PR 머지 실패: {result.ErrorMessage}", Severity.Error);
+                await HandleRefreshPr();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"PR 머지 중 오류: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "HandleMergePr 예외");
+        }
+        finally
+        {
+            _prMerging = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleArchiveAfterMerge()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null) return;
+
+        try
+        {
+            await SessionService.CleanupSessionAsync(session.Id);
+            Snackbar.Add("세션이 아카이브되었습니다.", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "세션 아카이브 실패: session={Id}", session.Id);
+            Snackbar.Add($"아카이브 실패: {ex.Message}", Severity.Warning);
+        }
     }
 
     private void HandleResolveConflict()
@@ -770,6 +998,62 @@
         if (noTarget) return "먼저 타겟 브랜치를 선택하세요";
         return $"AI 에게 위임 — {target} 를 base 로 PR 생성";
     }
+
+    // ─────────────────────────────────────────────
+    //  PR 상태 아이콘 / 뱃지 / 툴팁 헬퍼
+    // ─────────────────────────────────────────────
+
+    private static string PrStatusIcon(TrackedPullRequest pr) => pr switch
+    {
+        { IsDraft: true } => Icons.Material.Outlined.EditNote,
+        { IsMerged: true } => Icons.Material.Filled.CheckCircle,
+        { IsMergeable: true } => Icons.Material.Filled.CheckCircle,
+        { IsMergeable: false } => Icons.Material.Filled.Error,
+        _ => Icons.Material.Outlined.HourglassEmpty
+    };
+
+    private static string PrBadgeCssClass(TrackedPullRequest pr) => pr switch
+    {
+        { IsMerged: true } => "pr-badge-merged",
+        { IsDraft: true } => "pr-badge-draft",
+        { IsMergeable: true } => "pr-badge-mergeable",
+        { IsMergeable: false, MergeStateStatus: "BLOCKED" } => "pr-badge-blocked",
+        { IsMergeable: false } => "pr-badge-conflict",
+        _ => "pr-badge-unknown"
+    };
+
+    private static string BuildTrackedPrTooltip(TrackedPullRequest pr)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(pr.Title))
+            parts.Add($"PR #{pr.Number}: {pr.Title}");
+        else
+            parts.Add($"PR #{pr.Number}");
+        if (pr.IsDraft) parts.Add("Draft");
+        if (pr.IsMerged) parts.Add("머지됨");
+        if (!string.IsNullOrEmpty(pr.MergeStateStatus)) parts.Add($"상태: {pr.MergeStateStatus}");
+        if (!string.IsNullOrEmpty(pr.ReviewDecision)) parts.Add($"리뷰: {pr.ReviewDecision}");
+        if (!string.IsNullOrEmpty(pr.ChecksSummary)) parts.Add(pr.ChecksSummary);
+        if (pr.LastCheckedAtUtc.HasValue) parts.Add($"확인: {pr.LastCheckedAtUtc.Value:HH:mm:ss}");
+        return string.Join("\n", parts);
+    }
+
+    private static string PrMergeButtonTooltip(TrackedPullRequest pr) => pr switch
+    {
+        { IsDraft: true } => "Draft PR 은 머지할 수 없습니다",
+        { IsMergeable: false, MergeStateStatus: "BLOCKED" } => "체크 또는 리뷰가 필요합니다",
+        { IsMergeable: false } => "PR 에 충돌이 있습니다. GitHub 에서 해결하세요",
+        { CanMerge: true } => "GitHub 에서 PR 을 머지합니다",
+        _ => "머지 상태를 확인 중입니다"
+    };
+
+    private static string MergeMethodLabel(PullRequestMergeStrategy method) => method switch
+    {
+        PullRequestMergeStrategy.Merge => "Merge",
+        PullRequestMergeStrategy.Squash => "Squash",
+        PullRequestMergeStrategy.Rebase => "Rebase",
+        _ => "Squash"
+    };
 
     // ─────────────────────────────────────────────
     //  Dialog 헬퍼

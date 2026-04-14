@@ -196,6 +196,7 @@ public static class Program
         appBuilder.Services.AddSingleton<IGitBranchWatcherService, GitBranchWatcherService>();
         appBuilder.Services.AddSingleton<IConflictWatcherService, ConflictWatcherService>();
         appBuilder.Services.AddSingleton<IMergeStatusService, MergeStatusService>();
+        appBuilder.Services.AddSingleton<IPullRequestService, PullRequestService>();
         appBuilder.Services.AddSingleton<IWorktreeSyncService, WorktreeSyncService>();
         appBuilder.Services.AddSingleton<ClaudeService>();
         appBuilder.Services.AddSingleton<IClaudeService>(sp => sp.GetRequiredService<ClaudeService>());

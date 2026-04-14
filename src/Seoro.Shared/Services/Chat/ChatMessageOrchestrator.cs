@@ -11,6 +11,7 @@ public class ChatMessageOrchestrator(
     IStreamEventProcessor streamProcessor,
     ISystemPromptBuilder systemPromptBuilder,
     IHooksEngine hooksEngine,
+    IPullRequestService pullRequestService,
     IActiveSessionRegistry activeSessionRegistry,
     IGitBranchWatcherService branchWatcher,
     ILogger<ChatMessageOrchestrator> logger)
@@ -151,6 +152,19 @@ public class ChatMessageOrchestrator(
             }
 
             await streamProcessor.FinalizeAsync(streamCtx);
+
+            // PR 자동 추적: 기존 TrackedPr 이 있으면 갱신, 없으면 AI 응답에서 캡처 시도.
+            try
+            {
+                if (session.Git.TrackedPr != null)
+                    await pullRequestService.RefreshAsync(session, ct);
+                else
+                    await pullRequestService.TryCaptureCreatedPrAsync(session, assistantMsg, ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "세션 {SessionId} PR 추적 갱신 실패", session.Id);
+            }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
