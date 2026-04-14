@@ -177,6 +177,10 @@
 
                 // Original Enter / Shift+Enter handling
                 if (e.key === 'Enter' && !e.isComposing && !inputEl._isComposing) {
+                    var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                    var modKey = isMac ? e.metaKey : e.ctrlKey;
+                    // Ctrl/Cmd+Enter → let it bubble to panel shortcuts (plan approve)
+                    if (modKey) return;
                     e.preventDefault();
                     if (e.shiftKey) {
                         var start = inputEl.selectionStart;
@@ -655,6 +659,11 @@
                 var modifier = isMac ? e.metaKey : e.ctrlKey;
                 if (!modifier) return;
 
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    dotNetRef.invokeMethodAsync('OnApprovePlanShortcut');
+                    return;
+                }
                 if (e.key === 'b' || e.key === 'B') {
                     e.preventDefault();
                     dotNetRef.invokeMethodAsync('OnToggleSidebarShortcut');
@@ -667,7 +676,8 @@
                     e.preventDefault();
                     dotNetRef.invokeMethodAsync('OnToggleThemeShortcut');
                 }
-                if (e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+                var planKey = isMac ? (e.key === 'p' || e.key === 'P') : (e.key === 'o' || e.key === 'O');
+                if (e.shiftKey && planKey) {
                     e.preventDefault();
                     dotNetRef.invokeMethodAsync('OnTogglePlanModeShortcut');
                 }

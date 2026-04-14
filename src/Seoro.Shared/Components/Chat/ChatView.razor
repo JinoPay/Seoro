@@ -130,6 +130,7 @@
     private IDisposable? _planModeSub;
     private IDisposable? _effortLevelSub;
     private IDisposable? _mergeRequestSub;
+    private IDisposable? _approvePlanSub;
 
     protected override void OnInitialized()
     {
@@ -159,6 +160,13 @@
 
         _mergeRequestSub = EventBus.Subscribe<MergeRequestedEvent>(e =>
             InvokeAsync(() => HandleSend(e.Input)));
+
+        _approvePlanSub = EventBus.Subscribe<ApprovePlanEvent>(_ =>
+            InvokeAsync(async () =>
+            {
+                if (!_planReviewVisible) return;
+                await HandlePlanReviewAction(PlanReviewAction.Approve);
+            }));
     }
 
     private void HandleStateChanged()
@@ -683,6 +691,7 @@
         _planModeSub?.Dispose();
         _effortLevelSub?.Dispose();
         _mergeRequestSub?.Dispose();
+        _approvePlanSub?.Dispose();
 
         foreach (var (_, (cts, task)) in _sessionTasks)
         {

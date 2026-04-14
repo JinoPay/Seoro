@@ -261,6 +261,17 @@
         EventBus.Publish(new ToggleSyncEvent());
     }
 
+    [JSInvokable]
+    public void OnApprovePlanShortcut()
+    {
+        if (ChatState.CurrentSession == null
+            || ChatState.CurrentSession.Status == SessionStatus.Archived
+            || ChatState.ShowSettings
+            || ChatState.ShowNotifications)
+            return;
+        EventBus.Publish(new ApprovePlanEvent());
+    }
+
     private void HandleThemeChanged()
     {
         _ = InvokeAsync(() =>
