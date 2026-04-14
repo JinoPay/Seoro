@@ -37,6 +37,7 @@ public class ConflictWatcherService : IConflictWatcherService
     // 동시 접근은 많지 않지만 세션 전환과 수동 호출이 경합할 수 있어 lock 으로 단순 보호.
     private readonly object _lock = new();
     private readonly Dictionary<string, WatchHandle> _watches = new(StringComparer.Ordinal);
+    private volatile bool _disposed;
 
     private string? _activeSessionWorkDir;
 
@@ -61,6 +62,7 @@ public class ConflictWatcherService : IConflictWatcherService
 
     public void Dispose()
     {
+        _disposed = true;
         _sessionChangeSub.Dispose();
         lock (_lock)
         {
@@ -195,6 +197,9 @@ public class ConflictWatcherService : IConflictWatcherService
 
     private void DebouncedCheck(string workingDir)
     {
+        if (_disposed)
+            return;
+
         WatchHandle? handle;
         lock (_lock)
         {
@@ -209,6 +214,9 @@ public class ConflictWatcherService : IConflictWatcherService
 
     private async Task EmitIfChangedAsync(string workingDir)
     {
+        if (_disposed)
+            return;
+
         try
         {
             var inConflict = await _gitService.HasUnresolvedConflictsAsync(workingDir);

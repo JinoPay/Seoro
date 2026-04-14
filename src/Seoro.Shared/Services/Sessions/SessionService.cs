@@ -143,11 +143,12 @@ public partial class SessionService(
         }
         finally
         {
-            // Ensure caches are purged even if file deletion fails
+            // Ensure caches are purged even if file deletion fails.
+            // Keep _sessionLocks / _worktreeInitLocks entries alive — removing them
+            // while another thread holds a reference causes use-after-free crashes.
+            // They are lightweight and scavenged naturally via _deletedIds guard.
             _metadataCache.TryRemove(sessionId, out _);
             _sessionCache.TryRemove(sessionId, out _);
-            _sessionLocks.TryRemove(sessionId, out _);
-            _worktreeInitLocks.TryRemove(sessionId, out _);
         }
 
         logger.LogInformation("세션 {SessionId} 삭제됨", sessionId);

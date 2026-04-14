@@ -89,6 +89,7 @@ public class MergeStatusService : IMergeStatusService
     private readonly IWorkspaceService _workspaceService;
     private readonly IConflictWatcherService _conflictWatcher;
     private readonly ILogger<MergeStatusService> _logger;
+    private readonly CancellationTokenSource _cts = new();
 
     private readonly IDisposable _sessionChangeSub;
     private readonly IDisposable _streamingStoppedSub;
@@ -114,35 +115,41 @@ public class MergeStatusService : IMergeStatusService
         // 자동 갱신 트리거: 세션 전환, 스트림 종료, 브랜치 변경, 충돌 진입/해제.
         _sessionChangeSub = eventBus.Subscribe<SessionChangedEvent>(evt =>
         {
-            if (evt.NewSession != null)
-                _ = RefreshAsync(evt.NewSession.Id);
+            if (evt.NewSession != null && !_cts.IsCancellationRequested)
+                _ = RefreshAsync(evt.NewSession.Id, ct: _cts.Token);
         });
 
         _streamingStoppedSub = eventBus.Subscribe<StreamingStoppedEvent>(evt =>
         {
+            if (_cts.IsCancellationRequested)
+                return;
             // 스트리밍 종료 후 커밋이 새로 생겼을 수 있으므로 debounce 우회.
             _lastRefresh.TryRemove(evt.SessionId, out _);
-            _ = RefreshAsync(evt.SessionId);
+            _ = RefreshAsync(evt.SessionId, ct: _cts.Token);
         });
 
         _branchChangedSub = eventBus.Subscribe<BranchChangedEvent>(evt =>
         {
-            _ = RefreshAsync(evt.SessionId);
+            if (!_cts.IsCancellationRequested)
+                _ = RefreshAsync(evt.SessionId, ct: _cts.Token);
         });
 
         // 충돌 진입/해제 즉시 Kind 를 InConflict/직전 상태로 돌려야 하므로 debounce 우회.
         _conflictSub = eventBus.Subscribe<ConflictDetectedEvent>(evt =>
         {
-            _ = HandleConflictEventAsync(evt);
+            if (!_cts.IsCancellationRequested)
+                _ = HandleConflictEventAsync(evt);
         });
     }
 
     public void Dispose()
     {
+        _cts.Cancel();
         _sessionChangeSub.Dispose();
         _streamingStoppedSub.Dispose();
         _branchChangedSub.Dispose();
         _conflictSub.Dispose();
+        _cts.Dispose();
     }
 
     public MergeStatus GetCurrent(string sessionId)
@@ -352,7 +359,7 @@ public class MergeStatusService : IMergeStatusService
 
             // 해당 세션 강제 재계산 (debounce 우회를 위해 lastRefresh 초기화).
             _lastRefresh.TryRemove(sessionId, out _);
-            _ = RefreshAsync(sessionId);
+            _ = RefreshAsync(sessionId, ct: _cts.Token);
             break;
         }
     }

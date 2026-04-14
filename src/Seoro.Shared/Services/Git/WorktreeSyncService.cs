@@ -40,6 +40,9 @@ public class WorktreeSyncService : IWorktreeSyncService
             return;
         _disposed = true;
 
+        // Stop watching FIRST to prevent new timer callbacks from firing
+        StopWatching();
+
         // Stop sync synchronously on dispose (app closing)
         if (_state != null)
             try
@@ -51,7 +54,6 @@ public class WorktreeSyncService : IWorktreeSyncService
                 _logger.LogError(ex, "dispose 중 복원 실패");
             }
 
-        StopWatching();
         _syncLock.Dispose();
     }
 
@@ -104,6 +106,8 @@ public class WorktreeSyncService : IWorktreeSyncService
 
     public async Task StopSyncAsync(CancellationToken ct = default)
     {
+        if (_disposed)
+            return;
         await _syncLock.WaitAsync(ct);
         try
         {
@@ -117,6 +121,8 @@ public class WorktreeSyncService : IWorktreeSyncService
 
     public async Task<bool> StartSyncAsync(Session session, Workspace workspace, CancellationToken ct = default)
     {
+        if (_disposed)
+            return false;
         await _syncLock.WaitAsync(ct);
         try
         {
@@ -409,6 +415,8 @@ public class WorktreeSyncService : IWorktreeSyncService
 
     private async Task OnFullResyncAsync()
     {
+        if (_disposed)
+            return;
         await _syncLock.WaitAsync();
         try
         {
@@ -425,7 +433,7 @@ public class WorktreeSyncService : IWorktreeSyncService
 
     private async Task OnWorktreeChangedAsync()
     {
-        if (_state == null)
+        if (_disposed || _state == null)
             return;
 
         List<string> paths;
@@ -436,6 +444,9 @@ public class WorktreeSyncService : IWorktreeSyncService
             paths = _pendingPaths.ToList();
             _pendingPaths.Clear();
         }
+
+        if (_disposed)
+            return;
 
         await _syncLock.WaitAsync();
         try
@@ -637,10 +648,13 @@ public class WorktreeSyncService : IWorktreeSyncService
         _debounceTimer = new Timer(DebounceMs) { AutoReset = false };
         _debounceTimer.Elapsed += async (_, _) =>
         {
+            if (_disposed)
+                return;
             try
             {
                 await OnWorktreeChangedAsync();
             }
+            catch (ObjectDisposedException) { /* shutting down */ }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "라이브 동기화 중 오류");
@@ -685,11 +699,14 @@ public class WorktreeSyncService : IWorktreeSyncService
         _watcher.Renamed += OnFsRename;
         _watcher.Error += async (_, e) =>
         {
+            if (_disposed)
+                return;
             _logger.LogWarning(e.GetException(), "FileSystemWatcher 버퍼 오버플로우, 전체 재동기화 시작");
             try
             {
                 await OnFullResyncAsync();
             }
+            catch (ObjectDisposedException) { /* shutting down */ }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "전체 재동기화 폴백 중 오류");

@@ -21,6 +21,7 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
     private readonly IGitService _gitService;
     private readonly ILogger<GitBranchWatcherService> _logger;
 
+    private volatile bool _disposed;
     private FileSystemWatcher? _watcher;
     private Session? _watchedSession;
     private Timer? _debounceTimer;
@@ -47,6 +48,7 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
 
     public void Dispose()
     {
+        _disposed = true;
         Unwatch();
         _sessionChangeSub.Dispose();
     }
@@ -199,11 +201,17 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
 
     private void DebouncedHeadUpdate(string fullPath)
     {
+        if (_disposed)
+            return;
+
         _logger.LogWarning("[TRACE] FileSystemWatcher가 HEAD에 대해 작동됨: {Path}", fullPath);
         // Debounce: git operations can write HEAD multiple times in quick succession
         _debounceTimer?.Dispose();
         _debounceTimer = new Timer(_ =>
         {
+            if (_disposed)
+                return;
+
             var session = _watchedSession;
             if (session == null)
             {
