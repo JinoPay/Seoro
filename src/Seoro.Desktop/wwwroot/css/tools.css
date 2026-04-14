@@ -403,6 +403,7 @@
     font-size: var(--text-xs);
     color: var(--accent);
     font-style: italic;
+    overflow: hidden;
 }
 
 .thinking-content {
