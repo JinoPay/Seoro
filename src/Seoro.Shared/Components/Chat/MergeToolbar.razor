@@ -613,8 +613,8 @@
                 {
                     try
                     {
-                        await SessionService.CleanupSessionAsync(session.Id);
-                        Snackbar.Add("세션이 자동으로 아카이브되었습니다.", Severity.Info);
+                        await SessionService.DeleteSessionAsync(session.Id);
+                        Snackbar.Add("세션이 자동으로 삭제되었습니다.", Severity.Info);
                     }
                     catch (Exception ex)
                     {
@@ -828,8 +828,8 @@
 
         try
         {
-            await SessionService.CleanupSessionAsync(session.Id);
-            Snackbar.Add("세션이 아카이브되었습니다.", Severity.Info);
+            await SessionService.DeleteSessionAsync(session.Id);
+            Snackbar.Add("세션이 삭제되었습니다.", Severity.Info);
         }
         catch (Exception ex)
         {
