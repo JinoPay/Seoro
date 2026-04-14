@@ -113,8 +113,9 @@ public class SessionListDataService : IDisposable
         foreach (var session in sessions)
         {
             if (session.Status == SessionStatus.Pending || session.Git.IsLocalDir
-                                                        || string.IsNullOrEmpty(session.Git.WorktreePath) ||
-                                                        string.IsNullOrEmpty(session.Git.BaseBranch))
+                                                        || string.IsNullOrEmpty(session.Git.WorktreePath)
+                                                        || !Directory.Exists(session.Git.WorktreePath)
+                                                        || string.IsNullOrEmpty(session.Git.BaseBranch))
                 continue;
 
             try
@@ -156,8 +157,9 @@ public class SessionListDataService : IDisposable
     {
         var session = OrderedSessions.FirstOrDefault(o => o.Session.Id == sessionId).Session;
         if (session == null || session.Git.IsLocalDir
-                            || string.IsNullOrEmpty(session.Git.WorktreePath) ||
-                            string.IsNullOrEmpty(session.Git.BaseBranch))
+                            || string.IsNullOrEmpty(session.Git.WorktreePath)
+                            || !Directory.Exists(session.Git.WorktreePath)
+                            || string.IsNullOrEmpty(session.Git.BaseBranch))
             return;
 
         try

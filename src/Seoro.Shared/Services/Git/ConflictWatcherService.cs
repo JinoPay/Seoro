@@ -73,9 +73,10 @@ public class ConflictWatcherService : IConflictWatcherService
 
     public void Watch(Session session)
     {
-        if (session.Git.IsLocalDir || string.IsNullOrEmpty(session.Git.WorktreePath))
+        if (session.Git.IsLocalDir || string.IsNullOrEmpty(session.Git.WorktreePath)
+                                    || !Directory.Exists(session.Git.WorktreePath))
         {
-            // 로컬 디렉터리 세션은 MergeToolbar 가 숨겨지므로 감시 불필요.
+            // 로컬 디렉터리 세션이거나 워크트리가 존재하지 않으면 감시 불필요.
             Unwatch();
             return;
         }

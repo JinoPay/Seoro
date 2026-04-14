@@ -54,7 +54,7 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
     public async Task RefreshBranchAsync(Session session)
     {
         var workDir = session.Git.WorktreePath;
-        if (string.IsNullOrEmpty(workDir))
+        if (string.IsNullOrEmpty(workDir) || !Directory.Exists(workDir))
             return;
 
         try
