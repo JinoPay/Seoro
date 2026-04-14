@@ -1,6 +1,9 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Seoro.Shared.Models.Plugin;
+using Seoro.Shared.Services.Claude;
+using Seoro.Shared.Services.Infrastructure;
 
 namespace Seoro.Shared.Services.Plugin;
 
@@ -49,14 +52,28 @@ public interface IPluginService
     Task<bool> ValidatePluginAsync(string pluginId);
     Task<List<PluginInfo>> GetInstalledPluginsAsync();
     Task<PluginInfo?> GetPluginAsync(string pluginId);
+
+    // Marketplace & CLI-managed plugin data
+    Task<InstalledPluginsFile> GetInstalledPluginsFileAsync();
+    Task<List<BlockedPlugin>> GetBlockedPluginsAsync();
+    Task<InstallCountsCache> GetInstallCountsCacheAsync();
+    Task<(bool Success, string Output)> InstallMarketplacePluginAsync(string pluginName, CancellationToken ct = default);
+    Task<(bool Success, string Output)> UninstallMarketplacePluginAsync(string pluginName, CancellationToken ct = default);
 }
 
 public class PluginService(
     IOptionsMonitor<AppSettings> appSettings,
     ISettingsService settingsService,
+    ClaudeCliResolver cliResolver,
+    IProcessRunner processRunner,
     ILogger<PluginService> logger)
     : IPluginService
 {
+    private static readonly JsonSerializerOptions JsonOpts = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     private IPluginExecutionEngine? _executionEngine;
 
     public string PluginsDirectory { get; } = Path.Combine(
@@ -217,6 +234,110 @@ public class PluginService(
     public void SetExecutionEngine(IPluginExecutionEngine engine)
     {
         _executionEngine = engine;
+    }
+
+    // ─── Marketplace / CLI-managed data ───────────────────────────────────
+
+    public async Task<InstalledPluginsFile> GetInstalledPluginsFileAsync()
+    {
+        var path = Path.Combine(PluginsDirectory, "installed_plugins.json");
+        if (!File.Exists(path))
+            return new InstalledPluginsFile();
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(path);
+            return JsonSerializer.Deserialize<InstalledPluginsFile>(json, JsonOpts)
+                   ?? new InstalledPluginsFile();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "installed_plugins.json 읽기 실패");
+            return new InstalledPluginsFile();
+        }
+    }
+
+    public async Task<List<BlockedPlugin>> GetBlockedPluginsAsync()
+    {
+        var path = Path.Combine(PluginsDirectory, "blocked_plugins.json");
+        if (!File.Exists(path))
+            return [];
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(path);
+            return JsonSerializer.Deserialize<List<BlockedPlugin>>(json, JsonOpts) ?? [];
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "blocked_plugins.json 읽기 실패");
+            return [];
+        }
+    }
+
+    public async Task<InstallCountsCache> GetInstallCountsCacheAsync()
+    {
+        var path = Path.Combine(PluginsDirectory, "install-counts-cache.json");
+        if (!File.Exists(path))
+            return new InstallCountsCache();
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(path);
+            return JsonSerializer.Deserialize<InstallCountsCache>(json, JsonOpts)
+                   ?? new InstallCountsCache();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "install-counts-cache.json 읽기 실패");
+            return new InstallCountsCache();
+        }
+    }
+
+    public async Task<(bool Success, string Output)> InstallMarketplacePluginAsync(
+        string pluginName, CancellationToken ct = default)
+    {
+        return await RunPluginCliCommandAsync($"plugin install {pluginName}", ct);
+    }
+
+    public async Task<(bool Success, string Output)> UninstallMarketplacePluginAsync(
+        string pluginName, CancellationToken ct = default)
+    {
+        return await RunPluginCliCommandAsync($"plugin uninstall {pluginName}", ct);
+    }
+
+    private async Task<(bool Success, string Output)> RunPluginCliCommandAsync(
+        string subcommand, CancellationToken ct)
+    {
+        var settings = appSettings.CurrentValue;
+        var (fileName, argPrefix) = await cliResolver.ResolveAsync(settings.ClaudePath);
+
+        // Build arguments: split argPrefix tokens + subcommand tokens
+        var prefixTokens = argPrefix.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var cmdTokens = subcommand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var allArgs = prefixTokens.Concat(cmdTokens).ToArray();
+
+        try
+        {
+            var result = await processRunner.RunAsync(new ProcessRunOptions
+            {
+                FileName = fileName,
+                Arguments = allArgs,
+                Timeout = TimeSpan.FromSeconds(60)
+            }, ct);
+
+            if (result.Success)
+                return (true, result.Stdout);
+
+            var errMsg = string.IsNullOrWhiteSpace(result.Stderr) ? result.Stdout : result.Stderr;
+            logger.LogWarning("claude {Subcommand} 실패 (exit {Code}): {Err}", subcommand, result.ExitCode, errMsg);
+            return (false, errMsg);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "claude {Subcommand} 실행 중 오류", subcommand);
+            return (false, ex.Message);
+        }
     }
 
     private async Task<PluginInfo> LoadPluginFromDirectoryAsync(string dir, string pluginId, AppSettings settings)

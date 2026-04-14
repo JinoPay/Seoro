@@ -1,0 +1,561 @@
+@using System.Diagnostics
+@inject IPluginService PluginService
+@inject IPluginExecutionEngine PluginEngine
+@inject ISnackbar Snackbar
+
+<div class="settings-content-area wide">
+    <div class="settings-content-header">
+        <span class="typo-h6">플러그인</span>
+        <div style="flex: 1;"></div>
+        <MudTextField @bind-Value="_search"
+                      Placeholder="플러그인 검색..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Style="min-width: 220px;"
+                      DebounceInterval="150"/>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                       Size="Size.Small"
+                       title="새로고침"
+                       OnClick="RefreshAll"/>
+    </div>
+
+    <div class="settings-content-body">
+        @if (_loading)
+        {
+            <div class="stack items-center" style="padding: 48px;">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
+            </div>
+        }
+        else
+        {
+            <MudTabs Elevation="0" ApplyEffectsToContainer="true" Class="plugins-tabs">
+
+                @* ── 설치됨 탭 ── *@
+                <MudTabPanel>
+                    <TabContent>
+                        <div class="stack-row gap-2 items-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small"/>
+                            <span>설치됨</span>
+                            @if (InstalledCount > 0)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary"
+                                         Variant="Variant.Filled" Class="ml-1">@InstalledCount</MudChip>
+                            }
+                        </div>
+                    </TabContent>
+                    <ChildContent>
+                        <div class="plugins-tab-body">
+                            @{
+                                var filteredMp = FilteredMarketplaceInstalled;
+                                var filteredLocal = FilteredLocalOnly;
+                                var hasAny = filteredMp.Count > 0 || filteredLocal.Count > 0;
+                            }
+
+                            @if (!hasAny)
+                            {
+                                <div class="plugins-empty">
+                                    <MudIcon Icon="@Icons.Material.Filled.Extension"
+                                             Style="font-size: 40px; opacity: 0.2;"/>
+                                    <p class="typo-body2 text-secondary mt-2">
+                                        @(_search.Length > 0 ? "검색 결과가 없습니다" : "설치된 플러그인이 없습니다")
+                                    </p>
+                                    @if (_search.Length == 0)
+                                    {
+                                        <p class="typo-caption text-secondary">
+                                            마켓플레이스 탭에서 플러그인을 설치하거나,<br/>
+                                            <code>@PluginService.PluginsDirectory</code>에 플러그인 폴더를 추가하세요.
+                                        </p>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                @* 마켓플레이스에서 설치된 플러그인 *@
+                                @if (filteredMp.Count > 0)
+                                {
+                                    <div class="plugins-grid">
+                                        @foreach (var plugin in filteredMp)
+                                        {
+                                            var isBlocked = IsBlocked(plugin.Name);
+                                            <div class="plugin-card @(isBlocked ? "plugin-card--blocked" : "")">
+                                                <div class="plugin-card-header">
+                                                    <div class="plugin-card-icon">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Extension"
+                                                                 Style="color: var(--accent);"/>
+                                                    </div>
+                                                    <div class="plugin-card-meta">
+                                                        <div class="typo-subtitle2">@plugin.Name</div>
+                                                        <div class="typo-caption text-secondary">
+                                                            @(string.IsNullOrEmpty(plugin.Marketplace) ? "알 수 없음" : plugin.Marketplace)
+                                                        </div>
+                                                    </div>
+                                                    <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline"
+                                                                   Size="Size.Small"
+                                                                   Color="Color.Error"
+                                                                   title="제거"
+                                                                   Class="plugin-card-delete"
+                                                                   OnClick="@(() => ConfirmUninstallMarketplace(plugin))"/>
+                                                </div>
+                                                <div class="plugin-card-tags">
+                                                    <span class="plugin-tag">v@plugin.Version</span>
+                                                    <span class="plugin-tag">@plugin.Scope</span>
+                                                    @if (!string.IsNullOrEmpty(plugin.InstalledAt))
+                                                    {
+                                                        <span class="plugin-tag">@FormatDate(plugin.InstalledAt)</span>
+                                                    }
+                                                    @if (isBlocked)
+                                                    {
+                                                        <span class="plugin-tag plugin-tag--danger">차단됨</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+
+                                @* 로컬 플러그인 (디렉토리에서 발견됨) *@
+                                @if (filteredLocal.Count > 0)
+                                {
+                                    @if (filteredMp.Count > 0)
+                                    {
+                                        <div class="plugins-section-label mt-3">로컬 플러그인</div>
+                                    }
+                                    <div class="plugins-grid">
+                                        @foreach (var plugin in filteredLocal)
+                                        {
+                                            <div class="plugin-card">
+                                                <div class="plugin-card-header">
+                                                    <div class="plugin-card-icon">
+                                                        <MudIcon Icon="@Icons.Material.Filled.FolderSpecial"
+                                                                 Style="color: var(--accent);"/>
+                                                    </div>
+                                                    <div class="plugin-card-meta">
+                                                        <div class="typo-subtitle2">@plugin.Name</div>
+                                                        @if (!string.IsNullOrEmpty(plugin.Description))
+                                                        {
+                                                            <div class="typo-caption text-secondary">@plugin.Description</div>
+                                                        }
+                                                    </div>
+                                                    <MudSwitch T="bool" Value="@plugin.IsEnabled"
+                                                               ValueChanged="@(v => ToggleLocalPlugin(plugin, v))"
+                                                               Color="Color.Primary" Size="Size.Small"
+                                                               Disabled="@(plugin.Status is PluginStatus.Invalid or PluginStatus.Error)"/>
+                                                </div>
+                                                <div class="plugin-card-tags">
+                                                    @if (!string.IsNullOrEmpty(plugin.Version))
+                                                    {
+                                                        <span class="plugin-tag">v@plugin.Version</span>
+                                                    }
+                                                    @{
+                                                        var (_, statusColor, statusLabel) = GetStatusDisplay(plugin);
+                                                    }
+                                                    <MudChip T="string" Size="Size.Small"
+                                                             Variant="Variant.Outlined" Color="@statusColor">
+                                                        @statusLabel
+                                                    </MudChip>
+                                                    @if (!string.IsNullOrEmpty(plugin.Error))
+                                                    {
+                                                        <MudTooltip Text="@plugin.Error">
+                                                            <MudIcon Icon="@Icons.Material.Filled.Info"
+                                                                     Size="Size.Small" Color="Color.Warning"
+                                                                     Style="width:14px;height:14px;cursor:help;"/>
+                                                        </MudTooltip>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            }
+
+                            @* 차단된 플러그인 섹션 *@
+                            @if (_blockedPlugins.Count > 0)
+                            {
+                                <div class="plugins-section-label mt-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Small"
+                                             Style="vertical-align: middle; margin-right: 4px;"/>
+                                    차단됨
+                                </div>
+                                <div class="stack gap-1">
+                                    @foreach (var b in _blockedPlugins)
+                                    {
+                                        <div class="plugin-blocked-row">
+                                            <span class="typo-body2">@b.Plugin</span>
+                                            @if (!string.IsNullOrEmpty(b.Reason))
+                                            {
+                                                <span class="typo-caption text-secondary">@b.Reason</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            <div class="mt-3">
+                                <MudButton StartIcon="@Icons.Material.Filled.FolderOpen"
+                                           Size="Size.Small" Variant="Variant.Text"
+                                           OnClick="OpenPluginsDirectory"
+                                           Style="text-transform:none;">
+                                    플러그인 디렉토리 열기
+                                </MudButton>
+                            </div>
+                        </div>
+                    </ChildContent>
+                </MudTabPanel>
+
+                @* ── 마켓플레이스 탭 ── *@
+                <MudTabPanel>
+                    <TabContent>
+                        <div class="stack-row gap-2 items-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Store" Size="Size.Small"/>
+                            <span>마켓플레이스</span>
+                            @if (_installCounts.Count > 0)
+                            {
+                                <span class="typo-caption text-secondary ml-1">@_installCounts.Count</span>
+                            }
+                        </div>
+                    </TabContent>
+                    <ChildContent>
+                        <div class="plugins-tab-body">
+                            @{
+                                var filtered = FilteredMarketplace;
+                            }
+                            @if (filtered.Count == 0)
+                            {
+                                <div class="plugins-empty">
+                                    <MudIcon Icon="@Icons.Material.Filled.Store"
+                                             Style="font-size: 40px; opacity: 0.2;"/>
+                                    <p class="typo-body2 text-secondary mt-2">
+                                        @(_search.Length > 0
+                                            ? "검색 결과가 없습니다"
+                                            : "마켓플레이스 데이터가 없습니다")
+                                    </p>
+                                    @if (_search.Length == 0)
+                                    {
+                                        <p class="typo-caption text-secondary">
+                                            Claude CLI가 마켓플레이스 캐시를 아직 다운로드하지 않았습니다.
+                                        </p>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="plugins-grid plugins-grid--3col">
+                                    @foreach (var item in filtered)
+                                    {
+                                        var name = item.Plugin.Contains('@')
+                                            ? item.Plugin.Split('@')[0]
+                                            : item.Plugin;
+                                        var already = IsMarketplaceInstalled(item.Plugin);
+                                        var installing = _installingPlugin == item.Plugin;
+                                        <div class="plugin-card plugin-card--marketplace">
+                                            <div class="plugin-card-header">
+                                                <div class="plugin-card-icon plugin-card-icon--sm">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Extension"
+                                                             Size="Size.Small"
+                                                             Style="color: var(--accent);"/>
+                                                </div>
+                                                <div class="plugin-card-meta">
+                                                    <div class="typo-subtitle2">@name</div>
+                                                </div>
+                                            </div>
+                                            <div class="plugin-card-installs typo-caption text-secondary">
+                                                <MudIcon Icon="@Icons.Material.Filled.Download"
+                                                         Style="width:12px;height:12px;vertical-align:middle;"/>
+                                                @FormatInstalls(item.UniqueInstalls) installs
+                                            </div>
+                                            <div class="plugin-card-action mt-2">
+                                                @if (already)
+                                                {
+                                                    <span class="typo-caption" style="color: var(--mud-palette-success);">
+                                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                                                 Size="Size.Small"
+                                                                 Style="vertical-align:middle;"/>
+                                                        설치됨
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <MudButton Variant="Variant.Filled"
+                                                               Color="Color.Primary"
+                                                               Size="Size.Small"
+                                                               Disabled="@installing"
+                                                               Style="text-transform:none; width:100%;"
+                                                               OnClick="@(() => InstallMarketplacePlugin(item.Plugin))">
+                                                        @if (installing)
+                                                        {
+                                                            <MudProgressCircular Size="Size.Small"
+                                                                                 Indeterminate="true"
+                                                                                 Class="mr-1"/>
+                                                            <span>설치 중...</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>설치</span>
+                                                        }
+                                                    </MudButton>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </ChildContent>
+                </MudTabPanel>
+
+            </MudTabs>
+        }
+    </div>
+</div>
+
+@* 언인스톨 확인 다이얼로그 *@
+@if (_uninstallingPlugin != null)
+{
+    <MudDialog Visible="true" Options="_confirmDialogOptions">
+        <TitleContent>플러그인 제거</TitleContent>
+        <DialogContent>
+            <p>'<strong>@_uninstallingPlugin</strong>'을 제거하시겠습니까?</p>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _uninstallingPlugin = null)">취소</MudButton>
+            <MudButton Color="Color.Error" Variant="Variant.Filled"
+                       OnClick="DoUninstallMarketplace">제거</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private string _search = "";
+    private bool _loading = true;
+
+    // Marketplace-installed (installed_plugins.json)
+    private List<MarketplaceInstalledPlugin> _marketplaceInstalled = [];
+
+    // Local directory-discovered plugins
+    private List<PluginInfo> _localPlugins = [];
+
+    // Marketplace catalog (install-counts-cache.json)
+    private List<PluginInstallCount> _installCounts = [];
+
+    // Blocked
+    private List<BlockedPlugin> _blockedPlugins = [];
+
+    // UI state
+    private string? _installingPlugin;
+    private string? _uninstallingPlugin;
+
+    private readonly DialogOptions _confirmDialogOptions = new()
+    {
+        MaxWidth = MaxWidth.ExtraSmall,
+        FullWidth = true
+    };
+
+    // ── Computed ─────────────────────────────────────────────────────────
+
+    private int InstalledCount => _marketplaceInstalled.Count + _localPlugins.Count;
+
+    private List<MarketplaceInstalledPlugin> FilteredMarketplaceInstalled =>
+        _marketplaceInstalled
+            .Where(p => _search.Length == 0 ||
+                        p.Name.Contains(_search, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private List<PluginInfo> FilteredLocalOnly =>
+        _localPlugins
+            .Where(p => _search.Length == 0 ||
+                        p.Name.Contains(_search, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private List<PluginInstallCount> FilteredMarketplace =>
+        _installCounts
+            .Where(p => _search.Length == 0 ||
+                        p.Plugin.Contains(_search, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(p => p.UniqueInstalls)
+            .ToList();
+
+    // ── Lifecycle ────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAllAsync();
+    }
+
+    private async Task LoadAllAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        await PluginService.EnsurePluginsDirectoryAsync();
+
+        var t1 = PluginService.GetInstalledPluginsFileAsync();
+        var t2 = PluginService.GetBlockedPluginsAsync();
+        var t3 = PluginService.GetInstallCountsCacheAsync();
+        var t4 = PluginService.GetInstalledPluginsAsync();
+        await Task.WhenAll(t1, t2, t3, t4);
+        var mpFile = t1.Result;
+        var blocked = t2.Result;
+        var counts = t3.Result;
+        var local = t4.Result;
+
+        // Parse marketplace-installed into flat view models
+        _marketplaceInstalled = mpFile.Plugins
+            .SelectMany(kv =>
+            {
+                var fullName = kv.Key;
+                var parts = fullName.Split('@', 2);
+                var name = parts[0];
+                var marketplace = parts.Length > 1 ? parts[1] : "";
+                var latest = kv.Value.LastOrDefault() ?? new InstallEntry();
+                return new[]
+                {
+                    new MarketplaceInstalledPlugin
+                    {
+                        Name = name,
+                        Marketplace = marketplace,
+                        Scope = latest.Scope,
+                        Version = latest.Version,
+                        InstalledAt = latest.InstalledAt
+                    }
+                };
+            })
+            .ToList();
+
+        _blockedPlugins = blocked;
+        _installCounts = counts.Counts;
+
+        // Exclude from local list those already in marketplace-installed (by name)
+        var mpNames = _marketplaceInstalled.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _localPlugins = local.Where(p => !mpNames.Contains(p.Name)).ToList();
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private async Task RefreshAll()
+    {
+        await LoadAllAsync();
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+
+    private bool IsBlocked(string name) =>
+        _blockedPlugins.Any(b =>
+            string.Equals(b.Plugin, name, StringComparison.OrdinalIgnoreCase) ||
+            b.Plugin.StartsWith(name + "@", StringComparison.OrdinalIgnoreCase));
+
+    private bool IsMarketplaceInstalled(string fullName)
+    {
+        var name = fullName.Contains('@') ? fullName.Split('@')[0] : fullName;
+        return _marketplaceInstalled.Any(p =>
+            string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string FormatInstalls(int n) => n switch
+    {
+        >= 1_000_000 => $"{n / 1_000_000.0:F1}M",
+        >= 1_000 => $"{n / 1_000.0:F1}K",
+        _ => n.ToString()
+    };
+
+    private static string FormatDate(string dateStr)
+    {
+        if (string.IsNullOrEmpty(dateStr)) return "";
+        return DateTime.TryParse(dateStr, out var dt)
+            ? dt.ToString("yyyy-MM-dd")
+            : dateStr;
+    }
+
+    private static (string icon, Color color, string label) GetStatusDisplay(PluginInfo plugin)
+    {
+        if (!plugin.IsEnabled)
+            return (Icons.Material.Filled.PauseCircle, Color.Default, "비활성");
+
+        return plugin.Status switch
+        {
+            PluginStatus.Valid => (Icons.Material.Filled.CheckCircle, Color.Success, "정상"),
+            PluginStatus.Loaded => (Icons.Material.Filled.CheckCircle, Color.Success, "로드됨"),
+            PluginStatus.Invalid => (Icons.Material.Filled.Error, Color.Error, "오류"),
+            PluginStatus.Error => (Icons.Material.Filled.Error, Color.Error, "오류"),
+            _ => (Icons.Material.Filled.RadioButtonUnchecked, Color.Default, "확인 중")
+        };
+    }
+
+    // ── Actions ──────────────────────────────────────────────────────────
+
+    private async Task InstallMarketplacePlugin(string pluginName)
+    {
+        _installingPlugin = pluginName;
+        StateHasChanged();
+
+        var (success, output) = await PluginService.InstallMarketplacePluginAsync(pluginName);
+
+        _installingPlugin = null;
+
+        if (success)
+        {
+            Snackbar.Add($"'{pluginName.Split('@')[0]}' 플러그인을 설치했습니다.", Severity.Success);
+            await LoadAllAsync();
+        }
+        else
+        {
+            Snackbar.Add($"설치 실패: {output}", Severity.Error);
+            StateHasChanged();
+        }
+    }
+
+    private void ConfirmUninstallMarketplace(MarketplaceInstalledPlugin plugin)
+    {
+        _uninstallingPlugin = string.IsNullOrEmpty(plugin.Marketplace)
+            ? plugin.Name
+            : $"{plugin.Name}@{plugin.Marketplace}";
+    }
+
+    private async Task DoUninstallMarketplace()
+    {
+        if (_uninstallingPlugin == null) return;
+        var name = _uninstallingPlugin;
+        _uninstallingPlugin = null;
+
+        var (success, output) = await PluginService.UninstallMarketplacePluginAsync(name);
+
+        if (success)
+        {
+            Snackbar.Add($"'{name.Split('@')[0]}' 플러그인을 제거했습니다.", Severity.Success);
+            await LoadAllAsync();
+        }
+        else
+        {
+            Snackbar.Add($"제거 실패: {output}", Severity.Error);
+        }
+    }
+
+    private async Task ToggleLocalPlugin(PluginInfo plugin, bool enabled)
+    {
+        await PluginService.SetPluginEnabledAsync(plugin.Id, enabled);
+        plugin.IsEnabled = enabled;
+        Snackbar.Add(
+            $"'{plugin.Name}' 플러그인이 {(enabled ? "활성화" : "비활성화")}되었습니다.",
+            Severity.Info);
+        StateHasChanged();
+    }
+
+    private async Task OpenPluginsDirectory()
+    {
+        await PluginService.EnsurePluginsDirectoryAsync();
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = PluginService.PluginsDirectory,
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            Snackbar.Add("디렉토리를 열 수 없습니다.", Severity.Warning);
+        }
+    }
+
+}

@@ -64,11 +64,6 @@
                 <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small"/>
                 연동
             </button>
-            <button class="settings-nav-item @ActiveClass("extensions")"
-                    @onclick="@(() => SetSection("extensions"))">
-                <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small"/>
-                확장
-            </button>
             <button class="settings-nav-item @ActiveClass("slash-commands")"
                     @onclick="@(() => SetSection("slash-commands"))">
                 <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small"/>
@@ -104,6 +99,11 @@
                     @onclick="@(() => SetSection("instructions"))">
                 <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"/>
                 인스트럭션
+            </button>
+            <button class="settings-nav-item @ActiveClass("plugins")"
+                    @onclick="@(() => SetSection("plugins"))">
+                <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small"/>
+                플러그인
             </button>
             <button class="settings-nav-item @ActiveClass("accounts")"
                     @onclick="@(() => SetSection("accounts"))">
@@ -199,6 +199,10 @@
         else if (ChatState.SettingsSection == "slash-commands")
         {
             <SlashCommandsPage/>
+        }
+        else if (ChatState.SettingsSection == "plugins")
+        {
+            <PluginsPage/>
         }
         else if (ChatState.SettingsSection == "usage")
         {

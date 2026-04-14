@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Seoro.Shared.Models;
+using Seoro.Shared.Models.Plugin;
 using Seoro.Shared.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -364,6 +365,18 @@ public class PluginExecutionEngineTests
         public Task EnsurePluginsDirectoryAsync() => Task.CompletedTask;
         public Task<bool> LoadPluginAsync(string pluginId) => Task.FromResult(true);
         public Task UnloadPluginAsync(string pluginId) => Task.CompletedTask;
+        public Task<InstalledPluginsFile> GetInstalledPluginsFileAsync() =>
+            Task.FromResult(new InstalledPluginsFile());
+        public Task<List<BlockedPlugin>> GetBlockedPluginsAsync() =>
+            Task.FromResult(new List<BlockedPlugin>());
+        public Task<InstallCountsCache> GetInstallCountsCacheAsync() =>
+            Task.FromResult(new InstallCountsCache());
+        public Task<(bool Success, string Output)> InstallMarketplacePluginAsync(
+            string pluginName, CancellationToken ct = default) =>
+            Task.FromResult((true, ""));
+        public Task<(bool Success, string Output)> UninstallMarketplacePluginAsync(
+            string pluginName, CancellationToken ct = default) =>
+            Task.FromResult((true, ""));
     }
 
     private class FakeProcessRunner : IProcessRunner

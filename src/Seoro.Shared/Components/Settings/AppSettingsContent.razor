@@ -5,7 +5,7 @@
     <div class="settings-content-header">
         <span class="typo-h6">@GetSectionTitle()</span>
         <div style="flex: 1;"></div>
-        @if (Section != "shortcuts" && Section != "extensions")
+        @if (Section != "shortcuts")
         {
             <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
                        Size="Size.Small" Style="text-transform: none;">
@@ -34,9 +34,6 @@
                 break;
             case "integrations":
                 <IntegrationsSection Settings="_settings"/>
-                break;
-            case "extensions":
-                <ExtensionsSection/>
                 break;
             case "advanced":
                 <AdvancedSection Settings="_settings"/>
@@ -69,7 +66,6 @@
         "terminal" => "터미널",
         "shortcuts" => "단축키",
         "integrations" => "연동",
-        "extensions" => "확장",
         "advanced" => "고급",
         "updates" => "업데이트",
         "git-merge" => "Git / 머지",
