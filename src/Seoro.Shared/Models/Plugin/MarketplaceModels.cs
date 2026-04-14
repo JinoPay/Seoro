@@ -56,4 +56,21 @@ public class MarketplaceInstalledPlugin
     public string Scope { get; set; } = "user";
     public string Version { get; set; } = "unknown";
     public string InstalledAt { get; set; } = "";
+
+    // `claude plugin list --json`으로 보강되는 필드
+    public bool Enabled { get; set; } = true;
+    public bool HasUpdate { get; set; } = false;
+}
+
+/// <summary>
+///     `claude plugin list --json` 한 항목
+/// </summary>
+public class CliPluginEntry
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
+    [JsonPropertyName("version")] public string Version { get; set; } = "";
+    [JsonPropertyName("scope")] public string Scope { get; set; } = "user";
+    [JsonPropertyName("enabled")] public bool Enabled { get; set; } = true;
+    [JsonPropertyName("installedAt")] public string InstalledAt { get; set; } = "";
+    [JsonPropertyName("lastUpdated")] public string LastUpdated { get; set; } = "";
 }

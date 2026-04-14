@@ -84,20 +84,41 @@
                         @foreach (var p in filteredMp)
                         {
                             var blocked = IsBlocked(p.Name);
-                            <div class="plugin-card @(blocked ? "plugin-card--blocked" : "")">
+                            var updating = _updatingPlugin == p.Name;
+                            <div class="plugin-card @(!p.Enabled ? "plugin-card--disabled" : "") @(blocked ? "plugin-card--blocked" : "")">
                                 <div class="plugin-card-top">
-                                    <div class="plugin-card-avatar">
+                                    <div class="plugin-card-avatar @(!p.Enabled ? "plugin-card-avatar--off" : "")">
                                         <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small"/>
                                     </div>
                                     <div class="plugin-card-info">
                                         <span class="plugin-card-name">@p.Name</span>
                                         <span class="plugin-card-sub">@(p.Marketplace.Length > 0 ? p.Marketplace : "unknown")</span>
                                     </div>
-                                    <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline"
-                                                   Size="Size.Small" Color="Color.Error"
-                                                   Class="plugin-card-del"
-                                                   title="제거"
-                                                   OnClick="@(() => ConfirmUninstall(p))"/>
+                                    <div class="plugin-card-actions">
+                                        @if (updating)
+                                        {
+                                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                                 Style="width:16px;height:16px;"/>
+                                        }
+                                        else
+                                        {
+                                            <MudTooltip Text="업데이트">
+                                                <MudIconButton Icon="@Icons.Material.Filled.SystemUpdateAlt"
+                                                               Size="Size.Small"
+                                                               Class="plugin-card-action-btn"
+                                                               OnClick="@(() => UpdatePlugin(p))"/>
+                                            </MudTooltip>
+                                        }
+                                        <MudTooltip Text="제거">
+                                            <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline"
+                                                           Size="Size.Small" Color="Color.Error"
+                                                           Class="plugin-card-action-btn"
+                                                           OnClick="@(() => ConfirmUninstall(p))"/>
+                                        </MudTooltip>
+                                        <MudSwitch T="bool" Value="@p.Enabled"
+                                                   ValueChanged="@(v => ToggleMarketplacePlugin(p, v))"
+                                                   Color="Color.Primary" Size="Size.Small"/>
+                                    </div>
                                 </div>
                                 <div class="plugin-card-tags">
                                     <span class="plugin-tag">v@p.Version</span>
@@ -105,6 +126,10 @@
                                     @if (!string.IsNullOrEmpty(p.InstalledAt))
                                     {
                                         <span class="plugin-tag">@FormatDate(p.InstalledAt)</span>
+                                    }
+                                    @if (!p.Enabled)
+                                    {
+                                        <span class="plugin-tag plugin-tag--muted">비활성</span>
                                     }
                                     @if (blocked)
                                     {
@@ -294,6 +319,7 @@
 
     private string? _installingPlugin;
     private string? _uninstallingPlugin;
+    private string? _updatingPlugin;
 
     // ── Computed ─────────────────────────────────────────────────────────
 
@@ -333,25 +359,30 @@
         var t2 = PluginService.GetBlockedPluginsAsync();
         var t3 = PluginService.GetInstallCountsCacheAsync();
         var t4 = PluginService.GetInstalledPluginsAsync();
-        await Task.WhenAll(t1, t2, t3, t4);
+        var t5 = PluginService.ListMarketplacePluginsAsync();
+        await Task.WhenAll(t1, t2, t3, t4, t5);
 
         var mpFile = t1.Result;
         var blocked = t2.Result;
         var counts = t3.Result;
         var local = t4.Result;
+        var cliList = t5.Result.ToDictionary(e => e.Id, StringComparer.OrdinalIgnoreCase);
 
         _marketplaceInstalled = mpFile.Plugins
             .Select(kv =>
             {
                 var parts = kv.Key.Split('@', 2);
                 var latest = kv.Value.LastOrDefault() ?? new InstallEntry();
+                // CLI list로 enabled 상태 보강
+                cliList.TryGetValue(kv.Key, out var cliEntry);
                 return new MarketplaceInstalledPlugin
                 {
                     Name = parts[0],
                     Marketplace = parts.Length > 1 ? parts[1] : "",
                     Scope = latest.Scope,
                     Version = latest.Version,
-                    InstalledAt = latest.InstalledAt
+                    InstalledAt = latest.InstalledAt,
+                    Enabled = cliEntry?.Enabled ?? true
                 };
             })
             .ToList();
@@ -424,6 +455,44 @@
         else
         {
             Snackbar.Add($"설치 실패: {output}", Severity.Error);
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleMarketplacePlugin(MarketplaceInstalledPlugin p, bool enabled)
+    {
+        var fullName = p.Marketplace.Length > 0 ? $"{p.Name}@{p.Marketplace}" : p.Name;
+        var (success, output) = enabled
+            ? await PluginService.EnableMarketplacePluginAsync(fullName)
+            : await PluginService.DisableMarketplacePluginAsync(fullName);
+
+        if (success)
+        {
+            p.Enabled = enabled;
+            Snackbar.Add($"'{p.Name}' {(enabled ? "활성화" : "비활성화")}", Severity.Info);
+            StateHasChanged();
+        }
+        else
+        {
+            Snackbar.Add($"실패: {output}", Severity.Error);
+        }
+    }
+
+    private async Task UpdatePlugin(MarketplaceInstalledPlugin p)
+    {
+        _updatingPlugin = p.Name;
+        StateHasChanged();
+        var fullName = p.Marketplace.Length > 0 ? $"{p.Name}@{p.Marketplace}" : p.Name;
+        var (success, output) = await PluginService.UpdateMarketplacePluginAsync(fullName);
+        _updatingPlugin = null;
+        if (success)
+        {
+            Snackbar.Add($"'{p.Name}' 업데이트 완료 (재시작 후 적용)", Severity.Success);
+            await LoadAllAsync();
+        }
+        else
+        {
+            Snackbar.Add($"업데이트 실패: {output}", Severity.Error);
             StateHasChanged();
         }
     }

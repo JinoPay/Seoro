@@ -1256,3 +1256,35 @@
     letter-spacing: 0.08em;
     margin-bottom: var(--space-2);
 }
+
+/* plugin card — actions row */
+.plugin-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.plugin-card-action-btn {
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.plugin-card:hover .plugin-card-action-btn {
+    opacity: 1;
+}
+
+/* disabled state */
+.plugin-card--disabled {
+    opacity: 0.6;
+}
+
+.plugin-card-avatar--off {
+    background: var(--bg-overlay);
+    color: var(--text-muted);
+}
+
+.plugin-tag--muted {
+    color: var(--text-muted);
+    background: var(--bg-overlay);
+}

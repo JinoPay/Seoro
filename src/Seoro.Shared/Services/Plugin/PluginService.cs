@@ -57,8 +57,12 @@ public interface IPluginService
     Task<InstalledPluginsFile> GetInstalledPluginsFileAsync();
     Task<List<BlockedPlugin>> GetBlockedPluginsAsync();
     Task<InstallCountsCache> GetInstallCountsCacheAsync();
+    Task<List<CliPluginEntry>> ListMarketplacePluginsAsync(CancellationToken ct = default);
     Task<(bool Success, string Output)> InstallMarketplacePluginAsync(string pluginName, CancellationToken ct = default);
     Task<(bool Success, string Output)> UninstallMarketplacePluginAsync(string pluginName, CancellationToken ct = default);
+    Task<(bool Success, string Output)> EnableMarketplacePluginAsync(string pluginName, CancellationToken ct = default);
+    Task<(bool Success, string Output)> DisableMarketplacePluginAsync(string pluginName, CancellationToken ct = default);
+    Task<(bool Success, string Output)> UpdateMarketplacePluginAsync(string pluginName, CancellationToken ct = default);
 }
 
 public class PluginService(
@@ -300,6 +304,23 @@ public class PluginService(
         }
     }
 
+    public async Task<List<CliPluginEntry>> ListMarketplacePluginsAsync(CancellationToken ct = default)
+    {
+        var (success, output) = await RunPluginCliCommandAsync("plugin list --json", ct);
+        if (!success || string.IsNullOrWhiteSpace(output))
+            return [];
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<CliPluginEntry>>(output, JsonOpts) ?? [];
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "claude plugin list --json 파싱 실패");
+            return [];
+        }
+    }
+
     public async Task<(bool Success, string Output)> InstallMarketplacePluginAsync(
         string pluginName, CancellationToken ct = default)
     {
@@ -310,6 +331,24 @@ public class PluginService(
         string pluginName, CancellationToken ct = default)
     {
         return await RunPluginCliCommandAsync($"plugin uninstall {pluginName}", ct);
+    }
+
+    public async Task<(bool Success, string Output)> EnableMarketplacePluginAsync(
+        string pluginName, CancellationToken ct = default)
+    {
+        return await RunPluginCliCommandAsync($"plugin enable {pluginName}", ct);
+    }
+
+    public async Task<(bool Success, string Output)> DisableMarketplacePluginAsync(
+        string pluginName, CancellationToken ct = default)
+    {
+        return await RunPluginCliCommandAsync($"plugin disable {pluginName}", ct);
+    }
+
+    public async Task<(bool Success, string Output)> UpdateMarketplacePluginAsync(
+        string pluginName, CancellationToken ct = default)
+    {
+        return await RunPluginCliCommandAsync($"plugin update {pluginName}", ct);
     }
 
     private async Task<(bool Success, string Output)> RunPluginCliCommandAsync(

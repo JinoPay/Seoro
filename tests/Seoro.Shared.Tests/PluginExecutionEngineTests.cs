@@ -371,10 +371,21 @@ public class PluginExecutionEngineTests
             Task.FromResult(new List<BlockedPlugin>());
         public Task<InstallCountsCache> GetInstallCountsCacheAsync() =>
             Task.FromResult(new InstallCountsCache());
+        public Task<List<CliPluginEntry>> ListMarketplacePluginsAsync(CancellationToken ct = default) =>
+            Task.FromResult(new List<CliPluginEntry>());
         public Task<(bool Success, string Output)> InstallMarketplacePluginAsync(
             string pluginName, CancellationToken ct = default) =>
             Task.FromResult((true, ""));
         public Task<(bool Success, string Output)> UninstallMarketplacePluginAsync(
+            string pluginName, CancellationToken ct = default) =>
+            Task.FromResult((true, ""));
+        public Task<(bool Success, string Output)> EnableMarketplacePluginAsync(
+            string pluginName, CancellationToken ct = default) =>
+            Task.FromResult((true, ""));
+        public Task<(bool Success, string Output)> DisableMarketplacePluginAsync(
+            string pluginName, CancellationToken ct = default) =>
+            Task.FromResult((true, ""));
+        public Task<(bool Success, string Output)> UpdateMarketplacePluginAsync(
             string pluginName, CancellationToken ct = default) =>
             Task.FromResult((true, ""));
     }
