@@ -54,3 +54,8 @@ public sealed record ConflictDetectedEvent(string WorkingDir, bool Entered) : Ch
 ///     EmbeddedDiffPanel 의 Merge 탭으로 전환 요청.
 /// </summary>
 public sealed record MergeTabRequestedEvent : ChatEvent;
+
+/// <summary>
+///     MergePanel 의 diff stats 클릭 시 EmbeddedDiffPanel 의 Changes 탭으로 전환 요청.
+/// </summary>
+public sealed record ChangesTabRequestedEvent : ChatEvent;

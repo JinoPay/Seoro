@@ -63,6 +63,7 @@
     private TerminalPanel? _terminalPanel;
     private IDisposable? _mergeTabSub;
     private IDisposable? _conflictSub;
+    private IDisposable? _changesTabSub;
 
     protected override void OnInitialized()
     {
@@ -79,6 +80,10 @@
             {
                 if (e.Entered) { _activeTab = DiffPanelTab.Merge; StateHasChanged(); }
             }));
+
+        // MergePanel diff stats 클릭 시 Changes 탭으로 전환
+        _changesTabSub = EventBus.Subscribe<ChangesTabRequestedEvent>(_ =>
+            InvokeAsync(() => { _activeTab = DiffPanelTab.Changes; StateHasChanged(); }));
     }
 
     private void HandleStateChanged()
@@ -112,6 +117,7 @@
         ChatState.OnChange -= HandleStateChanged;
         _mergeTabSub?.Dispose();
         _conflictSub?.Dispose();
+        _changesTabSub?.Dispose();
 
         if (_terminalPanel != null)
             await _terminalPanel.DisposeAsync();

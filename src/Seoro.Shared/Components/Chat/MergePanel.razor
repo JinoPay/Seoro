@@ -48,54 +48,46 @@
         {
             var localHasChanges = (status.AheadCount ?? 0) > 0 || status.UncommittedChangeCount > 0;
 
-            @* 상태 섹션 *@
-            <div class="merge-panel-section">
-                <div class="merge-panel-section-label">상태</div>
-                <div class="merge-panel-status">
+            @* 상태 행 *@
+            <MudTooltip Text="@BuildStatusTooltip(status)" Placement="Placement.Bottom">
+                <div class="mp-status-row @StatusCssClass(status.Kind)">
                     <span class="merge-status-icon @StatusCssClass(status.Kind)">
-                        <MudIcon Icon="@StatusIcon(status.Kind)" Style="width: 14px; height: 14px;"/>
+                        <MudIcon Icon="@StatusIcon(status.Kind)" Style="width: 13px; height: 13px;"/>
                     </span>
-                    <div class="merge-panel-status-text">
-                        <div style="font-size: var(--text-xs); color: var(--text-primary);">
-                            @BuildStatusLabel(status)
-                        </div>
-                        @if (_diffStats is { Additions: > 0 } or { Deletions: > 0 })
-                        {
-                            <div style="font-size: var(--text-xs); margin-top: 2px;">
-                                <span class="diff-add">+@(_diffStats!.Value.Additions)</span>
-                                <span style="opacity:0.4; margin: 0 2px;">/</span>
-                                <span class="diff-del">-@(_diffStats!.Value.Deletions)</span>
-                            </div>
-                        }
-                        else if ((status.AheadCount ?? 0) > 0)
-                        {
-                            <div style="font-size: var(--text-xs); margin-top: 2px; opacity: 0.6;">
-                                ↑ @status.AheadCount 커밋 미푸시
-                            </div>
-                        }
-                        else if (status.UncommittedChangeCount > 0)
-                        {
-                            <div style="font-size: var(--text-xs); margin-top: 2px; opacity: 0.6;">
-                                변경 @status.UncommittedChangeCount 개
-                            </div>
-                        }
-                    </div>
+                    <span class="mp-status-label">@BuildStatusLabel(status)</span>
+                    @if (_diffStats is { Additions: > 0 } or { Deletions: > 0 })
+                    {
+                        <button class="mp-diff-link" @onclick="HandleNavigateToChanges" title="Changes 탭에서 보기">
+                            <span class="diff-add">+@(_diffStats!.Value.Additions)</span>
+                            <span class="mp-diff-sep">/</span>
+                            <span class="diff-del">-@(_diffStats!.Value.Deletions)</span>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Style="width: 11px; height: 11px; opacity: 0.5;"/>
+                        </button>
+                    }
+                    else if ((status.AheadCount ?? 0) > 0)
+                    {
+                        <span class="mp-status-sub">↑@status.AheadCount</span>
+                    }
+                    else if (status.UncommittedChangeCount > 0)
+                    {
+                        <button class="mp-diff-link" @onclick="HandleNavigateToChanges" title="Changes 탭에서 보기">
+                            <span>@status.UncommittedChangeCount 변경</span>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Style="width: 11px; height: 11px; opacity: 0.5;"/>
+                        </button>
+                    }
                 </div>
-            </div>
+            </MudTooltip>
 
             @if (localHasChanges && remoteInfo.Mode == RemoteMode.GitHub)
             {
-                <div class="merge-panel-section">
-                    <div class="merge-panel-section-label">액션</div>
-                    <MudTooltip Text="@BuildLocalDirPushTooltip(status, _diffStats)" Placement="Placement.Bottom">
-                        <button class="merge-action-btn @(blocked ? "disabled" : "")"
-                                @onclick="HandlePush"
-                                disabled="@blocked">
-                            <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Style="width: 13px; height: 13px;"/>
-                            <span>AI에게 커밋 · 푸시 요청</span>
-                        </button>
-                    </MudTooltip>
-                </div>
+                <MudTooltip Text="@BuildLocalDirPushTooltip(status, _diffStats)" Placement="Placement.Bottom">
+                    <button class="mp-main-btn @(blocked ? "disabled" : "")"
+                            @onclick="HandlePush"
+                            disabled="@blocked">
+                        <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Style="width: 13px; height: 13px;"/>
+                        <span>AI에게 커밋 · 푸시 요청</span>
+                    </button>
+                </MudTooltip>
             }
         }
         else
@@ -107,28 +99,21 @@
                           && (status.AheadCount ?? 0) == 0
                           && status.UncommittedChangeCount == 0;
 
-            @* 타겟 브랜치 섹션 — 항상 표시 *@
-            <div class="merge-panel-section">
-                <div class="merge-panel-section-label">
-                    타겟 브랜치
-                    <MudTooltip Text="브랜치 목록 · 머지 상태 새로고침" Placement="Placement.Right">
-                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                       Size="Size.Small" Disabled="@blocked"
-                                       OnClick="HandleManualRefresh"
-                                       Style="width: 18px; height: 18px; opacity: 0.55; margin-left: 4px;"/>
-                    </MudTooltip>
-                </div>
-                <div class="merge-branch-selector-wrap">
-                    <MudTooltip Text="머지 대상 브랜치 선택" Placement="Placement.Bottom">
-                        <button class="merge-target-badge @(blocked ? "disabled" : "")"
-                                @onclick="ToggleBranchMenu" disabled="@blocked">
-                            <MudIcon Icon="@Icons.Material.Filled.CallMerge"
-                                     Style="width: 12px; height: 12px; flex-shrink: 0;"/>
-                            <span>@(_targetBranch ?? "브랜치 선택")</span>
-                            <MudIcon Icon="@Icons.Material.Filled.ExpandMore"
-                                     Style="width: 12px; height: 12px; opacity: 0.5; flex-shrink: 0; margin-left: auto;"/>
-                        </button>
-                    </MudTooltip>
+            @* 브랜치 행 — 현재 브랜치 → 타겟 *@
+            <div class="mp-branch-row">
+                <div class="merge-branch-selector-wrap" style="flex: 1; min-width: 0;">
+                    <button class="mp-branch-btn @(blocked ? "disabled" : "")"
+                            @onclick="ToggleBranchMenu" disabled="@blocked">
+                        <MudIcon Icon="@Icons.Material.Filled.CallMerge"
+                                 Style="width: 12px; height: 12px; flex-shrink: 0; opacity: 0.6;"/>
+                        <span class="mp-branch-current">@(session.Git.BranchName ?? "—")</span>
+                        <span class="mp-branch-arrow">→</span>
+                        <span class="mp-branch-target @(noTarget ? "mp-branch-placeholder" : "")">
+                            @(_targetBranch ?? "브랜치 선택")
+                        </span>
+                        <MudIcon Icon="@Icons.Material.Filled.UnfoldMore"
+                                 Style="width: 12px; height: 12px; opacity: 0.4; flex-shrink: 0;"/>
+                    </button>
 
                     <MudPopover Open="@_branchMenuOpen" AnchorOrigin="Origin.BottomLeft"
                                 TransformOrigin="Origin.TopLeft" Class="branch-popover">
@@ -174,214 +159,182 @@
                         <MudOverlay Visible="true" OnClick="CloseBranchMenu" DarkBackground="false" ZIndex="1"/>
                     }
                 </div>
-            </div>
 
-            @* 상태 섹션 *@
-            <div class="merge-panel-section">
-                <div class="merge-panel-section-label">상태</div>
-                <MudTooltip Text="@BuildStatusTooltip(status)" Placement="Placement.Bottom">
-                    <div class="merge-panel-status">
-                        <span class="merge-status-icon @StatusCssClass(status.Kind)">
-                            <MudIcon Icon="@StatusIcon(status.Kind)" Style="width: 14px; height: 14px;"/>
-                        </span>
-                        <div class="merge-panel-status-text">
-                            <div style="font-size: var(--text-xs); color: var(--text-primary);">
-                                @BuildStatusLabel(status)
-                            </div>
-                            @if (status.Kind == MergeStatusKind.BehindTarget && status.BehindCount is > 0)
-                            {
-                                <div style="font-size: var(--text-xs); margin-top: 2px; opacity: 0.6;">
-                                    ↓ @status.BehindCount 커밋 뒤처짐
-                                </div>
-                            }
-                            else if (status.Kind == MergeStatusKind.UncommittedDirty && status.UncommittedChangeCount > 0)
-                            {
-                                <div style="font-size: var(--text-xs); margin-top: 2px;">
-                                    @if (_diffStats is { Additions: > 0 } or { Deletions: > 0 })
-                                    {
-                                        <span class="diff-add">+@(_diffStats!.Value.Additions)</span>
-                                        <span style="opacity:0.4; margin: 0 2px;">/</span>
-                                        <span class="diff-del">-@(_diffStats!.Value.Deletions)</span>
-                                    }
-                                    else
-                                    {
-                                        <span style="opacity: 0.6;">변경 @status.UncommittedChangeCount 개</span>
-                                    }
-                                </div>
-                            }
-                            else if (status.Kind == MergeStatusKind.ConflictExpected && status.ConflictingFiles is { Count: > 0 })
-                            {
-                                <div style="font-size: var(--text-xs); margin-top: 2px; opacity: 0.6;">
-                                    @status.ConflictingFiles.Count 개 파일 충돌 예상
-                                </div>
-                            }
-                            else if (isEmpty && !noTarget)
-                            {
-                                <div style="font-size: var(--text-xs); margin-top: 2px; opacity: 0.6;">
-                                    변경 사항이 없습니다
-                                </div>
-                            }
-                        </div>
-                    </div>
+                <MudTooltip Text="브랜치 · 머지 상태 새로고침" Placement="Placement.Left">
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Size="Size.Small" Disabled="@blocked"
+                                   OnClick="HandleManualRefresh"
+                                   Style="width: 26px; height: 26px; flex-shrink: 0; opacity: 0.5;"/>
                 </MudTooltip>
             </div>
 
-            @* PR 정보 섹션 *@
+            @* 상태 행 *@
+            <MudTooltip Text="@BuildStatusTooltip(status)" Placement="Placement.Bottom">
+                <div class="mp-status-row @StatusCssClass(status.Kind)">
+                    <span class="merge-status-icon @StatusCssClass(status.Kind)">
+                        <MudIcon Icon="@StatusIcon(status.Kind)" Style="width: 13px; height: 13px;"/>
+                    </span>
+                    <span class="mp-status-label">@BuildStatusLabel(status)</span>
+
+                    @if (status.Kind == MergeStatusKind.BehindTarget && status.BehindCount is > 0)
+                    {
+                        <span class="mp-status-sub">↓@status.BehindCount</span>
+                    }
+                    else if (status.Kind == MergeStatusKind.ConflictExpected && status.ConflictingFiles is { Count: > 0 })
+                    {
+                        <span class="mp-status-sub">@status.ConflictingFiles.Count 파일</span>
+                    }
+                    else if (_diffStats is { Additions: > 0 } or { Deletions: > 0 })
+                    {
+                        <button class="mp-diff-link" @onclick="HandleNavigateToChanges" title="Changes 탭에서 보기">
+                            <span class="diff-add">+@(_diffStats!.Value.Additions)</span>
+                            <span class="mp-diff-sep">/</span>
+                            <span class="diff-del">-@(_diffStats!.Value.Deletions)</span>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Style="width: 11px; height: 11px; opacity: 0.5;"/>
+                        </button>
+                    }
+                    else if (status.UncommittedChangeCount > 0)
+                    {
+                        <button class="mp-diff-link" @onclick="HandleNavigateToChanges" title="Changes 탭에서 보기">
+                            <span>@status.UncommittedChangeCount 변경</span>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Style="width: 11px; height: 11px; opacity: 0.5;"/>
+                        </button>
+                    }
+                </div>
+            </MudTooltip>
+
+            @* PR 카드 *@
             @if (session.Git.TrackedPr != null)
             {
                 var pr = session.Git.TrackedPr;
-                <div class="merge-panel-section">
-                    <div class="merge-panel-section-label">풀 리퀘스트</div>
-                    <div class="merge-panel-pr">
-                        <div class="merge-panel-pr-header">
-                            <span class="pr-badge @PrBadgeCssClass(pr)">
-                                <MudIcon Icon="@PrStatusIcon(pr)" Style="width: 12px; height: 12px;"/>
-                                <span>#@pr.Number</span>
-                            </span>
-                            @if (!string.IsNullOrEmpty(pr.Title))
-                            {
-                                <span class="merge-panel-pr-title" title="@pr.Title">@pr.Title</span>
-                            }
-                        </div>
-                        @if (!string.IsNullOrEmpty(pr.MergeStateStatus) || !string.IsNullOrEmpty(pr.ReviewDecision))
-                        {
-                            <div style="font-size: var(--text-xs); opacity: 0.6; display: flex; gap: 8px;">
-                                @if (!string.IsNullOrEmpty(pr.MergeStateStatus))
-                                {
-                                    <span>@pr.MergeStateStatus</span>
-                                }
-                                @if (!string.IsNullOrEmpty(pr.ReviewDecision))
-                                {
-                                    <span>@pr.ReviewDecision</span>
-                                }
-                                @if (!string.IsNullOrEmpty(pr.ChecksSummary))
-                                {
-                                    <span>@pr.ChecksSummary</span>
-                                }
-                            </div>
-                        }
-                        <div class="merge-panel-pr-actions">
-                            <MudTooltip Text="PR 열기" Placement="Placement.Bottom">
-                                <button class="merge-action-btn @(blocked ? "disabled" : "")"
-                                        @onclick="OpenSavedPr"
-                                        disabled="@blocked"
-                                        style="flex: 1;">
-                                    <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Style="width: 12px; height: 12px;"/>
-                                    <span>PR 열기</span>
-                                </button>
-                            </MudTooltip>
-                            <MudTooltip Text="PR 상태 새로고침" Placement="Placement.Bottom">
-                                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                               Size="Size.Small" Disabled="@(blocked || _prLoading)"
-                                               OnClick="HandleRefreshPr"
-                                               Style="width: 28px; height: 28px; opacity: 0.55;"/>
-                            </MudTooltip>
-                            <MudTooltip Text="저장된 PR 링크 지우기" Placement="Placement.Bottom">
-                                <MudIconButton Icon="@Icons.Material.Outlined.Close"
-                                               Size="Size.Small" Disabled="@blocked"
-                                               OnClick="ClearSavedPr"
-                                               Style="width: 28px; height: 28px; opacity: 0.5;"/>
-                            </MudTooltip>
-                        </div>
+                <div class="mp-pr-card">
+                    <div class="mp-pr-top">
+                        <span class="pr-badge @PrBadgeCssClass(pr)">
+                            <MudIcon Icon="@PrStatusIcon(pr)" Style="width: 11px; height: 11px;"/>
+                            <span>#@pr.Number</span>
+                        </span>
+                        <span class="mp-pr-title" title="@pr.Title">@pr.Title</span>
+                        <MudTooltip Text="PR 상태 새로고침" Placement="Placement.Top">
+                            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                           Size="Size.Small" Disabled="@(blocked || _prLoading)"
+                                           OnClick="HandleRefreshPr"
+                                           Style="width: 22px; height: 22px; flex-shrink: 0; opacity: 0.5;"/>
+                        </MudTooltip>
+                        <MudTooltip Text="PR 링크 해제" Placement="Placement.Top">
+                            <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                                           Size="Size.Small" Disabled="@blocked"
+                                           OnClick="ClearSavedPr"
+                                           Style="width: 22px; height: 22px; flex-shrink: 0; opacity: 0.4;"/>
+                        </MudTooltip>
                     </div>
+
+                    @{
+                        var metaParts = new List<string>();
+                        if (!string.IsNullOrEmpty(pr.MergeStateStatus)) metaParts.Add(pr.MergeStateStatus);
+                        if (!string.IsNullOrEmpty(pr.ReviewDecision)) metaParts.Add(pr.ReviewDecision);
+                        if (!string.IsNullOrEmpty(pr.ChecksSummary)) metaParts.Add(pr.ChecksSummary);
+                    }
+                    @if (metaParts.Count > 0)
+                    {
+                        <div class="mp-pr-meta">@string.Join(" · ", metaParts)</div>
+                    }
+
+                    <button class="mp-pr-open-btn @(blocked ? "disabled" : "")"
+                            @onclick="OpenSavedPr" disabled="@blocked">
+                        <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Style="width: 11px; height: 11px;"/>
+                        <span>PR 열기</span>
+                    </button>
                 </div>
             }
 
-            @* 액션 섹션 *@
-            @if (!isEmpty || status.Kind == MergeStatusKind.InConflict)
+            @* 액션 영역 *@
+            @if (status.Kind == MergeStatusKind.InConflict)
             {
-                <div class="merge-panel-section">
-                    <div class="merge-panel-section-label">액션</div>
-
-                    @if (status.Kind == MergeStatusKind.InConflict)
-                    {
-                        <MudTooltip Text="워크트리 충돌을 AI에게 위임해 해결" Placement="Placement.Bottom">
-                            <button class="merge-action-btn merge-action-conflict @(blocked ? "disabled" : "")"
-                                    @onclick="HandleResolveConflict"
-                                    disabled="@blocked">
-                                <MudIcon Icon="@Icons.Material.Filled.Warning" Style="width: 13px; height: 13px;"/>
-                                <span>충돌 해결 요청</span>
-                            </button>
-                        </MudTooltip>
-                    }
-                    else if (session.Git.TrackedPr is { IsMerged: true })
-                    {
-                        <button class="merge-action-btn @(blocked ? "disabled" : "")"
-                                @onclick="HandleArchiveAfterMerge"
-                                disabled="@blocked">
-                            <MudIcon Icon="@Icons.Material.Outlined.Archive" Style="width: 13px; height: 13px;"/>
-                            <span>세션 아카이브</span>
-                        </button>
-                    }
-                    else if (session.Git.TrackedPr is { State: PullRequestLifecycleState.Open })
-                    {
-                        @* PR Open — 머지 버튼 + 전략 드롭다운 *@
-                        <div class="merge-split-group">
-                            <MudTooltip Text="@PrMergeButtonTooltip(session.Git.TrackedPr)" Placement="Placement.Bottom">
-                                <button class="merge-split-primary @(!session.Git.TrackedPr.CanMerge || blocked || _prMerging ? "disabled" : "")"
-                                        @onclick="HandleMergePr"
-                                        disabled="@(!session.Git.TrackedPr.CanMerge || blocked || _prMerging)">
-                                    @if (_prMerging)
-                                    {
-                                        <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                             Style="width: 13px; height: 13px;"/>
-                                    }
-                                    else
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
-                                    }
-                                    <span>@MergeMethodLabel(_selectedMergeStrategy) 머지</span>
-                                </button>
-                            </MudTooltip>
-                            <MudMenu Icon="@Icons.Material.Filled.ExpandMore"
-                                     Size="Size.Small" Dense="true"
-                                     AnchorOrigin="Origin.BottomRight"
-                                     TransformOrigin="Origin.TopRight">
-                                <MudMenuItem OnClick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Merge">
-                                    Merge commit
-                                </MudMenuItem>
-                                <MudMenuItem OnClick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Squash">
-                                    Squash and merge
-                                </MudMenuItem>
-                                <MudMenuItem OnClick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Rebase">
-                                    Rebase and merge
-                                </MudMenuItem>
-                            </MudMenu>
-                        </div>
-                    }
-                    else
-                    {
-                        @* PR 없음 또는 닫힌 상태 *@
-                        <MudTooltip Text="@BuildPrTooltip(noTarget, _targetBranch)" Placement="Placement.Bottom">
-                            <button class="merge-split-primary @(blocked || noTarget ? "disabled" : "")"
-                                    @onclick="HandleCreatePrViaAi"
-                                    disabled="@(blocked || noTarget)">
-                                <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
-                                <span>PR 생성 요청</span>
-                            </button>
-                        </MudTooltip>
-                        @if (remoteInfo.Mode == RemoteMode.GitHub)
-                        {
-                            <MudTooltip Text="이 브랜치에 연결된 PR을 GitHub에서 조회" Placement="Placement.Bottom">
-                                <button class="merge-action-btn @(blocked || _prLoading ? "disabled" : "")"
-                                        @onclick="HandleCheckPr"
-                                        disabled="@(blocked || _prLoading)"
-                                        style="margin-top: var(--space-1);">
-                                    @if (_prLoading)
-                                    {
-                                        <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                             Style="width: 13px; height: 13px;"/>
-                                    }
-                                    else
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Outlined.Search" Style="width: 13px; height: 13px;"/>
-                                    }
-                                    <span>PR 확인</span>
-                                </button>
-                            </MudTooltip>
-                        }
-                    }
+                <MudTooltip Text="워크트리 충돌을 AI에게 위임해 해결" Placement="Placement.Bottom">
+                    <button class="mp-main-btn mp-main-btn-conflict @(blocked ? "disabled" : "")"
+                            @onclick="HandleResolveConflict"
+                            disabled="@blocked">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Style="width: 13px; height: 13px;"/>
+                        <span>충돌 해결 요청</span>
+                    </button>
+                </MudTooltip>
+            }
+            else if (session.Git.TrackedPr is { IsMerged: true })
+            {
+                <button class="mp-main-btn @(blocked ? "disabled" : "")"
+                        @onclick="HandleArchiveAfterMerge"
+                        disabled="@blocked">
+                    <MudIcon Icon="@Icons.Material.Outlined.Archive" Style="width: 13px; height: 13px;"/>
+                    <span>세션 아카이브</span>
+                </button>
+            }
+            else if (session.Git.TrackedPr is { State: PullRequestLifecycleState.Open })
+            {
+                @* 전략 pills + 머지 버튼 *@
+                <div class="mp-strategy-pills">
+                    <button class="mp-pill @(_selectedMergeStrategy == PullRequestMergeStrategy.Merge ? "active" : "")"
+                            @onclick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Merge"
+                            disabled="@blocked">
+                        Merge
+                    </button>
+                    <button class="mp-pill @(_selectedMergeStrategy == PullRequestMergeStrategy.Squash ? "active" : "")"
+                            @onclick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Squash"
+                            disabled="@blocked">
+                        Squash
+                    </button>
+                    <button class="mp-pill @(_selectedMergeStrategy == PullRequestMergeStrategy.Rebase ? "active" : "")"
+                            @onclick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Rebase"
+                            disabled="@blocked">
+                        Rebase
+                    </button>
                 </div>
+                <MudTooltip Text="@PrMergeButtonTooltip(session.Git.TrackedPr)" Placement="Placement.Bottom">
+                    <button class="mp-main-btn @(!session.Git.TrackedPr.CanMerge || blocked || _prMerging ? "disabled" : "")"
+                            @onclick="HandleMergePr"
+                            disabled="@(!session.Git.TrackedPr.CanMerge || blocked || _prMerging)">
+                        @if (_prMerging)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                 Style="width: 13px; height: 13px;"/>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
+                        }
+                        <span>@MergeMethodLabel(_selectedMergeStrategy) 머지</span>
+                    </button>
+                </MudTooltip>
+            }
+            else if (!isEmpty)
+            {
+                @* PR 없음 또는 닫힌 상태 *@
+                <MudTooltip Text="@BuildPrTooltip(noTarget, _targetBranch)" Placement="Placement.Bottom">
+                    <button class="mp-main-btn @(blocked || noTarget ? "disabled" : "")"
+                            @onclick="HandleCreatePrViaAi"
+                            disabled="@(blocked || noTarget)">
+                        <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
+                        <span>PR 생성 요청</span>
+                    </button>
+                </MudTooltip>
+                @if (remoteInfo.Mode == RemoteMode.GitHub)
+                {
+                    <MudTooltip Text="이 브랜치에 연결된 PR을 GitHub에서 조회" Placement="Placement.Bottom">
+                        <button class="mp-secondary-btn @(blocked || _prLoading ? "disabled" : "")"
+                                @onclick="HandleCheckPr"
+                                disabled="@(blocked || _prLoading)">
+                            @if (_prLoading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                     Style="width: 11px; height: 11px;"/>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Outlined.Search" Style="width: 11px; height: 11px;"/>
+                            }
+                            <span>PR 확인</span>
+                        </button>
+                    </MudTooltip>
+                }
             }
         }
     }
@@ -559,6 +512,15 @@
             MergeStatusService.SetTargetBranch(session.Id, BranchRefNormalizer.Normalize(branch));
             await MergeStatusService.RefreshAsync(session.Id, BranchRefNormalizer.Normalize(branch));
         }
+    }
+
+    // ─────────────────────────────────────────────
+    //  탭 네비게이션
+    // ─────────────────────────────────────────────
+
+    private void HandleNavigateToChanges()
+    {
+        EventBus.Publish(new ChangesTabRequestedEvent());
     }
 
     // ─────────────────────────────────────────────
