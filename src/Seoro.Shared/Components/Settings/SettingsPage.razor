@@ -45,6 +45,11 @@
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"/>
                 터미널
             </button>
+            <button class="settings-nav-item @ActiveClass("git-merge")"
+                    @onclick="@(() => SetSection("git-merge"))">
+                <MudIcon Icon="@Icons.Material.Filled.CallMerge" Size="Size.Small"/>
+                Git / 머지
+            </button>
             <button class="settings-nav-item @ActiveClass("shortcuts")"
                     @onclick="@(() => SetSection("shortcuts"))">
                 <MudIcon Icon="@Icons.Material.Filled.Keyboard" Size="Size.Small"/>
