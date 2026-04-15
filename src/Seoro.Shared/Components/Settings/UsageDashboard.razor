@@ -445,7 +445,7 @@
 @code {
     private UsageStats? _stats;
     private DashboardStats _dashStats = new();
-    private bool _loading;
+    private bool _loading = true;
     private bool _refreshing;
     private bool _exporting;
     private string _selectedRange = "30";
@@ -465,12 +465,10 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // 컴퓨터의 모든 세션 스캔 (대시보드와 동일한 출처)
-        _dashStats = await GamificationService.GetDashboardStatsAsync();
-
-        // 만료된 경우 세션 파일에서 통계 캐시 새로 고침 (lastComputedDate != today)
+        // 먼저 통계 캐시 새로 고침 (history.jsonl 기반, 글리픽과 동일한 파이프라인)
         await StatsCacheService.RefreshIfStaleAsync();
 
+        _dashStats = await GamificationService.GetDashboardStatsAsync();
         await LoadStats();
     }
 
@@ -486,7 +484,7 @@
         StateHasChanged();
 
         await StatsCacheService.ForceRefreshAsync();
-        _dashStats = await GamificationService.GetDashboardStatsAsync();
+        _dashStats = await GamificationService.ForceRefreshDashboardAsync();
         await LoadStats();
 
         _refreshing = false;
