@@ -4,9 +4,10 @@ using Microsoft.Extensions.Logging;
 namespace Seoro.Shared.Services.Gamification;
 
 /// <summary>
-///     Reads ~/.claude/stats-cache.json (Claude CLI external indexer)
-///     to provide complete historical usage stats.
-///     When the cache is stale, refreshes by scanning session JSONL files directly.
+///     Reads ~/.claude/stats-cache.json (Claude CLI 외부 인덱서가 작성)
+///     as-is — 글리픽과 동일하게 파일을 수정하지 않고 그대로 읽습니다.
+///     토큰/비용 데이터: stats-cache.json (Claude CLI 신뢰)
+///     활동 데이터: history.jsonl (ComputeLiveActivityAsync)
 /// </summary>
 public class StatsCacheService(ILogger<StatsCacheService> logger) : IStatsCacheService
 {
@@ -15,82 +16,19 @@ public class StatsCacheService(ILogger<StatsCacheService> logger) : IStatsCacheS
         PropertyNameCaseInsensitive = true
     };
 
-    private static readonly JsonSerializerOptions WriteOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        WriteIndented = false
-    };
-
-    private static readonly SemaphoreSlim RefreshLock = new(1, 1);
-
     private static readonly string HistoryPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".claude", "history.jsonl");
-
-    private static readonly string ProjectsDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".claude", "projects");
 
     private static readonly string StatsCachePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".claude", "stats-cache.json");
 
-    public async Task ForceRefreshAsync()
-    {
-        await RefreshLock.WaitAsync();
-        try
-        {
-            if (!Directory.Exists(ProjectsDir))
-                return;
+    /// <summary>글리픽과 동일하게 stats-cache.json을 수정하지 않으므로 no-op.</summary>
+    public Task ForceRefreshAsync() => Task.CompletedTask;
 
-            var cache = await ReadStatsCacheAsync();
-            await RefreshFromSessionsAsync(cache);
-        }
-        finally
-        {
-            RefreshLock.Release();
-        }
-    }
-
-    public async Task<bool> RefreshIfStaleAsync()
-    {
-        if (!await RefreshLock.WaitAsync(0))
-            return false; // Another refresh is already running
-
-        try
-        {
-            var cache = await ReadStatsCacheAsync();
-            var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
-
-            if (cache != null && cache.Version >= 3 && cache.LastComputedDate == today
-                && cache.DailyModelTokens.Count > 0 && cache.ModelUsage.Count > 0)
-            {
-                // Date matches today, but check if any session file is newer than the cache
-                if (File.Exists(StatsCachePath) && Directory.Exists(ProjectsDir))
-                {
-                    var cacheLastWrite = File.GetLastWriteTimeUtc(StatsCachePath);
-                    var anyNewer = Directory.EnumerateFiles(ProjectsDir, "*.jsonl", SearchOption.AllDirectories)
-                        .Any(f => File.GetLastWriteTimeUtc(f) > cacheLastWrite);
-                    if (!anyNewer)
-                        return false; // Cache is truly fresh
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            if (!Directory.Exists(ProjectsDir))
-                return false;
-
-            await RefreshFromSessionsAsync(cache);
-            return true;
-        }
-        finally
-        {
-            RefreshLock.Release();
-        }
-    }
+    /// <summary>글리픽과 동일하게 stats-cache.json을 수정하지 않으므로 no-op.</summary>
+    public Task<bool> RefreshIfStaleAsync() => Task.FromResult(false);
 
     public async Task<LiveActivityStats?> ComputeLiveActivityAsync()
     {
@@ -344,133 +282,6 @@ public class StatsCacheService(ILogger<StatsCacheService> logger) : IStatsCacheS
                 .ToList();
 
         return stats;
-    }
-
-    /// <summary>
-    ///     Scans all session JSONL files to rebuild dailyModelTokens and modelUsage,
-    ///     preserving other fields from the existing cache.
-    /// </summary>
-    private async Task RefreshFromSessionsAsync(StatsCache? existingCache)
-    {
-        var dailyModelTokens = new Dictionary<string, Dictionary<string, DailyModelTokenBreakdown>>();
-        var modelUsage = new Dictionary<string, StatsCacheModelUsage>();
-
-        var files = Directory.EnumerateFiles(ProjectsDir, "*.jsonl", SearchOption.AllDirectories);
-
-        foreach (var file in files)
-            try
-            {
-                using var reader = new StreamReader(file);
-                while (await reader.ReadLineAsync() is { } line)
-                {
-                    // Fast filter: skip lines that can't be assistant messages with usage
-                    if (!line.Contains("\"assistant\"") || !line.Contains("\"usage\""))
-                        continue;
-
-                    try
-                    {
-                        using var doc = JsonDocument.Parse(line);
-                        var root = doc.RootElement;
-
-                        if (!root.TryGetProperty("type", out var typeProp) ||
-                            typeProp.GetString() != "assistant")
-                            continue;
-
-                        if (!root.TryGetProperty("message", out var msg) ||
-                            msg.ValueKind != JsonValueKind.Object)
-                            continue;
-
-                        if (!msg.TryGetProperty("usage", out var usage))
-                            continue;
-
-                        // Extract timestamp → date (supports both ISO 8601 string and Unix ms number)
-                        if (!root.TryGetProperty("timestamp", out var tsProp))
-                            continue;
-
-                        string dateStr;
-                        if (tsProp.ValueKind == JsonValueKind.String)
-                        {
-                            var tsStr = tsProp.GetString();
-                            if (tsStr == null || !DateTimeOffset.TryParse(tsStr, out var dto))
-                                continue;
-                            dateStr = dto.UtcDateTime.ToString("yyyy-MM-dd");
-                        }
-                        else if (tsProp.ValueKind == JsonValueKind.Number)
-                        {
-                            var tsMs = (long)tsProp.GetDouble();
-                            if (tsMs <= 0) continue;
-                            dateStr = DateTimeOffset.FromUnixTimeMilliseconds(tsMs)
-                                .UtcDateTime.ToString("yyyy-MM-dd");
-                        }
-                        else
-                        {
-                            continue;
-                        }
-
-                        var model = msg.TryGetProperty("model", out var mp)
-                            ? mp.GetString() ?? "unknown"
-                            : "unknown";
-
-                        var inputTokens = usage.TryGetProperty("input_tokens", out var it) ? it.GetInt64() : 0;
-                        var outputTokens = usage.TryGetProperty("output_tokens", out var ot) ? ot.GetInt64() : 0;
-                        var cacheCreation = usage.TryGetProperty("cache_creation_input_tokens", out var cc)
-                            ? cc.GetInt64()
-                            : 0;
-                        var cacheRead = usage.TryGetProperty("cache_read_input_tokens", out var cr) ? cr.GetInt64() : 0;
-
-                        // dailyModelTokens (per-model breakdown)
-                        if (!dailyModelTokens.TryGetValue(dateStr, out var dayTokens))
-                            dailyModelTokens[dateStr] = dayTokens = new Dictionary<string, DailyModelTokenBreakdown>();
-                        if (!dayTokens.TryGetValue(model, out var breakdown))
-                            dayTokens[model] = breakdown = new DailyModelTokenBreakdown();
-                        breakdown.InputTokens += inputTokens;
-                        breakdown.OutputTokens += outputTokens;
-                        breakdown.CacheCreationInputTokens += cacheCreation;
-                        breakdown.CacheReadInputTokens += cacheRead;
-
-                        // modelUsage
-                        if (!modelUsage.TryGetValue(model, out var mu))
-                            modelUsage[model] = mu = new StatsCacheModelUsage();
-                        mu.InputTokens += inputTokens;
-                        mu.OutputTokens += outputTokens;
-                        mu.CacheCreationInputTokens += cacheCreation;
-                        mu.CacheReadInputTokens += cacheRead;
-                    }
-                    catch
-                    {
-                        /* skip unparseable lines */
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "통계 세션 파일 읽기 실패: {File}", file);
-            }
-
-        // Safety: don't overwrite existing data with empty results
-        if (dailyModelTokens.Count == 0 && modelUsage.Count == 0)
-            return;
-
-        // Build updated cache, preserving fields we don't compute
-        var updated = existingCache ?? new StatsCache();
-        updated.LastComputedDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
-        updated.DailyModelTokens = dailyModelTokens
-            .Select(kv => new StatsCacheDailyModelTokens { Date = kv.Key, TokensByModel = kv.Value })
-            .OrderBy(d => d.Date)
-            .ToList();
-        updated.ModelUsage = modelUsage;
-        updated.Version = 3;
-
-        // Write back to disk
-        try
-        {
-            var json = JsonSerializer.Serialize(updated, WriteOptions);
-            await File.WriteAllTextAsync(StatsCachePath, json);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "통계 캐시를 디스크에 쓰기 실패");
-        }
     }
 
     private async Task<StatsCache?> ReadStatsCacheAsync()

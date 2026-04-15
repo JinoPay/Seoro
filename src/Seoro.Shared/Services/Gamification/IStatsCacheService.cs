@@ -2,22 +2,15 @@
 namespace Seoro.Shared.Services.Gamification;
 
 /// <summary>
-///     Reads ~/.claude/stats-cache.json and merges with usage.jsonl
-///     to provide complete historical usage data.
+///     Reads ~/.claude/stats-cache.json (Claude CLI가 작성, 글리픽과 동일하게 수정 없음)
+///     토큰/비용 데이터: stats-cache.json | 활동 데이터: history.jsonl
 /// </summary>
 public interface IStatsCacheService
 {
-    /// <summary>
-    ///     Forces a refresh of stats-cache.json by scanning session JSONL files,
-    ///     regardless of staleness. Used by manual refresh buttons.
-    /// </summary>
+    /// <summary>No-op — stats-cache.json은 Claude CLI가 관리, 수정하지 않음.</summary>
     Task ForceRefreshAsync();
 
-    /// <summary>
-    ///     Refreshes stats-cache.json by scanning session JSONL files
-    ///     if the cache is stale (lastComputedDate is not today).
-    ///     Returns true if a refresh was performed.
-    /// </summary>
+    /// <summary>No-op — stats-cache.json은 Claude CLI가 관리, 수정하지 않음.</summary>
     Task<bool> RefreshIfStaleAsync();
 
     /// <summary>
