@@ -22,16 +22,6 @@
         </div>
     </div>
 
-    <div>
-        <div class="settings-field-label">@Strings.Settings_General_UiLanguageLabel</div>
-        <div class="settings-segmented">
-            <button class="settings-seg-item @(Settings.UiLanguage == "ko" ? "active" : "")"
-                    @onclick="@(() => ApplyUiLanguage("ko"))">한국어</button>
-            <button class="settings-seg-item @(Settings.UiLanguage == "en" ? "active" : "")"
-                    @onclick="@(() => ApplyUiLanguage("en"))">English</button>
-        </div>
-    </div>
-
     <div class="settings-group-title mt">@Strings.Settings_General_UiScaleTitle</div>
 
     <div class="stack gap-1">
@@ -185,12 +175,6 @@
         catch
         {
         }
-    }
-
-    private void ApplyUiLanguage(string lang)
-    {
-        Settings.UiLanguage = lang;
-        Strings.SetCulture(lang);
     }
 
     private async Task BrowseCloneDirectory()

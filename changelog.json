@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.17.20",
+    "date": "2026-04-15",
+    "changes": [
+      { "type": "feat", "description": "워크트리 세션 생성 시 .claude/settings.local.json 자동 복사" },
+      { "type": "feat", "description": "Input bar에 MCP 서버 토글 기능 추가 (ToolPicker)" },
+      { "type": "feat", "description": "플랜 승인 단축키(Ctrl/Cmd+Enter) 추가 & Windows 플랜 모드 단축키 수정" },
+      { "type": "fix", "description": "i18n 언어 전환 버그 수정 — culture 스레드 전파 및 렌더링 타이밍 개선" }
+    ]
+  },
+  {
     "version": "1.17.19",
     "date": "2026-04-14",
     "changes": [
