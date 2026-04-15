@@ -272,6 +272,34 @@
             }
             else if (session.Git.TrackedPr is { State: PullRequestLifecycleState.Open })
             {
+                @* 미푸시 경고 *@
+                if (_upstreamAhead > 0 || status.UncommittedChangeCount > 0)
+                {
+                    <div class="mp-unpushed-warning">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Style="width: 13px; height: 13px;"/>
+                        @if (status.UncommittedChangeCount > 0 && _upstreamAhead > 0)
+                        {
+                            <span>미커밋 @(status.UncommittedChangeCount)개 + 미푸시 커밋 @(_upstreamAhead)개</span>
+                        }
+                        else if (status.UncommittedChangeCount > 0)
+                        {
+                            <span>미커밋 변경 @(status.UncommittedChangeCount)개</span>
+                        }
+                        else
+                        {
+                            <span>미푸시 커밋 @(_upstreamAhead)개</span>
+                        }
+                    </div>
+                    <MudTooltip Text="미커밋 변경을 커밋하고 origin에 푸시합니다" Placement="Placement.Bottom">
+                        <button class="mp-main-btn mp-main-btn-push @(blocked ? "disabled" : "")"
+                                @onclick="HandlePush"
+                                disabled="@blocked">
+                            <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Style="width: 13px; height: 13px;"/>
+                            <span>AI에게 커밋 · 푸시 요청</span>
+                        </button>
+                    </MudTooltip>
+                }
+
                 @* 전략 pills + 머지 버튼 *@
                 <div class="mp-strategy-pills">
                     <button class="mp-pill @(_selectedMergeStrategy == PullRequestMergeStrategy.Merge ? "active" : "")"
@@ -354,6 +382,7 @@
     private PullRequestMergeStrategy _selectedMergeStrategy = PullRequestMergeStrategy.Squash;
     private (int Additions, int Deletions)? _diffStats;
     private AppSettings? _appSettings;
+    private int _upstreamAhead; // origin 대비 미푸시 커밋 수
 
     private IDisposable? _sessionChangedSub;
     private IDisposable? _streamingStoppedSub;
@@ -383,10 +412,14 @@
             {
                 await ReloadBranchesAsync(forceCacheInvalidate: false);
                 var sess = ChatState.CurrentSession;
-                if (sess != null && !string.IsNullOrEmpty(_targetBranch))
-                    await MergeStatusService.RefreshAsync(
-                        sess.Id,
-                        BranchRefNormalizer.Normalize(_targetBranch));
+                if (sess != null)
+                {
+                    if (!string.IsNullOrEmpty(_targetBranch))
+                        await MergeStatusService.RefreshAsync(
+                            sess.Id,
+                            BranchRefNormalizer.Normalize(_targetBranch));
+                    await RefreshUpstreamAheadAsync(sess);
+                }
             }));
 
         _branchChangedSub = EventBus.Subscribe<BranchChangedEvent>(_ =>
@@ -426,6 +459,7 @@
         {
             await MergeStatusService.RefreshAsync(session.Id);
             await LoadLocalDiffStatsAsync(session);
+            await RefreshUpstreamAheadAsync(session);
             return;
         }
 
@@ -457,6 +491,7 @@
             }
 
             await LoadLocalDiffStatsAsync(session);
+            await RefreshUpstreamAheadAsync(session);
         }
         catch (Exception ex)
         {
@@ -472,6 +507,7 @@
         InvokeAsync(async () =>
         {
             await LoadLocalDiffStatsAsync(current);
+            await RefreshUpstreamAheadAsync(current);
             StateHasChanged();
         });
     }
@@ -485,10 +521,14 @@
         {
             await ReloadBranchesAsync(forceCacheInvalidate: true);
             var session = ChatState.CurrentSession;
-            if (session != null && !string.IsNullOrEmpty(_targetBranch))
-                await MergeStatusService.RefreshAsync(
-                    session.Id,
-                    BranchRefNormalizer.Normalize(_targetBranch));
+            if (session != null)
+            {
+                if (!string.IsNullOrEmpty(_targetBranch))
+                    await MergeStatusService.RefreshAsync(
+                        session.Id,
+                        BranchRefNormalizer.Normalize(_targetBranch));
+                await RefreshUpstreamAheadAsync(session);
+            }
         }
         finally
         {
@@ -648,12 +688,12 @@
         }
     }
 
-    private async Task HandlePush()
+    private Task HandlePush()
     {
         var session = ChatState.CurrentSession;
-        if (session == null) return;
-        if (session.Git.IsLocalDir)
-            HandleLocalDirPushViaAi(session);
+        if (session == null) return Task.CompletedTask;
+        HandlePushViaAi(session);
+        return Task.CompletedTask;
     }
 
     private Task OpenSavedPr()
@@ -884,7 +924,18 @@
         }
     }
 
-    private void HandleLocalDirPushViaAi(Session session)
+    private async Task RefreshUpstreamAheadAsync(Session session)
+    {
+        if (string.IsNullOrEmpty(session.Git.WorktreePath)) return;
+        try
+        {
+            var (ahead, _) = await GitService.GetAheadBehindAsync(session.Git.WorktreePath);
+            _upstreamAhead = ahead;
+        }
+        catch { _upstreamAhead = 0; }
+    }
+
+    private void HandlePushViaAi(Session session)
     {
         var branch = session.Git.BranchName ?? "";
 
