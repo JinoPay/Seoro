@@ -446,6 +446,7 @@ public partial class SessionService(
                 session.Git.BaseCommit =
                     await gitService.ResolveCommitHashAsync(workspace.RepoLocalPath, baseBranch) ?? "";
                 session.TransitionStatus(SessionStatus.Ready);
+                await CopyLocalSettingsToWorktreeAsync(workspace.RepoLocalPath, session.Git.WorktreePath);
             }
         }
         catch (Exception ex)
@@ -511,6 +512,7 @@ public partial class SessionService(
                     session.TransitionStatus(SessionStatus.Ready);
                     // Initialize .context/ directory for collaboration
                     await contextService.EnsureContextDirectoryAsync(session.Git.WorktreePath);
+                    await CopyLocalSettingsToWorktreeAsync(workspace.RepoLocalPath, session.Git.WorktreePath);
                     logger.LogInformation("세션 {SessionId}의 워크트리 초기화됨 (브랜치: {Branch})", sessionId,
                         branchName);
                 }
@@ -593,6 +595,7 @@ public partial class SessionService(
                     session.Git.BaseCommit =
                         await gitService.ResolveCommitHashAsync(workspace.RepoLocalPath, newBaseBranch) ?? "";
                     await contextService.EnsureContextDirectoryAsync(session.Git.WorktreePath);
+                    await CopyLocalSettingsToWorktreeAsync(workspace.RepoLocalPath, session.Git.WorktreePath);
                     logger.LogInformation(
                         "세션 {SessionId}의 워크트리 리베이스됨 (브랜치: {BaseBranch})", sessionId, newBaseBranch);
                 }
@@ -611,6 +614,19 @@ public partial class SessionService(
         {
             semaphore.Release();
         }
+    }
+
+    private async Task CopyLocalSettingsToWorktreeAsync(string repoPath, string worktreePath)
+    {
+        var source = Path.Combine(repoPath, ".claude", "settings.local.json");
+        if (!File.Exists(source))
+            return;
+
+        var destDir = Path.Combine(worktreePath, ".claude");
+        Directory.CreateDirectory(destDir);
+
+        var dest = Path.Combine(destDir, "settings.local.json");
+        await Task.Run(() => File.Copy(source, dest, overwrite: true));
     }
 
     private static List<ChatMessage> TruncateToolOutputs(List<ChatMessage> messages)
