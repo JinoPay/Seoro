@@ -14,6 +14,7 @@ public class ChatMessageOrchestrator(
     IPullRequestService pullRequestService,
     IActiveSessionRegistry activeSessionRegistry,
     IGitBranchWatcherService branchWatcher,
+    IClaudeSettingsService claudeSettingsService,
     ILogger<ChatMessageOrchestrator> logger)
     : IChatMessageOrchestrator
 {
@@ -124,17 +125,23 @@ public class ChatMessageOrchestrator(
             ct.ThrowIfCancellationRequested();
 
             var provider = cliProviderFactory.GetProviderForSession(session);
+            var permissionMode = session.PermissionMode ?? SeoroConstants.DefaultPermissionMode;
+            List<string>? mcpAllowedTools = null;
+            if (permissionMode == "bypassAll")
+                mcpAllowedTools = await CollectMcpToolPatternsAsync(session.Git.WorktreePath);
+
             var sendOptions = new CliSendOptions
             {
                 Message = message,
                 WorkingDir = session.Git.WorktreePath,
                 Model = modelOverride ?? session.Model,
-                PermissionMode = session.PermissionMode,
+                PermissionMode = permissionMode,
                 EffortLevel = session.EffortLevel ?? SeoroConstants.DefaultEffortLevel,
                 SessionId = session.Id,
                 ConversationId = conversationId,
                 SystemPrompt = systemPrompt,
-                ContinueMode = continueMode
+                ContinueMode = continueMode,
+                AllowedTools = mcpAllowedTools
             };
 
             await foreach (var evt in provider.SendMessageAsync(sendOptions, ct).WithCancellation(ct))
@@ -206,6 +213,52 @@ public class ChatMessageOrchestrator(
             ErrorMessage = errorMessage,
             WasCancelled = wasCancelled
         };
+    }
+
+    private async Task<List<string>?> CollectMcpToolPatternsAsync(string? projectPath)
+    {
+        var patterns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            var global = await claudeSettingsService.ReadAsync(ClaudeSettingsScope.Global);
+            if (global.McpServers != null)
+                foreach (var key in global.McpServers.Keys)
+                    patterns.Add($"mcp__{key}__*");
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Global MCP 서버 목록 읽기 실패");
+        }
+
+        if (!string.IsNullOrEmpty(projectPath))
+        {
+            try
+            {
+                var project = await claudeSettingsService.ReadAsync(ClaudeSettingsScope.Project, projectPath);
+                if (project.McpServers != null)
+                    foreach (var key in project.McpServers.Keys)
+                        patterns.Add($"mcp__{key}__*");
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Project MCP 서버 목록 읽기 실패");
+            }
+
+            try
+            {
+                var local = await claudeSettingsService.ReadAsync(ClaudeSettingsScope.Local, projectPath);
+                if (local.McpServers != null)
+                    foreach (var key in local.McpServers.Keys)
+                        patterns.Add($"mcp__{key}__*");
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Local MCP 서버 목록 읽기 실패");
+            }
+        }
+
+        return patterns.Count > 0 ? patterns.ToList() : null;
     }
 
     private void FireHooksInBackground(Session session)
