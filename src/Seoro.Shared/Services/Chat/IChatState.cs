@@ -77,6 +77,8 @@ public interface IChatState : IDisposable
     // Input draft (per-session temporary storage)
     void SetInputDraft(string sessionId, string text);
     void SetAttachmentDraft(string sessionId, List<PendingAttachment> attachments);
+    void SetSkillDraft(string sessionId, string? skillName);
+    string? GetSkillDraft(string sessionId);
     void SetPendingMessage(string? message);
     void SetPhase(StreamingPhase phase, string? toolName = null, string? sessionId = null);
     void SetRightPanel(RightPanelMode mode);

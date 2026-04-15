@@ -94,6 +94,7 @@ public class SessionJsonConverter : JsonConverter<Session>
         if (root.TryGet("draftInputText", out var dit)) session.DraftInputText = dit;
         if (root.TryGetProperty("draftAttachments", out var da) && da.ValueKind == JsonValueKind.Array)
             session.DraftAttachments = JsonSerializer.Deserialize<List<PendingAttachment>>(da.GetRawText(), options) ?? [];
+        if (root.TryGet("draftSkillName", out var dsn)) session.DraftSkillName = dsn;
 
         if (root.TryGetProperty("disabledMcpServers", out var dms) && dms.ValueKind == JsonValueKind.Array)
             session.DisabledMcpServers = JsonSerializer.Deserialize<HashSet<string>>(dms.GetRawText(), options) ?? [];
@@ -195,6 +196,8 @@ public class SessionJsonConverter : JsonConverter<Session>
             writer.WritePropertyName("draftAttachments");
             JsonSerializer.Serialize(writer, value.DraftAttachments, options);
         }
+        if (!string.IsNullOrEmpty(value.DraftSkillName))
+            writer.WriteString("draftSkillName", value.DraftSkillName);
         if (value.PendingAskUserQuestionInput != null)
             writer.WriteString("pendingAskUserQuestionInput", value.PendingAskUserQuestionInput);
         if (value.DisabledMcpServers.Count > 0)

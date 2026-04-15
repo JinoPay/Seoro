@@ -95,6 +95,11 @@ public class Session
     public List<PendingAttachment> DraftAttachments { get; set; } = [];
 
     /// <summary>
+    ///     전송 전 슬래시 명령어 칩 초안을 세션 단위로 임시 저장합니다.
+    /// </summary>
+    public string? DraftSkillName { get; set; }
+
+    /// <summary>
     ///     이 세션에서 비활성화된 MCP 서버 이름 목록.
     ///     bypassAll 모드에서 해당 서버의 mcp__name__* 패턴이 AllowedTools에서 제외됩니다.
     /// </summary>

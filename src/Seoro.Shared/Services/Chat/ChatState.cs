@@ -16,6 +16,7 @@ public class ChatState : IChatState
     // 입력 초안 저장소 (세션당, 메모리만)
     private readonly Dictionary<string, string> _inputDrafts = new();
     private readonly Dictionary<string, List<PendingAttachment>> _attachmentDrafts = new();
+    private readonly Dictionary<string, string> _skillDrafts = new();
 
     // 중재자: 타입화된 이벤트 버스
     private readonly IChatEventBus _eventBus;
@@ -302,6 +303,17 @@ public class ChatState : IChatState
         else
             _attachmentDrafts[sessionId] = [..attachments];
     }
+
+    public void SetSkillDraft(string sessionId, string? skillName)
+    {
+        if (string.IsNullOrEmpty(skillName))
+            _skillDrafts.Remove(sessionId);
+        else
+            _skillDrafts[sessionId] = skillName;
+    }
+
+    public string? GetSkillDraft(string sessionId)
+        => _skillDrafts.TryGetValue(sessionId, out var name) ? name : null;
 
     public void SetPendingMessage(string? message)
     {
