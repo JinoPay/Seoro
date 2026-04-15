@@ -7,6 +7,14 @@
     <div class="tree-header">
         <span class="tree-header-label">Explorer</span>
         <div class="tree-header-actions">
+            <MudIconButton Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small"
+                           Style="width: 22px; height: 22px; opacity: 0.5;"
+                           OnClick="ExpandAll" Disabled="_loading || _tree.Count == 0"
+                           title="모두 펼치기"/>
+            <MudIconButton Icon="@Icons.Material.Filled.UnfoldLess" Size="Size.Small"
+                           Style="width: 22px; height: 22px; opacity: 0.5;"
+                           OnClick="CollapseAll" Disabled="_loading || _tree.Count == 0"
+                           title="모두 접기"/>
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                            Style="width: 22px; height: 22px; opacity: 0.5;"
                            OnClick="LoadFilesAsync" Disabled="_loading"/>
@@ -254,6 +262,16 @@
             currentPath = i == 0 ? parts[i] : $"{currentPath}/{parts[i]}";
             _expandedDirs.Add(currentPath);
         }
+    }
+
+    private void ExpandAll()
+    {
+        ExpandAllDirs(_tree);
+    }
+
+    private void CollapseAll()
+    {
+        _expandedDirs.Clear();
     }
 
     private void ExpandAllDirs(List<FileNode> nodes)
