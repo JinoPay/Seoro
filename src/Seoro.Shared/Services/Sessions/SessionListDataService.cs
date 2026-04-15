@@ -50,6 +50,9 @@ public class SessionListDataService : IDisposable
 
     public static string GetProjectName(Workspace ws)
     {
+        if (!string.IsNullOrEmpty(ws.Name))
+            return ws.Name;
+
         if (!string.IsNullOrEmpty(ws.RepoUrl))
         {
             var url = ws.RepoUrl.TrimEnd('/');
@@ -67,7 +70,7 @@ public class SessionListDataService : IDisposable
         if (!string.IsNullOrEmpty(ws.RepoLocalPath))
             return Path.GetFileName(ws.RepoLocalPath.TrimEnd(Path.DirectorySeparatorChar, '/'));
 
-        return ws.Name;
+        return ws.Id;
     }
 
     public IEnumerable<Workspace> GetFilteredWorkspaces(string? filterText)
