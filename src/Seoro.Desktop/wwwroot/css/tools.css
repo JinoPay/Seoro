@@ -381,6 +381,20 @@
     opacity: 1;
 }
 
+.plan-review-kbd {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 5px;
+    margin-left: 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    font-family: var(--font-sans);
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    line-height: 1;
+    opacity: 0.7;
+}
+
 /* ===== Thinking Block ===== */
 .thinking-block {
     margin: 3px 0;

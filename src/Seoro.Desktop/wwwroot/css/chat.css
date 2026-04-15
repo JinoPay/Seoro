@@ -752,9 +752,24 @@
     flex-shrink: 0;
 }
 
+/* Language-less code block: hide the header bar, float copy button only */
+.code-block-header-no-lang {
+    padding: 0;
+    background: transparent;
+    border-bottom: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+}
+
 /* Light mode adjustments */
 [data-theme="light"] .code-block-header {
     background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .code-block-header-no-lang {
+    background: transparent;
 }
 
 [data-theme="light"] .code-block-wrapper > pre {

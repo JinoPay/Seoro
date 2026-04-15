@@ -290,7 +290,7 @@ function getCurrentTheme() {
 
     // Create header
     const header = document.createElement('div');
-    header.className = 'code-block-header';
+    header.className = langDisplay ? 'code-block-header' : 'code-block-header code-block-header-no-lang';
 
     const langLabel = document.createElement('span');
     langLabel.className = 'code-lang-label';

@@ -1,5 +1,6 @@
 @using Markdig
 @using Seoro.Shared.Helpers
+@using System.Runtime.InteropServices
 @inject IJSRuntime JS
 @if (IsVisible)
 {
@@ -48,6 +49,7 @@
                        OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Approve))"
                        Class="plan-review-btn plan-review-btn-approve">
                 @Strings.Chat_Plan_Approve
+                <kbd class="plan-review-kbd">@_approveShortcut</kbd>
             </MudButton>
             <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
                        StartIcon="@Icons.Material.Filled.Close"
@@ -68,6 +70,8 @@
 
     private bool _showPreview = true;
     private readonly string _planId = Guid.NewGuid().ToString("N")[..8];
+    private static readonly string _approveShortcut = RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+        ? "⌘+Enter" : "Ctrl+Enter";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
