@@ -1,13 +1,13 @@
 <div class="achievement-card">
     <div class="achievement-header">
         <span class="achievement-title">
-            업적 <span class="achievement-count">(@UnlockedCount/@Achievements.Count)</span>
+            @Strings.Dashboard_Achievement_Title <span class="achievement-count">(@UnlockedCount/@Achievements.Count)</span>
         </span>
         <div class="achievement-filter-row">
             <MudChipSet T="string" SelectedValue="_selectedCategory" SelectedValueChanged="v => _selectedCategory = v"
                         SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
                         Variant="Variant.Text" Color="Color.Primary">
-                <MudChip T="string" Value="@("all")" Style="font-size:0.7rem;">전체</MudChip>
+                <MudChip T="string" Value="@("all")" Style="font-size:0.7rem;">@Strings.Dashboard_Achievement_All</MudChip>
                 @foreach (var cat in _categories)
                 {
                     <MudChip T="string" Value="@cat.Key" Style="font-size:0.7rem;">@cat.Value</MudChip>
@@ -18,10 +18,10 @@
 
     @* Rarity legend *@
     <div class="rarity-legend">
-        <span class="rarity-badge rarity-common">일반</span>
-        <span class="rarity-badge rarity-rare">희귀</span>
-        <span class="rarity-badge rarity-epic">영웅</span>
-        <span class="rarity-badge rarity-legendary">전설</span>
+        <span class="rarity-badge rarity-common">@Strings.Dashboard_Achievement_Rarity_Common</span>
+        <span class="rarity-badge rarity-rare">@Strings.Dashboard_Achievement_Rarity_Rare</span>
+        <span class="rarity-badge rarity-epic">@Strings.Dashboard_Achievement_Rarity_Epic</span>
+        <span class="rarity-badge rarity-legendary">@Strings.Dashboard_Achievement_Rarity_Legendary</span>
     </div>
 
     <div class="achievement-grid">
@@ -56,17 +56,17 @@
 
     private int UnlockedCount => Achievements.Count(a => a.Unlocked);
 
-    private static readonly Dictionary<string, string> _categories = new()
+    private Dictionary<string, string> _categories => new()
     {
-        ["Config"] = "설정",
-        ["Usage"] = "사용량",
-        ["Streak"] = "연속",
-        ["Mastery"] = "숙련",
-        ["Explorer"] = "탐험",
-        ["Efficiency"] = "효율",
-        ["Time"] = "시간",
-        ["Economy"] = "경제",
-        ["Pattern"] = "패턴"
+        ["Config"] = Strings.Dashboard_Achievement_Category_Config,
+        ["Usage"] = Strings.Dashboard_Achievement_Category_Usage,
+        ["Streak"] = Strings.Dashboard_Achievement_Category_Streak,
+        ["Mastery"] = Strings.Dashboard_Achievement_Category_Mastery,
+        ["Explorer"] = Strings.Dashboard_Achievement_Category_Explorer,
+        ["Efficiency"] = Strings.Dashboard_Achievement_Category_Efficiency,
+        ["Time"] = Strings.Dashboard_Achievement_Category_Time,
+        ["Economy"] = Strings.Dashboard_Achievement_Category_Economy,
+        ["Pattern"] = Strings.Dashboard_Achievement_Category_Pattern
     };
 
     private List<Achievement> FilteredAchievements => _selectedCategory == "all"

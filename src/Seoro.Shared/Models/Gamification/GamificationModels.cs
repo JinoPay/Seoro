@@ -1,3 +1,5 @@
+using Seoro.Shared.Resources;
+
 namespace Seoro.Shared.Models.Gamification;
 
 public class UserLevel
@@ -6,18 +8,11 @@ public class UserLevel
     public static readonly int[] Thresholds =
         [0, 100, 300, 600, 1000, 1500, 2500, 4000, 6000, 10000, 15000, 22000, 32000, 50000, 80000];
 
-    public static readonly string[] Names =
-    [
-        "새내기", "탐험가", "건축가", "설계자", "전문가",
-        "숙련자", "달인", "거장", "현자", "초월자",
-        "전설", "신화", "불멸자", "태초의 자", "조물주"
-    ];
-
     public double Progress { get; set; }
     public int Level { get; set; } = 1;
     public int Xp { get; set; }
     public int XpForNext { get; set; }
-    public string Name { get; set; } = "새내기";
+    public string Name { get; set; } = Strings.GetLevelName(1);
 }
 
 public class StreakInfo

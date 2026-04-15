@@ -1,13 +1,13 @@
 @* Git / 머지 설정 섹션 *@
 
-<div class="settings-section-title">Git / 머지</div>
-<div class="settings-section-desc">MergePanel 동작과 AI 위임 프롬프트를 설정합니다.</div>
+<div class="settings-section-title">@Strings.Settings_GitMerge_Title</div>
+<div class="settings-section-desc">@Strings.Settings_GitMerge_Desc</div>
 
 <div class="stack gap-3">
 
     @* ── 기본 머지 전략 ── *@
     <div>
-        <div class="settings-field-label">기본 PR 머지 전략</div>
+        <div class="settings-field-label">@Strings.Settings_GitMerge_DefaultStrategyLabel</div>
         <div class="settings-segmented">
             <button class="settings-seg-item @(Settings.DefaultMergeStrategy == "Merge" ? "active" : "")"
                     @onclick="@(() => Settings.DefaultMergeStrategy = "Merge")">Merge</button>
@@ -16,7 +16,7 @@
             <button class="settings-seg-item @(Settings.DefaultMergeStrategy == "Rebase" ? "active" : "")"
                     @onclick="@(() => Settings.DefaultMergeStrategy = "Rebase")">Rebase</button>
         </div>
-        <div class="settings-field-hint">MergePanel에서 PR 머지 버튼의 기본 선택값입니다.</div>
+        <div class="settings-field-hint">@Strings.Settings_GitMerge_DefaultStrategyHint</div>
     </div>
 
     @* ── 머지 성공 시 자동 아카이브 ── *@
@@ -24,28 +24,27 @@
         <MudSwitch T="bool" @bind-Value="Settings.AutoArchiveOnMergeSuccess" Color="Color.Primary"
                    Style="margin: 0;"/>
         <div>
-            <div class="settings-field-label" style="margin-bottom: 0;">머지 성공 시 세션 자동 아카이브</div>
-            <div class="settings-field-hint" style="margin-top: 2px;">스쿼시 머지가 성공하면 해당 세션을 자동으로 삭제합니다.</div>
+            <div class="settings-field-label" style="margin-bottom: 0;">@Strings.Settings_GitMerge_AutoArchiveLabel</div>
+            <div class="settings-field-hint" style="margin-top: 2px;">@Strings.Settings_GitMerge_AutoArchiveHint</div>
         </div>
     </div>
 
-    <div class="settings-group-title mt">AI 위임 프롬프트</div>
+    <div class="settings-group-title mt">@Strings.Settings_GitMerge_AiPromptsTitle</div>
     <div class="settings-section-desc" style="margin-top: -8px;">
-        MergePanel 버튼 클릭 시 AI에게 전달되는 지시 파일입니다.
-        비워두면 기본 프롬프트를 사용합니다.
+        @Strings.Settings_GitMerge_AiPromptsDesc
     </div>
 
     @* ── PR 생성 프롬프트 ── *@
     <div>
         <div class="stack-row items-center gap-1" style="margin-bottom: 4px;">
-            <div class="settings-field-label" style="flex: 1; margin-bottom: 0;">PR 생성 프롬프트</div>
+            <div class="settings-field-label" style="flex: 1; margin-bottom: 0;">@Strings.Settings_GitMerge_CreatePrPromptLabel</div>
             <div class="settings-field-hint" style="margin: 0;">변수: <code>{branch}</code> <code>{target}</code> <code>{uncommittedNote}</code></div>
             @if (!string.IsNullOrEmpty(Settings.MergePromptCreatePr))
             {
                 <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
                            OnClick="@(() => Settings.MergePromptCreatePr = null)"
                            Style="text-transform: none; padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
-                    기본값으로
+                    @Strings.Settings_GitMerge_ResetToDefault
                 </MudButton>
             }
         </div>
@@ -58,14 +57,14 @@
     @* ── 커밋·푸시 프롬프트 ── *@
     <div>
         <div class="stack-row items-center gap-1" style="margin-bottom: 4px;">
-            <div class="settings-field-label" style="flex: 1; margin-bottom: 0;">커밋·푸시 프롬프트</div>
+            <div class="settings-field-label" style="flex: 1; margin-bottom: 0;">@Strings.Settings_GitMerge_PushPromptLabel</div>
             <div class="settings-field-hint" style="margin: 0;">변수: <code>{branch}</code></div>
             @if (!string.IsNullOrEmpty(Settings.MergePromptPush))
             {
                 <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
                            OnClick="@(() => Settings.MergePromptPush = null)"
                            Style="text-transform: none; padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
-                    기본값으로
+                    @Strings.Settings_GitMerge_ResetToDefault
                 </MudButton>
             }
         </div>
@@ -78,14 +77,14 @@
     @* ── 충돌 해결 프롬프트 ── *@
     <div>
         <div class="stack-row items-center gap-1" style="margin-bottom: 4px;">
-            <div class="settings-field-label" style="flex: 1; margin-bottom: 0;">충돌 해결 프롬프트</div>
+            <div class="settings-field-label" style="flex: 1; margin-bottom: 0;">@Strings.Settings_GitMerge_ConflictPromptLabel</div>
             <div class="settings-field-hint" style="margin: 0;">변수: <code>{conflictFiles}</code></div>
             @if (!string.IsNullOrEmpty(Settings.MergePromptResolveConflict))
             {
                 <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
                            OnClick="@(() => Settings.MergePromptResolveConflict = null)"
                            Style="text-transform: none; padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
-                    기본값으로
+                    @Strings.Settings_GitMerge_ResetToDefault
                 </MudButton>
             }
         </div>

@@ -1,27 +1,27 @@
 @using System.Reflection
 @inject IUpdateService UpdateService
 
-<div class="settings-section-title">업데이트</div>
-<div class="settings-section-desc">앱 업데이트 설정 및 확인을 합니다.</div>
+<div class="settings-section-title">@Strings.Settings_Updates_Title</div>
+<div class="settings-section-desc">@Strings.Settings_Updates_Desc</div>
 
 <div class="stack gap-3">
     <div class="stack-row items-center gap-2">
-        <span class="typo-body2">현재 버전:</span>
+        <span class="typo-body2">@Strings.Settings_Updates_CurrentVersion</span>
         <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">
             @(Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "개발 모드")
         </MudChip>
         @if (!UpdateService.IsInstalled)
         {
             <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                개발 빌드
+                @Strings.Settings_Updates_DevBuild
             </MudChip>
         }
     </div>
 
     <div class="settings-toggle-row">
         <div>
-            <span class="typo-body2">자동 업데이트 확인</span>
-            <div class="typo-caption text-secondary">앱 시작 시 및 주기적으로 새 버전이 있는지 확인합니다.</div>
+            <span class="typo-body2">@Strings.Settings_Updates_AutoCheckLabel</span>
+            <div class="typo-caption text-secondary">@Strings.Settings_Updates_AutoCheckHint</div>
         </div>
         <MudSwitch T="bool" @bind-Value="Settings.AutoUpdateEnabled"
                    Color="Color.Primary" UncheckedColor="Color.Default"/>
@@ -30,13 +30,13 @@
     @if (Settings.AutoUpdateEnabled)
     {
         <div>
-            <div class="settings-field-label">업데이트 확인 주기</div>
+            <div class="settings-field-label">@Strings.Settings_Updates_IntervalLabel</div>
             <div class="settings-pill-group">
-                @foreach (var interval in _intervals)
+                @foreach (var interval in _intervalValues)
                 {
-                    <button class="settings-pill @(Settings.UpdateCheckIntervalMinutes == interval.Value ? "active" : "")"
-                            @onclick="@(() => Settings.UpdateCheckIntervalMinutes = interval.Value)">
-                        @interval.Label
+                    <button class="settings-pill @(Settings.UpdateCheckIntervalMinutes == interval ? "active" : "")"
+                            @onclick="@(() => Settings.UpdateCheckIntervalMinutes = interval)">
+                        @GetIntervalLabel(interval)
                     </button>
                 }
             </div>
@@ -52,11 +52,11 @@
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
                                  Style="width: 16px; height: 16px; margin-right: 8px;"/>
-            @:확인 중...
+            @Strings.Settings_Updates_Checking
         }
         else
         {
-            @:업데이트 확인
+            @Strings.Settings_Updates_CheckButton
         }
     </MudButton>
 
@@ -67,13 +67,13 @@
     else if (_updateReady)
     {
         <MudAlert Severity="Severity.Success" Dense="true">
-            업데이트 다운로드 완료. 재시작하여 적용합니다.
+            @Strings.Settings_Updates_Ready
         </MudAlert>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                    OnClick="@(() => UpdateService.ApplyUpdateAndRestart())"
                    StartIcon="@Icons.Material.Filled.RestartAlt"
                    Style="text-transform: none; align-self: flex-start;">
-            재시작하여 적용
+            @Strings.Settings_Updates_RestartButton
         </MudButton>
     }
     else if (_updateDownloading)
@@ -81,13 +81,13 @@
         <MudAlert Severity="Severity.Info" Dense="true">
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
                                  Style="width: 16px; height: 16px; margin-right: 8px;"/>
-            업데이트 다운로드 중...
+            @Strings.Settings_Updates_Downloading
         </MudAlert>
     }
     else if (_updateInfo != null)
     {
         <MudAlert Severity="Severity.Info" Dense="true">
-            새 버전 @_updateInfo.TargetVersion 사용 가능
+            @Strings.Settings_Updates_Available(_updateInfo.TargetVersion.ToString())
             @if (_updateInfo.DownloadSize.HasValue)
             {
                 @:(@FormatSize(_updateInfo.DownloadSize.Value))
@@ -97,36 +97,42 @@
                    OnClick="DownloadUpdate"
                    StartIcon="@Icons.Material.Filled.Download"
                    Style="text-transform: none; align-self: flex-start;">
-            다운로드 및 설치
+            @Strings.Settings_Updates_DownloadButton
         </MudButton>
     }
     else if (!_updateChecking)
     {
         <small class="typo-caption text-secondary">
-            최신 버전을 사용 중입니다.
+            @Strings.Settings_Updates_UpToDate
         </small>
     }
 
     @if (!UpdateService.IsInstalled)
     {
         <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
-            자동 업데이트는 설치 빌드에서만 사용할 수 있습니다.
-            개발 빌드에서는 수동으로 업데이트하세요.
+            @Strings.Settings_Updates_DevBuildWarning
         </MudAlert>
     }
 </div>
 
-<div class="settings-group-title mt-lg">릴리스 노트</div>
+<div class="settings-group-title mt-lg">@Strings.Settings_Updates_ReleaseNotesTitle</div>
 <ReleaseNotesPanel/>
 
 @code {
     [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
 
-    private static readonly (int Value, string Label)[] _intervals =
-    [
-        (30, "30분"), (60, "1시간"), (180, "3시간"),
-        (360, "6시간"), (720, "12시간"), (1440, "24시간")
-    ];
+    private static readonly int[] _intervalValues = [30, 60, 180, 360, 720, 1440];
+
+    private static string GetIntervalLabel(int minutes) => minutes switch
+    {
+        30 => Strings.Settings_Updates_Interval_30,
+        60 => Strings.Settings_Updates_Interval_60,
+        180 => Strings.Settings_Updates_Interval_180,
+        360 => Strings.Settings_Updates_Interval_360,
+        720 => Strings.Settings_Updates_Interval_720,
+        1440 => Strings.Settings_Updates_Interval_1440,
+        _ => $"{minutes}m"
+    };
 
     private bool _updateChecking;
     private UpdateInfo? _updateInfo;
@@ -153,7 +159,7 @@
         }
         catch (Exception ex)
         {
-            _updateError = $"업데이트 확인 실패: {ex.Message}";
+            _updateError = Strings.Settings_Updates_CheckFailed(ex.Message);
         }
         finally
         {
@@ -176,7 +182,7 @@
         }
         catch (Exception ex)
         {
-            _updateError = $"다운로드 실패: {ex.Message}";
+            _updateError = Strings.Settings_Updates_DownloadFailed(ex.Message);
             _updateDownloading = false;
         }
 

@@ -304,7 +304,7 @@
     public void OnLargeTextPasted(string fileName, string contentType, string base64Data)
     {
         AddPendingAttachmentFromBase64(fileName, contentType, base64Data);
-        Snackbar.Add("긴 텍스트가 파일로 첨부되었습니다.", Severity.Info);
+        Snackbar.Add(Strings.Chat_PastedAsFile, Severity.Info);
     }
 
     [JSInvokable]
@@ -380,14 +380,14 @@
 
     private string GetPlaceholder()
     {
-        if (Disabled) return "먼저 세션을 선택하거나 만드세요...";
-        if (IsStreaming) return "Claude가 응답 중...";
-        if (IsPlanReviewVisible) return "플랜에 대한 피드백을 입력하세요...";
+        if (Disabled) return Strings.Chat_Placeholder_NoSession;
+        if (IsStreaming) return Strings.Chat_Placeholder_Streaming;
+        if (IsPlanReviewVisible) return Strings.Chat_Placeholder_PlanFeedback;
         return _currentPermissionMode switch
         {
-            "plan" => "플랜 모드: Claude가 읽기와 조사만 합니다...",
-            "acceptEdits" => "편집 허용 모드: 파일 편집은 허용, 명령 실행은 확인...",
-            _ => "메시지를 입력하세요..."
+            "plan" => Strings.Chat_Placeholder_PlanMode,
+            "acceptEdits" => Strings.Chat_Placeholder_AcceptEditsMode,
+            _ => Strings.Chat_Placeholder_Default
         };
     }
 

@@ -1,14 +1,14 @@
 <div class="cost-card">
     <div class="cost-card-title">
         <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small"/>
-        비용 개요
+        @Strings.Dashboard_Cost_Title
     </div>
     @if (Cost is not null)
     {
         <div class="cost-card-rows">
             <div class="cost-card-row">
                 <div class="cost-card-row-header">
-                    <span class="cost-card-label">오늘</span>
+                    <span class="cost-card-label">@Strings.Dashboard_Cost_Today</span>
                     <span
                         class="cost-card-amount @(Cost.DailyExceeded ? "exceeded" : "")">$@Cost.Today.ToString("F2")</span>
                 </div>
@@ -22,7 +22,7 @@
             </div>
             <div class="cost-card-row">
                 <div class="cost-card-row-header">
-                    <span class="cost-card-label">이번 달</span>
+                    <span class="cost-card-label">@Strings.Dashboard_Cost_ThisMonth</span>
                     <span class="cost-card-amount">$@Cost.ThisMonth.ToString("F2")</span>
                 </div>
                 @if (Cost.MonthlyLimit.HasValue)
@@ -36,16 +36,16 @@
             <div class="cost-card-row-header">
                 <span class="cost-card-label">
                     <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Style="font-size: 0.7rem;"/>
-                    추정
+                    @Strings.Dashboard_Cost_Projection
                 </span>
-                <span class="cost-card-projection">$@Cost.MonthlyProjection.ToString("F2")/월</span>
+                <span class="cost-card-projection">$@Cost.MonthlyProjection.ToString("F2")@Strings.Dashboard_Cost_PerMonth</span>
             </div>
-            <button class="cost-card-link" @onclick="GoToAnalytics">전체 분석 보기 →</button>
+            <button class="cost-card-link" @onclick="GoToAnalytics">@Strings.Dashboard_Cost_ViewAnalytics</button>
         </div>
     }
     else
     {
-        <span class="cost-card-label">로딩 중...</span>
+        <span class="cost-card-label">@Strings.Common_Loading</span>
     }
 </div>
 

@@ -9,9 +9,9 @@
                        Variant="Variant.Outlined"
                        OnClick="@(() => _galleryOpen = true)"
                        Style="text-transform: none;">
-                템플릿
+                @Strings.Mcp_Page_Template
             </MudButton>
-            <MudTooltip Text="가져오기">
+            <MudTooltip Text="@Strings.Common_Refresh">
                 <MudMenu Icon="@Icons.Material.Filled.FileDownload" Size="Size.Small"
                          Variant="Variant.Outlined" Dense="true"
                          AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
@@ -22,7 +22,7 @@
                     </MudMenuItem>
                     <MudMenuItem Icon="@Icons.Material.Filled.Code"
                                  OnClick="@(() => _importJsonOpen = true)">
-                        JSON으로 가져오기
+                        @Strings.Mcp_Page_ImportJson
                     </MudMenuItem>
                 </MudMenu>
             </MudTooltip>
@@ -32,7 +32,7 @@
                            Variant="Variant.Filled" Color="Color.Primary"
                            OnClick="OpenNewEditor"
                            Style="text-transform: none;">
-                    서버 추가
+                    @Strings.Mcp_Page_AddServer
                 </MudButton>
             }
         </ExtraActions>
@@ -206,13 +206,13 @@
         {
             result = await McpService.AddServerToScopeAsync(server, _scope, _projectPath);
             if (result.Success)
-                Snackbar.Add($"서버 '{server.Name}'이 추가되었습니다.", Severity.Success);
+                Snackbar.Add(Strings.Mcp_Page_ServerAdded(server.Name), Severity.Success);
         }
         else
         {
             result = await McpService.UpdateServerInScopeAsync(_editingServer.Name, server, _scope, _projectPath);
             if (result.Success)
-                Snackbar.Add($"서버 '{server.Name}'이 수정되었습니다.", Severity.Success);
+                Snackbar.Add(Strings.Mcp_Page_ServerUpdated(server.Name), Severity.Success);
         }
 
         if (result.Success)
@@ -223,7 +223,7 @@
         }
         else
         {
-            Snackbar.Add($"실패: {result.Error}", Severity.Error);
+            Snackbar.Add(Strings.Common_SaveFailed(result.Error), Severity.Error);
         }
     }
 
@@ -232,7 +232,7 @@
         var result = await McpService.RemoveServerFromScopeAsync(server.Name, _scope, _projectPath);
         if (result.Success)
         {
-            Snackbar.Add($"서버 '{server.Name}'이 제거되었습니다.", Severity.Success);
+            Snackbar.Add(Strings.Mcp_Page_ServerRemoved(server.Name), Severity.Success);
             if (_editingServer?.Name == server.Name)
             {
                 _editorOpen = false;
@@ -242,7 +242,7 @@
         }
         else
         {
-            Snackbar.Add($"제거 실패: {result.Error}", Severity.Error);
+            Snackbar.Add(Strings.Common_SaveFailed(result.Error), Severity.Error);
         }
     }
 

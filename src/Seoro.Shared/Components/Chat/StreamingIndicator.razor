@@ -49,9 +49,9 @@
 
     private string PhaseLabel => Phase switch
     {
-        StreamingPhase.Preparing => "준비 중...",
-        StreamingPhase.Sending => "전송 중...",
-        StreamingPhase.Thinking => "생각 중...",
+        StreamingPhase.Preparing => Strings.Chat_Streaming_Preparing,
+        StreamingPhase.Sending => Strings.Chat_Streaming_Sending,
+        StreamingPhase.Thinking => Strings.Chat_Thinking,
         _ => ""
     };
 
@@ -62,9 +62,7 @@
             if (StartedAt.HasValue)
             {
                 var elapsed = DateTime.UtcNow - StartedAt.Value;
-                var newElapsed = elapsed.TotalSeconds < 60
-                    ? $"{(int)elapsed.TotalSeconds}초"
-                    : $"{(int)elapsed.TotalMinutes}분 {elapsed.Seconds}초";
+                var newElapsed = Strings.FormatElapsedTime(elapsed);
                 if (newElapsed != _elapsed)
                 {
                     _elapsed = newElapsed;

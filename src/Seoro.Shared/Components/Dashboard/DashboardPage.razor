@@ -5,13 +5,13 @@
 
 <div class="settings-content-area wide">
     <div class="settings-content-header">
-        <span class="typo-h6">대시보드</span>
+        <span class="typo-h6">@Strings.Dashboard_Title</span>
         <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
             @if (_refreshing)
             {
                 <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="width: 20px; height: 20px;"/>
             }
-            <MudTooltip Text="통계 새로고침">
+            <MudTooltip Text="@Strings.Dashboard_RefreshTooltip">
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                                Disabled="_refreshing || _loading"
                                OnClick="OnRefreshClick"/>
@@ -37,10 +37,10 @@
                     <div style="text-align: right;">
                         <span
                             class="typo-caption">@_stats.Level.Xp.ToString("N0") / @_stats.Level.XpForNext.ToString("N0") XP</span>
-                        @if (_stats.Level.Level < UserLevel.Names.Length)
+                        @if (_stats.Level.Level < UserLevel.Thresholds.Length)
                         {
                             <div class="typo-caption" style="opacity: 0.7;">
-                                다음: @UserLevel.Names[_stats.Level.Level]
+                                @Strings.Dashboard_NextLevel(Strings.GetLevelName(_stats.Level.Level + 1))
                             </div>
                         }
                     </div>
@@ -49,9 +49,9 @@
                                    Rounded="true" Size="Size.Medium"
                                    Style="height: 8px;"/>
                 <div class="d-flex gap-4 mt-2" style="font-size: 0.7rem; opacity: 0.8;">
-                    <span>@_stats.TotalProjects 프로젝트</span>
-                    <span>@_stats.Achievements.Count(a => a.Unlocked)/@_stats.Achievements.Count 업적</span>
-                    <span>@(_stats.Streak.CurrentStreak)일 연속</span>
+                    <span>@Strings.Dashboard_Stat_Projects(_stats.TotalProjects)</span>
+                    <span>@Strings.Dashboard_Stat_Achievements(_stats.Achievements.Count(a => a.Unlocked), _stats.Achievements.Count)</span>
+                    <span>@Strings.Dashboard_Stat_StreakDays(_stats.Streak.CurrentStreak)</span>
                 </div>
             </div>
 
@@ -69,7 +69,7 @@
 
                 @* Config Completeness *@
                 <div class="dashboard-config-card">
-                    <div class="dashboard-config-title">설정 완성도</div>
+                    <div class="dashboard-config-title">@Strings.Dashboard_ConfigCompleteness</div>
                     <div class="d-flex align-center gap-4">
                         <div style="position: relative; flex-shrink: 0;">
                             <MudProgressCircular Value="@(_stats.ConfigCompleteness * 100)"

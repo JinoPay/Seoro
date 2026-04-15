@@ -37,7 +37,7 @@
         </div>
         <div class="message-content" id="msg-@(Message.Id)">
             <div class="message-header">
-                <span class="role-name">@(Message.Role == MessageRole.User ? "나" : ProviderDisplayName)</span>
+                <span class="role-name">@(Message.Role == MessageRole.User ? Strings.Chat_UserRoleName : ProviderDisplayName)</span>
                 <span class="message-time">@Message.Timestamp.ToLocalTime().ToString("HH:mm")</span>
                 @if (Message is { Role: MessageRole.Assistant, Duration: not null } && !HasActivitySummary())
                 {
@@ -258,18 +258,13 @@
     private static string GetThinkingHeaderText(string thinkingText, bool isExpanded)
     {
         if (isExpanded || string.IsNullOrWhiteSpace(thinkingText))
-            return "생각 중...";
+            return Strings.Chat_Thinking;
 
         var preview = thinkingText.Trim().ReplaceLineEndings(" ");
         return preview.Length <= 80 ? preview : preview[..80] + "...";
     }
 
-    private static string FormatDuration(TimeSpan duration)
-    {
-        if (duration.TotalSeconds < 60)
-            return $"{(int)duration.TotalSeconds}초";
-        return $"{(int)duration.TotalMinutes}분 {duration.Seconds}초";
-    }
+    private static string FormatDuration(TimeSpan duration) => Strings.FormatElapsedTime(duration);
 
     private static readonly HashSet<string> TextContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {

@@ -13,7 +13,8 @@ public static class ClaudeArgumentBuilder
         "Bash(git:*)",
         "Bash(gh:*)",
         "WebFetch",
-        "WebSearch"
+        "WebSearch",
+        "mcp__*"
     ];
 
     public static string Build(

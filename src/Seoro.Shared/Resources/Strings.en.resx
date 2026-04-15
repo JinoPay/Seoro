@@ -33,6 +33,413 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
 
+  <!-- Common Actions -->
+  <data name="Common_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Common_Confirm" xml:space="preserve"><value>OK</value></data>
+  <data name="Common_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Common_Back" xml:space="preserve"><value>Back</value></data>
+  <data name="Common_Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Common_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Common_Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Common_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Common_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Common_Retry" xml:space="preserve"><value>Retry</value></data>
+  <data name="Common_Loading" xml:space="preserve"><value>Loading...</value></data>
+  <data name="Common_Error" xml:space="preserve"><value>Error</value></data>
+  <data name="Common_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Common_Unknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="Common_None" xml:space="preserve"><value>None</value></data>
+  <data name="Common_Yes" xml:space="preserve"><value>Yes</value></data>
+  <data name="Common_No" xml:space="preserve"><value>No</value></data>
+
+  <!-- Common Status -->
+  <data name="Common_Status_Error" xml:space="preserve"><value>Error</value></data>
+  <data name="Common_Status_Archived" xml:space="preserve"><value>Archived</value></data>
+  <data name="Common_Status_Completed" xml:space="preserve"><value>Completed</value></data>
+  <data name="Common_Status_Synced" xml:space="preserve"><value>Synced</value></data>
+  <data name="Common_Status_Local" xml:space="preserve"><value>Local</value></data>
+
+  <!-- Common Time -->
+  <data name="Common_Time_JustNow" xml:space="preserve"><value>Just now</value></data>
+  <data name="Common_Time_SecondsAgo" xml:space="preserve"><value>{0}s ago</value></data>
+  <data name="Common_Time_MinutesAgo" xml:space="preserve"><value>{0}m ago</value></data>
+  <data name="Common_Time_HoursAgo" xml:space="preserve"><value>{0}h ago</value></data>
+  <data name="Common_Time_DaysAgo" xml:space="preserve"><value>{0}d ago</value></data>
+  <data name="Common_Time_DateFormat" xml:space="preserve"><value>{1}/{2}/{0}</value></data>
+  <data name="Common_Time_Seconds" xml:space="preserve"><value>{0}s</value></data>
+  <data name="Common_Time_MinutesSeconds" xml:space="preserve"><value>{0}m {1}s</value></data>
+
+  <!-- Settings Navigation -->
+  <data name="Nav_BackToApp" xml:space="preserve"><value>Back to App</value></data>
+  <data name="Nav_Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Nav_Usage" xml:space="preserve"><value>Usage</value></data>
+  <data name="Nav_AppSettings" xml:space="preserve"><value>App Settings</value></data>
+  <data name="Nav_General" xml:space="preserve"><value>General</value></data>
+  <data name="Nav_AiModel" xml:space="preserve"><value>AI Model</value></data>
+  <data name="Nav_Notifications" xml:space="preserve"><value>Notifications</value></data>
+  <data name="Nav_Terminal" xml:space="preserve"><value>Terminal</value></data>
+  <data name="Nav_GitMerge" xml:space="preserve"><value>Git / Merge</value></data>
+  <data name="Nav_Shortcuts" xml:space="preserve"><value>Shortcuts</value></data>
+  <data name="Nav_IntegrationsAndExtensions" xml:space="preserve"><value>Integrations &amp; Extensions</value></data>
+  <data name="Nav_Integrations" xml:space="preserve"><value>Integrations</value></data>
+  <data name="Nav_SlashCommands" xml:space="preserve"><value>Slash Commands</value></data>
+  <data name="Nav_ClaudeSettings" xml:space="preserve"><value>Claude Settings</value></data>
+  <data name="Nav_McpServers" xml:space="preserve"><value>MCP Servers</value></data>
+  <data name="Nav_Hooks" xml:space="preserve"><value>Hooks</value></data>
+  <data name="Nav_Rules" xml:space="preserve"><value>Rules</value></data>
+  <data name="Nav_Instructions" xml:space="preserve"><value>Instructions</value></data>
+  <data name="Nav_Plugins" xml:space="preserve"><value>Plugins</value></data>
+  <data name="Nav_Accounts" xml:space="preserve"><value>Accounts</value></data>
+  <data name="Nav_Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Nav_SessionHistory" xml:space="preserve"><value>Session History</value></data>
+  <data name="Nav_Memory" xml:space="preserve"><value>Memory</value></data>
+  <data name="Nav_System" xml:space="preserve"><value>System</value></data>
+  <data name="Nav_Advanced" xml:space="preserve"><value>Advanced</value></data>
+  <data name="Nav_Updates" xml:space="preserve"><value>Updates</value></data>
+  <data name="Nav_Workspaces" xml:space="preserve"><value>Workspaces</value></data>
+
+  <!-- Settings Sections: General -->
+  <data name="Settings_General_Title" xml:space="preserve"><value>General</value></data>
+  <data name="Settings_General_Desc" xml:space="preserve"><value>Configure the app's basic behavior.</value></data>
+  <data name="Settings_General_ThemeLabel" xml:space="preserve"><value>Theme</value></data>
+  <data name="Settings_General_ThemeDark" xml:space="preserve"><value>Dark</value></data>
+  <data name="Settings_General_ThemeLight" xml:space="preserve"><value>Light</value></data>
+  <data name="Settings_General_ThemeSystem" xml:space="preserve"><value>System</value></data>
+  <data name="Settings_General_UiLanguageLabel" xml:space="preserve"><value>UI Language</value></data>
+  <data name="Settings_General_UiScaleTitle" xml:space="preserve"><value>Display Scale</value></data>
+  <data name="Settings_General_UiScaleAuto" xml:space="preserve"><value>Auto (Platform default)</value></data>
+  <data name="Settings_General_UiScaleHint" xml:space="preserve"><value>macOS default: 110%, Windows default: 100%. Preview updates as you drag the slider.</value></data>
+  <data name="Settings_General_GitWorkflowTitle" xml:space="preserve"><value>Git Workflow</value></data>
+  <data name="Settings_General_CloneDirLabel" xml:space="preserve"><value>Clone Directory</value></data>
+  <data name="Settings_General_CloneDirPlaceholder" xml:space="preserve"><value>~/Seoro</value></data>
+  <data name="Settings_General_CloneDirHint" xml:space="preserve"><value>Where repositories are cloned. Leave blank to use the default.</value></data>
+  <data name="Settings_General_BrowseDir" xml:space="preserve"><value>Browse...</value></data>
+  <data name="Settings_General_SessionLangLabel" xml:space="preserve"><value>Session Name Language</value></data>
+  <data name="Settings_General_SessionLangHint" xml:space="preserve"><value>Language Claude uses when generating worktree branch names and local session titles.</value></data>
+  <data name="Settings_General_HelpTitle" xml:space="preserve"><value>Help</value></data>
+  <data name="Settings_General_ShowTutorial" xml:space="preserve"><value>Show Tutorial Again</value></data>
+  <data name="Settings_General_ShowWhatsNew" xml:space="preserve"><value>What's New</value></data>
+  <data name="Settings_General_MigrationTitle" xml:space="preserve"><value>Data Migration</value></data>
+  <data name="Settings_General_MigrationDesc" xml:space="preserve"><value>Import existing Cominomi data into Seoro.</value></data>
+  <data name="Settings_General_MigrationFoundData" xml:space="preserve"><value>Found: {0} sessions, {1} workspaces, {2} memories, {3} tasks, {4} config files</value></data>
+  <data name="Settings_General_MigrationImporting" xml:space="preserve"><value>Importing...</value></data>
+  <data name="Settings_General_MigrationImport" xml:space="preserve"><value>Import Cominomi Data</value></data>
+  <data name="Settings_General_ImportDialogTitle" xml:space="preserve"><value>Import Cominomi Data</value></data>
+  <data name="Settings_General_ImportDialogMsg" xml:space="preserve"><value>Import {0} Cominomi items into Seoro.\nChoose how to handle files that already exist.</value></data>
+  <data name="Settings_General_ImportOverwrite" xml:space="preserve"><value>Overwrite existing data</value></data>
+  <data name="Settings_General_ImportKeep" xml:space="preserve"><value>Keep existing data (skip)</value></data>
+  <data name="Settings_General_ImportDoneTitle" xml:space="preserve"><value>Import Complete</value></data>
+  <data name="Settings_General_ImportDoneMsg" xml:space="preserve"><value>Imported {0} items. The app will restart to apply changes.</value></data>
+  <data name="Settings_General_ImportResult" xml:space="preserve"><value>Import complete: {0} skipped (no changes)</value></data>
+  <data name="Settings_General_ImportFailed" xml:space="preserve"><value>Import failed: {0}</value></data>
+  <data name="Settings_General_ImportFailedCount" xml:space="preserve"><value>, {0} failed</value></data>
+  <data name="Settings_General_ImportFolderDeleteFailed" xml:space="preserve"><value> (Cominomi folder deletion failed)</value></data>
+
+  <!-- Settings Sections: AI Model -->
+  <data name="Settings_Ai_Title" xml:space="preserve"><value>AI Model</value></data>
+  <data name="Settings_Ai_Desc" xml:space="preserve"><value>Configure AI models and behavior.</value></data>
+  <data name="Settings_Ai_DefaultModelLabel" xml:space="preserve"><value>Default Model</value></data>
+  <data name="Settings_Ai_DefaultModelHint" xml:space="preserve"><value>Global default. Each workspace can override this with a different model.</value></data>
+  <data name="Settings_Ai_EffortLevelLabel" xml:space="preserve"><value>Default Effort Level</value></data>
+  <data name="Settings_Ai_EffortLevelMax" xml:space="preserve"><value>Max</value></data>
+  <data name="Settings_Ai_EffortLevelHint" xml:space="preserve"><value>auto: model default, max: highest thinking level per model (Opus: max, others: high)</value></data>
+  <data name="Settings_Ai_PermissionModeLabel" xml:space="preserve"><value>Default Permission Mode</value></data>
+  <data name="Settings_Ai_PermissionModeNormal" xml:space="preserve"><value>Normal Mode</value></data>
+  <data name="Settings_Ai_PermissionModePlan" xml:space="preserve"><value>Plan Mode</value></data>
+  <data name="Settings_Ai_PermissionModeHint" xml:space="preserve"><value>Permission mode applied when Claude CLI is run from Seoro.</value></data>
+  <data name="Settings_Ai_FallbackModelLabel" xml:space="preserve"><value>Fallback Model</value></data>
+  <data name="Settings_Ai_FallbackModelHint" xml:space="preserve"><value>Fallback model when the default is overloaded (leave blank to disable)</value></data>
+  <data name="Settings_Ai_McpConfigPathLabel" xml:space="preserve"><value>MCP Config File Path</value></data>
+  <data name="Settings_Ai_McpConfigPathHint" xml:space="preserve"><value>Path to MCP server config JSON file (leave blank to disable)</value></data>
+  <data name="Settings_Ai_CodexDefaultModelLabel" xml:space="preserve"><value>Codex Default Model</value></data>
+  <data name="Settings_Ai_CodexDefaultModelHint" xml:space="preserve"><value>Global default model for Codex sessions.</value></data>
+  <data name="Settings_Ai_ReasoningEffortLabel" xml:space="preserve"><value>Reasoning Effort</value></data>
+  <data name="Settings_Ai_ReasoningEffortHint" xml:space="preserve"><value>Sets the reasoning depth for Codex models.</value></data>
+  <data name="Settings_Ai_SandboxModeLabel" xml:space="preserve"><value>Sandbox Mode</value></data>
+  <data name="Settings_Ai_SandboxReadOnly" xml:space="preserve"><value>Read Only</value></data>
+  <data name="Settings_Ai_SandboxWorkspace" xml:space="preserve"><value>Workspace</value></data>
+  <data name="Settings_Ai_SandboxFullAccess" xml:space="preserve"><value>Full Access</value></data>
+  <data name="Settings_Ai_SandboxModeHint" xml:space="preserve"><value>Sets the file system access scope.</value></data>
+  <data name="Settings_Ai_ApprovalPolicyLabel" xml:space="preserve"><value>Approval Policy</value></data>
+  <data name="Settings_Ai_ApprovalAlways" xml:space="preserve"><value>Always Approve</value></data>
+  <data name="Settings_Ai_ApprovalOnRequest" xml:space="preserve"><value>On Request</value></data>
+  <data name="Settings_Ai_ApprovalAuto" xml:space="preserve"><value>Auto</value></data>
+  <data name="Settings_Ai_ApprovalPolicyHint" xml:space="preserve"><value>Sets when user approval is required before executing commands.</value></data>
+  <data name="Settings_Ai_WebSearchLabel" xml:space="preserve"><value>Web Search</value></data>
+  <data name="Settings_Ai_WebSearchHint" xml:space="preserve"><value>Enables web search in Codex sessions.</value></data>
+  <data name="Settings_Ai_ReasoningMinimal" xml:space="preserve"><value>Minimal</value></data>
+  <data name="Settings_Ai_ReasoningLow" xml:space="preserve"><value>Low</value></data>
+  <data name="Settings_Ai_ReasoningMedium" xml:space="preserve"><value>Medium</value></data>
+  <data name="Settings_Ai_ReasoningHigh" xml:space="preserve"><value>High</value></data>
+  <data name="Settings_Ai_ReasoningXHigh" xml:space="preserve"><value>Max</value></data>
+
+  <!-- Settings Sections: Notifications -->
+  <data name="Settings_Notifications_Title" xml:space="preserve"><value>Notifications</value></data>
+  <data name="Settings_Notifications_Desc" xml:space="preserve"><value>Send OS notifications for task completion, response awaiting, and plan reviews.</value></data>
+  <data name="Settings_Notifications_DesktopLabel" xml:space="preserve"><value>Desktop Notifications</value></data>
+  <data name="Settings_Notifications_DesktopHint" xml:space="preserve"><value>Display OS notifications when tasks complete.</value></data>
+  <data name="Settings_Notifications_SoundLabel" xml:space="preserve"><value>Notification Sound</value></data>
+  <data name="Settings_Notifications_SoundHint" xml:space="preserve"><value>Play a sound when a notification occurs.</value></data>
+  <data name="Settings_Notifications_SoundTypeLabel" xml:space="preserve"><value>Sound Type</value></data>
+  <data name="Settings_Notifications_TestButton" xml:space="preserve"><value>Send Test Notification</value></data>
+  <data name="Settings_Notifications_NativeActive" xml:space="preserve"><value>Seoro notifications are enabled. You can change settings in System Preferences &gt; Notifications.</value></data>
+  <data name="Settings_Notifications_ScriptFallback" xml:space="preserve"><value>No notification permission; using script fallback. If Seoro is missing from System Preferences &gt; Notifications, reinstall the app or sign the code.</value></data>
+  <data name="Settings_Notifications_TestMsg" xml:space="preserve"><value>This is a test notification!</value></data>
+  <data name="Settings_Notifications_TestSent" xml:space="preserve"><value>Test notification sent.</value></data>
+  <data name="Settings_Notifications_SoundDefault" xml:space="preserve"><value>Default</value></data>
+
+  <!-- Settings Sections: Terminal -->
+  <data name="Settings_Terminal_Title" xml:space="preserve"><value>Terminal</value></data>
+  <data name="Settings_Terminal_Desc" xml:space="preserve"><value>Configure the default shell for the built-in terminal.</value></data>
+  <data name="Settings_Terminal_ShellLabel" xml:space="preserve"><value>Default Shell</value></data>
+  <data name="Settings_Terminal_ShellAuto" xml:space="preserve"><value>Auto-detect ({0})</value></data>
+  <data name="Settings_Terminal_ShellHint" xml:space="preserve"><value>Shell to use in the terminal panel. Auto-detect uses the system default shell.</value></data>
+
+  <!-- Settings Sections: Git/Merge -->
+  <data name="Settings_GitMerge_Title" xml:space="preserve"><value>Git / Merge</value></data>
+  <data name="Settings_GitMerge_Desc" xml:space="preserve"><value>Configure MergePanel behavior and AI delegation prompts.</value></data>
+  <data name="Settings_GitMerge_DefaultStrategyLabel" xml:space="preserve"><value>Default PR Merge Strategy</value></data>
+  <data name="Settings_GitMerge_DefaultStrategyHint" xml:space="preserve"><value>Default selection for the PR merge button in MergePanel.</value></data>
+  <data name="Settings_GitMerge_AutoArchiveLabel" xml:space="preserve"><value>Auto-archive session on merge success</value></data>
+  <data name="Settings_GitMerge_AutoArchiveHint" xml:space="preserve"><value>Automatically archives the session when a squash merge succeeds.</value></data>
+  <data name="Settings_GitMerge_AiPromptsTitle" xml:space="preserve"><value>AI Delegation Prompts</value></data>
+  <data name="Settings_GitMerge_AiPromptsDesc" xml:space="preserve"><value>Instructions sent to the AI when a MergePanel button is clicked. Leave blank to use the default prompt.</value></data>
+  <data name="Settings_GitMerge_CreatePrPromptLabel" xml:space="preserve"><value>Create PR Prompt</value></data>
+  <data name="Settings_GitMerge_PushPromptLabel" xml:space="preserve"><value>Commit &amp; Push Prompt</value></data>
+  <data name="Settings_GitMerge_ConflictPromptLabel" xml:space="preserve"><value>Conflict Resolution Prompt</value></data>
+  <data name="Settings_GitMerge_ResetToDefault" xml:space="preserve"><value>Reset to default</value></data>
+
+  <!-- Settings Sections: Advanced -->
+  <data name="Settings_Advanced_Title" xml:space="preserve"><value>Advanced</value></data>
+  <data name="Settings_Advanced_Desc" xml:space="preserve"><value>Manage advanced Claude CLI settings and environment variables.</value></data>
+  <data name="Settings_Advanced_DebugModeLabel" xml:space="preserve"><value>Debug Mode</value></data>
+  <data name="Settings_Advanced_DebugModeHint" xml:space="preserve"><value>When enabled, passes the --debug flag to the Claude CLI.</value></data>
+  <data name="Settings_Advanced_EnvVarsTitle" xml:space="preserve"><value>Process Environment Variables</value></data>
+  <data name="Settings_Advanced_EnvVarsHint" xml:space="preserve"><value>Environment variables injected into the process when Seoro runs the Claude CLI.</value></data>
+  <data name="Settings_Advanced_EnvKeyPlaceholder" xml:space="preserve"><value>Key</value></data>
+  <data name="Settings_Advanced_EnvValuePlaceholder" xml:space="preserve"><value>Value</value></data>
+
+  <!-- Settings Sections: Updates -->
+  <data name="Settings_Updates_Title" xml:space="preserve"><value>Updates</value></data>
+  <data name="Settings_Updates_Desc" xml:space="preserve"><value>Configure and check for app updates.</value></data>
+  <data name="Settings_Updates_CurrentVersion" xml:space="preserve"><value>Current version:</value></data>
+  <data name="Settings_Updates_DevBuild" xml:space="preserve"><value>Dev Build</value></data>
+  <data name="Settings_Updates_AutoCheckLabel" xml:space="preserve"><value>Auto-check for Updates</value></data>
+  <data name="Settings_Updates_AutoCheckHint" xml:space="preserve"><value>Checks for new versions at app startup and periodically.</value></data>
+  <data name="Settings_Updates_IntervalLabel" xml:space="preserve"><value>Check Interval</value></data>
+  <data name="Settings_Updates_CheckButton" xml:space="preserve"><value>Check for Updates</value></data>
+  <data name="Settings_Updates_Checking" xml:space="preserve"><value>Checking...</value></data>
+  <data name="Settings_Updates_Ready" xml:space="preserve"><value>Update downloaded. Restart to apply.</value></data>
+  <data name="Settings_Updates_RestartButton" xml:space="preserve"><value>Restart to Apply</value></data>
+  <data name="Settings_Updates_Downloading" xml:space="preserve"><value>Downloading update...</value></data>
+  <data name="Settings_Updates_Available" xml:space="preserve"><value>Version {0} available</value></data>
+  <data name="Settings_Updates_DownloadButton" xml:space="preserve"><value>Download and Install</value></data>
+  <data name="Settings_Updates_UpToDate" xml:space="preserve"><value>You are using the latest version.</value></data>
+  <data name="Settings_Updates_DevBuildWarning" xml:space="preserve"><value>Auto-update is only available for installed builds. Please update manually for dev builds.</value></data>
+  <data name="Settings_Updates_CheckFailed" xml:space="preserve"><value>Update check failed: {0}</value></data>
+  <data name="Settings_Updates_DownloadFailed" xml:space="preserve"><value>Download failed: {0}</value></data>
+  <data name="Settings_Updates_ReleaseNotesTitle" xml:space="preserve"><value>Release Notes</value></data>
+  <data name="Settings_Updates_Interval_30" xml:space="preserve"><value>30m</value></data>
+  <data name="Settings_Updates_Interval_60" xml:space="preserve"><value>1h</value></data>
+  <data name="Settings_Updates_Interval_180" xml:space="preserve"><value>3h</value></data>
+  <data name="Settings_Updates_Interval_360" xml:space="preserve"><value>6h</value></data>
+  <data name="Settings_Updates_Interval_720" xml:space="preserve"><value>12h</value></data>
+  <data name="Settings_Updates_Interval_1440" xml:space="preserve"><value>24h</value></data>
+
+  <!-- Settings Sections: Integrations -->
+  <data name="Settings_Integrations_Title" xml:space="preserve"><value>Integrations</value></data>
+  <data name="Settings_Integrations_Desc" xml:space="preserve"><value>Check the connection status of external services.</value></data>
+  <data name="Settings_Integrations_Checking" xml:space="preserve"><value>Detecting...</value></data>
+  <data name="Settings_Integrations_Detected" xml:space="preserve"><value>Detected</value></data>
+  <data name="Settings_Integrations_NotDetected" xml:space="preserve"><value>Not detected</value></data>
+  <data name="Settings_Integrations_Recheck" xml:space="preserve"><value>Recheck</value></data>
+  <data name="Settings_Integrations_Version" xml:space="preserve"><value>Version:</value></data>
+  <data name="Settings_Integrations_UpdateNeeded" xml:space="preserve"><value>Update required (v{0})</value></data>
+  <data name="Settings_Integrations_UpdateMethod" xml:space="preserve"><value>How to update:</value></data>
+  <data name="Settings_Integrations_ClaudePathLabel" xml:space="preserve"><value>Claude CLI Path</value></data>
+  <data name="Settings_Integrations_AutoDetect" xml:space="preserve"><value>Auto-detect</value></data>
+  <data name="Settings_Integrations_AutoDetectHint" xml:space="preserve"><value>Leave blank for automatic detection</value></data>
+  <data name="Settings_Integrations_GitPathLabel" xml:space="preserve"><value>Git Path</value></data>
+  <data name="Settings_Integrations_GhPathLabel" xml:space="preserve"><value>GitHub CLI Path</value></data>
+  <data name="Settings_Integrations_CodexPathLabel" xml:space="preserve"><value>Codex CLI Path</value></data>
+  <data name="Settings_Integrations_CodexOptional" xml:space="preserve"><value>(Optional)</value></data>
+  <data name="Settings_Integrations_NotInstalled" xml:space="preserve"><value>Not installed</value></data>
+  <data name="Settings_Integrations_InstallMethod" xml:space="preserve"><value>How to install:</value></data>
+
+  <!-- Settings Sections: Shortcuts -->
+  <data name="Settings_Shortcuts_Switch" xml:space="preserve"><value>Switch to session 1–5</value></data>
+  <data name="Settings_Shortcuts_DeleteSession" xml:space="preserve"><value>Delete current session</value></data>
+  <data name="Settings_Shortcuts_ExpandAll" xml:space="preserve"><value>Expand all projects</value></data>
+  <data name="Settings_Shortcuts_CollapseAll" xml:space="preserve"><value>Collapse all projects</value></data>
+  <data name="Settings_Shortcuts_ToggleSidebar" xml:space="preserve"><value>Toggle sidebar</value></data>
+  <data name="Settings_Shortcuts_FocusInput" xml:space="preserve"><value>Focus input box</value></data>
+  <data name="Settings_Shortcuts_ToggleTheme" xml:space="preserve"><value>Toggle theme (light/dark)</value></data>
+  <data name="Settings_Shortcuts_TogglePlanMode" xml:space="preserve"><value>Toggle plan mode</value></data>
+  <data name="Settings_Shortcuts_ApprovePlan" xml:space="preserve"><value>Approve plan</value></data>
+  <data name="Settings_Shortcuts_ToggleEffort" xml:space="preserve"><value>Cycle effort level</value></data>
+  <data name="Settings_Shortcuts_ToggleSync" xml:space="preserve"><value>Toggle sync</value></data>
+  <data name="Settings_Shortcuts_SendMessage" xml:space="preserve"><value>Send message</value></data>
+  <data name="Settings_Shortcuts_Newline" xml:space="preserve"><value>New line</value></data>
+  <data name="Settings_Shortcuts_CloseOverlay" xml:space="preserve"><value>Close overlay</value></data>
+  <data name="Settings_Shortcuts_TerminalCopy" xml:space="preserve"><value>Terminal copy</value></data>
+  <data name="Settings_Shortcuts_TerminalPaste" xml:space="preserve"><value>Terminal paste</value></data>
+
+  <!-- Settings Sections: Claude CLI Settings -->
+  <data name="Settings_Claude_Title" xml:space="preserve"><value>Claude CLI Settings</value></data>
+  <data name="Settings_Claude_ScopeGlobal" xml:space="preserve"><value>~/.claude/settings.json — Global settings applied to all projects.</value></data>
+  <data name="Settings_Claude_ScopeProject" xml:space="preserve"><value>.claude/settings.json — Applied to this project only; tracked by git.</value></data>
+  <data name="Settings_Claude_ScopeLocal" xml:space="preserve"><value>.claude/settings.local.json — Applied to this project only; gitignored.</value></data>
+  <data name="Settings_Claude_ModelBehaviorTitle" xml:space="preserve"><value>Model &amp; Behavior</value></data>
+  <data name="Settings_Claude_ModelLabel" xml:space="preserve"><value>Model</value></data>
+  <data name="Settings_Claude_ModelHint" xml:space="preserve"><value>Used when running the CLI directly outside of Seoro.</value></data>
+  <data name="Settings_Claude_EffortLabel" xml:space="preserve"><value>Effort Level</value></data>
+  <data name="Settings_Claude_EffortHint" xml:space="preserve"><value>The value set in Seoro App Settings &gt; AI Model takes precedence.</value></data>
+  <data name="Settings_Claude_DefaultModeLabel" xml:space="preserve"><value>Default Mode</value></data>
+  <data name="Settings_Claude_DefaultModeHint" xml:space="preserve"><value>Used when running the CLI directly outside of Seoro.</value></data>
+  <data name="Settings_Claude_NotSet" xml:space="preserve"><value>Not set</value></data>
+  <data name="Settings_Claude_AlwaysThinkingLabel" xml:space="preserve"><value>Always enable Extended Thinking</value></data>
+  <data name="Settings_Claude_AlwaysThinkingHint" xml:space="preserve"><value>Uses extended thinking mode for all responses.</value></data>
+  <data name="Settings_Claude_AutoMemoryLabel" xml:space="preserve"><value>Enable Auto Memory</value></data>
+  <data name="Settings_Claude_AutoMemoryHint" xml:space="preserve"><value>Automatically saves conversation context to memory.</value></data>
+  <data name="Settings_Claude_PermissionsTitle" xml:space="preserve"><value>Permission Rules</value></data>
+  <data name="Settings_Claude_EnvVarsTitle" xml:space="preserve"><value>Environment Variables</value></data>
+  <data name="Settings_Claude_EnvVarsHint" xml:space="preserve"><value>Also applied when the CLI runs directly.</value></data>
+  <data name="Settings_Claude_AddDirsTitle" xml:space="preserve"><value>Additional Directories</value></data>
+  <data name="Settings_Claude_AddDirsHint" xml:space="preserve"><value>Directories Claude CLI can access beyond the project root.</value></data>
+  <data name="Settings_Claude_McpDesc" xml:space="preserve"><value>MCP servers are managed on a separate page.</value></data>
+  <data name="Settings_Claude_Manage" xml:space="preserve"><value>Manage</value></data>
+  <data name="Settings_Claude_NoHooks" xml:space="preserve"><value>No hooks registered.</value></data>
+  <data name="Settings_Claude_Saved" xml:space="preserve"><value>Claude settings saved.</value></data>
+  <data name="Settings_Claude_SaveFailed" xml:space="preserve"><value>Save failed: {0}</value></data>
+
+  <!-- Settings: Workspace Settings -->
+  <data name="Settings_Workspace_TabGeneral" xml:space="preserve"><value>General</value></data>
+  <data name="Settings_Workspace_TabPrompts" xml:space="preserve"><value>Prompts</value></data>
+  <data name="Settings_Workspace_GeneralDesc" xml:space="preserve"><value>Manage workspace basic information.</value></data>
+  <data name="Settings_Workspace_NameLabel" xml:space="preserve"><value>Name</value></data>
+  <data name="Settings_Workspace_UseAppDefault" xml:space="preserve"><value>Use app default</value></data>
+  <data name="Settings_Workspace_DefaultModelHint" xml:space="preserve"><value>Model to use for sessions in this workspace. Leave blank to follow the app default.</value></data>
+  <data name="Settings_Workspace_RepoPathLabel" xml:space="preserve"><value>Repository Path</value></data>
+  <data name="Settings_Workspace_RepoUrlLabel" xml:space="preserve"><value>Repository URL</value></data>
+  <data name="Settings_Workspace_SystemPromptLabel" xml:space="preserve"><value>System Prompt</value></data>
+  <data name="Settings_Workspace_SystemPromptPlaceholder" xml:space="preserve"><value>System prompt added to all sessions in this workspace.</value></data>
+  <data name="Settings_Workspace_SystemPromptHint" xml:space="preserve"><value>Leave blank to use the default system prompt only.</value></data>
+  <data name="Settings_Workspace_GitDesc" xml:space="preserve"><value>Configure Git defaults.</value></data>
+  <data name="Settings_Workspace_DefaultBranchLabel" xml:space="preserve"><value>Default Base Branch</value></data>
+  <data name="Settings_Workspace_DefaultBranchHint" xml:space="preserve"><value>Default branch to use when creating new sessions. Leave blank to auto-detect.</value></data>
+  <data name="Settings_Workspace_DefaultBranchAutoHint" xml:space="preserve"><value>Leave blank to auto-detect.</value></data>
+  <data name="Settings_Workspace_DefaultRemoteLabel" xml:space="preserve"><value>Default Remote</value></data>
+  <data name="Settings_Workspace_PromptsDesc" xml:space="preserve"><value>Configure custom instructions passed to the agent.</value></data>
+  <data name="Settings_Workspace_CodeReviewLabel" xml:space="preserve"><value>Code Review Prompt</value></data>
+  <data name="Settings_Workspace_CodeReviewPlaceholder" xml:space="preserve"><value>Instructions passed to the agent during code reviews.</value></data>
+  <data name="Settings_Workspace_GeneralPromptLabel" xml:space="preserve"><value>General Prompt</value></data>
+  <data name="Settings_Workspace_GeneralPromptPlaceholder" xml:space="preserve"><value>Instructions passed to the agent at the start of every new conversation.</value></data>
+  <data name="Settings_Workspace_DangerZoneTitle" xml:space="preserve"><value>Danger Zone</value></data>
+  <data name="Settings_Workspace_DeleteButton" xml:space="preserve"><value>Delete Workspace</value></data>
+  <data name="Settings_Workspace_DeleteWarning" xml:space="preserve"><value>This workspace and all its sessions will be deleted. This action cannot be undone.</value></data>
+  <data name="Settings_Workspace_DeleteDialogTitle" xml:space="preserve"><value>Delete Workspace</value></data>
+  <data name="Settings_Workspace_DeleteDialogMsg" xml:space="preserve"><value>'{0}' workspace and all its sessions will be deleted. Continue?</value></data>
+  <data name="Settings_Workspace_DeleteSuccess" xml:space="preserve"><value>'{0}' workspace has been deleted.</value></data>
+  <data name="Settings_Workspace_DeleteError" xml:space="preserve"><value>An error occurred while deleting: {0}</value></data>
+
+  <!-- Chat Components -->
+  <data name="Chat_Placeholder_NoSession" xml:space="preserve"><value>Select or create a session first...</value></data>
+  <data name="Chat_Placeholder_Streaming" xml:space="preserve"><value>Claude is responding...</value></data>
+  <data name="Chat_Placeholder_PlanFeedback" xml:space="preserve"><value>Enter feedback on the plan...</value></data>
+  <data name="Chat_Placeholder_PlanMode" xml:space="preserve"><value>Plan mode: Claude reads and researches only...</value></data>
+  <data name="Chat_Placeholder_AcceptEditsMode" xml:space="preserve"><value>Accept edits mode: file edits allowed, commands require confirmation...</value></data>
+  <data name="Chat_Placeholder_Default" xml:space="preserve"><value>Type a message...</value></data>
+  <data name="Chat_PastedAsFile" xml:space="preserve"><value>Large text was attached as a file.</value></data>
+  <data name="Chat_LandingSubtitle" xml:space="preserve"><value>AI Coding Assistant</value></data>
+  <data name="Chat_WelcomeTitle" xml:space="preserve"><value>How can I help you?</value></data>
+  <data name="Chat_Streaming_Preparing" xml:space="preserve"><value>Preparing...</value></data>
+  <data name="Chat_Streaming_Sending" xml:space="preserve"><value>Sending...</value></data>
+  <data name="Chat_Thinking" xml:space="preserve"><value>Thinking...</value></data>
+  <data name="Chat_Toolbar_AttachFile" xml:space="preserve"><value>Attach file</value></data>
+  <data name="Chat_Toolbar_WebSearchOn" xml:space="preserve"><value>Web search on</value></data>
+  <data name="Chat_Toolbar_WebSearchOff" xml:space="preserve"><value>Web search off</value></data>
+  <data name="Chat_Toolbar_ViewPlan" xml:space="preserve"><value>View plan</value></data>
+  <data name="Chat_Toolbar_Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="Chat_PermissionMode_PlanTooltip" xml:space="preserve"><value>Plan mode (read-only)</value></data>
+  <data name="Chat_PermissionMode_NormalTooltip" xml:space="preserve"><value>Normal mode (bypass all permissions)</value></data>
+  <data name="Chat_EffortLevel_AutoTooltip" xml:space="preserve"><value>Effort: Auto (max {0})</value></data>
+  <data name="Chat_TokenTooltip_Total" xml:space="preserve"><value>Tokens: {0} / {1} ({2}%)</value></data>
+  <data name="Chat_TokenTooltip_Input" xml:space="preserve"><value>Input: {0}</value></data>
+  <data name="Chat_TokenTooltip_Output" xml:space="preserve"><value>Output: {0}</value></data>
+  <data name="Chat_TokenTooltip_Cost" xml:space="preserve"><value>Est. cost: ${0}</value></data>
+  <data name="Chat_Plan_ReviewTitle" xml:space="preserve"><value>Plan Ready</value></data>
+  <data name="Chat_Plan_LoadingContent" xml:space="preserve"><value>Loading plan content...</value></data>
+  <data name="Chat_Plan_Approve" xml:space="preserve"><value>Approve &amp; Execute</value></data>
+  <data name="Chat_Plan_Reject" xml:space="preserve"><value>Reject</value></data>
+  <data name="Chat_Notification_PlanReady" xml:space="preserve"><value>Plan Ready</value></data>
+  <data name="Chat_Notification_NeedsResponse" xml:space="preserve"><value>Needs Response</value></data>
+  <data name="Chat_Notification_Done" xml:space="preserve"><value>Task Done</value></data>
+  <data name="Chat_Chaining" xml:space="preserve"><value>Chaining: /{0} running...</value></data>
+  <data name="Chat_UserRoleName" xml:space="preserve"><value>Me</value></data>
+
+  <!-- Sidebar Components -->
+  <data name="Sidebar_WorkspaceSettings" xml:space="preserve"><value>Workspace Settings</value></data>
+  <data name="Sidebar_DeleteWorkspace" xml:space="preserve"><value>Delete Workspace</value></data>
+  <data name="Sidebar_WelcomeMessage" xml:space="preserve"><value>Create a workspace to get started</value></data>
+  <data name="Sidebar_NewWorkspace" xml:space="preserve"><value>New Workspace</value></data>
+  <data name="Sidebar_OpenFolder" xml:space="preserve"><value>Open Folder</value></data>
+  <data name="Sidebar_OpenInIde" xml:space="preserve"><value>Open in {0}</value></data>
+  <data name="Sidebar_Search" xml:space="preserve"><value>Search...</value></data>
+  <data name="Sidebar_Status_Writing" xml:space="preserve"><value>Writing...</value></data>
+  <data name="Sidebar_Status_Planning" xml:space="preserve"><value>Planning...</value></data>
+  <data name="Sidebar_Status_Working" xml:space="preserve"><value>Working...</value></data>
+  <data name="Sidebar_Tool_Bash" xml:space="preserve"><value>Running command...</value></data>
+  <data name="Sidebar_Tool_Read" xml:space="preserve"><value>Reading file...</value></data>
+  <data name="Sidebar_Tool_Write" xml:space="preserve"><value>Writing file...</value></data>
+  <data name="Sidebar_Tool_Edit" xml:space="preserve"><value>Editing file...</value></data>
+  <data name="Sidebar_Tool_Glob" xml:space="preserve"><value>Searching files...</value></data>
+  <data name="Sidebar_Tool_Grep" xml:space="preserve"><value>Searching content...</value></data>
+  <data name="Sidebar_Tool_Agent" xml:space="preserve"><value>Agent...</value></data>
+  <data name="Sidebar_Tool_Default" xml:space="preserve"><value>Using tool...</value></data>
+  <data name="Sidebar_CreateWorkspace_Title" xml:space="preserve"><value>New Workspace</value></data>
+  <data name="Sidebar_CreateWorkspace_Subtitle" xml:space="preserve"><value>Connect a repository to start AI coding</value></data>
+  <data name="Sidebar_CreateWorkspace_CloneFromUrl" xml:space="preserve"><value>Clone from URL</value></data>
+  <data name="Sidebar_CreateWorkspace_LocalRepository" xml:space="preserve"><value>Local Repository</value></data>
+  <data name="Sidebar_CreateWorkspace_RepoUrlLabel" xml:space="preserve"><value>Repository URL</value></data>
+  <data name="Sidebar_CreateWorkspace_ClonePathLabel" xml:space="preserve"><value>Clone Path</value></data>
+  <data name="Sidebar_CreateWorkspace_Browse" xml:space="preserve"><value>Browse...</value></data>
+  <data name="Sidebar_CreateWorkspace_WorkspaceNameLabel" xml:space="preserve"><value>Workspace Name</value></data>
+  <data name="Sidebar_CreateWorkspace_DefaultModelLabel" xml:space="preserve"><value>Default Model</value></data>
+  <data name="Sidebar_CreateWorkspace_DefaultModelHelper" xml:space="preserve"><value>Leave empty to use app default.</value></data>
+  <data name="Sidebar_CreateWorkspace_UseAppDefault" xml:space="preserve"><value>Use app default</value></data>
+  <data name="Sidebar_CreateWorkspace_RepoPathLabel" xml:space="preserve"><value>Repository Path</value></data>
+  <data name="Sidebar_CreateWorkspace_InitGit" xml:space="preserve"><value>Initialize Git</value></data>
+  <data name="Sidebar_CreateWorkspace_Create" xml:space="preserve"><value>Create</value></data>
+  <data name="Sidebar_CreateWorkspace_Cloning" xml:space="preserve"><value>Cloning repository...</value></data>
+  <data name="Sidebar_CreateWorkspace_CreationFailed" xml:space="preserve"><value>Failed to create workspace.</value></data>
+  <data name="Sidebar_CreateWorkspace_OperationCancelled" xml:space="preserve"><value>Operation was cancelled.</value></data>
+  <data name="Sidebar_CreateWorkspace_SettingUp" xml:space="preserve"><value>Setting up workspace...</value></data>
+  <data name="Sidebar_CreateWorkspace_NotGitRepo" xml:space="preserve"><value>This folder is not a git repository.</value></data>
+  <data name="Sidebar_CreateWorkspace_ValidGitRepo" xml:space="preserve"><value>Valid git repository</value></data>
+  <data name="Sidebar_CreateWorkspace_GitInitFailed" xml:space="preserve"><value>Git initialization failed: {0}</value></data>
+  <data name="Sidebar_CreateWorkspace_GitInitialized" xml:space="preserve"><value>Git repository initialized.</value></data>
+  <data name="Sidebar_CreateWorkspace_GitInitError" xml:space="preserve"><value>Git initialization failed. Please try again.</value></data>
+  <data name="Sidebar_AddSession_HeaderNew" xml:space="preserve"><value>New</value></data>
+  <data name="Sidebar_AddSession_NewWorktreeTitle" xml:space="preserve"><value>New Worktree</value></data>
+  <data name="Sidebar_AddSession_NewWorktreeDesc" xml:space="preserve"><value>Start from workspace base path</value></data>
+  <data name="Sidebar_AddSession_LocalDirectoryTitle" xml:space="preserve"><value>Local Directory</value></data>
+  <data name="Sidebar_AddSession_LocalDirectoryDesc" xml:space="preserve"><value>Use local repository path</value></data>
+  <data name="Sidebar_AddSession_CodexWorktreeTitle" xml:space="preserve"><value>Codex Worktree</value></data>
+  <data name="Sidebar_AddSession_CodexWorktreeDesc" xml:space="preserve"><value>Start with OpenAI Codex CLI</value></data>
+  <data name="Sidebar_AddSession_CodexLocalTitle" xml:space="preserve"><value>Codex Local Directory</value></data>
+  <data name="Sidebar_AddSession_CodexLocalDesc" xml:space="preserve"><value>OpenAI Codex CLI + Local Path</value></data>
+  <data name="Sidebar_Changes_ConflictTooltip" xml:space="preserve"><value>Merge conflict expected with target branch for: {0}</value></data>
+  <data name="Sidebar_Changes_GroupModified" xml:space="preserve"><value>Modified</value></data>
+  <data name="Sidebar_Changes_GroupAdded" xml:space="preserve"><value>Added</value></data>
+  <data name="Sidebar_Changes_GroupDeleted" xml:space="preserve"><value>Deleted</value></data>
+  <data name="Sidebar_Changes_GroupRenamed" xml:space="preserve"><value>Renamed</value></data>
+  <data name="Sidebar_Changes_GroupUntracked" xml:space="preserve"><value>Untracked</value></data>
+  <data name="Sidebar_Changes_GroupOther" xml:space="preserve"><value>Other</value></data>
+  <data name="Sidebar_Explorer_NoFilesFound" xml:space="preserve"><value>No files found</value></data>
+  <data name="Sidebar_Explorer_FileReadError" xml:space="preserve"><value>File read error: {0}</value></data>
+
   <!-- SnackbarExtensions -->
   <data name="Snackbar_PushSuccess" xml:space="preserve"><value>Branch '{0}' has been pushed.</value></data>
   <data name="Snackbar_PushError" xml:space="preserve"><value>Push failed: {0}</value></data>
@@ -79,5 +486,594 @@
   <data name="Tool_ReadHint" xml:space="preserve"><value>{0} lines read</value></data>
   <data name="Tool_GrepHint" xml:space="preserve"><value>{0} results</value></data>
   <data name="Tool_GlobHint" xml:space="preserve"><value>{0} files found</value></data>
+
+  <!-- Layout Components -->
+  <data name="Layout_SidebarToolbar_NotificationHistory" xml:space="preserve"><value>Notification History</value></data>
+  <data name="Layout_SidebarToolbar_CollapseSidebar" xml:space="preserve"><value>Collapse Sidebar</value></data>
+  <data name="Layout_SidebarToolbar_ExpandSidebar" xml:space="preserve"><value>Expand Sidebar</value></data>
+  <data name="Layout_MainTabBar_CloseTab" xml:space="preserve"><value>Close Tab</value></data>
+  <data name="Layout_MainTabBar_CloseOtherTabs" xml:space="preserve"><value>Close Other Tabs</value></data>
+  <data name="Layout_MainTabBar_CloseTabsToRight" xml:space="preserve"><value>Close Tabs to Right</value></data>
+  <data name="Layout_MainTabBar_CloseAllTabs" xml:space="preserve"><value>Close All Tabs</value></data>
+  <data name="Layout_MainToolbar_NewConversation" xml:space="preserve"><value>New Conversation</value></data>
+  <data name="Layout_MainToolbar_Branch" xml:space="preserve"><value>Branch: {0}</value></data>
+  <data name="Layout_MainToolbar_PlanModeTooltip" xml:space="preserve"><value>Plan mode — analysis only, no code changes</value></data>
+  <data name="Layout_MainToolbar_EffortLevelTooltip" xml:space="preserve"><value>Effort level: {0}</value></data>
+  <data name="Layout_MainToolbar_SelectConversation" xml:space="preserve"><value>Select a conversation</value></data>
+  <data name="Layout_MainToolbar_OpenFolder" xml:space="preserve"><value>Open Folder</value></data>
+  <data name="Layout_MainToolbar_OpenInIde" xml:space="preserve"><value>Open in {0}</value></data>
+  <data name="Layout_MainToolbar_SyncDisable" xml:space="preserve"><value>Disable local sync ({0}+Shift+S)</value></data>
+  <data name="Layout_MainToolbar_SyncBlockedByOther" xml:space="preserve"><value>Another session is syncing</value></data>
+  <data name="Layout_MainToolbar_SyncEnable" xml:space="preserve"><value>Sync to local directory ({0}+Shift+S)</value></data>
+  <data name="Layout_MainToolbar_SyncDisabled_Snackbar" xml:space="preserve"><value>Sync disabled</value></data>
+  <data name="Layout_MainToolbar_SyncSuccess" xml:space="preserve"><value>Synced to local directory</value></data>
+  <data name="Layout_MainToolbar_SyncFailed" xml:space="preserve"><value>Sync failed — another session is syncing or session state is invalid</value></data>
+  <data name="Layout_MainToolbar_SyncError" xml:space="preserve"><value>Sync error: {0}</value></data>
+  <data name="Layout_MainToolbar_EffortLow" xml:space="preserve"><value>Low</value></data>
+  <data name="Layout_MainToolbar_EffortHigh" xml:space="preserve"><value>High</value></data>
+  <data name="Layout_AppClose_Title" xml:space="preserve"><value>Quit App</value></data>
+  <data name="Layout_AppClose_Message" xml:space="preserve"><value>There are active sessions. Quitting now will interrupt them. Are you sure?</value></data>
+  <data name="Layout_AppClose_Confirm" xml:space="preserve"><value>Quit</value></data>
+  <data name="Layout_Update_Available" xml:space="preserve"><value>Update Available</value></data>
+  <data name="Layout_Update_AvailableDesc" xml:space="preserve"><value>New version {0} is available.</value></data>
+  <data name="Layout_Update_NotificationTitle" xml:space="preserve"><value>Seoro Update</value></data>
+  <data name="Layout_Update_NotificationBody" xml:space="preserve"><value>New version {0} is available.</value></data>
+  <data name="Layout_Migration_Title" xml:space="preserve"><value>Cominomi Data Found</value></data>
+  <data name="Layout_Migration_Message" xml:space="preserve"><value>Existing Cominomi data was found ({0} items).
+Would you like to import it into Seoro?
+
+Importing will copy the data and delete the original Cominomi folder.</value></data>
+  <data name="Layout_Migration_Import" xml:space="preserve"><value>Import</value></data>
+  <data name="Layout_Migration_Later" xml:space="preserve"><value>Later</value></data>
+  <data name="Layout_Migration_Skip" xml:space="preserve"><value>Don't Import</value></data>
+  <data name="Layout_Migration_DoneTitle" xml:space="preserve"><value>Import Complete</value></data>
+  <data name="Layout_Migration_DoneRestart" xml:space="preserve"><value>Imported {0} items. The app will restart to apply changes.</value></data>
+  <data name="Layout_Migration_Summary" xml:space="preserve"><value>Import complete: {0} copied, {1} skipped</value></data>
+  <data name="Layout_Migration_SummaryFailed" xml:space="preserve"><value>, {0} failed</value></data>
+  <data name="Layout_Migration_FolderDeleteFailed" xml:space="preserve"><value> (Failed to delete Cominomi folder — please delete manually)</value></data>
+  <data name="Layout_Migration_DeleteFolderFailed" xml:space="preserve"><value>Failed to delete the Cominomi folder. Please delete it manually.</value></data>
+
+  <!-- Level Names -->
+  <data name="Level_1" xml:space="preserve"><value>Novice</value></data>
+  <data name="Level_2" xml:space="preserve"><value>Explorer</value></data>
+  <data name="Level_3" xml:space="preserve"><value>Architect</value></data>
+  <data name="Level_4" xml:space="preserve"><value>Designer</value></data>
+  <data name="Level_5" xml:space="preserve"><value>Expert</value></data>
+  <data name="Level_6" xml:space="preserve"><value>Skilled</value></data>
+  <data name="Level_7" xml:space="preserve"><value>Master</value></data>
+  <data name="Level_8" xml:space="preserve"><value>Maestro</value></data>
+  <data name="Level_9" xml:space="preserve"><value>Sage</value></data>
+  <data name="Level_10" xml:space="preserve"><value>Transcendent</value></data>
+  <data name="Level_11" xml:space="preserve"><value>Legend</value></data>
+  <data name="Level_12" xml:space="preserve"><value>Myth</value></data>
+  <data name="Level_13" xml:space="preserve"><value>Immortal</value></data>
+  <data name="Level_14" xml:space="preserve"><value>Primordial</value></data>
+  <data name="Level_15" xml:space="preserve"><value>Creator</value></data>
+
+  <!-- Gamification Config Items -->
+  <data name="Gamification_Config_Model" xml:space="preserve"><value>Model</value></data>
+  <data name="Gamification_Config_EffortLevel" xml:space="preserve"><value>Effort Level</value></data>
+  <data name="Gamification_Config_DefaultMode" xml:space="preserve"><value>Default Mode</value></data>
+  <data name="Gamification_Config_Permissions" xml:space="preserve"><value>Permissions</value></data>
+  <data name="Gamification_Config_Hooks" xml:space="preserve"><value>Hooks</value></data>
+  <data name="Gamification_Config_McpServers" xml:space="preserve"><value>MCP Servers</value></data>
+
+  <!-- Dashboard UI -->
+  <data name="Dashboard_Title" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Dashboard_RefreshTooltip" xml:space="preserve"><value>Refresh Stats</value></data>
+  <data name="Dashboard_NextLevel" xml:space="preserve"><value>Next: {0}</value></data>
+  <data name="Dashboard_Stat_Projects" xml:space="preserve"><value>{0} projects</value></data>
+  <data name="Dashboard_Stat_Achievements" xml:space="preserve"><value>{0}/{1} achievements</value></data>
+  <data name="Dashboard_Stat_StreakDays" xml:space="preserve"><value>{0}-day streak</value></data>
+  <data name="Dashboard_ConfigCompleteness" xml:space="preserve"><value>Config Completeness</value></data>
+
+  <!-- Achievement Grid -->
+  <data name="Dashboard_Achievement_Title" xml:space="preserve"><value>Achievements</value></data>
+  <data name="Dashboard_Achievement_All" xml:space="preserve"><value>All</value></data>
+  <data name="Dashboard_Achievement_Rarity_Common" xml:space="preserve"><value>Common</value></data>
+  <data name="Dashboard_Achievement_Rarity_Rare" xml:space="preserve"><value>Rare</value></data>
+  <data name="Dashboard_Achievement_Rarity_Epic" xml:space="preserve"><value>Epic</value></data>
+  <data name="Dashboard_Achievement_Rarity_Legendary" xml:space="preserve"><value>Legendary</value></data>
+  <data name="Dashboard_Achievement_Category_Config" xml:space="preserve"><value>Config</value></data>
+  <data name="Dashboard_Achievement_Category_Usage" xml:space="preserve"><value>Usage</value></data>
+  <data name="Dashboard_Achievement_Category_Streak" xml:space="preserve"><value>Streak</value></data>
+  <data name="Dashboard_Achievement_Category_Mastery" xml:space="preserve"><value>Mastery</value></data>
+  <data name="Dashboard_Achievement_Category_Explorer" xml:space="preserve"><value>Explorer</value></data>
+  <data name="Dashboard_Achievement_Category_Efficiency" xml:space="preserve"><value>Efficiency</value></data>
+  <data name="Dashboard_Achievement_Category_Time" xml:space="preserve"><value>Time</value></data>
+  <data name="Dashboard_Achievement_Category_Economy" xml:space="preserve"><value>Economy</value></data>
+  <data name="Dashboard_Achievement_Category_Pattern" xml:space="preserve"><value>Pattern</value></data>
+
+  <!-- Activity Heatmap -->
+  <data name="Dashboard_Heatmap_Title" xml:space="preserve"><value>Activity</value></data>
+  <data name="Dashboard_Heatmap_Tooltip" xml:space="preserve"><value>{0} messages · {1} sessions · {2} tools</value></data>
+  <data name="Dashboard_Heatmap_Less" xml:space="preserve"><value>Less</value></data>
+  <data name="Dashboard_Heatmap_More" xml:space="preserve"><value>More</value></data>
+  <data name="Dashboard_Heatmap_DaysTracked" xml:space="preserve"><value>{0} days tracked</value></data>
+  <data name="Dashboard_Heatmap_DateFormat" xml:space="preserve"><value>dddd, MMMM d, yyyy</value></data>
+
+  <!-- Cost Card -->
+  <data name="Dashboard_Cost_Title" xml:space="preserve"><value>Cost Overview</value></data>
+  <data name="Dashboard_Cost_Today" xml:space="preserve"><value>Today</value></data>
+  <data name="Dashboard_Cost_ThisMonth" xml:space="preserve"><value>This Month</value></data>
+  <data name="Dashboard_Cost_Projection" xml:space="preserve"><value>Projected</value></data>
+  <data name="Dashboard_Cost_PerMonth" xml:space="preserve"><value>/mo</value></data>
+  <data name="Dashboard_Cost_ViewAnalytics" xml:space="preserve"><value>View Full Analytics →</value></data>
+
+  <!-- Session Monitor -->
+  <data name="Dashboard_Session_Title" xml:space="preserve"><value>Recent Sessions</value></data>
+  <data name="Dashboard_Session_CostTooltip" xml:space="preserve"><value>Estimated cost (based on entry count)</value></data>
+  <data name="Dashboard_Session_ViewAll" xml:space="preserve"><value>View All Sessions →</value></data>
+
+  <!-- Stats Overview -->
+  <data name="Dashboard_Stats_Sessions" xml:space="preserve"><value>Sessions</value></data>
+  <data name="Dashboard_Stats_Messages" xml:space="preserve"><value>Messages</value></data>
+  <data name="Dashboard_Stats_ToolCalls" xml:space="preserve"><value>Tool Calls</value></data>
+  <data name="Dashboard_Stats_ActiveDays" xml:space="preserve"><value>Active Days</value></data>
+
+  <!-- Streak Card -->
+  <data name="Dashboard_Streak_Title" xml:space="preserve"><value>Streak</value></data>
+  <data name="Dashboard_Streak_Unit" xml:space="preserve"><value>days</value></data>
+  <data name="Dashboard_Streak_Longest" xml:space="preserve"><value>Longest: {0} days</value></data>
+  <data name="Dashboard_Streak_LastActive" xml:space="preserve"><value>Last Active:</value></data>
+
+  <!-- Achievement Names and Descriptions -->
+  <data name="Achievement_cfg_configured_Name" xml:space="preserve"><value>Setup Complete</value></data>
+  <data name="Achievement_cfg_configured_Desc" xml:space="preserve"><value>Complete basic settings (model/effort)</value></data>
+  <data name="Achievement_cfg_thinking_Name" xml:space="preserve"><value>Deep Thinker</value></data>
+  <data name="Achievement_cfg_thinking_Desc" xml:space="preserve"><value>Enable extended thinking mode</value></data>
+  <data name="Achievement_cfg_memory_Name" xml:space="preserve"><value>Memory Palace</value></data>
+  <data name="Achievement_cfg_memory_Desc" xml:space="preserve"><value>Enable automatic memory</value></data>
+  <data name="Achievement_cfg_mode_Name" xml:space="preserve"><value>My Style</value></data>
+  <data name="Achievement_cfg_mode_Desc" xml:space="preserve"><value>Set default mode</value></data>
+  <data name="Achievement_cfg_hooks_Name" xml:space="preserve"><value>Hook Master</value></data>
+  <data name="Achievement_cfg_hooks_Desc" xml:space="preserve"><value>Register 5+ hook events</value></data>
+  <data name="Achievement_cfg_hooks10_Name" xml:space="preserve"><value>Automation Empire</value></data>
+  <data name="Achievement_cfg_hooks10_Desc" xml:space="preserve"><value>Register 10+ hooks</value></data>
+  <data name="Achievement_cfg_hooks20_Name" xml:space="preserve"><value>God of Automation</value></data>
+  <data name="Achievement_cfg_hooks20_Desc" xml:space="preserve"><value>Register 20+ hooks</value></data>
+  <data name="Achievement_cfg_mcp_Name" xml:space="preserve"><value>First Connection</value></data>
+  <data name="Achievement_cfg_mcp_Desc" xml:space="preserve"><value>Connect 1 MCP server</value></data>
+  <data name="Achievement_cfg_mcp_network_Name" xml:space="preserve"><value>Network Builder</value></data>
+  <data name="Achievement_cfg_mcp_network_Desc" xml:space="preserve"><value>Connect 3+ MCP servers</value></data>
+  <data name="Achievement_cfg_mcp_kingdom_Name" xml:space="preserve"><value>MCP Kingdom</value></data>
+  <data name="Achievement_cfg_mcp_kingdom_Desc" xml:space="preserve"><value>Connect 5+ MCP servers</value></data>
+  <data name="Achievement_cfg_mcp10_Name" xml:space="preserve"><value>MCP Empire</value></data>
+  <data name="Achievement_cfg_mcp10_Desc" xml:space="preserve"><value>Connect 10+ MCP servers</value></data>
+  <data name="Achievement_cfg_permissions_Name" xml:space="preserve"><value>Gatekeeper</value></data>
+  <data name="Achievement_cfg_permissions_Desc" xml:space="preserve"><value>Set permission rules</value></data>
+  <data name="Achievement_cfg_env_Name" xml:space="preserve"><value>Environment Setter</value></data>
+  <data name="Achievement_cfg_env_Desc" xml:space="preserve"><value>Configure environment variables</value></data>
+  <data name="Achievement_cfg_complete_Name" xml:space="preserve"><value>Full Setup</value></data>
+  <data name="Achievement_cfg_complete_Desc" xml:space="preserve"><value>Reach 100% configuration completeness</value></data>
+  <data name="Achievement_use_first_Name" xml:space="preserve"><value>First Conversation</value></data>
+  <data name="Achievement_use_first_Desc" xml:space="preserve"><value>Send your first message</value></data>
+  <data name="Achievement_use_100_Name" xml:space="preserve"><value>First Steps</value></data>
+  <data name="Achievement_use_100_Desc" xml:space="preserve"><value>Reach 100 messages</value></data>
+  <data name="Achievement_use_500_Name" xml:space="preserve"><value>Conversation Wave</value></data>
+  <data name="Achievement_use_500_Desc" xml:space="preserve"><value>Reach 500 messages</value></data>
+  <data name="Achievement_use_1k_Name" xml:space="preserve"><value>Chatterbox</value></data>
+  <data name="Achievement_use_1k_Desc" xml:space="preserve"><value>Reach 1,000 messages</value></data>
+  <data name="Achievement_use_5k_Name" xml:space="preserve"><value>Talk Show Host</value></data>
+  <data name="Achievement_use_5k_Desc" xml:space="preserve"><value>Reach 5,000 messages</value></data>
+  <data name="Achievement_use_10k_Name" xml:space="preserve"><value>Power User</value></data>
+  <data name="Achievement_use_10k_Desc" xml:space="preserve"><value>Reach 10,000 messages</value></data>
+  <data name="Achievement_use_50k_Name" xml:space="preserve"><value>Digital Novelist</value></data>
+  <data name="Achievement_use_50k_Desc" xml:space="preserve"><value>Reach 50,000 messages</value></data>
+  <data name="Achievement_use_100k_Name" xml:space="preserve"><value>Unstoppable</value></data>
+  <data name="Achievement_use_100k_Desc" xml:space="preserve"><value>Reach 100,000 messages</value></data>
+  <data name="Achievement_use_sessions_10_Name" xml:space="preserve"><value>Session Beginner</value></data>
+  <data name="Achievement_use_sessions_10_Desc" xml:space="preserve"><value>Reach 10 sessions</value></data>
+  <data name="Achievement_use_sessions_50_Name" xml:space="preserve"><value>Session Collector</value></data>
+  <data name="Achievement_use_sessions_50_Desc" xml:space="preserve"><value>Reach 50 sessions</value></data>
+  <data name="Achievement_use_sessions_100_Name" xml:space="preserve"><value>Veteran</value></data>
+  <data name="Achievement_use_sessions_100_Desc" xml:space="preserve"><value>Reach 100 sessions</value></data>
+  <data name="Achievement_use_sessions_200_Name" xml:space="preserve"><value>Session Expert</value></data>
+  <data name="Achievement_use_sessions_200_Desc" xml:space="preserve"><value>Reach 200 sessions</value></data>
+  <data name="Achievement_use_sessions_500_Name" xml:space="preserve"><value>Session Lord</value></data>
+  <data name="Achievement_use_sessions_500_Desc" xml:space="preserve"><value>Reach 500 sessions</value></data>
+  <data name="Achievement_use_sessions_1k_Name" xml:space="preserve"><value>Session Emperor</value></data>
+  <data name="Achievement_use_sessions_1k_Desc" xml:space="preserve"><value>Reach 1,000 sessions</value></data>
+  <data name="Achievement_use_tools_100_Name" xml:space="preserve"><value>First Tool Steps</value></data>
+  <data name="Achievement_use_tools_100_Desc" xml:space="preserve"><value>Reach 100 tool calls</value></data>
+  <data name="Achievement_use_tools_1k_Name" xml:space="preserve"><value>Tool Apprentice</value></data>
+  <data name="Achievement_use_tools_1k_Desc" xml:space="preserve"><value>Reach 1,000 tool calls</value></data>
+  <data name="Achievement_use_tools_5k_Name" xml:space="preserve"><value>Tool Craftsman</value></data>
+  <data name="Achievement_use_tools_5k_Desc" xml:space="preserve"><value>Reach 5,000 tool calls</value></data>
+  <data name="Achievement_use_tools_10k_Name" xml:space="preserve"><value>Tool Master</value></data>
+  <data name="Achievement_use_tools_10k_Desc" xml:space="preserve"><value>Reach 10,000 tool calls</value></data>
+  <data name="Achievement_use_tools_50k_Name" xml:space="preserve"><value>Tool Maestro</value></data>
+  <data name="Achievement_use_tools_50k_Desc" xml:space="preserve"><value>Reach 50,000 tool calls</value></data>
+  <data name="Achievement_use_tools_100k_Name" xml:space="preserve"><value>God of Tools</value></data>
+  <data name="Achievement_use_tools_100k_Desc" xml:space="preserve"><value>Reach 100,000 tool calls</value></data>
+  <data name="Achievement_streak_3_Name" xml:space="preserve"><value>Hat Trick</value></data>
+  <data name="Achievement_streak_3_Desc" xml:space="preserve"><value>3 consecutive days</value></data>
+  <data name="Achievement_streak_5_Name" xml:space="preserve"><value>Five Days</value></data>
+  <data name="Achievement_streak_5_Desc" xml:space="preserve"><value>5 consecutive days</value></data>
+  <data name="Achievement_streak_7_Name" xml:space="preserve"><value>Weekly Warrior</value></data>
+  <data name="Achievement_streak_7_Desc" xml:space="preserve"><value>7 consecutive days</value></data>
+  <data name="Achievement_streak_14_Name" xml:space="preserve"><value>Two-Week Strength</value></data>
+  <data name="Achievement_streak_14_Desc" xml:space="preserve"><value>14 consecutive days</value></data>
+  <data name="Achievement_streak_21_Name" xml:space="preserve"><value>Habit Formed</value></data>
+  <data name="Achievement_streak_21_Desc" xml:space="preserve"><value>21 consecutive days</value></data>
+  <data name="Achievement_streak_30_Name" xml:space="preserve"><value>Monthly Master</value></data>
+  <data name="Achievement_streak_30_Desc" xml:space="preserve"><value>30 consecutive days</value></data>
+  <data name="Achievement_streak_60_Name" xml:space="preserve"><value>Iron Person</value></data>
+  <data name="Achievement_streak_60_Desc" xml:space="preserve"><value>60 consecutive days</value></data>
+  <data name="Achievement_streak_90_Name" xml:space="preserve"><value>Quarterly Champion</value></data>
+  <data name="Achievement_streak_90_Desc" xml:space="preserve"><value>90 consecutive days</value></data>
+  <data name="Achievement_streak_180_Name" xml:space="preserve"><value>Half-Year Willpower</value></data>
+  <data name="Achievement_streak_180_Desc" xml:space="preserve"><value>180 consecutive days</value></data>
+  <data name="Achievement_streak_365_Name" xml:space="preserve"><value>365-Day Legend</value></data>
+  <data name="Achievement_streak_365_Desc" xml:space="preserve"><value>1 year consecutive</value></data>
+  <data name="Achievement_mastery_3d_Name" xml:space="preserve"><value>Good Start</value></data>
+  <data name="Achievement_mastery_3d_Desc" xml:space="preserve"><value>3 days active</value></data>
+  <data name="Achievement_mastery_10d_Name" xml:space="preserve"><value>Enthusiast</value></data>
+  <data name="Achievement_mastery_10d_Desc" xml:space="preserve"><value>10 days active</value></data>
+  <data name="Achievement_mastery_30d_Name" xml:space="preserve"><value>Devoted</value></data>
+  <data name="Achievement_mastery_30d_Desc" xml:space="preserve"><value>30 days active</value></data>
+  <data name="Achievement_mastery_50d_Name" xml:space="preserve"><value>Halfway There</value></data>
+  <data name="Achievement_mastery_50d_Desc" xml:space="preserve"><value>50 days active</value></data>
+  <data name="Achievement_mastery_100d_Name" xml:space="preserve"><value>Century</value></data>
+  <data name="Achievement_mastery_100d_Desc" xml:space="preserve"><value>100 days active</value></data>
+  <data name="Achievement_mastery_200d_Name" xml:space="preserve"><value>200-Day Journey</value></data>
+  <data name="Achievement_mastery_200d_Desc" xml:space="preserve"><value>200 days active</value></data>
+  <data name="Achievement_mastery_365d_Name" xml:space="preserve"><value>Year Journey</value></data>
+  <data name="Achievement_mastery_365d_Desc" xml:space="preserve"><value>365 days active</value></data>
+  <data name="Achievement_mastery_500d_Name" xml:space="preserve"><value>500-Day Legend</value></data>
+  <data name="Achievement_mastery_500d_Desc" xml:space="preserve"><value>500 days active</value></data>
+  <data name="Achievement_mastery_hook_Name" xml:space="preserve"><value>Automation Artisan</value></data>
+  <data name="Achievement_mastery_hook_Desc" xml:space="preserve"><value>Register your first hook</value></data>
+  <data name="Achievement_mastery_hooks3_Name" xml:space="preserve"><value>Automation Intermediate</value></data>
+  <data name="Achievement_mastery_hooks3_Desc" xml:space="preserve"><value>Register 3+ hooks</value></data>
+  <data name="Achievement_exp_1proj_Name" xml:space="preserve"><value>First Project</value></data>
+  <data name="Achievement_exp_1proj_Desc" xml:space="preserve"><value>Work on 1 project</value></data>
+  <data name="Achievement_exp_3proj_Name" xml:space="preserve"><value>Explorer</value></data>
+  <data name="Achievement_exp_3proj_Desc" xml:space="preserve"><value>Work on 3 projects</value></data>
+  <data name="Achievement_exp_5proj_Name" xml:space="preserve"><value>Multitasker</value></data>
+  <data name="Achievement_exp_5proj_Desc" xml:space="preserve"><value>Work on 5 projects</value></data>
+  <data name="Achievement_exp_7proj_Name" xml:space="preserve"><value>Active Explorer</value></data>
+  <data name="Achievement_exp_7proj_Desc" xml:space="preserve"><value>Work on 7 projects</value></data>
+  <data name="Achievement_exp_10proj_Name" xml:space="preserve"><value>All-Around Developer</value></data>
+  <data name="Achievement_exp_10proj_Desc" xml:space="preserve"><value>Work on 10 projects</value></data>
+  <data name="Achievement_exp_15proj_Name" xml:space="preserve"><value>Project Collector</value></data>
+  <data name="Achievement_exp_15proj_Desc" xml:space="preserve"><value>Work on 15 projects</value></data>
+  <data name="Achievement_exp_20proj_Name" xml:space="preserve"><value>World Conqueror</value></data>
+  <data name="Achievement_exp_20proj_Desc" xml:space="preserve"><value>Work on 20 projects</value></data>
+  <data name="Achievement_exp_50proj_Name" xml:space="preserve"><value>Project Emperor</value></data>
+  <data name="Achievement_exp_50proj_Desc" xml:space="preserve"><value>Work on 50 projects</value></data>
+  <data name="Achievement_eff_cache30_Name" xml:space="preserve"><value>Cache Start</value></data>
+  <data name="Achievement_eff_cache30_Desc" xml:space="preserve"><value>Cache hit rate 30%+</value></data>
+  <data name="Achievement_eff_cache50_Name" xml:space="preserve"><value>Cache Beginner</value></data>
+  <data name="Achievement_eff_cache50_Desc" xml:space="preserve"><value>Cache hit rate 50%+</value></data>
+  <data name="Achievement_eff_cache70_Name" xml:space="preserve"><value>Cache Pro</value></data>
+  <data name="Achievement_eff_cache70_Desc" xml:space="preserve"><value>Cache hit rate 70%+</value></data>
+  <data name="Achievement_eff_cache80_Name" xml:space="preserve"><value>Optimization Master</value></data>
+  <data name="Achievement_eff_cache80_Desc" xml:space="preserve"><value>Cache hit rate 80%+</value></data>
+  <data name="Achievement_eff_cache90_Name" xml:space="preserve"><value>Cache Master</value></data>
+  <data name="Achievement_eff_cache90_Desc" xml:space="preserve"><value>Cache hit rate 90%+</value></data>
+  <data name="Achievement_eff_savings_Name" xml:space="preserve"><value>Saver</value></data>
+  <data name="Achievement_eff_savings_Desc" xml:space="preserve"><value>Save $1+ via cache</value></data>
+  <data name="Achievement_eff_save5_Name" xml:space="preserve"><value>Savings Master</value></data>
+  <data name="Achievement_eff_save5_Desc" xml:space="preserve"><value>Save $5+ via cache</value></data>
+  <data name="Achievement_eff_save10_Name" xml:space="preserve"><value>Savings Expert</value></data>
+  <data name="Achievement_eff_save10_Desc" xml:space="preserve"><value>Save $10+ via cache</value></data>
+  <data name="Achievement_eff_save50_Name" xml:space="preserve"><value>Savings Champion</value></data>
+  <data name="Achievement_eff_save50_Desc" xml:space="preserve"><value>Save $50+ via cache</value></data>
+  <data name="Achievement_time_sprint_Name" xml:space="preserve"><value>Sprint</value></data>
+  <data name="Achievement_time_sprint_Desc" xml:space="preserve"><value>Single session 30+ minutes</value></data>
+  <data name="Achievement_time_owl_Name" xml:space="preserve"><value>Night Owl</value></data>
+  <data name="Achievement_time_owl_Desc" xml:space="preserve"><value>50+ late-night sessions (22-04)</value></data>
+  <data name="Achievement_time_morning_Name" xml:space="preserve"><value>Early Bird</value></data>
+  <data name="Achievement_time_morning_Desc" xml:space="preserve"><value>50+ early-morning sessions (05-09)</value></data>
+  <data name="Achievement_time_marathon_Name" xml:space="preserve"><value>Marathon</value></data>
+  <data name="Achievement_time_marathon_Desc" xml:space="preserve"><value>Single session 2+ hours</value></data>
+  <data name="Achievement_time_half_Name" xml:space="preserve"><value>Half Marathon</value></data>
+  <data name="Achievement_time_half_Desc" xml:space="preserve"><value>Single session 4+ hours</value></data>
+  <data name="Achievement_time_ultramarathon_Name" xml:space="preserve"><value>Ultramarathon</value></data>
+  <data name="Achievement_time_ultramarathon_Desc" xml:space="preserve"><value>Single session 8+ hours</value></data>
+  <data name="Achievement_time_allnighter_Name" xml:space="preserve"><value>All-Nighter</value></data>
+  <data name="Achievement_time_allnighter_Desc" xml:space="preserve"><value>100+ late-night sessions</value></data>
+  <data name="Achievement_time_owl200_Name" xml:space="preserve"><value>Night Owl Master</value></data>
+  <data name="Achievement_time_owl200_Desc" xml:space="preserve"><value>200+ late-night sessions</value></data>
+  <data name="Achievement_time_morning200_Name" xml:space="preserve"><value>Dawn Warrior</value></data>
+  <data name="Achievement_time_morning200_Desc" xml:space="preserve"><value>200+ early-morning sessions</value></data>
+  <data name="Achievement_time_owl500_Name" xml:space="preserve"><value>King of Night</value></data>
+  <data name="Achievement_time_owl500_Desc" xml:space="preserve"><value>500+ late-night sessions</value></data>
+  <data name="Achievement_time_morning500_Name" xml:space="preserve"><value>King of Dawn</value></data>
+  <data name="Achievement_time_morning500_Desc" xml:space="preserve"><value>500+ early-morning sessions</value></data>
+  <data name="Achievement_time_ironman_Name" xml:space="preserve"><value>Iron Man</value></data>
+  <data name="Achievement_time_ironman_Desc" xml:space="preserve"><value>Single session 24+ hours</value></data>
+  <data name="Achievement_eco_token_1m_Name" xml:space="preserve"><value>Million Tokens</value></data>
+  <data name="Achievement_eco_token_1m_Desc" xml:space="preserve"><value>Use 1M total tokens</value></data>
+  <data name="Achievement_eco_token_10m_Name" xml:space="preserve"><value>Ten Million Tokens</value></data>
+  <data name="Achievement_eco_token_10m_Desc" xml:space="preserve"><value>Use 10M total tokens</value></data>
+  <data name="Achievement_eco_token_100m_Name" xml:space="preserve"><value>Hundred Million Tokens</value></data>
+  <data name="Achievement_eco_token_100m_Desc" xml:space="preserve"><value>Use 100M total tokens</value></data>
+  <data name="Achievement_eco_token_1b_Name" xml:space="preserve"><value>Billion Tokens</value></data>
+  <data name="Achievement_eco_token_1b_Desc" xml:space="preserve"><value>Use 1B total tokens</value></data>
+  <data name="Achievement_eco_cost_1_Name" xml:space="preserve"><value>First Investment</value></data>
+  <data name="Achievement_eco_cost_1_Desc" xml:space="preserve"><value>Reach $1 total cost</value></data>
+  <data name="Achievement_eco_cost_10_Name" xml:space="preserve"><value>Patron</value></data>
+  <data name="Achievement_eco_cost_10_Desc" xml:space="preserve"><value>Reach $10 total cost</value></data>
+  <data name="Achievement_eco_cost_100_Name" xml:space="preserve"><value>Big Spender</value></data>
+  <data name="Achievement_eco_cost_100_Desc" xml:space="preserve"><value>Reach $100 total cost</value></data>
+  <data name="Achievement_eco_cost_500_Name" xml:space="preserve"><value>High Investor</value></data>
+  <data name="Achievement_eco_cost_500_Desc" xml:space="preserve"><value>Reach $500 total cost</value></data>
+  <data name="Achievement_eco_cost_1k_Name" xml:space="preserve"><value>Thousand Dollar Club</value></data>
+  <data name="Achievement_eco_cost_1k_Desc" xml:space="preserve"><value>Reach $1,000 total cost</value></data>
+  <data name="Achievement_eco_model_1_Name" xml:space="preserve"><value>First Model</value></data>
+  <data name="Achievement_eco_model_1_Desc" xml:space="preserve"><value>Use 1 model</value></data>
+  <data name="Achievement_eco_model_3_Name" xml:space="preserve"><value>Model Explorer</value></data>
+  <data name="Achievement_eco_model_3_Desc" xml:space="preserve"><value>Use 3+ models</value></data>
+  <data name="Achievement_eco_model_5_Name" xml:space="preserve"><value>Model Collector</value></data>
+  <data name="Achievement_eco_model_5_Desc" xml:space="preserve"><value>Use 5+ models</value></data>
+  <data name="Achievement_pat_weekend20_Name" xml:space="preserve"><value>Weekend Warrior</value></data>
+  <data name="Achievement_pat_weekend20_Desc" xml:space="preserve"><value>20+ weekend days active</value></data>
+  <data name="Achievement_pat_weekend50_Name" xml:space="preserve"><value>Weekend Champion</value></data>
+  <data name="Achievement_pat_weekend50_Desc" xml:space="preserve"><value>50+ weekend days active</value></data>
+  <data name="Achievement_pat_allhours_Name" xml:space="preserve"><value>24-Hour Conqueror</value></data>
+  <data name="Achievement_pat_allhours_Desc" xml:space="preserve"><value>Active in all 24 hours</value></data>
+  <data name="Achievement_pat_burst50_Name" xml:space="preserve"><value>Focus Burst</value></data>
+  <data name="Achievement_pat_burst50_Desc" xml:space="preserve"><value>50+ messages in a day</value></data>
+  <data name="Achievement_pat_burst100_Name" xml:space="preserve"><value>Hyper-Focus</value></data>
+  <data name="Achievement_pat_burst100_Desc" xml:space="preserve"><value>100+ messages in a day</value></data>
+  <data name="Achievement_pat_burst200_Name" xml:space="preserve"><value>Storm Coding</value></data>
+  <data name="Achievement_pat_burst200_Desc" xml:space="preserve"><value>200+ messages in a day</value></data>
+  <data name="Achievement_pat_burst500_Name" xml:space="preserve"><value>Legendary Day</value></data>
+  <data name="Achievement_pat_burst500_Desc" xml:space="preserve"><value>500+ messages in a day</value></data>
+  <data name="Achievement_pat_lunch_Name" xml:space="preserve"><value>Lunch Coder</value></data>
+  <data name="Achievement_pat_lunch_Desc" xml:space="preserve"><value>Active during lunch (11-13)</value></data>
+  <data name="Achievement_pat_diverse12_Name" xml:space="preserve"><value>Time Diversity</value></data>
+  <data name="Achievement_pat_diverse12_Desc" xml:space="preserve"><value>Active in 12+ time slots</value></data>
+  <data name="Achievement_pat_nocturn_Name" xml:space="preserve"><value>Night &amp; Dawn Warrior</value></data>
+  <data name="Achievement_pat_nocturn_Desc" xml:space="preserve"><value>100+ both night and morning sessions</value></data>
+
+  <!-- Phase 8: MCP, Hooks, Rules, Instructions, Memory, Plugins, Accounts, Sessions, Notifications, Onboarding, WhatsNew, Setup, TemplateGallery, ToolCallCard -->
+  <data name="Accounts_AddHint" xml:space="preserve"><value>Add new accounts to manage multiple accounts.</value></data>
+  <data name="Accounts_AddNew" xml:space="preserve"><value>Add New Account</value></data>
+  <data name="Accounts_Card_Active" xml:space="preserve"><value>Active</value></data>
+  <data name="Accounts_Card_AllModels" xml:space="preserve"><value>All Models Available</value></data>
+  <data name="Accounts_Card_CurrentSession" xml:space="preserve"><value>Current Session</value></data>
+  <data name="Accounts_Card_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Accounts_Card_Deleted" xml:space="preserve"><value>{0} has been deleted.</value></data>
+  <data name="Accounts_Card_EditName" xml:space="preserve"><value>Edit Name</value></data>
+  <data name="Accounts_Card_NoBackup" xml:space="preserve"><value>No Backup</value></data>
+  <data name="Accounts_Card_RefreshToken" xml:space="preserve"><value>Refresh Token</value></data>
+  <data name="Accounts_Card_RefreshUsage" xml:space="preserve"><value>Refresh Usage</value></data>
+  <data name="Accounts_Card_SonnetOnly" xml:space="preserve"><value>Sonnet Only</value></data>
+  <data name="Accounts_Card_Switch" xml:space="preserve"><value>Switch</value></data>
+  <data name="Accounts_Card_SwitchFailed" xml:space="preserve"><value>Failed to switch account.</value></data>
+  <data name="Accounts_Card_SwitchSuccess" xml:space="preserve"><value>Switched to {0}.</value></data>
+  <data name="Accounts_Card_TokenRefreshFailed" xml:space="preserve"><value>Failed to refresh token.</value></data>
+  <data name="Accounts_Card_TokenRefreshed" xml:space="preserve"><value>Token has been refreshed.</value></data>
+  <data name="Accounts_Card_UsageError" xml:space="preserve"><value>Error loading usage.</value></data>
+  <data name="Accounts_Card_UsageLoadError" xml:space="preserve"><value>Failed to load usage: {0}</value></data>
+  <data name="Accounts_Card_UsageNone" xml:space="preserve"><value>No usage information.</value></data>
+  <data name="Accounts_Desc" xml:space="preserve"><value>Manage Claude accounts</value></data>
+  <data name="Accounts_Dialog_Desc" xml:space="preserve"><value>Register your currently logged in Claude account.</value></data>
+  <data name="Accounts_Dialog_Detected" xml:space="preserve"><value>Detected Account</value></data>
+  <data name="Accounts_Dialog_EmailNotDetected" xml:space="preserve"><value>Email not detected.</value></data>
+  <data name="Accounts_Dialog_Failed" xml:space="preserve"><value>Failed to register account: {0}</value></data>
+  <data name="Accounts_Dialog_LoggedIn" xml:space="preserve"><value>Logged In</value></data>
+  <data name="Accounts_Dialog_ProfileName" xml:space="preserve"><value>Profile Name</value></data>
+  <data name="Accounts_Dialog_ProfileNameHint" xml:space="preserve"><value>A name to distinguish this account.</value></data>
+  <data name="Accounts_Dialog_ProfileNamePlaceholder" xml:space="preserve"><value>Enter a profile name.</value></data>
+  <data name="Accounts_Dialog_Register" xml:space="preserve"><value>Register</value></data>
+  <data name="Accounts_Dialog_Success" xml:space="preserve"><value>{0} has been registered.</value></data>
+  <data name="Accounts_Dialog_Title" xml:space="preserve"><value>Register Account</value></data>
+  <data name="Accounts_Empty" xml:space="preserve"><value>No registered accounts.</value></data>
+  <data name="Accounts_EmptyHint" xml:space="preserve"><value>Register the current account or add a new one.</value></data>
+  <data name="Accounts_RegisterCurrent" xml:space="preserve"><value>Register Current Account</value></data>
+  <data name="Accounts_SwitchBlocked" xml:space="preserve"><value>Cannot switch while active sessions exist.</value></data>
+  <data name="Accounts_Title" xml:space="preserve"><value>Accounts</value></data>
+  <data name="Common_EmptyContent" xml:space="preserve"><value>No content.</value></data>
+  <data name="Common_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Common_SaveFailed" xml:space="preserve"><value>Save failed: {0}</value></data>
+  <data name="Common_SwitchToEditor" xml:space="preserve"><value>Switch to Editor</value></data>
+  <data name="Common_SwitchToPreview" xml:space="preserve"><value>Switch to Preview</value></data>
+  <data name="Hooks_AddHook" xml:space="preserve"><value>Add Hook</value></data>
+  <data name="Hooks_AgentModelLabel" xml:space="preserve"><value>Model</value></data>
+  <data name="Hooks_AgentPromptLabel" xml:space="preserve"><value>Prompt</value></data>
+  <data name="Hooks_AsyncExecution" xml:space="preserve"><value>Async Execution</value></data>
+  <data name="Hooks_CommandLabel" xml:space="preserve"><value>Command</value></data>
+  <data name="Hooks_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Hooks_Deleted" xml:space="preserve"><value>Hook has been deleted.</value></data>
+  <data name="Hooks_Event" xml:space="preserve"><value>Event</value></data>
+  <data name="Hooks_HandlerType" xml:space="preserve"><value>Handler Type</value></data>
+  <data name="Hooks_HeadersLabel" xml:space="preserve"><value>Headers</value></data>
+  <data name="Hooks_ModelOptionalLabel" xml:space="preserve"><value>Model (Optional)</value></data>
+  <data name="Hooks_Page_Desc" xml:space="preserve"><value>Configure automated actions for session events</value></data>
+  <data name="Hooks_Page_Title" xml:space="preserve"><value>Hooks</value></data>
+  <data name="Hooks_PromptLabel" xml:space="preserve"><value>Prompt</value></data>
+  <data name="Hooks_Saved" xml:space="preserve"><value>Hook has been saved.</value></data>
+  <data name="Hooks_StatusMessageLabel" xml:space="preserve"><value>Status Message</value></data>
+  <data name="Hooks_TimeoutLabel" xml:space="preserve"><value>Timeout (seconds)</value></data>
+  <data name="Hooks_TypeAgent" xml:space="preserve"><value>Agent</value></data>
+  <data name="Hooks_TypeCommand" xml:space="preserve"><value>Command</value></data>
+  <data name="Hooks_TypeHttp" xml:space="preserve"><value>HTTP</value></data>
+  <data name="Hooks_TypePrompt" xml:space="preserve"><value>Prompt</value></data>
+  <data name="Hooks_UrlLabel" xml:space="preserve"><value>URL</value></data>
+  <data name="Instructions_NoFile" xml:space="preserve"><value>No instruction file.</value></data>
+  <data name="Instructions_Page_Desc" xml:space="preserve"><value>Manage project instructions for Claude</value></data>
+  <data name="Instructions_Page_Title" xml:space="preserve"><value>Instructions</value></data>
+  <data name="Instructions_ReferencedFiles" xml:space="preserve"><value>Referenced Files</value></data>
+  <data name="Instructions_RootClaude" xml:space="preserve"><value>Claude Root Instructions</value></data>
+  <data name="Instructions_SaveError" xml:space="preserve"><value>Failed to save instructions: {0}</value></data>
+  <data name="Instructions_Saved" xml:space="preserve"><value>Instructions have been saved.</value></data>
+  <data name="Mcp_Card_Command" xml:space="preserve"><value>Command</value></data>
+  <data name="Mcp_Card_Connected" xml:space="preserve"><value>Connected</value></data>
+  <data name="Mcp_Card_Disconnected" xml:space="preserve"><value>Disconnected</value></data>
+  <data name="Mcp_Card_Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Mcp_Card_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Mcp_Card_Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Mcp_Card_Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Mcp_Card_Type" xml:space="preserve"><value>Type</value></data>
+  <data name="Mcp_Card_Url" xml:space="preserve"><value>URL</value></data>
+  <data name="Mcp_Editor_CommandLabel" xml:space="preserve"><value>Command</value></data>
+  <data name="Mcp_Editor_EnvVarsLabel" xml:space="preserve"><value>Environment Variables</value></data>
+  <data name="Mcp_Editor_NewServer" xml:space="preserve"><value>New Server</value></data>
+  <data name="Mcp_Editor_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Mcp_Editor_Title" xml:space="preserve"><value>Edit Server</value></data>
+  <data name="Mcp_Editor_UrlLabel" xml:space="preserve"><value>URL</value></data>
+  <data name="Mcp_List_AddFirst" xml:space="preserve"><value>Add your first server.</value></data>
+  <data name="Mcp_List_NoServers" xml:space="preserve"><value>No servers configured.</value></data>
+  <data name="Mcp_Page_AddServer" xml:space="preserve"><value>Add Server</value></data>
+  <data name="Mcp_Page_Desc" xml:space="preserve"><value>Configure MCP servers for Claude CLI</value></data>
+  <data name="Mcp_Page_ImportFailed" xml:space="preserve"><value>Failed to import JSON: {0}</value></data>
+  <data name="Mcp_Page_ImportJson" xml:space="preserve"><value>Import JSON</value></data>
+  <data name="Mcp_Page_ImportSuccess" xml:space="preserve"><value>Successfully imported JSON.</value></data>
+  <data name="Mcp_Page_ServerAdded" xml:space="preserve"><value>{0} server has been added.</value></data>
+  <data name="Mcp_Page_ServerRemoved" xml:space="preserve"><value>{0} server has been removed.</value></data>
+  <data name="Mcp_Page_ServerUpdated" xml:space="preserve"><value>{0} server has been updated.</value></data>
+  <data name="Mcp_Page_Template" xml:space="preserve"><value>Template</value></data>
+  <data name="Mcp_Page_Title" xml:space="preserve"><value>MCP Servers</value></data>
+  <data name="Memory_All" xml:space="preserve"><value>All</value></data>
+  <data name="Memory_ContentLabel" xml:space="preserve"><value>Content</value></data>
+  <data name="Memory_CreatedModified" xml:space="preserve"><value>Created: {0}, Modified: {1}</value></data>
+  <data name="Memory_DeleteError" xml:space="preserve"><value>Failed to delete memory: {0}</value></data>
+  <data name="Memory_Deleted" xml:space="preserve"><value>Memory has been deleted.</value></data>
+  <data name="Memory_Desc" xml:space="preserve"><value>Manage project memory and context</value></data>
+  <data name="Memory_DescriptionLabel" xml:space="preserve"><value>Description</value></data>
+  <data name="Memory_Empty" xml:space="preserve"><value>No memory entries.</value></data>
+  <data name="Memory_NameLabel" xml:space="preserve"><value>Name</value></data>
+  <data name="Memory_SaveError" xml:space="preserve"><value>Failed to save memory: {0}</value></data>
+  <data name="Memory_Saved" xml:space="preserve"><value>Memory has been saved.</value></data>
+  <data name="Memory_SearchPlaceholder" xml:space="preserve"><value>Search memory...</value></data>
+  <data name="Memory_SelectHint" xml:space="preserve"><value>Select an entry.</value></data>
+  <data name="Memory_Title" xml:space="preserve"><value>Memory</value></data>
+  <data name="Memory_TypeFeedback" xml:space="preserve"><value>Feedback</value></data>
+  <data name="Memory_TypeLabel" xml:space="preserve"><value>Type</value></data>
+  <data name="Memory_TypeOther" xml:space="preserve"><value>Other</value></data>
+  <data name="Memory_TypeProject" xml:space="preserve"><value>Project</value></data>
+  <data name="Memory_TypeReference" xml:space="preserve"><value>Reference</value></data>
+  <data name="Memory_TypeUser" xml:space="preserve"><value>User Memory</value></data>
+  <data name="Notifications_BackToApp" xml:space="preserve"><value>Back to App</value></data>
+  <data name="Notifications_DeletedSession" xml:space="preserve"><value>Session has been deleted.</value></data>
+  <data name="Notifications_Empty" xml:space="preserve"><value>No notifications.</value></data>
+  <data name="Notifications_MarkAllRead" xml:space="preserve"><value>Mark All as Read</value></data>
+  <data name="Notifications_Title" xml:space="preserve"><value>Notifications</value></data>
+  <data name="Onboarding_Feature1" xml:space="preserve"><value>Session Management</value></data>
+  <data name="Onboarding_Feature2" xml:space="preserve"><value>Git Integration</value></data>
+  <data name="Onboarding_Feature3" xml:space="preserve"><value>Plugin Extensions</value></data>
+  <data name="Onboarding_Layout_Chat" xml:space="preserve"><value>Chat Area - Interact with Claude</value></data>
+  <data name="Onboarding_Layout_Desc" xml:space="preserve"><value>Learn about the key UI components.</value></data>
+  <data name="Onboarding_Layout_Panel" xml:space="preserve"><value>Panel - Files and Options</value></data>
+  <data name="Onboarding_Layout_Settings" xml:space="preserve"><value>Settings - App Configuration</value></data>
+  <data name="Onboarding_Layout_Sidebar" xml:space="preserve"><value>Sidebar - Sessions and Tools</value></data>
+  <data name="Onboarding_Layout_Title" xml:space="preserve"><value>UI Layout</value></data>
+  <data name="Onboarding_Next" xml:space="preserve"><value>Next</value></data>
+  <data name="Onboarding_Prev" xml:space="preserve"><value>Previous</value></data>
+  <data name="Onboarding_Session_Desc" xml:space="preserve"><value>Create a new Claude session.</value></data>
+  <data name="Onboarding_Session_Step1" xml:space="preserve"><value>Choose a session name.</value></data>
+  <data name="Onboarding_Session_Step2" xml:space="preserve"><value>Enter your prompt.</value></data>
+  <data name="Onboarding_Session_Step3" xml:space="preserve"><value>Submit and wait for a response.</value></data>
+  <data name="Onboarding_Session_Title" xml:space="preserve"><value>Start a Session</value></data>
+  <data name="Onboarding_Skip" xml:space="preserve"><value>Skip</value></data>
+  <data name="Onboarding_Start" xml:space="preserve"><value>Start</value></data>
+  <data name="Onboarding_Title" xml:space="preserve"><value>Guide</value></data>
+  <data name="Onboarding_Welcome_Desc" xml:space="preserve"><value>Your perfect tool for interacting with Claude</value></data>
+  <data name="Onboarding_Welcome_Title" xml:space="preserve"><value>Welcome to Seoro</value></data>
+  <data name="Onboarding_Workspace_Desc" xml:space="preserve"><value>Ready to get started?</value></data>
+  <data name="Onboarding_Workspace_Step1" xml:space="preserve"><value>Select a Git repository.</value></data>
+  <data name="Onboarding_Workspace_Step2" xml:space="preserve"><value>Configure basic settings.</value></data>
+  <data name="Onboarding_Workspace_Step3" xml:space="preserve"><value>Start your first session.</value></data>
+  <data name="Onboarding_Workspace_Title" xml:space="preserve"><value>Workspace Setup</value></data>
+  <data name="Plugins_Activated" xml:space="preserve"><value>Activated</value></data>
+  <data name="Plugins_AddFolderHint" xml:space="preserve"><value>Add a plugin folder.</value></data>
+  <data name="Plugins_Blocked" xml:space="preserve"><value>Blocked</value></data>
+  <data name="Plugins_Deactivated" xml:space="preserve"><value>Deactivated</value></data>
+  <data name="Plugins_Desc" xml:space="preserve"><value>Install and manage plugins</value></data>
+  <data name="Plugins_Install" xml:space="preserve"><value>Install</value></data>
+  <data name="Plugins_InstallFailed" xml:space="preserve"><value>Failed to install plugin: {0}</value></data>
+  <data name="Plugins_InstallSuccess" xml:space="preserve"><value>{0} has been installed.</value></data>
+  <data name="Plugins_Installing" xml:space="preserve"><value>Installing...</value></data>
+  <data name="Plugins_Inactive" xml:space="preserve"><value>Inactive</value></data>
+  <data name="Plugins_MarketplaceHint" xml:space="preserve"><value>Browse plugins in the marketplace.</value></data>
+  <data name="Plugins_NoMarketplace" xml:space="preserve"><value>Marketplace is not available.</value></data>
+  <data name="Plugins_NoneInstalled" xml:space="preserve"><value>No plugins installed.</value></data>
+  <data name="Plugins_NoneInstalledHint" xml:space="preserve"><value>Install plugins to extend functionality.</value></data>
+  <data name="Plugins_NoResults" xml:space="preserve"><value>No results found.</value></data>
+  <data name="Plugins_OpenDirFailed" xml:space="preserve"><value>Failed to open directory: {0}</value></data>
+  <data name="Plugins_OpenDirectory" xml:space="preserve"><value>Open Directory</value></data>
+  <data name="Plugins_RemoveFailed" xml:space="preserve"><value>Failed to remove plugin: {0}</value></data>
+  <data name="Plugins_RemoveSuccess" xml:space="preserve"><value>{0} has been removed.</value></data>
+  <data name="Plugins_SearchInstalled" xml:space="preserve"><value>Search installed plugins...</value></data>
+  <data name="Plugins_SearchMarketplace" xml:space="preserve"><value>Search marketplace...</value></data>
+  <data name="Plugins_StatusChecking" xml:space="preserve"><value>Checking...</value></data>
+  <data name="Plugins_StatusError" xml:space="preserve"><value>Error</value></data>
+  <data name="Plugins_StatusLoaded" xml:space="preserve"><value>Loaded</value></data>
+  <data name="Plugins_StatusNormal" xml:space="preserve"><value>Normal</value></data>
+  <data name="Plugins_TabInstalled" xml:space="preserve"><value>Installed</value></data>
+  <data name="Plugins_TabMarketplace" xml:space="preserve"><value>Marketplace</value></data>
+  <data name="Plugins_Title" xml:space="preserve"><value>Plugins</value></data>
+  <data name="Plugins_ToggleFailed" xml:space="preserve"><value>Failed to toggle plugin: {0}</value></data>
+  <data name="Plugins_ToggleSuccess" xml:space="preserve"><value>{0} has been {1}.</value></data>
+  <data name="Plugins_Uninstall" xml:space="preserve"><value>Uninstall</value></data>
+  <data name="Plugins_UninstallConfirm" xml:space="preserve"><value>Uninstall {0}?</value></data>
+  <data name="Plugins_UninstallTitle" xml:space="preserve"><value>Uninstall Plugin</value></data>
+  <data name="Plugins_Update" xml:space="preserve"><value>Update</value></data>
+  <data name="Plugins_UpdateFailed" xml:space="preserve"><value>Failed to update plugin: {0}</value></data>
+  <data name="Plugins_UpdateSuccess" xml:space="preserve"><value>{0} has been updated.</value></data>
+  <data name="Rules_DeleteConfirm" xml:space="preserve"><value>Delete {0}?</value></data>
+  <data name="Rules_DeleteError" xml:space="preserve"><value>Failed to delete rule: {0}</value></data>
+  <data name="Rules_DeleteTitle" xml:space="preserve"><value>Delete Rule</value></data>
+  <data name="Rules_Deleted" xml:space="preserve"><value>Rule has been deleted.</value></data>
+  <data name="Rules_Desc" xml:space="preserve"><value>Manage project rules and guidelines</value></data>
+  <data name="Rules_Empty" xml:space="preserve"><value>No rules.</value></data>
+  <data name="Rules_FileName" xml:space="preserve"><value>File Name</value></data>
+  <data name="Rules_Name" xml:space="preserve"><value>Rules</value></data>
+  <data name="Rules_New" xml:space="preserve"><value>New Rule</value></data>
+  <data name="Rules_SaveError" xml:space="preserve"><value>Failed to save rule: {0}</value></data>
+  <data name="Rules_Saved" xml:space="preserve"><value>Rule has been saved.</value></data>
+  <data name="Rules_SearchPlaceholder" xml:space="preserve"><value>Search rules...</value></data>
+  <data name="Rules_TemplateApplied" xml:space="preserve"><value>{0} template has been applied.</value></data>
+  <data name="Sessions_CountLabel" xml:space="preserve"><value>Sessions</value></data>
+  <data name="Sessions_Desc" xml:space="preserve"><value>Browse and replay sessions</value></data>
+  <data name="Sessions_Empty" xml:space="preserve"><value>No sessions.</value></data>
+  <data name="Sessions_Realtime" xml:space="preserve"><value>Real-time</value></data>
+  <data name="Sessions_Reset" xml:space="preserve"><value>Reset</value></data>
+  <data name="Sessions_Results" xml:space="preserve"><value>Search Results</value></data>
+  <data name="Sessions_Searching" xml:space="preserve"><value>Searching...</value></data>
+  <data name="Sessions_SearchPlaceholder" xml:space="preserve"><value>Search sessions...</value></data>
+  <data name="Sessions_SortBy" xml:space="preserve"><value>Sort By</value></data>
+  <data name="Sessions_Title" xml:space="preserve"><value>Session History</value></data>
+  <data name="Sessions_UsageAnalytics" xml:space="preserve"><value>Usage Analytics</value></data>
+  <data name="Setup_Desc" xml:space="preserve"><value>Configure Claude CLI</value></data>
+  <data name="Setup_HowToInstall" xml:space="preserve"><value>How to Install</value></data>
+  <data name="Setup_Installed" xml:space="preserve"><value>Installed</value></data>
+  <data name="Setup_Recheck" xml:space="preserve"><value>Recheck</value></data>
+  <data name="Setup_Skip" xml:space="preserve"><value>Skip</value></data>
+  <data name="Setup_Start" xml:space="preserve"><value>Start</value></data>
+  <data name="Setup_Title" xml:space="preserve"><value>Setup</value></data>
+  <data name="TemplateGallery_All" xml:space="preserve"><value>All</value></data>
+  <data name="TemplateGallery_Agent" xml:space="preserve"><value>Agents</value></data>
+  <data name="TemplateGallery_Hook" xml:space="preserve"><value>Hooks</value></data>
+  <data name="TemplateGallery_Mcp" xml:space="preserve"><value>MCP</value></data>
+  <data name="TemplateGallery_NoResults" xml:space="preserve"><value>No results found.</value></data>
+  <data name="TemplateGallery_Rules" xml:space="preserve"><value>Rules</value></data>
+  <data name="TemplateGallery_SearchPlaceholder" xml:space="preserve"><value>Search templates...</value></data>
+  <data name="TemplateGallery_Skill" xml:space="preserve"><value>Skills</value></data>
+  <data name="TemplateGallery_Title" xml:space="preserve"><value>Template Gallery</value></data>
+  <data name="Tool_Card_Collapse" xml:space="preserve"><value>Collapse</value></data>
+  <data name="Tool_Card_ExpandAll" xml:space="preserve"><value>Expand All</value></data>
+  <data name="Tool_Card_Input" xml:space="preserve"><value>Input</value></data>
+  <data name="Tool_Card_Lines" xml:space="preserve"><value>{0} lines</value></data>
+  <data name="Tool_Card_Output" xml:space="preserve"><value>Output</value></data>
+  <data name="WhatsNew_CurrentVersion" xml:space="preserve"><value>Current Version</value></data>
+  <data name="WhatsNew_DateDayBeforeYesterday" xml:space="preserve"><value>Day Before Yesterday</value></data>
+  <data name="WhatsNew_DateFormat" xml:space="preserve"><value>{0} days ago</value></data>
+  <data name="WhatsNew_DateToday" xml:space="preserve"><value>Today</value></data>
+  <data name="WhatsNew_DateYesterday" xml:space="preserve"><value>Yesterday</value></data>
+  <data name="WhatsNew_Empty" xml:space="preserve"><value>No changes.</value></data>
+  <data name="WhatsNew_Title" xml:space="preserve"><value>What's New</value></data>
+  <data name="WhatsNew_TypeDocs" xml:space="preserve"><value>Documentation</value></data>
+  <data name="WhatsNew_TypeFeature" xml:space="preserve"><value>Feature</value></data>
+  <data name="WhatsNew_TypeFix" xml:space="preserve"><value>Fix</value></data>
+  <data name="WhatsNew_TypeImprove" xml:space="preserve"><value>Improvement</value></data>
+  <data name="WhatsNew_TypeOther" xml:space="preserve"><value>Other</value></data>
+  <data name="WhatsNew_TypeStyle" xml:space="preserve"><value>Style</value></data>
+  <data name="WhatsNew_TypeTranslation" xml:space="preserve"><value>Translation</value></data>
+  <data name="Rules_ContentLabel" xml:space="preserve"><value>Content</value></data>
 
 </root>

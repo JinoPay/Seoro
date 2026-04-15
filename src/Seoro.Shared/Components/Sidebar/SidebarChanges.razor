@@ -71,7 +71,7 @@
                         var conflictPredicted = _conflictPredictedFiles.Contains(file.FilePath);
                         <div @key="file.FilePath"
                              class="sidebar-file-item file @(conflictPredicted ? "file-conflict-predicted" : "")"
-                             title="@(conflictPredicted ? $"이 파일은 타겟 브랜치와 머지 시 충돌이 예상됩니다: {file.FilePath}" : file.FilePath)"
+                             title="@(conflictPredicted ? Strings.Sidebar_Changes_ConflictTooltip(file.FilePath) : file.FilePath)"
                              @onclick="@(() => OpenFileDiff(file))">
                             <MudIcon Icon="@GetFileIcon(file.ChangeType)" Size="Size.Small"
                                      Style="@($"width: 14px; height: 14px; {GetFileIconStyle(file.ChangeType)}")"/>
@@ -365,12 +365,12 @@
     {
         return type switch
         {
-            FileChangeType.Modified => "수정됨",
-            FileChangeType.Added => "추가됨",
-            FileChangeType.Deleted => "삭제됨",
-            FileChangeType.Renamed => "이름 변경",
-            FileChangeType.Untracked => "추적 안 됨",
-            _ => "기타"
+            FileChangeType.Modified => Strings.Sidebar_Changes_GroupModified,
+            FileChangeType.Added => Strings.Sidebar_Changes_GroupAdded,
+            FileChangeType.Deleted => Strings.Sidebar_Changes_GroupDeleted,
+            FileChangeType.Renamed => Strings.Sidebar_Changes_GroupRenamed,
+            FileChangeType.Untracked => Strings.Sidebar_Changes_GroupUntracked,
+            _ => Strings.Sidebar_Changes_GroupOther
         };
     }
 

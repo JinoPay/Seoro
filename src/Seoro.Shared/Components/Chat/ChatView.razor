@@ -35,7 +35,7 @@
                         <div class="welcome-container">
                             <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Color="Color.Primary"
                                      Style="opacity: 0.4;"/>
-                            <span class="welcome-title">무엇을 도와드릴까요?</span>
+                            <span class="welcome-title">@Strings.Chat_WelcomeTitle</span>
                             @if (!session.Git.IsLocalDir &&
                                  (session.Status is SessionStatus.Pending or SessionStatus.Initializing ||
                                   session is { Status: SessionStatus.Ready, Messages.Count: 0 }))
@@ -595,13 +595,13 @@
             await InvokeAsync(() => Snackbar.StreamingError(result.ErrorMessage));
 
         if (result.PlanReviewVisible)
-            _ = SendNotificationIfNeeded(session, "계획 완료", NotificationType.PlanReview);
+            _ = SendNotificationIfNeeded(session, Strings.Chat_Notification_PlanReady, NotificationType.PlanReview);
         else if (result.AskUserQuestionInput != null)
-            _ = SendNotificationIfNeeded(session, "응답 필요", NotificationType.Question);
+            _ = SendNotificationIfNeeded(session, Strings.Chat_Notification_NeedsResponse, NotificationType.Question);
         else if (result.QuickResponseVisible)
-            _ = SendNotificationIfNeeded(session, "응답 필요", NotificationType.Question);
+            _ = SendNotificationIfNeeded(session, Strings.Chat_Notification_NeedsResponse, NotificationType.Question);
         else
-            _ = SendNotificationIfNeeded(session, "작업 완료", NotificationType.Success);
+            _ = SendNotificationIfNeeded(session, Strings.Chat_Notification_Done, NotificationType.Success);
 
         await InvokeAsync(StateHasChanged);
 
@@ -614,7 +614,7 @@
             var remainingChain = _pendingChain.Count > 0 ? _pendingChain : null;
             _pendingChain = null;
 
-            ChatState.AddSystemMessage(session, $"체이닝: /{nextStep.SkillName} 실행 중...");
+            ChatState.AddSystemMessage(session, Strings.Chat_Chaining(nextStep.SkillName));
             await InvokeAsync(StateHasChanged);
 
             await InvokeAsync(() => HandleSend(new ChatInputMessage

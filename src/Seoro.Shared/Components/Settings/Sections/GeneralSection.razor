@@ -6,23 +6,33 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
-<div class="settings-section-title">일반</div>
-<div class="settings-section-desc">앱의 기본 동작을 설정합니다.</div>
+<div class="settings-section-title">@Strings.Settings_General_Title</div>
+<div class="settings-section-desc">@Strings.Settings_General_Desc</div>
 
 <div class="stack gap-3">
     <div>
-        <div class="settings-field-label">테마</div>
+        <div class="settings-field-label">@Strings.Settings_General_ThemeLabel</div>
         <div class="settings-segmented">
             <button class="settings-seg-item @(Settings.Theme == "dark" ? "active" : "")"
-                    @onclick="@(() => Settings.Theme = "dark")">다크</button>
+                    @onclick="@(() => Settings.Theme = "dark")">@Strings.Settings_General_ThemeDark</button>
             <button class="settings-seg-item @(Settings.Theme == "light" ? "active" : "")"
-                    @onclick="@(() => Settings.Theme = "light")">라이트</button>
+                    @onclick="@(() => Settings.Theme = "light")">@Strings.Settings_General_ThemeLight</button>
             <button class="settings-seg-item @(Settings.Theme == "system" ? "active" : "")"
-                    @onclick="@(() => Settings.Theme = "system")">시스템</button>
+                    @onclick="@(() => Settings.Theme = "system")">@Strings.Settings_General_ThemeSystem</button>
         </div>
     </div>
 
-    <div class="settings-group-title mt">화면 배율</div>
+    <div>
+        <div class="settings-field-label">@Strings.Settings_General_UiLanguageLabel</div>
+        <div class="settings-segmented">
+            <button class="settings-seg-item @(Settings.UiLanguage == "ko" ? "active" : "")"
+                    @onclick="@(() => ApplyUiLanguage("ko"))">한국어</button>
+            <button class="settings-seg-item @(Settings.UiLanguage == "en" ? "active" : "")"
+                    @onclick="@(() => ApplyUiLanguage("en"))">English</button>
+        </div>
+    </div>
+
+    <div class="settings-group-title mt">@Strings.Settings_General_UiScaleTitle</div>
 
     <div class="stack gap-1">
         <div class="stack-row items-center gap-2">
@@ -49,7 +59,7 @@
                                     _ = ApplyUiScalePreview(_autoDefault);
                                 })"
                        Style="text-transform: none;">
-                자동 (플랫폼 기본값)
+                @Strings.Settings_General_UiScaleAuto
             </MudButton>
             <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
                        OnClick="@(() =>
@@ -63,24 +73,25 @@
         </div>
 
         <small class="typo-caption text-secondary">
-            macOS 기본값: 110%, Windows 기본값: 100%. 슬라이더 조작 시 바로 미리보기됩니다.
+            @Strings.Settings_General_UiScaleHint
         </small>
     </div>
 
-    <div class="settings-group-title mt">Git 워크플로우</div>
+    <div class="settings-group-title mt">@Strings.Settings_General_GitWorkflowTitle</div>
 
     <div class="stack-row items-center gap-1">
-        <MudTextField @bind-Value="Settings.DefaultCloneDirectory" Label="클론 디렉토리"
+        <MudTextField @bind-Value="Settings.DefaultCloneDirectory"
+                      Label="@Strings.Settings_General_CloneDirLabel"
                       Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Placeholder="~/Seoro"
-                      HelperText="저장소가 클론되는 위치입니다. 비워두면 기본값을 사용합니다."
+                      Placeholder="@Strings.Settings_General_CloneDirPlaceholder"
+                      HelperText="@Strings.Settings_General_CloneDirHint"
                       Style="flex: 1;"/>
         <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
-                       OnClick="BrowseCloneDirectory" title="찾아보기..."/>
+                       OnClick="BrowseCloneDirectory" title="@Strings.Settings_General_BrowseDir"/>
     </div>
 
     <div>
-        <div class="settings-field-label">세션 이름 언어</div>
+        <div class="settings-field-label">@Strings.Settings_General_SessionLangLabel</div>
         <div class="settings-segmented">
             <button class="settings-seg-item @(Settings.SessionLanguage == "en" ? "active" : "")"
                     @onclick="@(() => Settings.SessionLanguage = "en")">English</button>
@@ -88,41 +99,42 @@
                     @onclick="@(() => Settings.SessionLanguage = "ko")">한국어</button>
         </div>
         <small class="typo-caption text-secondary">
-            Claude가 워크트리 브랜치 이름과 로컬 세션 타이틀을 생성할 때 사용할 언어입니다.
+            @Strings.Settings_General_SessionLangHint
         </small>
     </div>
 
-    <div class="settings-group-title mt">도움말</div>
+    <div class="settings-group-title mt">@Strings.Settings_General_HelpTitle</div>
 
     <div class="stack-row gap-2" style="flex-wrap: wrap;">
         <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
                    OnClick="@(() => ChatState.RequestShowOnboarding())"
                    StartIcon="@Icons.Material.Filled.School"
                    Style="text-transform: none;">
-            튜토리얼 다시 보기
+            @Strings.Settings_General_ShowTutorial
         </MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
                    OnClick="@(() => ChatState.RequestShowWhatsNew())"
                    StartIcon="@Icons.Material.Filled.NewReleases"
                    Style="text-transform: none;">
-            새로운 기능 보기
+            @Strings.Settings_General_ShowWhatsNew
         </MudButton>
     </div>
 
     @if (_cominomiSummary is { Exists: true, TotalFiles: > 0 })
     {
-        <div class="settings-group-title mt">데이터 마이그레이션</div>
+        <div class="settings-group-title mt">@Strings.Settings_General_MigrationTitle</div>
         <div class="typo-caption text-secondary" style="margin-bottom: 8px;">
-            기존 Cominomi 데이터를 Seoro로 가져옵니다.
+            @Strings.Settings_General_MigrationDesc
         </div>
 
         <div class="stack gap-1">
             <div class="typo-body2">
-                발견된 데이터: 세션 @(_cominomiSummary.SessionCount)개,
-                워크스페이스 @(_cominomiSummary.WorkspaceCount)개,
-                메모리 @(_cominomiSummary.MemoryCount)개,
-                태스크 @(_cominomiSummary.TaskCount)개,
-                설정 파일 @(_cominomiSummary.SettingsFileCount)개
+                @Strings.Settings_General_MigrationFoundData(
+                    _cominomiSummary.SessionCount,
+                    _cominomiSummary.WorkspaceCount,
+                    _cominomiSummary.MemoryCount,
+                    _cominomiSummary.TaskCount,
+                    _cominomiSummary.SettingsFileCount)
             </div>
 
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
@@ -133,11 +145,11 @@
                 @if (_importing)
                 {
                     <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" Style="width:16px;height:16px;"/>
-                    <span>가져오는 중...</span>
+                    <span>@Strings.Settings_General_MigrationImporting</span>
                 }
                 else
                 {
-                    <span>Cominomi 데이터 가져오기</span>
+                    <span>@Strings.Settings_General_MigrationImport</span>
                 }
             </MudButton>
         </div>
@@ -175,6 +187,12 @@
         }
     }
 
+    private void ApplyUiLanguage(string lang)
+    {
+        Settings.UiLanguage = lang;
+        Strings.SetCulture(lang);
+    }
+
     private async Task BrowseCloneDirectory()
     {
         var path = await FolderPickerService.PickFolderAsync();
@@ -187,10 +205,11 @@
     private async Task ImportCominomiData()
     {
         var result = await DialogService.ShowMessageBoxAsync(
-            "Cominomi 데이터 가져오기",
-            $"기존 Cominomi 데이터 {_cominomiSummary!.TotalFiles}개 항목을 Seoro로 가져옵니다.\n" +
-            "이미 같은 파일이 있는 경우 처리 방법을 선택하세요.",
-            "기존 데이터 덮어쓰기", cancelText: "취소", noText: "기존 데이터 유지 (스킵)");
+            Strings.Settings_General_ImportDialogTitle,
+            Strings.Settings_General_ImportDialogMsg(_cominomiSummary!.TotalFiles),
+            Strings.Settings_General_ImportOverwrite,
+            cancelText: Strings.Common_Cancel,
+            noText: Strings.Settings_General_ImportKeep);
 
         if (result is null) return; // cancelled
 
@@ -207,9 +226,9 @@
             if (migrationResult.Copied > 0)
             {
                 await DialogService.ShowMessageBoxAsync(
-                    "가져오기 완료",
-                    $"{migrationResult.Copied}개 항목을 가져왔습니다. 변경사항을 반영하기 위해 앱을 다시 시작합니다.",
-                    "확인");
+                    Strings.Settings_General_ImportDoneTitle,
+                    Strings.Settings_General_ImportDoneMsg(migrationResult.Copied),
+                    Strings.Common_Confirm);
 
                 var exePath = Environment.ProcessPath;
                 if (!string.IsNullOrEmpty(exePath))
@@ -218,18 +237,18 @@
                 return;
             }
 
-            var msg = $"가져오기 완료: {migrationResult.Skipped}개 스킵 (변경 없음)";
+            var msg = Strings.Settings_General_ImportResult(migrationResult.Skipped);
             if (migrationResult.Failed > 0)
-                msg += $", {migrationResult.Failed}개 실패";
+                msg += Strings.Settings_General_ImportFailedCount(migrationResult.Failed);
             if (!deleted)
-                msg += " (Cominomi 폴더 삭제 실패)";
+                msg += Strings.Settings_General_ImportFolderDeleteFailed;
 
             Snackbar.Add(msg, migrationResult.Failed > 0 || !deleted ? Severity.Warning : Severity.Info);
             _cominomiSummary = MigrationService.GetDataSummary();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"가져오기 실패: {ex.Message}", Severity.Error);
+            Snackbar.Add(Strings.Settings_General_ImportFailed(ex.Message), Severity.Error);
         }
         finally
         {

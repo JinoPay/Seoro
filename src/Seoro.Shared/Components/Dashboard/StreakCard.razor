@@ -1,19 +1,19 @@
 <div class="streak-card">
-    <div class="streak-card-title">연속 기록</div>
+    <div class="streak-card-title">@Strings.Dashboard_Streak_Title</div>
     <div class="streak-card-main">
         @if (Current > 0)
         {
             <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Color="Color.Primary" Size="Size.Large"/>
         }
         <span class="streak-card-number">@Current</span>
-        <span class="streak-card-unit">일</span>
+        <span class="streak-card-unit">@Strings.Dashboard_Streak_Unit</span>
     </div>
     <div class="streak-card-details">
-        <div class="streak-card-detail">최장: <span class="streak-card-detail-value">@(Longest)일</span></div>
+        <div class="streak-card-detail">@Strings.Dashboard_Streak_Longest(Longest)</div>
         @if (LastActiveDate.HasValue)
         {
-            <div class="streak-card-detail">마지막 활동: <span
-                    class="streak-card-detail-value">@TimeAgo(LastActiveDate.Value)</span></div>
+            <div class="streak-card-detail">@Strings.Dashboard_Streak_LastActive <span
+                    class="streak-card-detail-value">@Strings.FormatRelativeTime(DateTime.UtcNow - LastActiveDate.Value)</span></div>
         }
     </div>
 </div>
@@ -23,14 +23,6 @@
     [Parameter] public int Longest { get; set; }
     [Parameter] public DateTime? LastActiveDate { get; set; }
 
-    private static string TimeAgo(DateTime dt)
-    {
-        var diff = DateTime.UtcNow - dt;
-        if (diff.TotalMinutes < 1) return "방금";
-        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}분 전";
-        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}시간 전";
-        return $"{(int)diff.TotalDays}일 전";
-    }
 
 }
 

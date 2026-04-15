@@ -16,13 +16,13 @@
         }
         else
         {
-            <div class="settings-section-title">Claude CLI 설정</div>
+            <div class="settings-section-title">@Strings.Settings_Claude_Title</div>
             <div class="settings-section-desc">
                 @(_scope switch
                 {
-                    ClaudeSettingsScope.Global => "~/.claude/settings.json — 모든 프로젝트에 적용되는 전역 설정입니다.",
-                    ClaudeSettingsScope.Project => ".claude/settings.json — 이 프로젝트에만 적용되며 git으로 추적됩니다.",
-                    ClaudeSettingsScope.Local => ".claude/settings.local.json — 이 프로젝트에만 적용되며 gitignore됩니다.",
+                    ClaudeSettingsScope.Global => Strings.Settings_Claude_ScopeGlobal,
+                    ClaudeSettingsScope.Project => Strings.Settings_Claude_ScopeProject,
+                    ClaudeSettingsScope.Local => Strings.Settings_Claude_ScopeLocal,
                     _ => ""
                 })
             </div>
@@ -32,20 +32,20 @@
                 <div class="settings-group">
                     <div class="settings-group-title">
                         <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"/>
-                        모델 및 동작
+                        @Strings.Settings_Claude_ModelBehaviorTitle
                     </div>
 
                     <div class="stack gap-3">
-                        <MudTextField T="string" @bind-Value="_settings.Model" Label="모델"
+                        <MudTextField T="string" @bind-Value="_settings.Model" Label="@Strings.Settings_Claude_ModelLabel"
                                       Variant="Variant.Outlined" Margin="Margin.Dense"
                                       Placeholder="claude-sonnet-4-20250514"
-                                      HelperText="Seoro 외부에서 CLI 직접 실행 시 사용됩니다."/>
+                                      HelperText="@Strings.Settings_Claude_ModelHint"/>
 
                         <div>
-                            <div class="settings-field-label">Effort 레벨</div>
+                            <div class="settings-field-label">@Strings.Settings_Claude_EffortLabel</div>
                             <div class="settings-segmented">
                                 <button class="settings-seg-item @(_settings.EffortLevel == null ? "active" : "")"
-                                        @onclick="@(() => _settings.EffortLevel = null)">미설정</button>
+                                        @onclick="@(() => _settings.EffortLevel = null)">@Strings.Settings_Claude_NotSet</button>
                                 <button class="settings-seg-item @(_settings.EffortLevel == EffortLevel.Low ? "active" : "")"
                                         @onclick="@(() => _settings.EffortLevel = EffortLevel.Low)">Low</button>
                                 <button class="settings-seg-item @(_settings.EffortLevel == EffortLevel.Medium ? "active" : "")"
@@ -53,14 +53,14 @@
                                 <button class="settings-seg-item @(_settings.EffortLevel == EffortLevel.High ? "active" : "")"
                                         @onclick="@(() => _settings.EffortLevel = EffortLevel.High)">High</button>
                             </div>
-                            <div class="settings-field-hint">Seoro 앱 설정 > AI 모델에서 지정한 값이 우선합니다.</div>
+                            <div class="settings-field-hint">@Strings.Settings_Claude_EffortHint</div>
                         </div>
 
                         <div>
-                            <div class="settings-field-label">기본 모드</div>
+                            <div class="settings-field-label">@Strings.Settings_Claude_DefaultModeLabel</div>
                             <div class="settings-segmented">
                                 <button class="settings-seg-item @(_settings.DefaultMode == null ? "active" : "")"
-                                        @onclick="@(() => _settings.DefaultMode = null)">미설정</button>
+                                        @onclick="@(() => _settings.DefaultMode = null)">@Strings.Settings_Claude_NotSet</button>
                                 <button class="settings-seg-item @(_settings.DefaultMode == ClaudeDefaultMode.Default ? "active" : "")"
                                         @onclick="@(() => _settings.DefaultMode = ClaudeDefaultMode.Default)">Default</button>
                                 <button class="settings-seg-item @(_settings.DefaultMode == ClaudeDefaultMode.Plan ? "active" : "")"
@@ -72,21 +72,21 @@
                                 <button class="settings-seg-item @(_settings.DefaultMode == ClaudeDefaultMode.BypassPermissions ? "active" : "")"
                                         @onclick="@(() => _settings.DefaultMode = ClaudeDefaultMode.BypassPermissions)">Bypass</button>
                             </div>
-                            <div class="settings-field-hint">Seoro 외부에서 CLI 직접 실행 시 사용됩니다.</div>
+                            <div class="settings-field-hint">@Strings.Settings_Claude_DefaultModeHint</div>
                         </div>
 
                         <div class="settings-toggle-row">
                             <div>
-                                <span class="typo-body2">Extended Thinking 항상 활성화</span>
-                                <div class="typo-caption text-secondary">모든 응답에서 확장 사고 모드를 사용합니다.</div>
+                                <span class="typo-body2">@Strings.Settings_Claude_AlwaysThinkingLabel</span>
+                                <div class="typo-caption text-secondary">@Strings.Settings_Claude_AlwaysThinkingHint</div>
                             </div>
                             <MudSwitch T="bool?" @bind-Value="_settings.AlwaysThinkingEnabled" Color="Color.Primary"/>
                         </div>
 
                         <div class="settings-toggle-row">
                             <div>
-                                <span class="typo-body2">Auto Memory 활성화</span>
-                                <div class="typo-caption text-secondary">대화 컨텍스트를 메모리에 자동 저장합니다.</div>
+                                <span class="typo-body2">@Strings.Settings_Claude_AutoMemoryLabel</span>
+                                <div class="typo-caption text-secondary">@Strings.Settings_Claude_AutoMemoryHint</div>
                             </div>
                             <MudSwitch T="bool?" @bind-Value="_settings.AutoMemoryEnabled" Color="Color.Primary"/>
                         </div>
@@ -97,7 +97,7 @@
                 <div class="settings-group">
                     <div class="settings-group-title">
                         <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small"/>
-                        권한 규칙
+                        @Strings.Settings_Claude_PermissionsTitle
                     </div>
                     <PermissionsEditor @bind-Permissions="_settings.Permissions"/>
                 </div>
@@ -106,10 +106,10 @@
                 <div class="settings-group">
                     <div class="settings-group-title">
                         <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"/>
-                        환경변수
+                        @Strings.Settings_Claude_EnvVarsTitle
                     </div>
                     <div class="typo-caption text-secondary mb-2">
-                        CLI가 직접 실행될 때도 적용됩니다.
+                        @Strings.Settings_Claude_EnvVarsHint
                     </div>
                     <EnvVarsEditor @bind-EnvVars="_settings.Env"/>
                 </div>
@@ -118,10 +118,10 @@
                 <div class="settings-group">
                     <div class="settings-group-title">
                         <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Size="Size.Small"/>
-                        추가 디렉토리
+                        @Strings.Settings_Claude_AddDirsTitle
                     </div>
                     <div class="typo-caption text-secondary mb-2">
-                        Claude CLI가 프로젝트 루트 외에 추가로 접근할 디렉토리입니다.
+                        @Strings.Settings_Claude_AddDirsHint
                     </div>
                     <AdditionalDirectoriesEditor @bind-Directories="_settings.AdditionalDirectories"/>
                 </div>
@@ -130,15 +130,15 @@
                 <div class="settings-group">
                     <div class="settings-group-title">
                         <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small"/>
-                        MCP 서버
+                        @Strings.Nav_McpServers
                         <div style="flex: 1;"></div>
                         <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
                                    OnClick="NavigateToMcp" Style="text-transform: none;">
-                            관리
+                            @Strings.Settings_Claude_Manage
                         </MudButton>
                     </div>
                     <div class="typo-caption text-secondary">
-                        MCP 서버는 별도 페이지에서 관리합니다.
+                        @Strings.Settings_Claude_McpDesc
                     </div>
                 </div>
 
@@ -146,12 +146,12 @@
                 <div class="settings-group">
                     <div class="settings-group-title">
                         <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small"/>
-                        훅
+                        @Strings.Nav_Hooks
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@GetTotalHookCount()</MudChip>
                         <div style="flex: 1;"></div>
                         <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
                                    OnClick="NavigateToHooks" Style="text-transform: none;">
-                            관리
+                            @Strings.Settings_Claude_Manage
                         </MudButton>
                     </div>
                     @if (_settings.Hooks is { Count: > 0 })
@@ -172,7 +172,7 @@
                     }
                     else
                     {
-                        <div class="typo-caption text-secondary">등록된 훅이 없습니다.</div>
+                        <div class="typo-caption text-secondary">@Strings.Settings_Claude_NoHooks</div>
                     }
                 </div>
             </div>
@@ -246,11 +246,11 @@
         {
             await ClaudeSettingsService.WriteAsync(_scope, _settings,
                 _scope == ClaudeSettingsScope.Global ? null : _projectPath);
-            Snackbar.Add("Claude 설정이 저장되었습니다.", Severity.Success);
+            Snackbar.Add(Strings.Settings_Claude_Saved, Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
+            Snackbar.Add(Strings.Settings_Claude_SaveFailed(ex.Message), Severity.Error);
         }
         finally
         {

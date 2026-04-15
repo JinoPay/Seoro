@@ -116,17 +116,12 @@
     private static string GetThinkingPreview(string text, bool isExpanded)
     {
         if (isExpanded || string.IsNullOrWhiteSpace(text))
-            return "생각 중...";
+            return Strings.Chat_Thinking;
         var preview = text.Trim().ReplaceLineEndings(" ");
         return preview.Length <= 80 ? preview : preview[..80] + "...";
     }
 
-    private static string FormatDuration(TimeSpan duration)
-    {
-        if (duration.TotalSeconds < 60)
-            return $"{(int)duration.TotalSeconds}초";
-        return $"{(int)duration.TotalMinutes}분 {duration.Seconds}초";
-    }
+    private static string FormatDuration(TimeSpan duration) => Strings.FormatElapsedTime(duration);
 
     private static string GetBadgeClass(string action)
     {

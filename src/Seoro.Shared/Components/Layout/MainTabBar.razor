@@ -29,23 +29,23 @@
     <MudMenuItem OnClick="@HandleCloseTab"
                  Icon="@Icons.Material.Filled.Close"
                  Disabled="@(_contextTab?.Type == MainTabType.Chat)">
-        탭 닫기
+        @Strings.Layout_MainTabBar_CloseTab
     </MudMenuItem>
     <MudMenuItem OnClick="@HandleCloseOtherTabs"
                  Icon="@Icons.Material.Filled.FilterNone"
                  Disabled="@(ChatState.Tabs.OpenTabs.Count(t => t.Type != MainTabType.Chat) <= 1)">
-        다른 탭 모두 닫기
+        @Strings.Layout_MainTabBar_CloseOtherTabs
     </MudMenuItem>
     <MudMenuItem OnClick="@HandleCloseTabsToRight"
                  Icon="@Icons.Material.Filled.LastPage"
                  Disabled="@IsNoTabsToRight()">
-        오른쪽 탭 닫기
+        @Strings.Layout_MainTabBar_CloseTabsToRight
     </MudMenuItem>
     <MudDivider/>
     <MudMenuItem OnClick="@HandleCloseAllTabs"
                  Icon="@Icons.Material.Filled.ClearAll"
                  Disabled="@(ChatState.Tabs.OpenTabs.All(t => t.Type == MainTabType.Chat))">
-        모든 탭 닫기
+        @Strings.Layout_MainTabBar_CloseAllTabs
     </MudMenuItem>
 </MudMenu>
 

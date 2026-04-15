@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Seoro.Desktop.Components;
 using Seoro.Desktop.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,7 @@ using Photino.Blazor;
 using Serilog;
 using Serilog.Events;
 using Velopack;
+using Seoro.Shared.Resources;
 using Seoro.Shared.Services.Cli;
 using Seoro.Shared.Services.Claude;
 using Seoro.Shared.Services.Infrastructure;
@@ -268,6 +270,23 @@ public static class Program
         // Load external model definitions
         var modelsJsonPath = Path.Combine(AppPaths.Settings, "models.json");
         ModelDefinitions.LoadFromFileAsync(modelsJsonPath).GetAwaiter().GetResult();
+
+        // Apply saved UI language before the Blazor app renders
+        try
+        {
+            var settingsPath = AppPaths.SettingsFile;
+            if (File.Exists(settingsPath))
+            {
+                var json = File.ReadAllText(settingsPath);
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("uiLanguage", out var langProp))
+                    Strings.SetCulture(langProp.GetString() ?? "ko");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to read UiLanguage from settings, defaulting to ko");
+        }
 
         // Root component
         appBuilder.RootComponents.Add<Routes>("#app");

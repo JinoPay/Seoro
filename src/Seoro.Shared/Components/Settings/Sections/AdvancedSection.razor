@@ -1,20 +1,20 @@
-<div class="settings-section-title">고급</div>
-<div class="settings-section-desc">Claude CLI 고급 설정 및 환경변수를 관리합니다.</div>
+<div class="settings-section-title">@Strings.Settings_Advanced_Title</div>
+<div class="settings-section-desc">@Strings.Settings_Advanced_Desc</div>
 
 <div class="stack gap-3">
     <div class="settings-toggle-row">
         <div>
-            <span class="typo-body2">디버그 모드</span>
-            <div class="typo-caption text-secondary">활성화하면 Claude CLI에 --debug 플래그를 전달합니다.</div>
+            <span class="typo-body2">@Strings.Settings_Advanced_DebugModeLabel</span>
+            <div class="typo-caption text-secondary">@Strings.Settings_Advanced_DebugModeHint</div>
         </div>
         <MudSwitch T="bool" @bind-Value="Settings.DebugMode"
                    Color="Color.Warning" UncheckedColor="Color.Default"/>
     </div>
 </div>
 
-<div class="settings-group-title mt">프로세스 환경변수</div>
+<div class="settings-group-title mt">@Strings.Settings_Advanced_EnvVarsTitle</div>
 <small class="typo-caption text-secondary" style="margin-top: -4px;">
-    Seoro에서 Claude CLI를 실행할 때 프로세스에 주입하는 환경변수입니다.
+    @Strings.Settings_Advanced_EnvVarsHint
 </small>
 
 <div class="stack gap-2">
@@ -36,10 +36,10 @@
     }
 
     <div class="stack-row gap-1 items-center">
-        <MudTextField @bind-Value="_newEnvKey" Placeholder="변수명"
+        <MudTextField @bind-Value="_newEnvKey" Placeholder="@Strings.Settings_Advanced_EnvKeyPlaceholder"
                       Variant="Variant.Outlined" Margin="Margin.Dense"
                       Style="flex: 0.4;"/>
-        <MudTextField @bind-Value="_newEnvValue" Placeholder="값"
+        <MudTextField @bind-Value="_newEnvValue" Placeholder="@Strings.Settings_Advanced_EnvValuePlaceholder"
                       Variant="Variant.Outlined" Margin="Margin.Dense"
                       Style="flex: 0.6;"/>
         <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"

@@ -11,7 +11,7 @@
                     <MudIcon Icon="@Icons.Material.Filled.Map" Size="Size.Small" Style="width: 18px; height: 18px;"/>
                 </div>
                 <div class="plan-review-title-area">
-                    <span class="plan-review-title">플랜 완료</span>
+                    <span class="plan-review-title">@Strings.Chat_Plan_ReviewTitle</span>
                     @if (!string.IsNullOrEmpty(PlanFilePath))
                     {
                         <span class="plan-review-filename">@Path.GetFileName(PlanFilePath)</span>
@@ -35,7 +35,7 @@
                 else
                 {
                     <div style="opacity: 0.5; font-size: var(--text-sm); padding: 8px 0;">
-                        플랜 내용을 불러오는 중...
+                        @Strings.Chat_Plan_LoadingContent
                     </div>
                 }
             </div>
@@ -47,13 +47,13 @@
                        StartIcon="@Icons.Material.Filled.PlayArrow"
                        OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Approve))"
                        Class="plan-review-btn plan-review-btn-approve">
-                승인 및 실행
+                @Strings.Chat_Plan_Approve
             </MudButton>
             <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
                        StartIcon="@Icons.Material.Filled.Close"
                        OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Reject))"
                        Class="plan-review-btn plan-review-btn-reject">
-                거절
+                @Strings.Chat_Plan_Reject
             </MudButton>
         </div>
 

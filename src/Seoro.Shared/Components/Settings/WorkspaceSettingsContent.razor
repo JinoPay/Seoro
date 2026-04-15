@@ -13,37 +13,37 @@
             <div style="flex: 1;"></div>
             <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
                        Size="Size.Small" Style="text-transform: none;">
-                저장
+                @Strings.Common_Save
             </MudButton>
         </div>
 
         <div class="ws-settings-tabs">
             <button class="ws-settings-tab @(_tab == "general" ? "active" : "")"
-                    @onclick="@(() => _tab = "general")">일반
+                    @onclick="@(() => _tab = "general")">@Strings.Settings_Workspace_TabGeneral
             </button>
             <button class="ws-settings-tab @(_tab == "git" ? "active" : "")"
                     @onclick="@(() => _tab = "git")">Git
             </button>
             <button class="ws-settings-tab @(_tab == "prompts" ? "active" : "")"
-                    @onclick="@(() => _tab = "prompts")">프롬프트
+                    @onclick="@(() => _tab = "prompts")">@Strings.Settings_Workspace_TabPrompts
             </button>
         </div>
 
         <div class="settings-content-body">
             @if (_tab == "general")
             {
-                <div class="settings-section-title">일반</div>
-                <div class="settings-section-desc">워크스페이스 기본 정보를 관리합니다.</div>
+                <div class="settings-section-title">@Strings.Settings_Workspace_TabGeneral</div>
+                <div class="settings-section-desc">@Strings.Settings_Workspace_GeneralDesc</div>
 
                 <div class="stack gap-3">
-                    <MudTextField @bind-Value="_workspace.Name" Label="이름"
+                    <MudTextField @bind-Value="_workspace.Name" Label="@Strings.Settings_Workspace_NameLabel"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"/>
 
-                    <MudSelect T="string" @bind-Value="_workspace.DefaultModel" Label="기본 모델"
+                    <MudSelect T="string" @bind-Value="_workspace.DefaultModel" Label="@Strings.Settings_Ai_DefaultModelLabel"
                                Variant="Variant.Outlined" Margin="Margin.Dense"
-                               HelperText="이 워크스페이스의 세션에 사용할 모델입니다. 비워두면 앱 기본값을 따릅니다."
+                               HelperText="@Strings.Settings_Workspace_DefaultModelHint"
                                Clearable="true">
-                        <MudSelectItem T="string" Value="@("")">앱 기본값 사용</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("")">@Strings.Settings_Workspace_UseAppDefault</MudSelectItem>
                         @foreach (var model in ModelDefinitions.All.Where(m => m.Provider != "codex"))
                         {
                             <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
@@ -52,34 +52,34 @@
 
                     @if (!string.IsNullOrEmpty(_workspace.RepoLocalPath))
                     {
-                        <MudTextField Value="@ShortenPath(_workspace.RepoLocalPath)" Label="저장소 경로"
+                        <MudTextField Value="@ShortenPath(_workspace.RepoLocalPath)" Label="@Strings.Settings_Workspace_RepoPathLabel"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" ReadOnly="true"/>
                     }
 
                     @if (!string.IsNullOrEmpty(_workspace.RepoUrl))
                     {
-                        <MudTextField Value="@_workspace.RepoUrl" Label="저장소 URL"
+                        <MudTextField Value="@_workspace.RepoUrl" Label="@Strings.Settings_Workspace_RepoUrlLabel"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" ReadOnly="true"/>
                     }
 
-                    <MudTextField @bind-Value="_workspace.SystemPrompt" Label="시스템 프롬프트"
+                    <MudTextField @bind-Value="_workspace.SystemPrompt" Label="@Strings.Settings_Workspace_SystemPromptLabel"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
-                                  Placeholder="이 워크스페이스의 모든 세션에 추가될 시스템 프롬프트입니다."
-                                  HelperText="비워두면 기본 시스템 프롬프트만 사용합니다."/>
+                                  Placeholder="@Strings.Settings_Workspace_SystemPromptPlaceholder"
+                                  HelperText="@Strings.Settings_Workspace_SystemPromptHint"/>
                 </div>
             }
             else if (_tab == "git")
             {
                 <div class="settings-section-title">Git</div>
-                <div class="settings-section-desc">Git 기본값을 설정합니다.</div>
+                <div class="settings-section-desc">@Strings.Settings_Workspace_GitDesc</div>
 
                 <div class="stack gap-3">
                     @if (_branches.Count > 0)
                     {
                         <MudSelect T="string" @bind-Value="_workspace.DefaultBaseBranch"
-                                   Label="기본 베이스 브랜치"
+                                   Label="@Strings.Settings_Workspace_DefaultBranchLabel"
                                    Variant="Variant.Outlined" Margin="Margin.Dense"
-                                   HelperText="새 세션 생성 시 기본으로 사용할 브랜치입니다. 비워두면 자동 감지합니다."
+                                   HelperText="@Strings.Settings_Workspace_DefaultBranchHint"
                                    Clearable="true">
                             @foreach (var branch in _branches)
                             {
@@ -90,45 +90,45 @@
                     else
                     {
                         <MudTextField @bind-Value="_workspace.DefaultBaseBranch"
-                                      Label="기본 베이스 브랜치"
+                                      Label="@Strings.Settings_Workspace_DefaultBranchLabel"
                                       Variant="Variant.Outlined" Margin="Margin.Dense"
                                       Placeholder="origin/main"
-                                      HelperText="비워두면 자동 감지합니다."/>
+                                      HelperText="@Strings.Settings_Workspace_DefaultBranchAutoHint"/>
                     }
 
-                    <MudTextField @bind-Value="_workspace.DefaultRemote" Label="기본 리모트"
+                    <MudTextField @bind-Value="_workspace.DefaultRemote" Label="@Strings.Settings_Workspace_DefaultRemoteLabel"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Placeholder="origin"/>
                 </div>
             }
             else if (_tab == "prompts")
             {
-                <div class="settings-section-title">프롬프트</div>
-                <div class="settings-section-desc">에이전트에 전달할 커스텀 지침을 설정합니다.</div>
+                <div class="settings-section-title">@Strings.Settings_Workspace_TabPrompts</div>
+                <div class="settings-section-desc">@Strings.Settings_Workspace_PromptsDesc</div>
 
                 <div class="stack gap-4">
                     <MudTextField @bind-Value="_workspace.Preferences.CodeReviewPrompt"
-                                  Label="코드 리뷰 프롬프트"
+                                  Label="@Strings.Settings_Workspace_CodeReviewLabel"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
-                                  Placeholder="코드 리뷰 시 에이전트에 전달할 지침입니다."/>
+                                  Placeholder="@Strings.Settings_Workspace_CodeReviewPlaceholder"/>
 
                     <MudTextField @bind-Value="_workspace.Preferences.GeneralPrompt"
-                                  Label="일반 프롬프트"
+                                  Label="@Strings.Settings_Workspace_GeneralPromptLabel"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
-                                  Placeholder="모든 새 대화 시작 시 에이전트에 전달할 지침입니다."/>
+                                  Placeholder="@Strings.Settings_Workspace_GeneralPromptPlaceholder"/>
                 </div>
             }
 
             <div class="settings-danger-zone">
-                <div class="settings-group-title" style="color: var(--mud-palette-error);">위험 영역</div>
+                <div class="settings-group-title" style="color: var(--mud-palette-error);">@Strings.Settings_Workspace_DangerZoneTitle</div>
                 <MudButton Variant="Variant.Outlined" Color="Color.Error"
                            StartIcon="@Icons.Material.Filled.Delete"
                            OnClick="DeleteWorkspace"
                            Style="text-transform: none;">
-                    워크스페이스 삭제
+                    @Strings.Settings_Workspace_DeleteButton
                 </MudButton>
                 <small class="typo-caption text-secondary" style="margin-top: 4px;">
-                    이 워크스페이스와 모든 세션이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                    @Strings.Settings_Workspace_DeleteWarning
                 </small>
             </div>
         </div>
@@ -203,9 +203,9 @@
         if (_workspace == null) return;
 
         var result = await DialogService.ShowMessageBoxAsync(
-            "워크스페이스 삭제",
-            $"'{_workspace.Name}' 워크스페이스와 모든 세션이 삭제됩니다. 계속하시겠습니까?",
-            "삭제", cancelText: "취소");
+            Strings.Settings_Workspace_DeleteDialogTitle,
+            Strings.Settings_Workspace_DeleteDialogMsg(_workspace.Name),
+            Strings.Common_Delete, cancelText: Strings.Common_Cancel);
 
         if (result != true) return;
 
@@ -224,12 +224,12 @@
                 ChatState.SetWorkspace(null!);
             }
 
-            Snackbar.Add($"'{_workspace.Name}' 워크스페이스가 삭제되었습니다.", Severity.Success);
+            Snackbar.Add(Strings.Settings_Workspace_DeleteSuccess(_workspace.Name), Severity.Success);
             await OnWorkspaceDeleted.InvokeAsync();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"삭제 중 오류가 발생했습니다: {ex.Message}", Severity.Error);
+            Snackbar.Add(Strings.Settings_Workspace_DeleteError(ex.Message), Severity.Error);
         }
     }
 

@@ -72,15 +72,15 @@
         var pct = ContextWindow > 0 ? (double)total / ContextWindow * 100 : 0;
 
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"토큰: {FormatTokens(total)} / {FormatTokens(ContextWindow)} ({pct:F1}%)");
-        sb.AppendLine($"입력: {FormatTokens(input)}");
-        sb.Append($"출력: {FormatTokens(output)}");
+        sb.AppendLine(Strings.Chat_TokenTooltip_Total(FormatTokens(total), FormatTokens(ContextWindow), pct.ToString("F1")));
+        sb.AppendLine(Strings.Chat_TokenTooltip_Input(FormatTokens(input)));
+        sb.Append(Strings.Chat_TokenTooltip_Output(FormatTokens(output)));
 
         var pricing = ModelDefinitions.GetPricing(Model);
         if (pricing != null)
         {
             var cost = ModelDefinitions.CalculateTieredCost(pricing, input, output);
-            sb.Append($"\n예상 비용: ${cost:F4}");
+            sb.Append("\n" + Strings.Chat_TokenTooltip_Cost(cost.ToString("F4")));
         }
 
         return sb.ToString();

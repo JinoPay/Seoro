@@ -8,15 +8,15 @@
 
 <MudPopover Open="_open" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter"
             Class="add-session-popover" OverflowBehavior="OverflowBehavior.FlipAlways">
-    <div class="add-session-header">새로 만들기</div>
+    <div class="add-session-header">@Strings.Sidebar_AddSession_HeaderNew</div>
     <div class="add-session-option" @onclick="HandleNewChat">
         <div class="add-session-icon" style="background: var(--accent-dim);">
             <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
                      Style="color: var(--accent);"/>
         </div>
         <div class="add-session-label">
-            <span class="add-session-title">새 워크트리</span>
-            <span class="add-session-desc">워크스페이스 기본 경로에서 시작</span>
+            <span class="add-session-title">@Strings.Sidebar_AddSession_NewWorktreeTitle</span>
+            <span class="add-session-desc">@Strings.Sidebar_AddSession_NewWorktreeDesc</span>
         </div>
     </div>
     <div class="add-session-option" @onclick="HandleAddLocalDir">
@@ -25,8 +25,8 @@
                      Style="color: var(--color-warning);"/>
         </div>
         <div class="add-session-label">
-            <span class="add-session-title">로컬 디렉터리</span>
-            <span class="add-session-desc">로컬 저장소 경로를 사용</span>
+            <span class="add-session-title">@Strings.Sidebar_AddSession_LocalDirectoryTitle</span>
+            <span class="add-session-desc">@Strings.Sidebar_AddSession_LocalDirectoryDesc</span>
         </div>
     </div>
     @if (CodexAvailable)
@@ -38,8 +38,8 @@
                          Style="color: var(--color-success, #00c878);"/>
             </div>
             <div class="add-session-label">
-                <span class="add-session-title">Codex 워크트리</span>
-                <span class="add-session-desc">OpenAI Codex CLI로 시작</span>
+                <span class="add-session-title">@Strings.Sidebar_AddSession_CodexWorktreeTitle</span>
+                <span class="add-session-desc">@Strings.Sidebar_AddSession_CodexWorktreeDesc</span>
             </div>
         </div>
         <div class="add-session-option" @onclick="HandleAddCodexLocalDir">
@@ -48,8 +48,8 @@
                          Style="color: var(--color-success, #00c878);"/>
             </div>
             <div class="add-session-label">
-                <span class="add-session-title">Codex 로컬 디렉터리</span>
-                <span class="add-session-desc">OpenAI Codex CLI + 로컬 경로</span>
+                <span class="add-session-title">@Strings.Sidebar_AddSession_CodexLocalTitle</span>
+                <span class="add-session-desc">@Strings.Sidebar_AddSession_CodexLocalDesc</span>
             </div>
         </div>
     }

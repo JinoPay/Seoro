@@ -7,67 +7,67 @@
     <div class="settings-page-nav">
         <button class="settings-back-btn" @onclick="GoBack">
             <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"/>
-            앱으로 돌아가기
+            @Strings.Nav_BackToApp
         </button>
 
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("dashboard")"
                     @onclick="@(() => SetSection("dashboard"))">
                 <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small"/>
-                대시보드
+                @Strings.Nav_Dashboard
             </button>
             <button class="settings-nav-item @ActiveClass("usage")"
                     @onclick="@(() => SetSection("usage"))">
                 <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Small"/>
-                사용량
+                @Strings.Nav_Usage
             </button>
         </div>
 
-        <div class="settings-nav-label">앱 설정</div>
+        <div class="settings-nav-label">@Strings.Nav_AppSettings</div>
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("general")"
                     @onclick="@(() => SetSection("general"))">
                 <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small"/>
-                일반
+                @Strings.Nav_General
             </button>
             <button class="settings-nav-item @ActiveClass("ai")"
                     @onclick="@(() => SetSection("ai"))">
                 <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"/>
-                AI 모델
+                @Strings.Nav_AiModel
             </button>
             <button class="settings-nav-item @ActiveClass("notifications")"
                     @onclick="@(() => SetSection("notifications"))">
                 <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small"/>
-                알림
+                @Strings.Nav_Notifications
             </button>
             <button class="settings-nav-item @ActiveClass("terminal")"
                     @onclick="@(() => SetSection("terminal"))">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"/>
-                터미널
+                @Strings.Nav_Terminal
             </button>
             <button class="settings-nav-item @ActiveClass("git-merge")"
                     @onclick="@(() => SetSection("git-merge"))">
                 <MudIcon Icon="@Icons.Material.Filled.CallMerge" Size="Size.Small"/>
-                Git / 머지
+                @Strings.Nav_GitMerge
             </button>
             <button class="settings-nav-item @ActiveClass("shortcuts")"
                     @onclick="@(() => SetSection("shortcuts"))">
                 <MudIcon Icon="@Icons.Material.Filled.Keyboard" Size="Size.Small"/>
-                단축키
+                @Strings.Nav_Shortcuts
             </button>
         </div>
 
-        <div class="settings-nav-label">연동 & 확장</div>
+        <div class="settings-nav-label">@Strings.Nav_IntegrationsAndExtensions</div>
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("integrations")"
                     @onclick="@(() => SetSection("integrations"))">
                 <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small"/>
-                연동
+                @Strings.Nav_Integrations
             </button>
             <button class="settings-nav-item @ActiveClass("slash-commands")"
                     @onclick="@(() => SetSection("slash-commands"))">
                 <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small"/>
-                슬래시 명령어
+                @Strings.Nav_SlashCommands
             </button>
         </div>
 
@@ -78,70 +78,70 @@
             <button class="settings-nav-item @ActiveClass("claude-settings")"
                     @onclick="@(() => SetSection("claude-settings"))">
                 <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small"/>
-                Claude 설정
+                @Strings.Nav_ClaudeSettings
             </button>
             <button class="settings-nav-item @ActiveClass("mcp")"
                     @onclick="@(() => SetSection("mcp"))">
                 <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small"/>
-                MCP 서버
+                @Strings.Nav_McpServers
             </button>
             <button class="settings-nav-item @ActiveClass("hooks")"
                     @onclick="@(() => SetSection("hooks"))">
                 <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small"/>
-                훅
+                @Strings.Nav_Hooks
             </button>
             <button class="settings-nav-item @ActiveClass("rules")"
                     @onclick="@(() => SetSection("rules"))">
                 <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small"/>
-                룰
+                @Strings.Nav_Rules
             </button>
             <button class="settings-nav-item @ActiveClass("instructions")"
                     @onclick="@(() => SetSection("instructions"))">
                 <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"/>
-                인스트럭션
+                @Strings.Nav_Instructions
             </button>
             <button class="settings-nav-item @ActiveClass("plugins")"
                     @onclick="@(() => SetSection("plugins"))">
                 <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small"/>
-                플러그인
+                @Strings.Nav_Plugins
             </button>
             <button class="settings-nav-item @ActiveClass("accounts")"
                     @onclick="@(() => SetSection("accounts"))">
                 <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small"/>
-                계정 설정
+                @Strings.Nav_Accounts
             </button>
         </div>
 
-        <div class="settings-nav-label">도구</div>
+        <div class="settings-nav-label">@Strings.Nav_Tools</div>
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("session-replay")"
                     @onclick="@(() => SetSection("session-replay"))">
                 <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small"/>
-                세션 히스토리
+                @Strings.Nav_SessionHistory
             </button>
             <button class="settings-nav-item @ActiveClass("memory")"
                     @onclick="@(() => SetSection("memory"))">
                 <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small"/>
-                메모리
+                @Strings.Nav_Memory
             </button>
         </div>
 
-        <div class="settings-nav-label">시스템</div>
+        <div class="settings-nav-label">@Strings.Nav_System</div>
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("advanced")"
                     @onclick="@(() => SetSection("advanced"))">
                 <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small"/>
-                고급
+                @Strings.Nav_Advanced
             </button>
             <button class="settings-nav-item @ActiveClass("updates")"
                     @onclick="@(() => SetSection("updates"))">
                 <MudIcon Icon="@Icons.Material.Filled.SystemUpdate" Size="Size.Small"/>
-                업데이트
+                @Strings.Nav_Updates
             </button>
         </div>
 
         <div class="settings-nav-divider"></div>
-        <div class="settings-nav-label">Workspaces</div>
+        <div class="settings-nav-label">@Strings.Nav_Workspaces</div>
 
         @foreach (var ws in _workspaces)
         {
@@ -208,7 +208,7 @@
         {
             <div class="settings-content-area wide">
                 <div class="settings-content-header">
-                    <span class="typo-h6">사용량</span>
+                    <span class="typo-h6">@Strings.Nav_Usage</span>
                 </div>
                 <div class="settings-content-body">
                     <UsageDashboard/>

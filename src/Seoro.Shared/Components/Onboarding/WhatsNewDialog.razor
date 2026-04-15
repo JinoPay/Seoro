@@ -1,11 +1,12 @@
 @using System.Reflection
+@using Seoro.Shared.Resources
 @inject IReleaseNotesService ReleaseNotesService
 
 <MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
     <TitleContent>
         <div class="stack-row items-center gap-2">
             <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small"/>
-            <span class="typo-h6">새로운 기능</span>
+            <span class="typo-h6">@Strings.WhatsNew_Title</span>
             <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
                 v@(_currentVersion)
             </MudChip>
@@ -29,7 +30,7 @@
                                 <span class="rn-version">v@(release.Version)</span>
                                 @if (isCurrent)
                                 {
-                                    <span class="rn-badge rn-badge--current">현재 버전</span>
+                                    <span class="rn-badge rn-badge--current">@Strings.WhatsNew_CurrentVersion</span>
                                 }
                             </div>
                             <span class="rn-date">@FormatDate(release.Date)</span>
@@ -48,14 +49,14 @@
             }
             else
             {
-                <p class="typo-body2 text-secondary">표시할 변경사항이 없습니다.</p>
+                <p class="typo-body2 text-secondary">@Strings.WhatsNew_Empty</p>
             }
         </div>
     </DialogContent>
     <DialogActions>
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close"
                    Style="text-transform: none;">
-            확인
+            @Strings.Common_Confirm
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -137,13 +138,13 @@
     {
         return type switch
         {
-            "feat" => "기능",
-            "fix" => "수정",
-            "refactor" => "개선",
-            "localize" => "번역",
-            "style" => "스타일",
-            "docs" => "문서",
-            "chore" => "기타",
+            "feat" => Strings.WhatsNew_TypeFeature,
+            "fix" => Strings.WhatsNew_TypeFix,
+            "refactor" => Strings.WhatsNew_TypeImprove,
+            "localize" => Strings.WhatsNew_TypeTranslation,
+            "style" => Strings.WhatsNew_TypeStyle,
+            "docs" => Strings.WhatsNew_TypeDocs,
+            "chore" => Strings.WhatsNew_TypeOther,
             _ => type
         };
     }
@@ -158,10 +159,10 @@
 
         var relative = diff switch
         {
-            0 => "오늘",
-            1 => "어제",
-            2 => "그저께",
-            > 0 and <= 7 => $"{diff}일 전",
+            0 => Strings.WhatsNew_DateToday,
+            1 => Strings.WhatsNew_DateYesterday,
+            2 => Strings.WhatsNew_DateDayBeforeYesterday,
+            > 0 and <= 7 => Strings.WhatsNew_DateFormat(diff),
             _ => null
         };
 

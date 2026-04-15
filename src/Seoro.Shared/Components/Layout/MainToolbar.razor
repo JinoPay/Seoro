@@ -11,11 +11,11 @@
     @if (ChatState.CurrentSession != null)
     {
         <span class="toolbar-title @(_titleChanged ? "title-changed" : "")"
-              @onanimationend="@(() => _titleChanged = false)">@(ChatState.CurrentSession.Title ?? "새 대화")</span>
+              @onanimationend="@(() => _titleChanged = false)">@(ChatState.CurrentSession.Title ?? Strings.Layout_MainToolbar_NewConversation)</span>
 
         @if (!string.IsNullOrEmpty(ChatState.CurrentSession.Git.BranchName))
         {
-            <MudTooltip Text="@($"브랜치: {ChatState.CurrentSession.Git.BranchName}")" Placement="Placement.Bottom">
+            <MudTooltip Text="@Strings.Layout_MainToolbar_Branch(ChatState.CurrentSession.Git.BranchName)" Placement="Placement.Bottom">
                 <span class="toolbar-branch-badge">
                     <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
                              Style="width: 12px; height: 12px; opacity: 0.6;"/>
@@ -26,7 +26,7 @@
 
         @if (ChatState.CurrentSession.PermissionMode == "plan")
         {
-            <MudTooltip Text="플랜 모드 — 코드 변경 없이 분석만 수행" Placement="Placement.Bottom">
+            <MudTooltip Text="@Strings.Layout_MainToolbar_PlanModeTooltip" Placement="Placement.Bottom">
                 <span class="toolbar-indicator plan">
                     <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"
                              Style="width: 14px; height: 14px;"/>
@@ -36,7 +36,7 @@
 
         @if (ChatState.CurrentSession.EffortLevel is not (null or "" or "auto"))
         {
-            <MudTooltip Text="@($"사고 수준: {FormatEffortLevel(ChatState.CurrentSession.EffortLevel)}")"
+            <MudTooltip Text="@Strings.Layout_MainToolbar_EffortLevelTooltip(FormatEffortLevel(ChatState.CurrentSession.EffortLevel))"
                         Placement="Placement.Bottom">
                 <span class="toolbar-indicator effort">
                     <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
@@ -47,7 +47,7 @@
     }
     else
     {
-        <span class="toolbar-title" style="opacity: 0.4;">대화를 선택하세요</span>
+        <span class="toolbar-title" style="opacity: 0.4;">@Strings.Layout_MainToolbar_SelectConversation</span>
     }
 
     <div style="flex: 1;"></div>
@@ -68,7 +68,7 @@
                 </MudTooltip>
             }
 
-            <MudTooltip Text="폴더 열기" Placement="Placement.Bottom">
+            <MudTooltip Text="@Strings.Layout_MainToolbar_OpenFolder" Placement="Placement.Bottom">
                 <MudIconButton Icon="@Icons.Material.Outlined.FolderOpen" Size="Size.Small"
                                OnClick="OpenFolder"
                                Style="width: 28px; height: 28px; opacity: 0.5;"/>
@@ -76,7 +76,7 @@
 
             @if (_availableIdes.Count == 1)
             {
-                <MudTooltip Text="@($"{_availableIdes[0].Name}에서 열기")" Placement="Placement.Bottom">
+                <MudTooltip Text="@Strings.Layout_MainToolbar_OpenInIde(_availableIdes[0].Name)" Placement="Placement.Bottom">
                     <MudIconButton Icon="@Icons.Material.Outlined.Code" Size="Size.Small"
                                    OnClick="@(() => OpenInIde(_availableIdes[0].Command))"
                                    Style="width: 28px; height: 28px; opacity: 0.5;"/>
@@ -120,10 +120,10 @@
     private readonly string _mod = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "\u2318" : "Ctrl";
 
     private string SyncTooltip => IsSynced
-        ? $"로컬 동기화 해제 ({_mod}+Shift+S)"
+        ? Strings.Layout_MainToolbar_SyncDisable(_mod)
         : IsSyncBlockedByOther
-            ? "다른 세션이 동기화 중입니다"
-            : $"로컬 디렉터리에 동기화 ({_mod}+Shift+S)";
+            ? Strings.Layout_MainToolbar_SyncBlockedByOther
+            : Strings.Layout_MainToolbar_SyncEnable(_mod);
 
     private bool ShowSyncButton
     {
@@ -193,19 +193,19 @@
             if (IsSynced)
             {
                 await SyncService.StopSyncAsync();
-                Snackbar.Add("동기화 해제됨", Severity.Info);
+                Snackbar.Add(Strings.Layout_MainToolbar_SyncDisabled_Snackbar, Severity.Info);
             }
             else
             {
                 var workspace = ChatState.CurrentWorkspace;
                 if (workspace == null) return;
                 var success = await SyncService.StartSyncAsync(session, workspace);
-                Snackbar.Add(success ? "로컬 디렉터리에 동기화됨" : "동기화 실패 — 이미 다른 세션이 동기화 중이거나 세션 상태가 유효하지 않습니다", success ? Severity.Success : Severity.Error);
+                Snackbar.Add(success ? Strings.Layout_MainToolbar_SyncSuccess : Strings.Layout_MainToolbar_SyncFailed, success ? Severity.Success : Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"동기화 오류: {ex.Message}", Severity.Error);
+            Snackbar.Add(Strings.Layout_MainToolbar_SyncError(ex.Message), Severity.Error);
         }
         finally
         {
@@ -241,8 +241,8 @@
     {
         return level switch
         {
-            "low" => "낮음 (low)",
-            "high" => "높음 (high)",
+            "low" => Strings.Layout_MainToolbar_EffortLow,
+            "high" => Strings.Layout_MainToolbar_EffortHigh,
             _ => level ?? "auto"
         };
     }

@@ -2,8 +2,8 @@
 @inject IClaudeService ClaudeService
 @inject IDependencyCheckService DependencyCheckService
 
-<div class="settings-section-title">연동</div>
-<div class="settings-section-desc">외부 서비스 연결 상태를 확인합니다.</div>
+<div class="settings-section-title">@Strings.Settings_Integrations_Title</div>
+<div class="settings-section-desc">@Strings.Settings_Integrations_Desc</div>
 
 <div class="settings-group">
     <div class="settings-group-title">Claude CLI</div>
@@ -12,13 +12,13 @@
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
                                  Style="width: 18px; height: 18px;"/>
-            <span class="status-text">감지 중...</span>
+            <span class="status-text">@Strings.Settings_Integrations_Checking</span>
         }
         else if (_claudeCliFound)
         {
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
                      Class="status-ok"/>
-            <span class="status-text">감지됨</span>
+            <span class="status-text">@Strings.Settings_Integrations_Detected</span>
             @if (!string.IsNullOrEmpty(_claudeCliResolvedPath))
             {
                 <span class="status-path">@_claudeCliResolvedPath</span>
@@ -28,17 +28,17 @@
         {
             <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
                      Class="status-warn"/>
-            <span class="status-text">감지되지 않음</span>
+            <span class="status-text">@Strings.Settings_Integrations_NotDetected</span>
         }
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="CheckClaudeCli" title="다시 확인"/>
+                       OnClick="CheckClaudeCli" title="@Strings.Settings_Integrations_Recheck"/>
     </div>
 
     @if (_claudeCliFound && !string.IsNullOrEmpty(_claudeCliVersion))
     {
         <div class="stack gap-1 mt-2">
             <div class="stack-row items-center gap-2">
-                <span class="typo-body2">버전:</span>
+                <span class="typo-body2">@Strings.Settings_Integrations_Version</span>
                 <MudChip T="string" Size="Size.Small"
                          Color="@(_claudeVersionOutdated ? Color.Warning : Color.Success)"
                          Variant="Variant.Text">
@@ -48,7 +48,7 @@
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Warning"
                              Variant="Variant.Outlined">
-                        업데이트 필요 (v@(SeoroConstants.RequiredClaudeVersion))
+                        @Strings.Settings_Integrations_UpdateNeeded(SeoroConstants.RequiredClaudeVersion)
                     </MudChip>
                 }
             </div>
@@ -58,7 +58,7 @@
                 <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined"
                           Class="mt-2" Dense="true">
                     <div class="stack gap-1">
-                        <span class="typo-body2">업데이트 방법:</span>
+                        <span class="typo-body2">@Strings.Settings_Integrations_UpdateMethod</span>
                         @foreach (var method in _isMac ? ClaudeInstallMethods.Mac : ClaudeInstallMethods.Windows)
                         {
                             <div class="stack-row items-center gap-2">
@@ -75,10 +75,10 @@
         </div>
     }
 
-    <MudTextField @bind-Value="Settings.ClaudePath" Label="Claude CLI 경로"
+    <MudTextField @bind-Value="Settings.ClaudePath" Label="@Strings.Settings_Integrations_ClaudePathLabel"
                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                  Placeholder="자동 감지" Class="mt-3"
-                  HelperText="비워두면 자동으로 감지합니다"/>
+                  Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
+                  HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
 </div>
 
 <div class="settings-group">
@@ -88,13 +88,13 @@
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
                                  Style="width: 18px; height: 18px;"/>
-            <span class="status-text">감지 중...</span>
+            <span class="status-text">@Strings.Settings_Integrations_Checking</span>
         }
         else if (_gitFound)
         {
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
                      Class="status-ok"/>
-            <span class="status-text">감지됨</span>
+            <span class="status-text">@Strings.Settings_Integrations_Detected</span>
             @if (!string.IsNullOrEmpty(_gitResolvedPath))
             {
                 <span class="status-path">@_gitResolvedPath</span>
@@ -104,17 +104,17 @@
         {
             <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
                      Class="status-warn"/>
-            <span class="status-text">감지되지 않음</span>
+            <span class="status-text">@Strings.Settings_Integrations_NotDetected</span>
         }
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="CheckGit" title="다시 확인"/>
+                       OnClick="CheckGit" title="@Strings.Settings_Integrations_Recheck"/>
     </div>
 
     @if (_gitFound && !string.IsNullOrEmpty(_gitVersion))
     {
         <div class="stack gap-1 mt-2">
             <div class="stack-row items-center gap-2">
-                <span class="typo-body2">버전:</span>
+                <span class="typo-body2">@Strings.Settings_Integrations_Version</span>
                 <MudChip T="string" Size="Size.Small" Color="Color.Success"
                          Variant="Variant.Text">
                     @_gitVersion
@@ -128,7 +128,7 @@
         <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined"
                   Class="mt-2" Dense="true">
             <div class="stack gap-1">
-                <span class="typo-body2">설치 방법:</span>
+                <span class="typo-body2">@Strings.Settings_Integrations_InstallMethod</span>
                 @if (_isMac)
                 {
                     <code>brew install git</code>
@@ -141,10 +141,10 @@
         </MudAlert>
     }
 
-    <MudTextField @bind-Value="Settings.GitPath" Label="Git 경로"
+    <MudTextField @bind-Value="Settings.GitPath" Label="@Strings.Settings_Integrations_GitPathLabel"
                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                  Placeholder="자동 감지" Class="mt-3"
-                  HelperText="비워두면 자동으로 감지합니다"/>
+                  Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
+                  HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
 </div>
 
 <div class="settings-group">
@@ -154,13 +154,13 @@
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
                                  Style="width: 18px; height: 18px;"/>
-            <span class="status-text">감지 중...</span>
+            <span class="status-text">@Strings.Settings_Integrations_Checking</span>
         }
         else if (_ghFound)
         {
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
                      Class="status-ok"/>
-            <span class="status-text">감지됨</span>
+            <span class="status-text">@Strings.Settings_Integrations_Detected</span>
             @if (!string.IsNullOrEmpty(_ghResolvedPath))
             {
                 <span class="status-path">@_ghResolvedPath</span>
@@ -170,17 +170,17 @@
         {
             <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
                      Class="status-warn"/>
-            <span class="status-text">감지되지 않음</span>
+            <span class="status-text">@Strings.Settings_Integrations_NotDetected</span>
         }
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="CheckGh" title="다시 확인"/>
+                       OnClick="CheckGh" title="@Strings.Settings_Integrations_Recheck"/>
     </div>
 
     @if (_ghFound && !string.IsNullOrEmpty(_ghVersion))
     {
         <div class="stack gap-1 mt-2">
             <div class="stack-row items-center gap-2">
-                <span class="typo-body2">버전:</span>
+                <span class="typo-body2">@Strings.Settings_Integrations_Version</span>
                 <MudChip T="string" Size="Size.Small" Color="Color.Success"
                          Variant="Variant.Text">
                     @_ghVersion
@@ -194,7 +194,7 @@
         <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined"
                   Class="mt-2" Dense="true">
             <div class="stack gap-1">
-                <span class="typo-body2">설치 방법:</span>
+                <span class="typo-body2">@Strings.Settings_Integrations_InstallMethod</span>
                 @if (_isMac)
                 {
                     <code>brew install gh</code>
@@ -207,26 +207,26 @@
         </MudAlert>
     }
 
-    <MudTextField @bind-Value="Settings.GhPath" Label="GitHub CLI 경로"
+    <MudTextField @bind-Value="Settings.GhPath" Label="@Strings.Settings_Integrations_GhPathLabel"
                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                  Placeholder="자동 감지" Class="mt-3"
-                  HelperText="비워두면 자동으로 감지합니다"/>
+                  Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
+                  HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
 </div>
 
 <div class="settings-group">
-    <div class="settings-group-title">Codex CLI <span style="opacity: 0.5; font-size: 0.75rem;">(선택 사항)</span></div>
+    <div class="settings-group-title">Codex CLI <span style="opacity: 0.5; font-size: 0.75rem;">@Strings.Settings_Integrations_CodexOptional</span></div>
     <div class="integration-status">
         @if (_codexChecking)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true"
                                  Style="width: 18px; height: 18px;"/>
-            <span class="status-text">감지 중...</span>
+            <span class="status-text">@Strings.Settings_Integrations_Checking</span>
         }
         else if (_codexFound)
         {
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
                      Class="status-ok"/>
-            <span class="status-text">감지됨</span>
+            <span class="status-text">@Strings.Settings_Integrations_Detected</span>
             @if (!string.IsNullOrEmpty(_codexResolvedPath))
             {
                 <span class="status-path">@_codexResolvedPath</span>
@@ -236,17 +236,17 @@
         {
             <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small"
                      Style="color: var(--mud-palette-text-secondary);"/>
-            <span class="status-text">미설치</span>
+            <span class="status-text">@Strings.Settings_Integrations_NotInstalled</span>
         }
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="CheckCodex" title="다시 확인"/>
+                       OnClick="CheckCodex" title="@Strings.Settings_Integrations_Recheck"/>
     </div>
 
     @if (_codexFound && !string.IsNullOrEmpty(_codexVersion))
     {
         <div class="stack gap-1 mt-2">
             <div class="stack-row items-center gap-2">
-                <span class="typo-body2">버전:</span>
+                <span class="typo-body2">@Strings.Settings_Integrations_Version</span>
                 <MudChip T="string" Size="Size.Small" Color="Color.Success"
                          Variant="Variant.Text">
                     @_codexVersion
@@ -260,16 +260,16 @@
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined"
                   Class="mt-2" Dense="true">
             <div class="stack gap-1">
-                <span class="typo-body2">설치 방법:</span>
+                <span class="typo-body2">@Strings.Settings_Integrations_InstallMethod</span>
                 <code>npm install -g @("@openai/codex")</code>
             </div>
         </MudAlert>
     }
 
-    <MudTextField @bind-Value="Settings.CodexPath" Label="Codex CLI 경로"
+    <MudTextField @bind-Value="Settings.CodexPath" Label="@Strings.Settings_Integrations_CodexPathLabel"
                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                  Placeholder="자동 감지" Class="mt-3"
-                  HelperText="비워두면 자동으로 감지합니다"/>
+                  Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
+                  HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
 </div>
 
 @code {

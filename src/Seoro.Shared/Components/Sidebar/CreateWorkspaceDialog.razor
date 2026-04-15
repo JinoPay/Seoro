@@ -10,8 +10,8 @@
                 <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size: 18px;"/>
             </div>
             <div class="stack gap-1">
-                <span class="create-ws-title">새 워크스페이스</span>
-                <span class="create-ws-subtitle">저장소를 연결하여 AI 코딩을 시작하세요</span>
+                <span class="create-ws-title">@Strings.Sidebar_CreateWorkspace_Title</span>
+                <span class="create-ws-subtitle">@Strings.Sidebar_CreateWorkspace_Subtitle</span>
             </div>
         </div>
     </TitleContent>
@@ -31,12 +31,12 @@
                 <button type="button" class="create-ws-segment @(_activeTab == 0 ? "active" : "")"
                         @onclick="@(() => _activeTab = 0)">
                     <MudIcon Icon="@Icons.Material.Filled.Cloud" Style="font-size: 16px;"/>
-                    URL에서 클론
+                    @Strings.Sidebar_CreateWorkspace_CloneFromUrl
                 </button>
                 <button type="button" class="create-ws-segment @(_activeTab == 1 ? "active" : "")"
                         @onclick="@(() => _activeTab = 1)">
                     <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size: 16px;"/>
-                    로컬 저장소
+                    @Strings.Sidebar_CreateWorkspace_LocalRepository
                 </button>
             </div>
 
@@ -45,7 +45,7 @@
                 {
                     <div class="stack gap-3">
                         <div class="create-ws-field-group">
-                            <label class="create-ws-label">저장소 URL</label>
+                            <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_RepoUrlLabel</label>
                             <MudTextField @bind-Value="_repoUrl" Variant="Variant.Outlined"
                                           Margin="Margin.Dense" Placeholder="https://github.com/org/repo"
                                           Immediate="true" TextChanged="OnUrlChanged"
@@ -53,28 +53,28 @@
                                           AdornmentIcon="@Icons.Material.Filled.Link"/>
                         </div>
                         <div class="create-ws-field-group">
-                            <label class="create-ws-label">클론 경로</label>
+                            <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_ClonePathLabel</label>
                             <div class="create-ws-path-input">
                                 <MudTextField @bind-Value="_clonePath" Variant="Variant.Outlined"
                                               Margin="Margin.Dense" Placeholder="/경로/저장소"
                                               Style="flex: 1;"/>
                                 <button type="button" class="create-ws-browse-btn"
-                                        @onclick="BrowseCloneFolder" title="찾아보기...">
+                                        @onclick="BrowseCloneFolder" title="@Strings.Sidebar_CreateWorkspace_Browse">
                                     <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Style="font-size: 18px;"/>
                                 </button>
                             </div>
                         </div>
                         <div class="create-ws-field-group">
-                            <label class="create-ws-label">워크스페이스 이름</label>
+                            <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_WorkspaceNameLabel</label>
                             <MudTextField @bind-Value="_editName" Variant="Variant.Outlined"
                                           Margin="Margin.Dense"/>
                         </div>
                         <div class="create-ws-field-group">
-                            <label class="create-ws-label">기본 모델</label>
+                            <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_DefaultModelLabel</label>
                             <MudSelect T="string" @bind-Value="_editModel"
                                        Variant="Variant.Outlined" Margin="Margin.Dense"
-                                       HelperText="비워두면 앱 기본값을 따릅니다.">
-                                <MudSelectItem T="string" Value="@("")">앱 기본값 사용</MudSelectItem>
+                                       HelperText="@Strings.Sidebar_CreateWorkspace_DefaultModelHelper">
+                                <MudSelectItem T="string" Value="@("")">@Strings.Sidebar_CreateWorkspace_UseAppDefault</MudSelectItem>
                                 @foreach (var model in ModelDefinitions.All.Where(m => m.Provider != "codex"))
                                 {
                                     <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
@@ -87,13 +87,13 @@
                 {
                     <div class="stack gap-3">
                         <div class="create-ws-field-group">
-                            <label class="create-ws-label">저장소 경로</label>
+                            <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_RepoPathLabel</label>
                             <div class="create-ws-path-input">
                                 <MudTextField @bind-Value="_localPath" Variant="Variant.Outlined"
                                               Margin="Margin.Dense" Placeholder="/경로/저장소"
                                               Style="flex: 1;"/>
                                 <button type="button" class="create-ws-browse-btn"
-                                        @onclick="BrowseLocalFolder" title="찾아보기...">
+                                        @onclick="BrowseLocalFolder" title="@Strings.Sidebar_CreateWorkspace_Browse">
                                     <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Style="font-size: 18px;"/>
                                 </button>
                             </div>
@@ -115,22 +115,22 @@
                                             <MudProgressCircular Size="Size.Small" Indeterminate="true"
                                                                  Style="width: 14px; height: 14px;"/>
                                         }
-                                        Git 초기화
+                                        @Strings.Sidebar_CreateWorkspace_InitGit
                                     </button>
                                 }
                             </div>
                         }
                         <div class="create-ws-field-group">
-                            <label class="create-ws-label">워크스페이스 이름</label>
+                            <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_WorkspaceNameLabel</label>
                             <MudTextField @bind-Value="_editName" Variant="Variant.Outlined"
                                           Margin="Margin.Dense"/>
                         </div>
                         <div class="create-ws-field-group">
-                            <label class="create-ws-label">기본 모델</label>
+                            <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_DefaultModelLabel</label>
                             <MudSelect T="string" @bind-Value="_editModel"
                                        Variant="Variant.Outlined" Margin="Margin.Dense"
-                                       HelperText="비워두면 앱 기본값을 따릅니다.">
-                                <MudSelectItem T="string" Value="@("")">앱 기본값 사용</MudSelectItem>
+                                       HelperText="@Strings.Sidebar_CreateWorkspace_DefaultModelHelper">
+                                <MudSelectItem T="string" Value="@("")">@Strings.Sidebar_CreateWorkspace_UseAppDefault</MudSelectItem>
                                 @foreach (var model in ModelDefinitions.All.Where(m => m.Provider != "codex"))
                                 {
                                     <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
@@ -153,7 +153,7 @@
     <DialogActions>
         <div class="create-ws-actions">
             <button type="button" class="create-ws-btn-cancel" @onclick="Close" disabled="@_isCreating">
-                취소
+                @Strings.Common_Cancel
             </button>
             <button type="button" class="create-ws-btn-create" @onclick="Create" disabled="@(!CanCreate)">
                 @if (_isCreating)
@@ -161,7 +161,7 @@
                     <MudProgressCircular Size="Size.Small" Indeterminate="true"
                                          Style="width: 16px; height: 16px;"/>
                 }
-                만들기
+                @Strings.Sidebar_CreateWorkspace_Create
                 @if (!_isCreating)
                 {
                     <kbd class="create-ws-kbd">Enter</kbd>
@@ -242,7 +242,7 @@
     {
         _errorMessage = null;
         _isCreating = true;
-        _progressMessage = "저장소 클론 중...";
+        _progressMessage = Strings.Sidebar_CreateWorkspace_Cloning;
         StateHasChanged();
 
         var progress = new Progress<string>(msg =>
@@ -260,7 +260,7 @@
 
             if (ws.Status == WorkspaceStatus.Error)
             {
-                _errorMessage = ws.ErrorMessage ?? "워크스페이스 생성에 실패했습니다.";
+                _errorMessage = ws.ErrorMessage ?? Strings.Sidebar_CreateWorkspace_CreationFailed;
                 _isCreating = false;
             }
             else
@@ -272,7 +272,7 @@
         }
         catch (OperationCanceledException)
         {
-            _errorMessage = "작업이 취소되었습니다.";
+            _errorMessage = Strings.Sidebar_CreateWorkspace_OperationCancelled;
             _isCreating = false;
         }
         catch (Exception ex)
@@ -286,7 +286,7 @@
     {
         _errorMessage = null;
         _isCreating = true;
-        _progressMessage = "워크스페이스 설정 중...";
+        _progressMessage = Strings.Sidebar_CreateWorkspace_SettingUp;
         StateHasChanged();
 
         try
@@ -296,7 +296,7 @@
 
             if (ws.Status == WorkspaceStatus.Error)
             {
-                _errorMessage = ws.ErrorMessage ?? "워크스페이스 생성에 실패했습니다.";
+                _errorMessage = ws.ErrorMessage ?? Strings.Sidebar_CreateWorkspace_CreationFailed;
                 _isCreating = false;
             }
             else
@@ -336,13 +336,13 @@
         var isGitRepo = await GitService.IsGitRepoAsync(path);
         if (!isGitRepo)
         {
-            _localPathValidation = "이 폴더는 git 저장소가 아닙니다.";
+            _localPathValidation = Strings.Sidebar_CreateWorkspace_NotGitRepo;
             _isLocalPathGitRepo = false;
             return;
         }
 
         _isLocalPathGitRepo = true;
-        _localPathValidation = "유효한 git 저장소";
+        _localPathValidation = Strings.Sidebar_CreateWorkspace_ValidGitRepo;
 
         if (string.IsNullOrEmpty(_editName) || _nameAutoFilled)
         {
@@ -364,7 +364,7 @@
             var initResult = await GitService.InitAsync(_localPath);
             if (!initResult.Success)
             {
-                _errorMessage = $"Git 초기화 실패: {initResult.Error}";
+                _errorMessage = Strings.Sidebar_CreateWorkspace_GitInitFailed(initResult.Error ?? "");
                 return;
             }
 
@@ -377,7 +377,7 @@
             if (await GitService.IsGitRepoAsync(_localPath))
             {
                 _isLocalPathGitRepo = true;
-                _localPathValidation = "Git 저장소가 초기화되었습니다.";
+                _localPathValidation = Strings.Sidebar_CreateWorkspace_GitInitialized;
 
                 if (string.IsNullOrEmpty(_editName) || _nameAutoFilled)
                 {
@@ -388,7 +388,7 @@
             }
             else
             {
-                _errorMessage = "Git 초기화에 실패했습니다. 다시 시도해 주세요.";
+                _errorMessage = Strings.Sidebar_CreateWorkspace_GitInitError;
             }
         }
         catch (Exception ex)

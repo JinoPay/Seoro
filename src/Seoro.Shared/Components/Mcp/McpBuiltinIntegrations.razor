@@ -65,12 +65,16 @@
     private enum IntegrationState { None, Partial, AllAllowed }
 
     private record ClaudeAiIntegration(
-        string DisplayName, string Icon, string ServerKey, List<string> Tools,
+        string DisplayName, string Icon, List<string> ServerKeys, List<string> Tools,
         string IconBg, string IconColor);
 
     private static readonly List<ClaudeAiIntegration> AllIntegrations =
     [
-        new("Figma", Icons.Material.Filled.Brush, "claude_ai_Figma",
+        new("Figma", Icons.Material.Filled.Brush,
+        [
+            "claude_ai_Figma",       // Claude.ai 내장 통합
+            "plugin_figma_figma"     // 공식 Figma 플러그인 (plugin:figma:figma)
+        ],
         [
             "add_code_connect_map", "create_design_system_rules", "create_new_file",
             "generate_diagram", "get_code_connect_map", "get_code_connect_suggestions",
@@ -78,7 +82,7 @@
             "get_metadata", "get_screenshot", "get_variable_defs",
             "search_design_system", "send_code_connect_mappings", "use_figma", "whoami"
         ], "color-mix(in srgb, #a259ff 15%, transparent)", "#a259ff"),
-        new("Notion", Icons.Material.Filled.Notes, "claude_ai_Notion",
+        new("Notion", Icons.Material.Filled.Notes, ["claude_ai_Notion"],
         [
             "notion-create-comment", "notion-create-database", "notion-create-pages",
             "notion-create-view", "notion-duplicate-page", "notion-fetch",
@@ -86,10 +90,10 @@
             "notion-move-pages", "notion-query-database-view", "notion-query-meeting-notes",
             "notion-search", "notion-update-data-source", "notion-update-page", "notion-update-view"
         ], "color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent)", "var(--mud-palette-text-primary)"),
-        new("Gmail", Icons.Material.Filled.Email, "claude_ai_Gmail",
+        new("Gmail", Icons.Material.Filled.Email, ["claude_ai_Gmail"],
             ["authenticate"],
             "color-mix(in srgb, #ea4335 15%, transparent)", "#ea4335"),
-        new("Google Calendar", Icons.Material.Filled.CalendarMonth, "claude_ai_Google_Calendar",
+        new("Google Calendar", Icons.Material.Filled.CalendarMonth, ["claude_ai_Google_Calendar"],
             ["authenticate"],
             "color-mix(in srgb, #1a73e8 15%, transparent)", "#1a73e8"),
     ];
@@ -123,11 +127,15 @@
     private IntegrationState GetState(ClaudeAiIntegration integration)
     {
         if (_permissions == null) return IntegrationState.None;
-        var existing = McpService.ExtractToolPermissions(integration.ServerKey, _permissions);
-        var allowedSet = existing
-            .Where(p => p.Level == McpPermissionLevel.Allow)
-            .Select(p => p.ToolName)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // 모든 서버 키에 걸쳐 허용된 도구 수집
+        var allowedSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var serverKey in integration.ServerKeys)
+        {
+            var existing = McpService.ExtractToolPermissions(serverKey, _permissions);
+            foreach (var p in existing.Where(p => p.Level == McpPermissionLevel.Allow))
+                allowedSet.Add(p.ToolName);
+        }
 
         var allowedCount = integration.Tools.Count(t => allowedSet.Contains(t));
         if (allowedCount == 0) return IntegrationState.None;
@@ -146,9 +154,11 @@
     private async Task AllowAll(ClaudeAiIntegration integration)
     {
         var settings = await ClaudeSettingsService.ReadAsync(ClaudeSettingsScope.Global);
-        foreach (var tool in integration.Tools)
-            settings.Permissions = McpService.ApplyToolPermission(
-                settings.Permissions, integration.ServerKey, tool, McpPermissionLevel.Allow);
+        // 모든 서버 키에 대해 권한 추가
+        foreach (var serverKey in integration.ServerKeys)
+            foreach (var tool in integration.Tools)
+                settings.Permissions = McpService.ApplyToolPermission(
+                    settings.Permissions, serverKey, tool, McpPermissionLevel.Allow);
         await ClaudeSettingsService.WriteAsync(ClaudeSettingsScope.Global, settings);
         _permissions = settings.Permissions;
         Snackbar.Add($"{integration.DisplayName} 도구 {integration.Tools.Count}개를 허용했습니다.", Severity.Success);
@@ -158,11 +168,12 @@
     private async Task RemoveAll(ClaudeAiIntegration integration)
     {
         var settings = await ClaudeSettingsService.ReadAsync(ClaudeSettingsScope.Global);
-        foreach (var tool in integration.Tools)
-        {
-            var pattern = $"mcp__{integration.ServerKey}__{tool}";
-            settings.Permissions = McpService.RemoveToolPermission(settings.Permissions, pattern);
-        }
+        foreach (var serverKey in integration.ServerKeys)
+            foreach (var tool in integration.Tools)
+            {
+                var pattern = $"mcp__{serverKey}__{tool}";
+                settings.Permissions = McpService.RemoveToolPermission(settings.Permissions, pattern);
+            }
         await ClaudeSettingsService.WriteAsync(ClaudeSettingsScope.Global, settings);
         _permissions = settings.Permissions;
         Snackbar.Add($"{integration.DisplayName} 권한을 제거했습니다.", Severity.Info);

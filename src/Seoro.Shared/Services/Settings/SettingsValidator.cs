@@ -9,6 +9,7 @@ namespace Seoro.Shared.Services.Settings;
 public static class SettingsValidator
 {
     private static readonly HashSet<string> ValidEffortLevels = ["auto", "low", "medium", "high", "max"];
+    private static readonly HashSet<string> ValidLanguages = ["ko", "en"];
     private static readonly HashSet<string> ValidMergeStrategies = ["Merge", "Squash", "Rebase"];
 
     private static readonly HashSet<string> ValidPermissionModes =
@@ -25,6 +26,9 @@ public static class SettingsValidator
     {
         if (!ValidThemes.Contains(settings.Theme))
             settings.Theme = "dark";
+
+        if (!ValidLanguages.Contains(settings.UiLanguage))
+            settings.UiLanguage = "ko";
 
         if (!ValidPermissionModes.Contains(settings.DefaultPermissionMode))
             settings.DefaultPermissionMode = SeoroConstants.DefaultPermissionMode;

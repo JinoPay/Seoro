@@ -33,6 +33,413 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
 
+  <!-- Common Actions -->
+  <data name="Common_Save" xml:space="preserve"><value>저장</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>취소</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>삭제</value></data>
+  <data name="Common_Confirm" xml:space="preserve"><value>확인</value></data>
+  <data name="Common_Close" xml:space="preserve"><value>닫기</value></data>
+  <data name="Common_Back" xml:space="preserve"><value>뒤로</value></data>
+  <data name="Common_Edit" xml:space="preserve"><value>수정</value></data>
+  <data name="Common_Add" xml:space="preserve"><value>추가</value></data>
+  <data name="Common_Search" xml:space="preserve"><value>검색</value></data>
+  <data name="Common_Copy" xml:space="preserve"><value>복사</value></data>
+  <data name="Common_Open" xml:space="preserve"><value>열기</value></data>
+  <data name="Common_Retry" xml:space="preserve"><value>재시도</value></data>
+  <data name="Common_Loading" xml:space="preserve"><value>불러오는 중...</value></data>
+  <data name="Common_Error" xml:space="preserve"><value>오류</value></data>
+  <data name="Common_Settings" xml:space="preserve"><value>설정</value></data>
+  <data name="Common_Unknown" xml:space="preserve"><value>알 수 없음</value></data>
+  <data name="Common_None" xml:space="preserve"><value>없음</value></data>
+  <data name="Common_Yes" xml:space="preserve"><value>예</value></data>
+  <data name="Common_No" xml:space="preserve"><value>아니오</value></data>
+
+  <!-- Common Status -->
+  <data name="Common_Status_Error" xml:space="preserve"><value>오류</value></data>
+  <data name="Common_Status_Archived" xml:space="preserve"><value>보관</value></data>
+  <data name="Common_Status_Completed" xml:space="preserve"><value>완료</value></data>
+  <data name="Common_Status_Synced" xml:space="preserve"><value>동기화</value></data>
+  <data name="Common_Status_Local" xml:space="preserve"><value>로컬</value></data>
+
+  <!-- Common Time -->
+  <data name="Common_Time_JustNow" xml:space="preserve"><value>방금 전</value></data>
+  <data name="Common_Time_SecondsAgo" xml:space="preserve"><value>{0}초 전</value></data>
+  <data name="Common_Time_MinutesAgo" xml:space="preserve"><value>{0}분 전</value></data>
+  <data name="Common_Time_HoursAgo" xml:space="preserve"><value>{0}시간 전</value></data>
+  <data name="Common_Time_DaysAgo" xml:space="preserve"><value>{0}일 전</value></data>
+  <data name="Common_Time_DateFormat" xml:space="preserve"><value>{0}년 {1}월 {2}일</value></data>
+  <data name="Common_Time_Seconds" xml:space="preserve"><value>{0}초</value></data>
+  <data name="Common_Time_MinutesSeconds" xml:space="preserve"><value>{0}분 {1}초</value></data>
+
+  <!-- Settings Navigation -->
+  <data name="Nav_BackToApp" xml:space="preserve"><value>앱으로 돌아가기</value></data>
+  <data name="Nav_Dashboard" xml:space="preserve"><value>대시보드</value></data>
+  <data name="Nav_Usage" xml:space="preserve"><value>사용량</value></data>
+  <data name="Nav_AppSettings" xml:space="preserve"><value>앱 설정</value></data>
+  <data name="Nav_General" xml:space="preserve"><value>일반</value></data>
+  <data name="Nav_AiModel" xml:space="preserve"><value>AI 모델</value></data>
+  <data name="Nav_Notifications" xml:space="preserve"><value>알림</value></data>
+  <data name="Nav_Terminal" xml:space="preserve"><value>터미널</value></data>
+  <data name="Nav_GitMerge" xml:space="preserve"><value>Git / 머지</value></data>
+  <data name="Nav_Shortcuts" xml:space="preserve"><value>단축키</value></data>
+  <data name="Nav_IntegrationsAndExtensions" xml:space="preserve"><value>연동 &amp; 확장</value></data>
+  <data name="Nav_Integrations" xml:space="preserve"><value>연동</value></data>
+  <data name="Nav_SlashCommands" xml:space="preserve"><value>슬래시 명령어</value></data>
+  <data name="Nav_ClaudeSettings" xml:space="preserve"><value>Claude 설정</value></data>
+  <data name="Nav_McpServers" xml:space="preserve"><value>MCP 서버</value></data>
+  <data name="Nav_Hooks" xml:space="preserve"><value>훅</value></data>
+  <data name="Nav_Rules" xml:space="preserve"><value>룰</value></data>
+  <data name="Nav_Instructions" xml:space="preserve"><value>인스트럭션</value></data>
+  <data name="Nav_Plugins" xml:space="preserve"><value>플러그인</value></data>
+  <data name="Nav_Accounts" xml:space="preserve"><value>계정 설정</value></data>
+  <data name="Nav_Tools" xml:space="preserve"><value>도구</value></data>
+  <data name="Nav_SessionHistory" xml:space="preserve"><value>세션 히스토리</value></data>
+  <data name="Nav_Memory" xml:space="preserve"><value>메모리</value></data>
+  <data name="Nav_System" xml:space="preserve"><value>시스템</value></data>
+  <data name="Nav_Advanced" xml:space="preserve"><value>고급</value></data>
+  <data name="Nav_Updates" xml:space="preserve"><value>업데이트</value></data>
+  <data name="Nav_Workspaces" xml:space="preserve"><value>Workspaces</value></data>
+
+  <!-- Settings Sections: General -->
+  <data name="Settings_General_Title" xml:space="preserve"><value>일반</value></data>
+  <data name="Settings_General_Desc" xml:space="preserve"><value>앱의 기본 동작을 설정합니다.</value></data>
+  <data name="Settings_General_ThemeLabel" xml:space="preserve"><value>테마</value></data>
+  <data name="Settings_General_ThemeDark" xml:space="preserve"><value>다크</value></data>
+  <data name="Settings_General_ThemeLight" xml:space="preserve"><value>라이트</value></data>
+  <data name="Settings_General_ThemeSystem" xml:space="preserve"><value>시스템</value></data>
+  <data name="Settings_General_UiLanguageLabel" xml:space="preserve"><value>UI 언어 / UI Language</value></data>
+  <data name="Settings_General_UiScaleTitle" xml:space="preserve"><value>화면 배율</value></data>
+  <data name="Settings_General_UiScaleAuto" xml:space="preserve"><value>자동 (플랫폼 기본값)</value></data>
+  <data name="Settings_General_UiScaleHint" xml:space="preserve"><value>macOS 기본값: 110%, Windows 기본값: 100%. 슬라이더 조작 시 바로 미리보기됩니다.</value></data>
+  <data name="Settings_General_GitWorkflowTitle" xml:space="preserve"><value>Git 워크플로우</value></data>
+  <data name="Settings_General_CloneDirLabel" xml:space="preserve"><value>클론 디렉토리</value></data>
+  <data name="Settings_General_CloneDirPlaceholder" xml:space="preserve"><value>~/Seoro</value></data>
+  <data name="Settings_General_CloneDirHint" xml:space="preserve"><value>저장소가 클론되는 위치입니다. 비워두면 기본값을 사용합니다.</value></data>
+  <data name="Settings_General_BrowseDir" xml:space="preserve"><value>찾아보기...</value></data>
+  <data name="Settings_General_SessionLangLabel" xml:space="preserve"><value>세션 이름 언어</value></data>
+  <data name="Settings_General_SessionLangHint" xml:space="preserve"><value>Claude가 워크트리 브랜치 이름과 로컬 세션 타이틀을 생성할 때 사용할 언어입니다.</value></data>
+  <data name="Settings_General_HelpTitle" xml:space="preserve"><value>도움말</value></data>
+  <data name="Settings_General_ShowTutorial" xml:space="preserve"><value>튜토리얼 다시 보기</value></data>
+  <data name="Settings_General_ShowWhatsNew" xml:space="preserve"><value>새로운 기능 보기</value></data>
+  <data name="Settings_General_MigrationTitle" xml:space="preserve"><value>데이터 마이그레이션</value></data>
+  <data name="Settings_General_MigrationDesc" xml:space="preserve"><value>기존 Cominomi 데이터를 Seoro로 가져옵니다.</value></data>
+  <data name="Settings_General_MigrationFoundData" xml:space="preserve"><value>발견된 데이터: 세션 {0}개, 워크스페이스 {1}개, 메모리 {2}개, 태스크 {3}개, 설정 파일 {4}개</value></data>
+  <data name="Settings_General_MigrationImporting" xml:space="preserve"><value>가져오는 중...</value></data>
+  <data name="Settings_General_MigrationImport" xml:space="preserve"><value>Cominomi 데이터 가져오기</value></data>
+  <data name="Settings_General_ImportDialogTitle" xml:space="preserve"><value>Cominomi 데이터 가져오기</value></data>
+  <data name="Settings_General_ImportDialogMsg" xml:space="preserve"><value>기존 Cominomi 데이터 {0}개 항목을 Seoro로 가져옵니다.\n이미 같은 파일이 있는 경우 처리 방법을 선택하세요.</value></data>
+  <data name="Settings_General_ImportOverwrite" xml:space="preserve"><value>기존 데이터 덮어쓰기</value></data>
+  <data name="Settings_General_ImportKeep" xml:space="preserve"><value>기존 데이터 유지 (스킵)</value></data>
+  <data name="Settings_General_ImportDoneTitle" xml:space="preserve"><value>가져오기 완료</value></data>
+  <data name="Settings_General_ImportDoneMsg" xml:space="preserve"><value>{0}개 항목을 가져왔습니다. 변경사항을 반영하기 위해 앱을 다시 시작합니다.</value></data>
+  <data name="Settings_General_ImportResult" xml:space="preserve"><value>가져오기 완료: {0}개 스킵 (변경 없음)</value></data>
+  <data name="Settings_General_ImportFailed" xml:space="preserve"><value>가져오기 실패: {0}</value></data>
+  <data name="Settings_General_ImportFailedCount" xml:space="preserve"><value>, {0}개 실패</value></data>
+  <data name="Settings_General_ImportFolderDeleteFailed" xml:space="preserve"><value> (Cominomi 폴더 삭제 실패)</value></data>
+
+  <!-- Settings Sections: AI Model -->
+  <data name="Settings_Ai_Title" xml:space="preserve"><value>AI 모델</value></data>
+  <data name="Settings_Ai_Desc" xml:space="preserve"><value>AI 모델 및 동작 방식을 설정합니다.</value></data>
+  <data name="Settings_Ai_DefaultModelLabel" xml:space="preserve"><value>기본 모델</value></data>
+  <data name="Settings_Ai_DefaultModelHint" xml:space="preserve"><value>전역 기본값입니다. 워크스페이스별로 다른 모델을 지정할 수 있습니다.</value></data>
+  <data name="Settings_Ai_EffortLevelLabel" xml:space="preserve"><value>기본 Effort 레벨</value></data>
+  <data name="Settings_Ai_EffortLevelMax" xml:space="preserve"><value>최대</value></data>
+  <data name="Settings_Ai_EffortLevelHint" xml:space="preserve"><value>auto: 모델 기본값, 최대: 모델별 최고 사고 수준 (Opus: max, 그 외: high)</value></data>
+  <data name="Settings_Ai_PermissionModeLabel" xml:space="preserve"><value>기본 권한 모드</value></data>
+  <data name="Settings_Ai_PermissionModeNormal" xml:space="preserve"><value>일반 모드</value></data>
+  <data name="Settings_Ai_PermissionModePlan" xml:space="preserve"><value>플랜 모드</value></data>
+  <data name="Settings_Ai_PermissionModeHint" xml:space="preserve"><value>Seoro에서 Claude CLI 실행 시 적용되는 권한 모드입니다.</value></data>
+  <data name="Settings_Ai_FallbackModelLabel" xml:space="preserve"><value>Fallback 모델</value></data>
+  <data name="Settings_Ai_FallbackModelHint" xml:space="preserve"><value>기본 모델 과부하 시 대체 모델 (비워두면 미사용)</value></data>
+  <data name="Settings_Ai_McpConfigPathLabel" xml:space="preserve"><value>MCP 설정 파일 경로</value></data>
+  <data name="Settings_Ai_McpConfigPathHint" xml:space="preserve"><value>MCP 서버 설정 JSON 파일 경로 (비워두면 미사용)</value></data>
+  <data name="Settings_Ai_CodexDefaultModelLabel" xml:space="preserve"><value>Codex 기본 모델</value></data>
+  <data name="Settings_Ai_CodexDefaultModelHint" xml:space="preserve"><value>Codex 세션의 전역 기본 모델입니다.</value></data>
+  <data name="Settings_Ai_ReasoningEffortLabel" xml:space="preserve"><value>Reasoning Effort</value></data>
+  <data name="Settings_Ai_ReasoningEffortHint" xml:space="preserve"><value>Codex 모델의 추론 깊이를 설정합니다.</value></data>
+  <data name="Settings_Ai_SandboxModeLabel" xml:space="preserve"><value>Sandbox 모드</value></data>
+  <data name="Settings_Ai_SandboxReadOnly" xml:space="preserve"><value>읽기 전용</value></data>
+  <data name="Settings_Ai_SandboxWorkspace" xml:space="preserve"><value>워크스페이스</value></data>
+  <data name="Settings_Ai_SandboxFullAccess" xml:space="preserve"><value>전체 접근</value></data>
+  <data name="Settings_Ai_SandboxModeHint" xml:space="preserve"><value>파일 시스템 접근 범위를 설정합니다.</value></data>
+  <data name="Settings_Ai_ApprovalPolicyLabel" xml:space="preserve"><value>승인 정책</value></data>
+  <data name="Settings_Ai_ApprovalAlways" xml:space="preserve"><value>항상 승인</value></data>
+  <data name="Settings_Ai_ApprovalOnRequest" xml:space="preserve"><value>요청 시</value></data>
+  <data name="Settings_Ai_ApprovalAuto" xml:space="preserve"><value>자동</value></data>
+  <data name="Settings_Ai_ApprovalPolicyHint" xml:space="preserve"><value>명령 실행 전 사용자 승인 시점을 설정합니다.</value></data>
+  <data name="Settings_Ai_WebSearchLabel" xml:space="preserve"><value>웹 검색</value></data>
+  <data name="Settings_Ai_WebSearchHint" xml:space="preserve"><value>Codex 세션에서 웹 검색을 활성화합니다.</value></data>
+  <data name="Settings_Ai_ReasoningMinimal" xml:space="preserve"><value>최소</value></data>
+  <data name="Settings_Ai_ReasoningLow" xml:space="preserve"><value>낮음</value></data>
+  <data name="Settings_Ai_ReasoningMedium" xml:space="preserve"><value>보통</value></data>
+  <data name="Settings_Ai_ReasoningHigh" xml:space="preserve"><value>높음</value></data>
+  <data name="Settings_Ai_ReasoningXHigh" xml:space="preserve"><value>최대</value></data>
+
+  <!-- Settings Sections: Notifications -->
+  <data name="Settings_Notifications_Title" xml:space="preserve"><value>알림</value></data>
+  <data name="Settings_Notifications_Desc" xml:space="preserve"><value>작업 완료, 응답 대기, 플랜 리뷰 시 OS 알림을 발송합니다.</value></data>
+  <data name="Settings_Notifications_DesktopLabel" xml:space="preserve"><value>데스크톱 알림</value></data>
+  <data name="Settings_Notifications_DesktopHint" xml:space="preserve"><value>작업 완료 시 OS 알림을 표시합니다.</value></data>
+  <data name="Settings_Notifications_SoundLabel" xml:space="preserve"><value>알림 사운드</value></data>
+  <data name="Settings_Notifications_SoundHint" xml:space="preserve"><value>알림 발생 시 소리를 재생합니다.</value></data>
+  <data name="Settings_Notifications_SoundTypeLabel" xml:space="preserve"><value>사운드 종류</value></data>
+  <data name="Settings_Notifications_TestButton" xml:space="preserve"><value>테스트 알림 보내기</value></data>
+  <data name="Settings_Notifications_NativeActive" xml:space="preserve"><value>Seoro 알림이 활성화되어 있습니다. 시스템 설정 &gt; 알림에서 세부 설정을 변경할 수 있습니다.</value></data>
+  <data name="Settings_Notifications_ScriptFallback" xml:space="preserve"><value>알림 권한이 없어 스크립트 방식으로 전송됩니다. 시스템 설정 &gt; 알림에 Seoro가 없다면 앱 재설치 또는 코드 서명이 필요합니다.</value></data>
+  <data name="Settings_Notifications_TestMsg" xml:space="preserve"><value>테스트 알림입니다!</value></data>
+  <data name="Settings_Notifications_TestSent" xml:space="preserve"><value>테스트 알림을 발송했습니다.</value></data>
+  <data name="Settings_Notifications_SoundDefault" xml:space="preserve"><value>기본</value></data>
+
+  <!-- Settings Sections: Terminal -->
+  <data name="Settings_Terminal_Title" xml:space="preserve"><value>터미널</value></data>
+  <data name="Settings_Terminal_Desc" xml:space="preserve"><value>내장 터미널의 기본 셸을 설정합니다.</value></data>
+  <data name="Settings_Terminal_ShellLabel" xml:space="preserve"><value>기본 셸</value></data>
+  <data name="Settings_Terminal_ShellAuto" xml:space="preserve"><value>자동 감지 ({0})</value></data>
+  <data name="Settings_Terminal_ShellHint" xml:space="preserve"><value>터미널 패널에서 사용할 셸입니다. 자동 감지는 시스템 기본 셸을 사용합니다.</value></data>
+
+  <!-- Settings Sections: Git/Merge -->
+  <data name="Settings_GitMerge_Title" xml:space="preserve"><value>Git / 머지</value></data>
+  <data name="Settings_GitMerge_Desc" xml:space="preserve"><value>MergePanel 동작과 AI 위임 프롬프트를 설정합니다.</value></data>
+  <data name="Settings_GitMerge_DefaultStrategyLabel" xml:space="preserve"><value>기본 PR 머지 전략</value></data>
+  <data name="Settings_GitMerge_DefaultStrategyHint" xml:space="preserve"><value>MergePanel에서 PR 머지 버튼의 기본 선택값입니다.</value></data>
+  <data name="Settings_GitMerge_AutoArchiveLabel" xml:space="preserve"><value>머지 성공 시 세션 자동 아카이브</value></data>
+  <data name="Settings_GitMerge_AutoArchiveHint" xml:space="preserve"><value>스쿼시 머지가 성공하면 해당 세션을 자동으로 삭제합니다.</value></data>
+  <data name="Settings_GitMerge_AiPromptsTitle" xml:space="preserve"><value>AI 위임 프롬프트</value></data>
+  <data name="Settings_GitMerge_AiPromptsDesc" xml:space="preserve"><value>MergePanel 버튼 클릭 시 AI에게 전달되는 지시 파일입니다. 비워두면 기본 프롬프트를 사용합니다.</value></data>
+  <data name="Settings_GitMerge_CreatePrPromptLabel" xml:space="preserve"><value>PR 생성 프롬프트</value></data>
+  <data name="Settings_GitMerge_PushPromptLabel" xml:space="preserve"><value>커밋·푸시 프롬프트</value></data>
+  <data name="Settings_GitMerge_ConflictPromptLabel" xml:space="preserve"><value>충돌 해결 프롬프트</value></data>
+  <data name="Settings_GitMerge_ResetToDefault" xml:space="preserve"><value>기본값으로</value></data>
+
+  <!-- Settings Sections: Advanced -->
+  <data name="Settings_Advanced_Title" xml:space="preserve"><value>고급</value></data>
+  <data name="Settings_Advanced_Desc" xml:space="preserve"><value>Claude CLI 고급 설정 및 환경변수를 관리합니다.</value></data>
+  <data name="Settings_Advanced_DebugModeLabel" xml:space="preserve"><value>디버그 모드</value></data>
+  <data name="Settings_Advanced_DebugModeHint" xml:space="preserve"><value>활성화하면 Claude CLI에 --debug 플래그를 전달합니다.</value></data>
+  <data name="Settings_Advanced_EnvVarsTitle" xml:space="preserve"><value>프로세스 환경변수</value></data>
+  <data name="Settings_Advanced_EnvVarsHint" xml:space="preserve"><value>Seoro에서 Claude CLI를 실행할 때 프로세스에 주입하는 환경변수입니다.</value></data>
+  <data name="Settings_Advanced_EnvKeyPlaceholder" xml:space="preserve"><value>변수명</value></data>
+  <data name="Settings_Advanced_EnvValuePlaceholder" xml:space="preserve"><value>값</value></data>
+
+  <!-- Settings Sections: Updates -->
+  <data name="Settings_Updates_Title" xml:space="preserve"><value>업데이트</value></data>
+  <data name="Settings_Updates_Desc" xml:space="preserve"><value>앱 업데이트 설정 및 확인을 합니다.</value></data>
+  <data name="Settings_Updates_CurrentVersion" xml:space="preserve"><value>현재 버전:</value></data>
+  <data name="Settings_Updates_DevBuild" xml:space="preserve"><value>개발 빌드</value></data>
+  <data name="Settings_Updates_AutoCheckLabel" xml:space="preserve"><value>자동 업데이트 확인</value></data>
+  <data name="Settings_Updates_AutoCheckHint" xml:space="preserve"><value>앱 시작 시 및 주기적으로 새 버전이 있는지 확인합니다.</value></data>
+  <data name="Settings_Updates_IntervalLabel" xml:space="preserve"><value>업데이트 확인 주기</value></data>
+  <data name="Settings_Updates_CheckButton" xml:space="preserve"><value>업데이트 확인</value></data>
+  <data name="Settings_Updates_Checking" xml:space="preserve"><value>확인 중...</value></data>
+  <data name="Settings_Updates_Ready" xml:space="preserve"><value>업데이트 다운로드 완료. 재시작하여 적용합니다.</value></data>
+  <data name="Settings_Updates_RestartButton" xml:space="preserve"><value>재시작하여 적용</value></data>
+  <data name="Settings_Updates_Downloading" xml:space="preserve"><value>업데이트 다운로드 중...</value></data>
+  <data name="Settings_Updates_Available" xml:space="preserve"><value>새 버전 {0} 사용 가능</value></data>
+  <data name="Settings_Updates_DownloadButton" xml:space="preserve"><value>다운로드 및 설치</value></data>
+  <data name="Settings_Updates_UpToDate" xml:space="preserve"><value>최신 버전을 사용 중입니다.</value></data>
+  <data name="Settings_Updates_DevBuildWarning" xml:space="preserve"><value>자동 업데이트는 설치 빌드에서만 사용할 수 있습니다. 개발 빌드에서는 수동으로 업데이트하세요.</value></data>
+  <data name="Settings_Updates_CheckFailed" xml:space="preserve"><value>업데이트 확인 실패: {0}</value></data>
+  <data name="Settings_Updates_DownloadFailed" xml:space="preserve"><value>다운로드 실패: {0}</value></data>
+  <data name="Settings_Updates_ReleaseNotesTitle" xml:space="preserve"><value>릴리스 노트</value></data>
+  <data name="Settings_Updates_Interval_30" xml:space="preserve"><value>30분</value></data>
+  <data name="Settings_Updates_Interval_60" xml:space="preserve"><value>1시간</value></data>
+  <data name="Settings_Updates_Interval_180" xml:space="preserve"><value>3시간</value></data>
+  <data name="Settings_Updates_Interval_360" xml:space="preserve"><value>6시간</value></data>
+  <data name="Settings_Updates_Interval_720" xml:space="preserve"><value>12시간</value></data>
+  <data name="Settings_Updates_Interval_1440" xml:space="preserve"><value>24시간</value></data>
+
+  <!-- Settings Sections: Integrations -->
+  <data name="Settings_Integrations_Title" xml:space="preserve"><value>연동</value></data>
+  <data name="Settings_Integrations_Desc" xml:space="preserve"><value>외부 서비스 연결 상태를 확인합니다.</value></data>
+  <data name="Settings_Integrations_Checking" xml:space="preserve"><value>감지 중...</value></data>
+  <data name="Settings_Integrations_Detected" xml:space="preserve"><value>감지됨</value></data>
+  <data name="Settings_Integrations_NotDetected" xml:space="preserve"><value>감지되지 않음</value></data>
+  <data name="Settings_Integrations_Recheck" xml:space="preserve"><value>다시 확인</value></data>
+  <data name="Settings_Integrations_Version" xml:space="preserve"><value>버전:</value></data>
+  <data name="Settings_Integrations_UpdateNeeded" xml:space="preserve"><value>업데이트 필요 (v{0})</value></data>
+  <data name="Settings_Integrations_UpdateMethod" xml:space="preserve"><value>업데이트 방법:</value></data>
+  <data name="Settings_Integrations_ClaudePathLabel" xml:space="preserve"><value>Claude CLI 경로</value></data>
+  <data name="Settings_Integrations_AutoDetect" xml:space="preserve"><value>자동 감지</value></data>
+  <data name="Settings_Integrations_AutoDetectHint" xml:space="preserve"><value>비워두면 자동으로 감지합니다</value></data>
+  <data name="Settings_Integrations_GitPathLabel" xml:space="preserve"><value>Git 경로</value></data>
+  <data name="Settings_Integrations_GhPathLabel" xml:space="preserve"><value>GitHub CLI 경로</value></data>
+  <data name="Settings_Integrations_CodexPathLabel" xml:space="preserve"><value>Codex CLI 경로</value></data>
+  <data name="Settings_Integrations_CodexOptional" xml:space="preserve"><value>(선택 사항)</value></data>
+  <data name="Settings_Integrations_NotInstalled" xml:space="preserve"><value>미설치</value></data>
+  <data name="Settings_Integrations_InstallMethod" xml:space="preserve"><value>설치 방법:</value></data>
+
+  <!-- Settings Sections: Shortcuts -->
+  <data name="Settings_Shortcuts_Switch" xml:space="preserve"><value>세션 1~5 전환</value></data>
+  <data name="Settings_Shortcuts_DeleteSession" xml:space="preserve"><value>현재 세션 삭제</value></data>
+  <data name="Settings_Shortcuts_ExpandAll" xml:space="preserve"><value>모든 프로젝트 펼치기</value></data>
+  <data name="Settings_Shortcuts_CollapseAll" xml:space="preserve"><value>모든 프로젝트 접기</value></data>
+  <data name="Settings_Shortcuts_ToggleSidebar" xml:space="preserve"><value>사이드바 토글</value></data>
+  <data name="Settings_Shortcuts_FocusInput" xml:space="preserve"><value>입력창 포커스</value></data>
+  <data name="Settings_Shortcuts_ToggleTheme" xml:space="preserve"><value>테마 전환 (라이트/다크)</value></data>
+  <data name="Settings_Shortcuts_TogglePlanMode" xml:space="preserve"><value>플랜 모드 전환</value></data>
+  <data name="Settings_Shortcuts_ApprovePlan" xml:space="preserve"><value>플랜 승인</value></data>
+  <data name="Settings_Shortcuts_ToggleEffort" xml:space="preserve"><value>Effort 레벨 전환</value></data>
+  <data name="Settings_Shortcuts_ToggleSync" xml:space="preserve"><value>동기화 토글</value></data>
+  <data name="Settings_Shortcuts_SendMessage" xml:space="preserve"><value>메시지 전송</value></data>
+  <data name="Settings_Shortcuts_Newline" xml:space="preserve"><value>줄바꿈</value></data>
+  <data name="Settings_Shortcuts_CloseOverlay" xml:space="preserve"><value>오버레이 닫기</value></data>
+  <data name="Settings_Shortcuts_TerminalCopy" xml:space="preserve"><value>터미널 복사</value></data>
+  <data name="Settings_Shortcuts_TerminalPaste" xml:space="preserve"><value>터미널 붙여넣기</value></data>
+
+  <!-- Settings Sections: Claude CLI Settings -->
+  <data name="Settings_Claude_Title" xml:space="preserve"><value>Claude CLI 설정</value></data>
+  <data name="Settings_Claude_ScopeGlobal" xml:space="preserve"><value>~/.claude/settings.json — 모든 프로젝트에 적용되는 전역 설정입니다.</value></data>
+  <data name="Settings_Claude_ScopeProject" xml:space="preserve"><value>.claude/settings.json — 이 프로젝트에만 적용되며 git으로 추적됩니다.</value></data>
+  <data name="Settings_Claude_ScopeLocal" xml:space="preserve"><value>.claude/settings.local.json — 이 프로젝트에만 적용되며 gitignore됩니다.</value></data>
+  <data name="Settings_Claude_ModelBehaviorTitle" xml:space="preserve"><value>모델 및 동작</value></data>
+  <data name="Settings_Claude_ModelLabel" xml:space="preserve"><value>모델</value></data>
+  <data name="Settings_Claude_ModelHint" xml:space="preserve"><value>Seoro 외부에서 CLI 직접 실행 시 사용됩니다.</value></data>
+  <data name="Settings_Claude_EffortLabel" xml:space="preserve"><value>Effort 레벨</value></data>
+  <data name="Settings_Claude_EffortHint" xml:space="preserve"><value>Seoro 앱 설정 &gt; AI 모델에서 지정한 값이 우선합니다.</value></data>
+  <data name="Settings_Claude_DefaultModeLabel" xml:space="preserve"><value>기본 모드</value></data>
+  <data name="Settings_Claude_DefaultModeHint" xml:space="preserve"><value>Seoro 외부에서 CLI 직접 실행 시 사용됩니다.</value></data>
+  <data name="Settings_Claude_NotSet" xml:space="preserve"><value>미설정</value></data>
+  <data name="Settings_Claude_AlwaysThinkingLabel" xml:space="preserve"><value>Extended Thinking 항상 활성화</value></data>
+  <data name="Settings_Claude_AlwaysThinkingHint" xml:space="preserve"><value>모든 응답에서 확장 사고 모드를 사용합니다.</value></data>
+  <data name="Settings_Claude_AutoMemoryLabel" xml:space="preserve"><value>Auto Memory 활성화</value></data>
+  <data name="Settings_Claude_AutoMemoryHint" xml:space="preserve"><value>대화 컨텍스트를 메모리에 자동 저장합니다.</value></data>
+  <data name="Settings_Claude_PermissionsTitle" xml:space="preserve"><value>권한 규칙</value></data>
+  <data name="Settings_Claude_EnvVarsTitle" xml:space="preserve"><value>환경변수</value></data>
+  <data name="Settings_Claude_EnvVarsHint" xml:space="preserve"><value>CLI가 직접 실행될 때도 적용됩니다.</value></data>
+  <data name="Settings_Claude_AddDirsTitle" xml:space="preserve"><value>추가 디렉토리</value></data>
+  <data name="Settings_Claude_AddDirsHint" xml:space="preserve"><value>Claude CLI가 프로젝트 루트 외에 추가로 접근할 디렉토리입니다.</value></data>
+  <data name="Settings_Claude_McpDesc" xml:space="preserve"><value>MCP 서버는 별도 페이지에서 관리합니다.</value></data>
+  <data name="Settings_Claude_Manage" xml:space="preserve"><value>관리</value></data>
+  <data name="Settings_Claude_NoHooks" xml:space="preserve"><value>등록된 훅이 없습니다.</value></data>
+  <data name="Settings_Claude_Saved" xml:space="preserve"><value>Claude 설정이 저장되었습니다.</value></data>
+  <data name="Settings_Claude_SaveFailed" xml:space="preserve"><value>저장 실패: {0}</value></data>
+
+  <!-- Settings: Workspace Settings -->
+  <data name="Settings_Workspace_TabGeneral" xml:space="preserve"><value>일반</value></data>
+  <data name="Settings_Workspace_TabPrompts" xml:space="preserve"><value>프롬프트</value></data>
+  <data name="Settings_Workspace_GeneralDesc" xml:space="preserve"><value>워크스페이스 기본 정보를 관리합니다.</value></data>
+  <data name="Settings_Workspace_NameLabel" xml:space="preserve"><value>이름</value></data>
+  <data name="Settings_Workspace_UseAppDefault" xml:space="preserve"><value>앱 기본값 사용</value></data>
+  <data name="Settings_Workspace_DefaultModelHint" xml:space="preserve"><value>이 워크스페이스의 세션에 사용할 모델입니다. 비워두면 앱 기본값을 따릅니다.</value></data>
+  <data name="Settings_Workspace_RepoPathLabel" xml:space="preserve"><value>저장소 경로</value></data>
+  <data name="Settings_Workspace_RepoUrlLabel" xml:space="preserve"><value>저장소 URL</value></data>
+  <data name="Settings_Workspace_SystemPromptLabel" xml:space="preserve"><value>시스템 프롬프트</value></data>
+  <data name="Settings_Workspace_SystemPromptPlaceholder" xml:space="preserve"><value>이 워크스페이스의 모든 세션에 추가될 시스템 프롬프트입니다.</value></data>
+  <data name="Settings_Workspace_SystemPromptHint" xml:space="preserve"><value>비워두면 기본 시스템 프롬프트만 사용합니다.</value></data>
+  <data name="Settings_Workspace_GitDesc" xml:space="preserve"><value>Git 기본값을 설정합니다.</value></data>
+  <data name="Settings_Workspace_DefaultBranchLabel" xml:space="preserve"><value>기본 베이스 브랜치</value></data>
+  <data name="Settings_Workspace_DefaultBranchHint" xml:space="preserve"><value>새 세션 생성 시 기본으로 사용할 브랜치입니다. 비워두면 자동 감지합니다.</value></data>
+  <data name="Settings_Workspace_DefaultBranchAutoHint" xml:space="preserve"><value>비워두면 자동 감지합니다.</value></data>
+  <data name="Settings_Workspace_DefaultRemoteLabel" xml:space="preserve"><value>기본 리모트</value></data>
+  <data name="Settings_Workspace_PromptsDesc" xml:space="preserve"><value>에이전트에 전달할 커스텀 지침을 설정합니다.</value></data>
+  <data name="Settings_Workspace_CodeReviewLabel" xml:space="preserve"><value>코드 리뷰 프롬프트</value></data>
+  <data name="Settings_Workspace_CodeReviewPlaceholder" xml:space="preserve"><value>코드 리뷰 시 에이전트에 전달할 지침입니다.</value></data>
+  <data name="Settings_Workspace_GeneralPromptLabel" xml:space="preserve"><value>일반 프롬프트</value></data>
+  <data name="Settings_Workspace_GeneralPromptPlaceholder" xml:space="preserve"><value>모든 새 대화 시작 시 에이전트에 전달할 지침입니다.</value></data>
+  <data name="Settings_Workspace_DangerZoneTitle" xml:space="preserve"><value>위험 영역</value></data>
+  <data name="Settings_Workspace_DeleteButton" xml:space="preserve"><value>워크스페이스 삭제</value></data>
+  <data name="Settings_Workspace_DeleteWarning" xml:space="preserve"><value>이 워크스페이스와 모든 세션이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</value></data>
+  <data name="Settings_Workspace_DeleteDialogTitle" xml:space="preserve"><value>워크스페이스 삭제</value></data>
+  <data name="Settings_Workspace_DeleteDialogMsg" xml:space="preserve"><value>'{0}' 워크스페이스와 모든 세션이 삭제됩니다. 계속하시겠습니까?</value></data>
+  <data name="Settings_Workspace_DeleteSuccess" xml:space="preserve"><value>'{0}' 워크스페이스가 삭제되었습니다.</value></data>
+  <data name="Settings_Workspace_DeleteError" xml:space="preserve"><value>삭제 중 오류가 발생했습니다: {0}</value></data>
+
+  <!-- Chat Components -->
+  <data name="Chat_Placeholder_NoSession" xml:space="preserve"><value>먼저 세션을 선택하거나 만드세요...</value></data>
+  <data name="Chat_Placeholder_Streaming" xml:space="preserve"><value>Claude가 응답 중...</value></data>
+  <data name="Chat_Placeholder_PlanFeedback" xml:space="preserve"><value>플랜에 대한 피드백을 입력하세요...</value></data>
+  <data name="Chat_Placeholder_PlanMode" xml:space="preserve"><value>플랜 모드: Claude가 읽기와 조사만 합니다...</value></data>
+  <data name="Chat_Placeholder_AcceptEditsMode" xml:space="preserve"><value>편집 허용 모드: 파일 편집은 허용, 명령 실행은 확인...</value></data>
+  <data name="Chat_Placeholder_Default" xml:space="preserve"><value>메시지를 입력하세요...</value></data>
+  <data name="Chat_PastedAsFile" xml:space="preserve"><value>긴 텍스트가 파일로 첨부되었습니다.</value></data>
+  <data name="Chat_LandingSubtitle" xml:space="preserve"><value>AI 코딩 어시스턴트</value></data>
+  <data name="Chat_WelcomeTitle" xml:space="preserve"><value>무엇을 도와드릴까요?</value></data>
+  <data name="Chat_Streaming_Preparing" xml:space="preserve"><value>준비 중...</value></data>
+  <data name="Chat_Streaming_Sending" xml:space="preserve"><value>전송 중...</value></data>
+  <data name="Chat_Thinking" xml:space="preserve"><value>생각 중...</value></data>
+  <data name="Chat_Toolbar_AttachFile" xml:space="preserve"><value>파일 첨부</value></data>
+  <data name="Chat_Toolbar_WebSearchOn" xml:space="preserve"><value>웹 검색 켜짐</value></data>
+  <data name="Chat_Toolbar_WebSearchOff" xml:space="preserve"><value>웹 검색 꺼짐</value></data>
+  <data name="Chat_Toolbar_ViewPlan" xml:space="preserve"><value>플랜 보기</value></data>
+  <data name="Chat_Toolbar_Stop" xml:space="preserve"><value>중지</value></data>
+  <data name="Chat_PermissionMode_PlanTooltip" xml:space="preserve"><value>플랜 모드 (읽기 전용)</value></data>
+  <data name="Chat_PermissionMode_NormalTooltip" xml:space="preserve"><value>일반 모드 (모든 권한 우회)</value></data>
+  <data name="Chat_EffortLevel_AutoTooltip" xml:space="preserve"><value>Effort: Auto (최대 {0})</value></data>
+  <data name="Chat_TokenTooltip_Total" xml:space="preserve"><value>토큰: {0} / {1} ({2}%)</value></data>
+  <data name="Chat_TokenTooltip_Input" xml:space="preserve"><value>입력: {0}</value></data>
+  <data name="Chat_TokenTooltip_Output" xml:space="preserve"><value>출력: {0}</value></data>
+  <data name="Chat_TokenTooltip_Cost" xml:space="preserve"><value>예상 비용: ${0}</value></data>
+  <data name="Chat_Plan_ReviewTitle" xml:space="preserve"><value>플랜 완료</value></data>
+  <data name="Chat_Plan_LoadingContent" xml:space="preserve"><value>플랜 내용을 불러오는 중...</value></data>
+  <data name="Chat_Plan_Approve" xml:space="preserve"><value>승인 및 실행</value></data>
+  <data name="Chat_Plan_Reject" xml:space="preserve"><value>거절</value></data>
+  <data name="Chat_Notification_PlanReady" xml:space="preserve"><value>계획 완료</value></data>
+  <data name="Chat_Notification_NeedsResponse" xml:space="preserve"><value>응답 필요</value></data>
+  <data name="Chat_Notification_Done" xml:space="preserve"><value>작업 완료</value></data>
+  <data name="Chat_Chaining" xml:space="preserve"><value>체이닝: /{0} 실행 중...</value></data>
+  <data name="Chat_UserRoleName" xml:space="preserve"><value>나</value></data>
+
+  <!-- Sidebar Components -->
+  <data name="Sidebar_WorkspaceSettings" xml:space="preserve"><value>워크스페이스 설정</value></data>
+  <data name="Sidebar_DeleteWorkspace" xml:space="preserve"><value>워크스페이스 삭제</value></data>
+  <data name="Sidebar_WelcomeMessage" xml:space="preserve"><value>워크스페이스를 만들어 시작하세요</value></data>
+  <data name="Sidebar_NewWorkspace" xml:space="preserve"><value>새 워크스페이스</value></data>
+  <data name="Sidebar_OpenFolder" xml:space="preserve"><value>폴더 열기</value></data>
+  <data name="Sidebar_OpenInIde" xml:space="preserve"><value>{0} 에서 열기</value></data>
+  <data name="Sidebar_Search" xml:space="preserve"><value>검색...</value></data>
+  <data name="Sidebar_Status_Writing" xml:space="preserve"><value>작성 중...</value></data>
+  <data name="Sidebar_Status_Planning" xml:space="preserve"><value>계획 중...</value></data>
+  <data name="Sidebar_Status_Working" xml:space="preserve"><value>작업 중...</value></data>
+  <data name="Sidebar_Tool_Bash" xml:space="preserve"><value>명령 실행 중...</value></data>
+  <data name="Sidebar_Tool_Read" xml:space="preserve"><value>파일 읽는 중...</value></data>
+  <data name="Sidebar_Tool_Write" xml:space="preserve"><value>파일 작성 중...</value></data>
+  <data name="Sidebar_Tool_Edit" xml:space="preserve"><value>파일 수정 중...</value></data>
+  <data name="Sidebar_Tool_Glob" xml:space="preserve"><value>파일 검색 중...</value></data>
+  <data name="Sidebar_Tool_Grep" xml:space="preserve"><value>내용 검색 중...</value></data>
+  <data name="Sidebar_Tool_Agent" xml:space="preserve"><value>에이전트...</value></data>
+  <data name="Sidebar_Tool_Default" xml:space="preserve"><value>도구 사용 중...</value></data>
+  <data name="Sidebar_CreateWorkspace_Title" xml:space="preserve"><value>새 워크스페이스</value></data>
+  <data name="Sidebar_CreateWorkspace_Subtitle" xml:space="preserve"><value>저장소를 연결하여 AI 코딩을 시작하세요</value></data>
+  <data name="Sidebar_CreateWorkspace_CloneFromUrl" xml:space="preserve"><value>URL에서 클론</value></data>
+  <data name="Sidebar_CreateWorkspace_LocalRepository" xml:space="preserve"><value>로컬 저장소</value></data>
+  <data name="Sidebar_CreateWorkspace_RepoUrlLabel" xml:space="preserve"><value>저장소 URL</value></data>
+  <data name="Sidebar_CreateWorkspace_ClonePathLabel" xml:space="preserve"><value>클론 경로</value></data>
+  <data name="Sidebar_CreateWorkspace_Browse" xml:space="preserve"><value>찾아보기...</value></data>
+  <data name="Sidebar_CreateWorkspace_WorkspaceNameLabel" xml:space="preserve"><value>워크스페이스 이름</value></data>
+  <data name="Sidebar_CreateWorkspace_DefaultModelLabel" xml:space="preserve"><value>기본 모델</value></data>
+  <data name="Sidebar_CreateWorkspace_DefaultModelHelper" xml:space="preserve"><value>비워두면 앱 기본값을 따릅니다.</value></data>
+  <data name="Sidebar_CreateWorkspace_UseAppDefault" xml:space="preserve"><value>앱 기본값 사용</value></data>
+  <data name="Sidebar_CreateWorkspace_RepoPathLabel" xml:space="preserve"><value>저장소 경로</value></data>
+  <data name="Sidebar_CreateWorkspace_InitGit" xml:space="preserve"><value>Git 초기화</value></data>
+  <data name="Sidebar_CreateWorkspace_Create" xml:space="preserve"><value>만들기</value></data>
+  <data name="Sidebar_CreateWorkspace_Cloning" xml:space="preserve"><value>저장소 클론 중...</value></data>
+  <data name="Sidebar_CreateWorkspace_CreationFailed" xml:space="preserve"><value>워크스페이스 생성에 실패했습니다.</value></data>
+  <data name="Sidebar_CreateWorkspace_OperationCancelled" xml:space="preserve"><value>작업이 취소되었습니다.</value></data>
+  <data name="Sidebar_CreateWorkspace_SettingUp" xml:space="preserve"><value>워크스페이스 설정 중...</value></data>
+  <data name="Sidebar_CreateWorkspace_NotGitRepo" xml:space="preserve"><value>이 폴더는 git 저장소가 아닙니다.</value></data>
+  <data name="Sidebar_CreateWorkspace_ValidGitRepo" xml:space="preserve"><value>유효한 git 저장소</value></data>
+  <data name="Sidebar_CreateWorkspace_GitInitFailed" xml:space="preserve"><value>Git 초기화 실패: {0}</value></data>
+  <data name="Sidebar_CreateWorkspace_GitInitialized" xml:space="preserve"><value>Git 저장소가 초기화되었습니다.</value></data>
+  <data name="Sidebar_CreateWorkspace_GitInitError" xml:space="preserve"><value>Git 초기화에 실패했습니다. 다시 시도해 주세요.</value></data>
+  <data name="Sidebar_AddSession_HeaderNew" xml:space="preserve"><value>새로 만들기</value></data>
+  <data name="Sidebar_AddSession_NewWorktreeTitle" xml:space="preserve"><value>새 워크트리</value></data>
+  <data name="Sidebar_AddSession_NewWorktreeDesc" xml:space="preserve"><value>워크스페이스 기본 경로에서 시작</value></data>
+  <data name="Sidebar_AddSession_LocalDirectoryTitle" xml:space="preserve"><value>로컬 디렉터리</value></data>
+  <data name="Sidebar_AddSession_LocalDirectoryDesc" xml:space="preserve"><value>로컬 저장소 경로를 사용</value></data>
+  <data name="Sidebar_AddSession_CodexWorktreeTitle" xml:space="preserve"><value>Codex 워크트리</value></data>
+  <data name="Sidebar_AddSession_CodexWorktreeDesc" xml:space="preserve"><value>OpenAI Codex CLI로 시작</value></data>
+  <data name="Sidebar_AddSession_CodexLocalTitle" xml:space="preserve"><value>Codex 로컬 디렉터리</value></data>
+  <data name="Sidebar_AddSession_CodexLocalDesc" xml:space="preserve"><value>OpenAI Codex CLI + 로컬 경로</value></data>
+  <data name="Sidebar_Changes_ConflictTooltip" xml:space="preserve"><value>이 파일은 타겟 브랜치와 머지 시 충돌이 예상됩니다: {0}</value></data>
+  <data name="Sidebar_Changes_GroupModified" xml:space="preserve"><value>수정됨</value></data>
+  <data name="Sidebar_Changes_GroupAdded" xml:space="preserve"><value>추가됨</value></data>
+  <data name="Sidebar_Changes_GroupDeleted" xml:space="preserve"><value>삭제됨</value></data>
+  <data name="Sidebar_Changes_GroupRenamed" xml:space="preserve"><value>이름 변경</value></data>
+  <data name="Sidebar_Changes_GroupUntracked" xml:space="preserve"><value>추적 안 됨</value></data>
+  <data name="Sidebar_Changes_GroupOther" xml:space="preserve"><value>기타</value></data>
+  <data name="Sidebar_Explorer_NoFilesFound" xml:space="preserve"><value>파일을 찾을 수 없습니다</value></data>
+  <data name="Sidebar_Explorer_FileReadError" xml:space="preserve"><value>파일 읽기 오류: {0}</value></data>
+
   <!-- SnackbarExtensions -->
   <data name="Snackbar_PushSuccess" xml:space="preserve"><value>'{0}' 브랜치가 푸시되었습니다.</value></data>
   <data name="Snackbar_PushError" xml:space="preserve"><value>푸시 실패: {0}</value></data>
@@ -78,5 +485,594 @@
   <data name="Tool_ReadHint" xml:space="preserve"><value>{0}줄 읽음</value></data>
   <data name="Tool_GrepHint" xml:space="preserve"><value>{0}개 결과</value></data>
   <data name="Tool_GlobHint" xml:space="preserve"><value>{0}개 파일 발견</value></data>
+
+  <!-- Layout Components -->
+  <data name="Layout_SidebarToolbar_NotificationHistory" xml:space="preserve"><value>알림 히스토리</value></data>
+  <data name="Layout_SidebarToolbar_CollapseSidebar" xml:space="preserve"><value>사이드바 접기</value></data>
+  <data name="Layout_SidebarToolbar_ExpandSidebar" xml:space="preserve"><value>사이드바 펼치기</value></data>
+  <data name="Layout_MainTabBar_CloseTab" xml:space="preserve"><value>탭 닫기</value></data>
+  <data name="Layout_MainTabBar_CloseOtherTabs" xml:space="preserve"><value>다른 탭 모두 닫기</value></data>
+  <data name="Layout_MainTabBar_CloseTabsToRight" xml:space="preserve"><value>오른쪽 탭 닫기</value></data>
+  <data name="Layout_MainTabBar_CloseAllTabs" xml:space="preserve"><value>모든 탭 닫기</value></data>
+  <data name="Layout_MainToolbar_NewConversation" xml:space="preserve"><value>새 대화</value></data>
+  <data name="Layout_MainToolbar_Branch" xml:space="preserve"><value>브랜치: {0}</value></data>
+  <data name="Layout_MainToolbar_PlanModeTooltip" xml:space="preserve"><value>플랜 모드 — 코드 변경 없이 분석만 수행</value></data>
+  <data name="Layout_MainToolbar_EffortLevelTooltip" xml:space="preserve"><value>사고 수준: {0}</value></data>
+  <data name="Layout_MainToolbar_SelectConversation" xml:space="preserve"><value>대화를 선택하세요</value></data>
+  <data name="Layout_MainToolbar_OpenFolder" xml:space="preserve"><value>폴더 열기</value></data>
+  <data name="Layout_MainToolbar_OpenInIde" xml:space="preserve"><value>{0}에서 열기</value></data>
+  <data name="Layout_MainToolbar_SyncDisable" xml:space="preserve"><value>로컬 동기화 해제 ({0}+Shift+S)</value></data>
+  <data name="Layout_MainToolbar_SyncBlockedByOther" xml:space="preserve"><value>다른 세션이 동기화 중입니다</value></data>
+  <data name="Layout_MainToolbar_SyncEnable" xml:space="preserve"><value>로컬 디렉터리에 동기화 ({0}+Shift+S)</value></data>
+  <data name="Layout_MainToolbar_SyncDisabled_Snackbar" xml:space="preserve"><value>동기화 해제됨</value></data>
+  <data name="Layout_MainToolbar_SyncSuccess" xml:space="preserve"><value>로컬 디렉터리에 동기화됨</value></data>
+  <data name="Layout_MainToolbar_SyncFailed" xml:space="preserve"><value>동기화 실패 — 이미 다른 세션이 동기화 중이거나 세션 상태가 유효하지 않습니다</value></data>
+  <data name="Layout_MainToolbar_SyncError" xml:space="preserve"><value>동기화 오류: {0}</value></data>
+  <data name="Layout_MainToolbar_EffortLow" xml:space="preserve"><value>낮음 (low)</value></data>
+  <data name="Layout_MainToolbar_EffortHigh" xml:space="preserve"><value>높음 (high)</value></data>
+  <data name="Layout_AppClose_Title" xml:space="preserve"><value>앱 종료</value></data>
+  <data name="Layout_AppClose_Message" xml:space="preserve"><value>진행 중인 세션이 있습니다. 지금 종료하면 세션이 중단됩니다. 종료하시겠습니까?</value></data>
+  <data name="Layout_AppClose_Confirm" xml:space="preserve"><value>종료</value></data>
+  <data name="Layout_Update_Available" xml:space="preserve"><value>업데이트 사용 가능</value></data>
+  <data name="Layout_Update_AvailableDesc" xml:space="preserve"><value>새 버전 {0}이(가) 있습니다.</value></data>
+  <data name="Layout_Update_NotificationTitle" xml:space="preserve"><value>Seoro 업데이트</value></data>
+  <data name="Layout_Update_NotificationBody" xml:space="preserve"><value>새 버전 {0}이(가) 사용 가능합니다.</value></data>
+  <data name="Layout_Migration_Title" xml:space="preserve"><value>Cominomi 데이터 발견</value></data>
+  <data name="Layout_Migration_Message" xml:space="preserve"><value>기존 Cominomi 데이터가 발견되었습니다 ({0}개 항목).
+Seoro로 데이터를 가져오시겠습니까?
+
+가져오기를 선택하면 데이터가 복사된 후 기존 Cominomi 폴더가 삭제됩니다.</value></data>
+  <data name="Layout_Migration_Import" xml:space="preserve"><value>가져오기</value></data>
+  <data name="Layout_Migration_Later" xml:space="preserve"><value>나중에</value></data>
+  <data name="Layout_Migration_Skip" xml:space="preserve"><value>가져오지 않기</value></data>
+  <data name="Layout_Migration_DoneTitle" xml:space="preserve"><value>가져오기 완료</value></data>
+  <data name="Layout_Migration_DoneRestart" xml:space="preserve"><value>{0}개 항목을 가져왔습니다. 변경사항을 반영하기 위해 앱을 다시 시작합니다.</value></data>
+  <data name="Layout_Migration_Summary" xml:space="preserve"><value>가져오기 완료: {0}개 복사, {1}개 스킵</value></data>
+  <data name="Layout_Migration_SummaryFailed" xml:space="preserve"><value>, {0}개 실패</value></data>
+  <data name="Layout_Migration_FolderDeleteFailed" xml:space="preserve"><value> (Cominomi 폴더 삭제 실패 - 수동으로 삭제해주세요)</value></data>
+  <data name="Layout_Migration_DeleteFolderFailed" xml:space="preserve"><value>Cominomi 폴더 삭제에 실패했습니다. 수동으로 삭제해주세요.</value></data>
+
+  <!-- Level Names -->
+  <data name="Level_1" xml:space="preserve"><value>새내기</value></data>
+  <data name="Level_2" xml:space="preserve"><value>탐험가</value></data>
+  <data name="Level_3" xml:space="preserve"><value>건축가</value></data>
+  <data name="Level_4" xml:space="preserve"><value>설계자</value></data>
+  <data name="Level_5" xml:space="preserve"><value>전문가</value></data>
+  <data name="Level_6" xml:space="preserve"><value>숙련자</value></data>
+  <data name="Level_7" xml:space="preserve"><value>달인</value></data>
+  <data name="Level_8" xml:space="preserve"><value>거장</value></data>
+  <data name="Level_9" xml:space="preserve"><value>현자</value></data>
+  <data name="Level_10" xml:space="preserve"><value>초월자</value></data>
+  <data name="Level_11" xml:space="preserve"><value>전설</value></data>
+  <data name="Level_12" xml:space="preserve"><value>신화</value></data>
+  <data name="Level_13" xml:space="preserve"><value>불멸자</value></data>
+  <data name="Level_14" xml:space="preserve"><value>태초의 자</value></data>
+  <data name="Level_15" xml:space="preserve"><value>조물주</value></data>
+
+  <!-- Gamification Config Items -->
+  <data name="Gamification_Config_Model" xml:space="preserve"><value>모델</value></data>
+  <data name="Gamification_Config_EffortLevel" xml:space="preserve"><value>성능 수준</value></data>
+  <data name="Gamification_Config_DefaultMode" xml:space="preserve"><value>기본 모드</value></data>
+  <data name="Gamification_Config_Permissions" xml:space="preserve"><value>권한</value></data>
+  <data name="Gamification_Config_Hooks" xml:space="preserve"><value>훅</value></data>
+  <data name="Gamification_Config_McpServers" xml:space="preserve"><value>MCP 서버</value></data>
+
+  <!-- Dashboard UI -->
+  <data name="Dashboard_Title" xml:space="preserve"><value>대시보드</value></data>
+  <data name="Dashboard_RefreshTooltip" xml:space="preserve"><value>통계 새로고침</value></data>
+  <data name="Dashboard_NextLevel" xml:space="preserve"><value>다음: {0}</value></data>
+  <data name="Dashboard_Stat_Projects" xml:space="preserve"><value>{0} 프로젝트</value></data>
+  <data name="Dashboard_Stat_Achievements" xml:space="preserve"><value>{0}/{1} 업적</value></data>
+  <data name="Dashboard_Stat_StreakDays" xml:space="preserve"><value>{0}일 연속</value></data>
+  <data name="Dashboard_ConfigCompleteness" xml:space="preserve"><value>설정 완성도</value></data>
+
+  <!-- Achievement Grid -->
+  <data name="Dashboard_Achievement_Title" xml:space="preserve"><value>업적</value></data>
+  <data name="Dashboard_Achievement_All" xml:space="preserve"><value>전체</value></data>
+  <data name="Dashboard_Achievement_Rarity_Common" xml:space="preserve"><value>일반</value></data>
+  <data name="Dashboard_Achievement_Rarity_Rare" xml:space="preserve"><value>희귀</value></data>
+  <data name="Dashboard_Achievement_Rarity_Epic" xml:space="preserve"><value>영웅</value></data>
+  <data name="Dashboard_Achievement_Rarity_Legendary" xml:space="preserve"><value>전설</value></data>
+  <data name="Dashboard_Achievement_Category_Config" xml:space="preserve"><value>설정</value></data>
+  <data name="Dashboard_Achievement_Category_Usage" xml:space="preserve"><value>사용량</value></data>
+  <data name="Dashboard_Achievement_Category_Streak" xml:space="preserve"><value>연속</value></data>
+  <data name="Dashboard_Achievement_Category_Mastery" xml:space="preserve"><value>숙련</value></data>
+  <data name="Dashboard_Achievement_Category_Explorer" xml:space="preserve"><value>탐험</value></data>
+  <data name="Dashboard_Achievement_Category_Efficiency" xml:space="preserve"><value>효율</value></data>
+  <data name="Dashboard_Achievement_Category_Time" xml:space="preserve"><value>시간</value></data>
+  <data name="Dashboard_Achievement_Category_Economy" xml:space="preserve"><value>경제</value></data>
+  <data name="Dashboard_Achievement_Category_Pattern" xml:space="preserve"><value>패턴</value></data>
+
+  <!-- Activity Heatmap -->
+  <data name="Dashboard_Heatmap_Title" xml:space="preserve"><value>활동</value></data>
+  <data name="Dashboard_Heatmap_Tooltip" xml:space="preserve"><value>{0} 메시지 · {1} 세션 · {2} 도구</value></data>
+  <data name="Dashboard_Heatmap_Less" xml:space="preserve"><value>적음</value></data>
+  <data name="Dashboard_Heatmap_More" xml:space="preserve"><value>많음</value></data>
+  <data name="Dashboard_Heatmap_DaysTracked" xml:space="preserve"><value>{0}일 추적됨</value></data>
+  <data name="Dashboard_Heatmap_DateFormat" xml:space="preserve"><value>yyyy년 M월 d일 dddd</value></data>
+
+  <!-- Cost Card -->
+  <data name="Dashboard_Cost_Title" xml:space="preserve"><value>비용 개요</value></data>
+  <data name="Dashboard_Cost_Today" xml:space="preserve"><value>오늘</value></data>
+  <data name="Dashboard_Cost_ThisMonth" xml:space="preserve"><value>이번 달</value></data>
+  <data name="Dashboard_Cost_Projection" xml:space="preserve"><value>추정</value></data>
+  <data name="Dashboard_Cost_PerMonth" xml:space="preserve"><value>/월</value></data>
+  <data name="Dashboard_Cost_ViewAnalytics" xml:space="preserve"><value>전체 분석 보기 →</value></data>
+
+  <!-- Session Monitor -->
+  <data name="Dashboard_Session_Title" xml:space="preserve"><value>최근 세션</value></data>
+  <data name="Dashboard_Session_CostTooltip" xml:space="preserve"><value>추정 비용 (엔트리 수 기반)</value></data>
+  <data name="Dashboard_Session_ViewAll" xml:space="preserve"><value>모든 세션 보기 →</value></data>
+
+  <!-- Stats Overview -->
+  <data name="Dashboard_Stats_Sessions" xml:space="preserve"><value>세션</value></data>
+  <data name="Dashboard_Stats_Messages" xml:space="preserve"><value>메시지</value></data>
+  <data name="Dashboard_Stats_ToolCalls" xml:space="preserve"><value>도구 호출</value></data>
+  <data name="Dashboard_Stats_ActiveDays" xml:space="preserve"><value>활동일</value></data>
+
+  <!-- Streak Card -->
+  <data name="Dashboard_Streak_Title" xml:space="preserve"><value>연속 기록</value></data>
+  <data name="Dashboard_Streak_Unit" xml:space="preserve"><value>일</value></data>
+  <data name="Dashboard_Streak_Longest" xml:space="preserve"><value>최장: {0}일</value></data>
+  <data name="Dashboard_Streak_LastActive" xml:space="preserve"><value>마지막 활동:</value></data>
+
+  <!-- Achievement Names and Descriptions -->
+  <data name="Achievement_cfg_configured_Name" xml:space="preserve"><value>설정 완료</value></data>
+  <data name="Achievement_cfg_configured_Desc" xml:space="preserve"><value>기본 설정(모델/성능) 완료</value></data>
+  <data name="Achievement_cfg_thinking_Name" xml:space="preserve"><value>깊은 사색</value></data>
+  <data name="Achievement_cfg_thinking_Desc" xml:space="preserve"><value>확장 사고 모드 활성화</value></data>
+  <data name="Achievement_cfg_memory_Name" xml:space="preserve"><value>기억의 궁전</value></data>
+  <data name="Achievement_cfg_memory_Desc" xml:space="preserve"><value>자동 메모리 활성화</value></data>
+  <data name="Achievement_cfg_mode_Name" xml:space="preserve"><value>나만의 스타일</value></data>
+  <data name="Achievement_cfg_mode_Desc" xml:space="preserve"><value>기본 모드 설정</value></data>
+  <data name="Achievement_cfg_hooks_Name" xml:space="preserve"><value>훅 마스터</value></data>
+  <data name="Achievement_cfg_hooks_Desc" xml:space="preserve"><value>5개 이상 훅 이벤트 등록</value></data>
+  <data name="Achievement_cfg_hooks10_Name" xml:space="preserve"><value>자동화 제국</value></data>
+  <data name="Achievement_cfg_hooks10_Desc" xml:space="preserve"><value>10개 이상 훅 등록</value></data>
+  <data name="Achievement_cfg_hooks20_Name" xml:space="preserve"><value>자동화의 신</value></data>
+  <data name="Achievement_cfg_hooks20_Desc" xml:space="preserve"><value>20개 이상 훅 등록</value></data>
+  <data name="Achievement_cfg_mcp_Name" xml:space="preserve"><value>첫 연결</value></data>
+  <data name="Achievement_cfg_mcp_Desc" xml:space="preserve"><value>MCP 서버 1개 연결</value></data>
+  <data name="Achievement_cfg_mcp_network_Name" xml:space="preserve"><value>네트워크 구축</value></data>
+  <data name="Achievement_cfg_mcp_network_Desc" xml:space="preserve"><value>MCP 서버 3개 이상 연결</value></data>
+  <data name="Achievement_cfg_mcp_kingdom_Name" xml:space="preserve"><value>MCP 왕국</value></data>
+  <data name="Achievement_cfg_mcp_kingdom_Desc" xml:space="preserve"><value>MCP 서버 5개 이상 연결</value></data>
+  <data name="Achievement_cfg_mcp10_Name" xml:space="preserve"><value>MCP 제국</value></data>
+  <data name="Achievement_cfg_mcp10_Desc" xml:space="preserve"><value>MCP 서버 10개 이상 연결</value></data>
+  <data name="Achievement_cfg_permissions_Name" xml:space="preserve"><value>문지기</value></data>
+  <data name="Achievement_cfg_permissions_Desc" xml:space="preserve"><value>권한 규칙 설정</value></data>
+  <data name="Achievement_cfg_env_Name" xml:space="preserve"><value>환경 설정자</value></data>
+  <data name="Achievement_cfg_env_Desc" xml:space="preserve"><value>환경변수 설정</value></data>
+  <data name="Achievement_cfg_complete_Name" xml:space="preserve"><value>풀 세팅</value></data>
+  <data name="Achievement_cfg_complete_Desc" xml:space="preserve"><value>설정 완성도 100% 달성</value></data>
+  <data name="Achievement_use_first_Name" xml:space="preserve"><value>첫 대화</value></data>
+  <data name="Achievement_use_first_Desc" xml:space="preserve"><value>첫 메시지 전송</value></data>
+  <data name="Achievement_use_100_Name" xml:space="preserve"><value>첫 발걸음</value></data>
+  <data name="Achievement_use_100_Desc" xml:space="preserve"><value>100 메시지 달성</value></data>
+  <data name="Achievement_use_500_Name" xml:space="preserve"><value>대화의 물결</value></data>
+  <data name="Achievement_use_500_Desc" xml:space="preserve"><value>500 메시지 달성</value></data>
+  <data name="Achievement_use_1k_Name" xml:space="preserve"><value>수다쟁이</value></data>
+  <data name="Achievement_use_1k_Desc" xml:space="preserve"><value>1,000 메시지 달성</value></data>
+  <data name="Achievement_use_5k_Name" xml:space="preserve"><value>토크쇼 호스트</value></data>
+  <data name="Achievement_use_5k_Desc" xml:space="preserve"><value>5,000 메시지 달성</value></data>
+  <data name="Achievement_use_10k_Name" xml:space="preserve"><value>파워 유저</value></data>
+  <data name="Achievement_use_10k_Desc" xml:space="preserve"><value>10,000 메시지 달성</value></data>
+  <data name="Achievement_use_50k_Name" xml:space="preserve"><value>디지털 소설가</value></data>
+  <data name="Achievement_use_50k_Desc" xml:space="preserve"><value>50,000 메시지 달성</value></data>
+  <data name="Achievement_use_100k_Name" xml:space="preserve"><value>멈출 수 없는</value></data>
+  <data name="Achievement_use_100k_Desc" xml:space="preserve"><value>100,000 메시지 달성</value></data>
+  <data name="Achievement_use_sessions_10_Name" xml:space="preserve"><value>세션 입문</value></data>
+  <data name="Achievement_use_sessions_10_Desc" xml:space="preserve"><value>10 세션 달성</value></data>
+  <data name="Achievement_use_sessions_50_Name" xml:space="preserve"><value>세션 수집가</value></data>
+  <data name="Achievement_use_sessions_50_Desc" xml:space="preserve"><value>50 세션 달성</value></data>
+  <data name="Achievement_use_sessions_100_Name" xml:space="preserve"><value>백전노장</value></data>
+  <data name="Achievement_use_sessions_100_Desc" xml:space="preserve"><value>100 세션 달성</value></data>
+  <data name="Achievement_use_sessions_200_Name" xml:space="preserve"><value>세션 전문가</value></data>
+  <data name="Achievement_use_sessions_200_Desc" xml:space="preserve"><value>200 세션 달성</value></data>
+  <data name="Achievement_use_sessions_500_Name" xml:space="preserve"><value>세션 군주</value></data>
+  <data name="Achievement_use_sessions_500_Desc" xml:space="preserve"><value>500 세션 달성</value></data>
+  <data name="Achievement_use_sessions_1k_Name" xml:space="preserve"><value>세션 제왕</value></data>
+  <data name="Achievement_use_sessions_1k_Desc" xml:space="preserve"><value>1,000 세션 달성</value></data>
+  <data name="Achievement_use_tools_100_Name" xml:space="preserve"><value>도구 첫 걸음</value></data>
+  <data name="Achievement_use_tools_100_Desc" xml:space="preserve"><value>100 도구 호출 달성</value></data>
+  <data name="Achievement_use_tools_1k_Name" xml:space="preserve"><value>도구 입문자</value></data>
+  <data name="Achievement_use_tools_1k_Desc" xml:space="preserve"><value>1,000 도구 호출 달성</value></data>
+  <data name="Achievement_use_tools_5k_Name" xml:space="preserve"><value>도구 장인</value></data>
+  <data name="Achievement_use_tools_5k_Desc" xml:space="preserve"><value>5,000 도구 호출 달성</value></data>
+  <data name="Achievement_use_tools_10k_Name" xml:space="preserve"><value>도구의 달인</value></data>
+  <data name="Achievement_use_tools_10k_Desc" xml:space="preserve"><value>10,000 도구 호출 달성</value></data>
+  <data name="Achievement_use_tools_50k_Name" xml:space="preserve"><value>도구 마에스트로</value></data>
+  <data name="Achievement_use_tools_50k_Desc" xml:space="preserve"><value>50,000 도구 호출 달성</value></data>
+  <data name="Achievement_use_tools_100k_Name" xml:space="preserve"><value>도구의 신</value></data>
+  <data name="Achievement_use_tools_100k_Desc" xml:space="preserve"><value>100,000 도구 호출 달성</value></data>
+  <data name="Achievement_streak_3_Name" xml:space="preserve"><value>해트트릭</value></data>
+  <data name="Achievement_streak_3_Desc" xml:space="preserve"><value>3일 연속 사용</value></data>
+  <data name="Achievement_streak_5_Name" xml:space="preserve"><value>파이브 데이즈</value></data>
+  <data name="Achievement_streak_5_Desc" xml:space="preserve"><value>5일 연속 사용</value></data>
+  <data name="Achievement_streak_7_Name" xml:space="preserve"><value>주간 전사</value></data>
+  <data name="Achievement_streak_7_Desc" xml:space="preserve"><value>7일 연속 사용</value></data>
+  <data name="Achievement_streak_14_Name" xml:space="preserve"><value>2주의 힘</value></data>
+  <data name="Achievement_streak_14_Desc" xml:space="preserve"><value>14일 연속 사용</value></data>
+  <data name="Achievement_streak_21_Name" xml:space="preserve"><value>습관 형성</value></data>
+  <data name="Achievement_streak_21_Desc" xml:space="preserve"><value>21일 연속 사용</value></data>
+  <data name="Achievement_streak_30_Name" xml:space="preserve"><value>월간 마스터</value></data>
+  <data name="Achievement_streak_30_Desc" xml:space="preserve"><value>30일 연속 사용</value></data>
+  <data name="Achievement_streak_60_Name" xml:space="preserve"><value>철인</value></data>
+  <data name="Achievement_streak_60_Desc" xml:space="preserve"><value>60일 연속 사용</value></data>
+  <data name="Achievement_streak_90_Name" xml:space="preserve"><value>분기의 왕</value></data>
+  <data name="Achievement_streak_90_Desc" xml:space="preserve"><value>90일 연속 사용</value></data>
+  <data name="Achievement_streak_180_Name" xml:space="preserve"><value>반년의 의지</value></data>
+  <data name="Achievement_streak_180_Desc" xml:space="preserve"><value>180일 연속 사용</value></data>
+  <data name="Achievement_streak_365_Name" xml:space="preserve"><value>365일 전설</value></data>
+  <data name="Achievement_streak_365_Desc" xml:space="preserve"><value>1년 연속 사용</value></data>
+  <data name="Achievement_mastery_3d_Name" xml:space="preserve"><value>시작이 반</value></data>
+  <data name="Achievement_mastery_3d_Desc" xml:space="preserve"><value>3일 활동</value></data>
+  <data name="Achievement_mastery_10d_Name" xml:space="preserve"><value>열정가</value></data>
+  <data name="Achievement_mastery_10d_Desc" xml:space="preserve"><value>10일 활동</value></data>
+  <data name="Achievement_mastery_30d_Name" xml:space="preserve"><value>헌신자</value></data>
+  <data name="Achievement_mastery_30d_Desc" xml:space="preserve"><value>30일 활동</value></data>
+  <data name="Achievement_mastery_50d_Name" xml:space="preserve"><value>절반의 성공</value></data>
+  <data name="Achievement_mastery_50d_Desc" xml:space="preserve"><value>50일 활동</value></data>
+  <data name="Achievement_mastery_100d_Name" xml:space="preserve"><value>백일장</value></data>
+  <data name="Achievement_mastery_100d_Desc" xml:space="preserve"><value>100일 활동</value></data>
+  <data name="Achievement_mastery_200d_Name" xml:space="preserve"><value>200일의 여정</value></data>
+  <data name="Achievement_mastery_200d_Desc" xml:space="preserve"><value>200일 활동</value></data>
+  <data name="Achievement_mastery_365d_Name" xml:space="preserve"><value>1년의 여정</value></data>
+  <data name="Achievement_mastery_365d_Desc" xml:space="preserve"><value>365일 활동</value></data>
+  <data name="Achievement_mastery_500d_Name" xml:space="preserve"><value>500일 레전드</value></data>
+  <data name="Achievement_mastery_500d_Desc" xml:space="preserve"><value>500일 활동</value></data>
+  <data name="Achievement_mastery_hook_Name" xml:space="preserve"><value>자동화 장인</value></data>
+  <data name="Achievement_mastery_hook_Desc" xml:space="preserve"><value>첫 훅 등록</value></data>
+  <data name="Achievement_mastery_hooks3_Name" xml:space="preserve"><value>자동화 중급</value></data>
+  <data name="Achievement_mastery_hooks3_Desc" xml:space="preserve"><value>훅 3개 이상 등록</value></data>
+  <data name="Achievement_exp_1proj_Name" xml:space="preserve"><value>첫 프로젝트</value></data>
+  <data name="Achievement_exp_1proj_Desc" xml:space="preserve"><value>1개 프로젝트에서 작업</value></data>
+  <data name="Achievement_exp_3proj_Name" xml:space="preserve"><value>탐험가</value></data>
+  <data name="Achievement_exp_3proj_Desc" xml:space="preserve"><value>3개 프로젝트에서 작업</value></data>
+  <data name="Achievement_exp_5proj_Name" xml:space="preserve"><value>멀티태스커</value></data>
+  <data name="Achievement_exp_5proj_Desc" xml:space="preserve"><value>5개 프로젝트에서 작업</value></data>
+  <data name="Achievement_exp_7proj_Name" xml:space="preserve"><value>활발한 탐험가</value></data>
+  <data name="Achievement_exp_7proj_Desc" xml:space="preserve"><value>7개 프로젝트에서 작업</value></data>
+  <data name="Achievement_exp_10proj_Name" xml:space="preserve"><value>만능 개발자</value></data>
+  <data name="Achievement_exp_10proj_Desc" xml:space="preserve"><value>10개 프로젝트에서 작업</value></data>
+  <data name="Achievement_exp_15proj_Name" xml:space="preserve"><value>프로젝트 수집가</value></data>
+  <data name="Achievement_exp_15proj_Desc" xml:space="preserve"><value>15개 프로젝트에서 작업</value></data>
+  <data name="Achievement_exp_20proj_Name" xml:space="preserve"><value>세계 정복자</value></data>
+  <data name="Achievement_exp_20proj_Desc" xml:space="preserve"><value>20개 프로젝트에서 작업</value></data>
+  <data name="Achievement_exp_50proj_Name" xml:space="preserve"><value>프로젝트 제왕</value></data>
+  <data name="Achievement_exp_50proj_Desc" xml:space="preserve"><value>50개 프로젝트에서 작업</value></data>
+  <data name="Achievement_eff_cache30_Name" xml:space="preserve"><value>캐시 시작</value></data>
+  <data name="Achievement_eff_cache30_Desc" xml:space="preserve"><value>캐시 히트율 30% 이상</value></data>
+  <data name="Achievement_eff_cache50_Name" xml:space="preserve"><value>캐시 입문</value></data>
+  <data name="Achievement_eff_cache50_Desc" xml:space="preserve"><value>캐시 히트율 50% 이상</value></data>
+  <data name="Achievement_eff_cache70_Name" xml:space="preserve"><value>캐시 프로</value></data>
+  <data name="Achievement_eff_cache70_Desc" xml:space="preserve"><value>캐시 히트율 70% 이상</value></data>
+  <data name="Achievement_eff_cache80_Name" xml:space="preserve"><value>최적화 달인</value></data>
+  <data name="Achievement_eff_cache80_Desc" xml:space="preserve"><value>캐시 히트율 80% 이상</value></data>
+  <data name="Achievement_eff_cache90_Name" xml:space="preserve"><value>캐시 마스터</value></data>
+  <data name="Achievement_eff_cache90_Desc" xml:space="preserve"><value>캐시 히트율 90% 이상</value></data>
+  <data name="Achievement_eff_savings_Name" xml:space="preserve"><value>절약왕</value></data>
+  <data name="Achievement_eff_savings_Desc" xml:space="preserve"><value>캐시로 $1 이상 절감</value></data>
+  <data name="Achievement_eff_save5_Name" xml:space="preserve"><value>절약 달인</value></data>
+  <data name="Achievement_eff_save5_Desc" xml:space="preserve"><value>캐시로 $5 이상 절감</value></data>
+  <data name="Achievement_eff_save10_Name" xml:space="preserve"><value>절약 전문가</value></data>
+  <data name="Achievement_eff_save10_Desc" xml:space="preserve"><value>캐시로 $10 이상 절감</value></data>
+  <data name="Achievement_eff_save50_Name" xml:space="preserve"><value>절약 마스터</value></data>
+  <data name="Achievement_eff_save50_Desc" xml:space="preserve"><value>캐시로 $50 이상 절감</value></data>
+  <data name="Achievement_time_sprint_Name" xml:space="preserve"><value>스프린트</value></data>
+  <data name="Achievement_time_sprint_Desc" xml:space="preserve"><value>30분 이상 단일 세션</value></data>
+  <data name="Achievement_time_owl_Name" xml:space="preserve"><value>올빼미</value></data>
+  <data name="Achievement_time_owl_Desc" xml:space="preserve"><value>야간(22-04시) 50회 이상 작업</value></data>
+  <data name="Achievement_time_morning_Name" xml:space="preserve"><value>아침형 인간</value></data>
+  <data name="Achievement_time_morning_Desc" xml:space="preserve"><value>새벽(05-09시) 50회 이상 작업</value></data>
+  <data name="Achievement_time_marathon_Name" xml:space="preserve"><value>마라톤</value></data>
+  <data name="Achievement_time_marathon_Desc" xml:space="preserve"><value>2시간 이상 단일 세션</value></data>
+  <data name="Achievement_time_half_Name" xml:space="preserve"><value>하프 마라톤</value></data>
+  <data name="Achievement_time_half_Desc" xml:space="preserve"><value>4시간 이상 단일 세션</value></data>
+  <data name="Achievement_time_ultramarathon_Name" xml:space="preserve"><value>울트라마라톤</value></data>
+  <data name="Achievement_time_ultramarathon_Desc" xml:space="preserve"><value>8시간 이상 단일 세션</value></data>
+  <data name="Achievement_time_allnighter_Name" xml:space="preserve"><value>밤샘 전사</value></data>
+  <data name="Achievement_time_allnighter_Desc" xml:space="preserve"><value>야간 100회 이상 작업</value></data>
+  <data name="Achievement_time_owl200_Name" xml:space="preserve"><value>올빼미 마스터</value></data>
+  <data name="Achievement_time_owl200_Desc" xml:space="preserve"><value>야간 200회 이상 작업</value></data>
+  <data name="Achievement_time_morning200_Name" xml:space="preserve"><value>새벽의 전사</value></data>
+  <data name="Achievement_time_morning200_Desc" xml:space="preserve"><value>새벽 200회 이상 작업</value></data>
+  <data name="Achievement_time_owl500_Name" xml:space="preserve"><value>밤의 제왕</value></data>
+  <data name="Achievement_time_owl500_Desc" xml:space="preserve"><value>야간 500회 이상 작업</value></data>
+  <data name="Achievement_time_morning500_Name" xml:space="preserve"><value>새벽의 왕</value></data>
+  <data name="Achievement_time_morning500_Desc" xml:space="preserve"><value>새벽 500회 이상 작업</value></data>
+  <data name="Achievement_time_ironman_Name" xml:space="preserve"><value>아이언맨</value></data>
+  <data name="Achievement_time_ironman_Desc" xml:space="preserve"><value>24시간 이상 단일 세션</value></data>
+  <data name="Achievement_eco_token_1m_Name" xml:space="preserve"><value>백만 토큰</value></data>
+  <data name="Achievement_eco_token_1m_Desc" xml:space="preserve"><value>총 100만 토큰 사용</value></data>
+  <data name="Achievement_eco_token_10m_Name" xml:space="preserve"><value>천만 토큰</value></data>
+  <data name="Achievement_eco_token_10m_Desc" xml:space="preserve"><value>총 1,000만 토큰 사용</value></data>
+  <data name="Achievement_eco_token_100m_Name" xml:space="preserve"><value>억 토큰</value></data>
+  <data name="Achievement_eco_token_100m_Desc" xml:space="preserve"><value>총 1억 토큰 사용</value></data>
+  <data name="Achievement_eco_token_1b_Name" xml:space="preserve"><value>십억 토큰</value></data>
+  <data name="Achievement_eco_token_1b_Desc" xml:space="preserve"><value>총 10억 토큰 사용</value></data>
+  <data name="Achievement_eco_cost_1_Name" xml:space="preserve"><value>첫 투자</value></data>
+  <data name="Achievement_eco_cost_1_Desc" xml:space="preserve"><value>총 비용 $1 달성</value></data>
+  <data name="Achievement_eco_cost_10_Name" xml:space="preserve"><value>후원자</value></data>
+  <data name="Achievement_eco_cost_10_Desc" xml:space="preserve"><value>총 비용 $10 달성</value></data>
+  <data name="Achievement_eco_cost_100_Name" xml:space="preserve"><value>큰 손</value></data>
+  <data name="Achievement_eco_cost_100_Desc" xml:space="preserve"><value>총 비용 $100 달성</value></data>
+  <data name="Achievement_eco_cost_500_Name" xml:space="preserve"><value>고액 투자자</value></data>
+  <data name="Achievement_eco_cost_500_Desc" xml:space="preserve"><value>총 비용 $500 달성</value></data>
+  <data name="Achievement_eco_cost_1k_Name" xml:space="preserve"><value>천 달러 클럽</value></data>
+  <data name="Achievement_eco_cost_1k_Desc" xml:space="preserve"><value>총 비용 $1,000 달성</value></data>
+  <data name="Achievement_eco_model_1_Name" xml:space="preserve"><value>첫 모델</value></data>
+  <data name="Achievement_eco_model_1_Desc" xml:space="preserve"><value>1개 모델 사용</value></data>
+  <data name="Achievement_eco_model_3_Name" xml:space="preserve"><value>모델 탐험가</value></data>
+  <data name="Achievement_eco_model_3_Desc" xml:space="preserve"><value>3개 이상 모델 사용</value></data>
+  <data name="Achievement_eco_model_5_Name" xml:space="preserve"><value>모델 수집가</value></data>
+  <data name="Achievement_eco_model_5_Desc" xml:space="preserve"><value>5개 이상 모델 사용</value></data>
+  <data name="Achievement_pat_weekend20_Name" xml:space="preserve"><value>주말 전사</value></data>
+  <data name="Achievement_pat_weekend20_Desc" xml:space="preserve"><value>주말 20일 이상 활동</value></data>
+  <data name="Achievement_pat_weekend50_Name" xml:space="preserve"><value>주말의 왕</value></data>
+  <data name="Achievement_pat_weekend50_Desc" xml:space="preserve"><value>주말 50일 이상 활동</value></data>
+  <data name="Achievement_pat_allhours_Name" xml:space="preserve"><value>24시간 정복</value></data>
+  <data name="Achievement_pat_allhours_Desc" xml:space="preserve"><value>24시간 모든 시간대 활동</value></data>
+  <data name="Achievement_pat_burst50_Name" xml:space="preserve"><value>집중 폭발</value></data>
+  <data name="Achievement_pat_burst50_Desc" xml:space="preserve"><value>하루 50 메시지 이상 달성</value></data>
+  <data name="Achievement_pat_burst100_Name" xml:space="preserve"><value>초집중</value></data>
+  <data name="Achievement_pat_burst100_Desc" xml:space="preserve"><value>하루 100 메시지 이상 달성</value></data>
+  <data name="Achievement_pat_burst200_Name" xml:space="preserve"><value>폭풍 코딩</value></data>
+  <data name="Achievement_pat_burst200_Desc" xml:space="preserve"><value>하루 200 메시지 이상 달성</value></data>
+  <data name="Achievement_pat_burst500_Name" xml:space="preserve"><value>전설의 하루</value></data>
+  <data name="Achievement_pat_burst500_Desc" xml:space="preserve"><value>하루 500 메시지 이상 달성</value></data>
+  <data name="Achievement_pat_lunch_Name" xml:space="preserve"><value>런치 코더</value></data>
+  <data name="Achievement_pat_lunch_Desc" xml:space="preserve"><value>점심시간(11-13시) 활동 기록</value></data>
+  <data name="Achievement_pat_diverse12_Name" xml:space="preserve"><value>시간 다양성</value></data>
+  <data name="Achievement_pat_diverse12_Desc" xml:space="preserve"><value>12시간대 이상에서 활동</value></data>
+  <data name="Achievement_pat_nocturn_Name" xml:space="preserve"><value>낮밤 전사</value></data>
+  <data name="Achievement_pat_nocturn_Desc" xml:space="preserve"><value>야간+새벽 모두 100회 이상</value></data>
+
+  <!-- Phase 8: MCP, Hooks, Rules, Instructions, Memory, Plugins, Accounts, Sessions, Notifications, Onboarding, WhatsNew, Setup, TemplateGallery, ToolCallCard -->
+  <data name="Accounts_AddHint" xml:space="preserve"><value>새 계정을 추가하여 여러 계정을 관리하세요.</value></data>
+  <data name="Accounts_AddNew" xml:space="preserve"><value>새 계정 추가</value></data>
+  <data name="Accounts_Card_Active" xml:space="preserve"><value>활성</value></data>
+  <data name="Accounts_Card_AllModels" xml:space="preserve"><value>모든 모델 이용 가능</value></data>
+  <data name="Accounts_Card_CurrentSession" xml:space="preserve"><value>현재 세션</value></data>
+  <data name="Accounts_Card_Delete" xml:space="preserve"><value>삭제</value></data>
+  <data name="Accounts_Card_Deleted" xml:space="preserve"><value>{0}이(가) 삭제되었습니다.</value></data>
+  <data name="Accounts_Card_EditName" xml:space="preserve"><value>이름 수정</value></data>
+  <data name="Accounts_Card_NoBackup" xml:space="preserve"><value>백업 없음</value></data>
+  <data name="Accounts_Card_RefreshToken" xml:space="preserve"><value>토큰 갱신</value></data>
+  <data name="Accounts_Card_RefreshUsage" xml:space="preserve"><value>사용량 갱신</value></data>
+  <data name="Accounts_Card_SonnetOnly" xml:space="preserve"><value>Sonnet만 이용 가능</value></data>
+  <data name="Accounts_Card_Switch" xml:space="preserve"><value>전환</value></data>
+  <data name="Accounts_Card_SwitchFailed" xml:space="preserve"><value>계정 전환 실패</value></data>
+  <data name="Accounts_Card_SwitchSuccess" xml:space="preserve"><value>{0}(으)로 전환되었습니다.</value></data>
+  <data name="Accounts_Card_TokenRefreshFailed" xml:space="preserve"><value>토큰 갱신 실패</value></data>
+  <data name="Accounts_Card_TokenRefreshed" xml:space="preserve"><value>토큰이 갱신되었습니다.</value></data>
+  <data name="Accounts_Card_UsageError" xml:space="preserve"><value>사용량 불러오기 오류</value></data>
+  <data name="Accounts_Card_UsageLoadError" xml:space="preserve"><value>사용량 불러오기 실패: {0}</value></data>
+  <data name="Accounts_Card_UsageNone" xml:space="preserve"><value>사용량 정보 없음</value></data>
+  <data name="Accounts_Desc" xml:space="preserve"><value>Claude 계정 관리</value></data>
+  <data name="Accounts_Dialog_Desc" xml:space="preserve"><value>현재 로그인한 Claude 계정을 등록합니다.</value></data>
+  <data name="Accounts_Dialog_Detected" xml:space="preserve"><value>감지된 계정</value></data>
+  <data name="Accounts_Dialog_EmailNotDetected" xml:space="preserve"><value>이메일을 감지하지 못했습니다.</value></data>
+  <data name="Accounts_Dialog_Failed" xml:space="preserve"><value>계정 등록 실패: {0}</value></data>
+  <data name="Accounts_Dialog_LoggedIn" xml:space="preserve"><value>로그인됨</value></data>
+  <data name="Accounts_Dialog_ProfileName" xml:space="preserve"><value>프로필 이름</value></data>
+  <data name="Accounts_Dialog_ProfileNameHint" xml:space="preserve"><value>계정을 구분하기 위한 이름</value></data>
+  <data name="Accounts_Dialog_ProfileNamePlaceholder" xml:space="preserve"><value>프로필 이름을 입력하세요.</value></data>
+  <data name="Accounts_Dialog_Register" xml:space="preserve"><value>등록</value></data>
+  <data name="Accounts_Dialog_Success" xml:space="preserve"><value>{0}이(가) 등록되었습니다.</value></data>
+  <data name="Accounts_Dialog_Title" xml:space="preserve"><value>계정 등록</value></data>
+  <data name="Accounts_Empty" xml:space="preserve"><value>등록된 계정이 없습니다.</value></data>
+  <data name="Accounts_EmptyHint" xml:space="preserve"><value>현재 계정을 등록하거나 새 계정을 추가하세요.</value></data>
+  <data name="Accounts_RegisterCurrent" xml:space="preserve"><value>현재 계정 등록</value></data>
+  <data name="Accounts_SwitchBlocked" xml:space="preserve"><value>활성 세션이 있어 전환할 수 없습니다.</value></data>
+  <data name="Accounts_Title" xml:space="preserve"><value>계정</value></data>
+  <data name="Common_EmptyContent" xml:space="preserve"><value>내용이 없습니다.</value></data>
+  <data name="Common_Refresh" xml:space="preserve"><value>새로고침</value></data>
+  <data name="Common_SaveFailed" xml:space="preserve"><value>저장 실패: {0}</value></data>
+  <data name="Common_SwitchToEditor" xml:space="preserve"><value>에디터로 전환</value></data>
+  <data name="Common_SwitchToPreview" xml:space="preserve"><value>프리뷰로 전환</value></data>
+  <data name="Hooks_AddHook" xml:space="preserve"><value>훅 추가</value></data>
+  <data name="Hooks_AgentModelLabel" xml:space="preserve"><value>모델</value></data>
+  <data name="Hooks_AgentPromptLabel" xml:space="preserve"><value>프롬프트</value></data>
+  <data name="Hooks_AsyncExecution" xml:space="preserve"><value>비동기 실행</value></data>
+  <data name="Hooks_CommandLabel" xml:space="preserve"><value>명령어</value></data>
+  <data name="Hooks_Delete" xml:space="preserve"><value>삭제</value></data>
+  <data name="Hooks_Deleted" xml:space="preserve"><value>훅이 삭제되었습니다.</value></data>
+  <data name="Hooks_Event" xml:space="preserve"><value>이벤트</value></data>
+  <data name="Hooks_HandlerType" xml:space="preserve"><value>핸들러 타입</value></data>
+  <data name="Hooks_HeadersLabel" xml:space="preserve"><value>헤더</value></data>
+  <data name="Hooks_ModelOptionalLabel" xml:space="preserve"><value>모델 (선택사항)</value></data>
+  <data name="Hooks_Page_Desc" xml:space="preserve"><value>세션 이벤트에 대한 자동 작업 설정</value></data>
+  <data name="Hooks_Page_Title" xml:space="preserve"><value>훅</value></data>
+  <data name="Hooks_PromptLabel" xml:space="preserve"><value>프롬프트</value></data>
+  <data name="Hooks_Saved" xml:space="preserve"><value>훅이 저장되었습니다.</value></data>
+  <data name="Hooks_StatusMessageLabel" xml:space="preserve"><value>상태 메시지</value></data>
+  <data name="Hooks_TimeoutLabel" xml:space="preserve"><value>타임아웃 (초)</value></data>
+  <data name="Hooks_TypeAgent" xml:space="preserve"><value>에이전트</value></data>
+  <data name="Hooks_TypeCommand" xml:space="preserve"><value>명령어</value></data>
+  <data name="Hooks_TypeHttp" xml:space="preserve"><value>HTTP</value></data>
+  <data name="Hooks_TypePrompt" xml:space="preserve"><value>프롬프트</value></data>
+  <data name="Hooks_UrlLabel" xml:space="preserve"><value>URL</value></data>
+  <data name="Instructions_NoFile" xml:space="preserve"><value>인스트럭션 파일이 없습니다.</value></data>
+  <data name="Instructions_Page_Desc" xml:space="preserve"><value>Claude에 대한 프로젝트 인스트럭션 관리</value></data>
+  <data name="Instructions_Page_Title" xml:space="preserve"><value>인스트럭션</value></data>
+  <data name="Instructions_ReferencedFiles" xml:space="preserve"><value>참조된 파일</value></data>
+  <data name="Instructions_RootClaude" xml:space="preserve"><value>Claude 루트 인스트럭션</value></data>
+  <data name="Instructions_SaveError" xml:space="preserve"><value>인스트럭션 저장 실패: {0}</value></data>
+  <data name="Instructions_Saved" xml:space="preserve"><value>인스트럭션이 저장되었습니다.</value></data>
+  <data name="Mcp_Card_Command" xml:space="preserve"><value>명령어</value></data>
+  <data name="Mcp_Card_Connected" xml:space="preserve"><value>연결됨</value></data>
+  <data name="Mcp_Card_Disconnected" xml:space="preserve"><value>연결 끊김</value></data>
+  <data name="Mcp_Card_Edit" xml:space="preserve"><value>수정</value></data>
+  <data name="Mcp_Card_Name" xml:space="preserve"><value>이름</value></data>
+  <data name="Mcp_Card_Remove" xml:space="preserve"><value>제거</value></data>
+  <data name="Mcp_Card_Status" xml:space="preserve"><value>상태</value></data>
+  <data name="Mcp_Card_Type" xml:space="preserve"><value>타입</value></data>
+  <data name="Mcp_Card_Url" xml:space="preserve"><value>URL</value></data>
+  <data name="Mcp_Editor_CommandLabel" xml:space="preserve"><value>명령어</value></data>
+  <data name="Mcp_Editor_EnvVarsLabel" xml:space="preserve"><value>환경 변수</value></data>
+  <data name="Mcp_Editor_NewServer" xml:space="preserve"><value>새 서버</value></data>
+  <data name="Mcp_Editor_Save" xml:space="preserve"><value>저장</value></data>
+  <data name="Mcp_Editor_Title" xml:space="preserve"><value>서버 수정</value></data>
+  <data name="Mcp_Editor_UrlLabel" xml:space="preserve"><value>URL</value></data>
+  <data name="Mcp_List_AddFirst" xml:space="preserve"><value>첫 서버를 추가하세요.</value></data>
+  <data name="Mcp_List_NoServers" xml:space="preserve"><value>설정된 서버가 없습니다.</value></data>
+  <data name="Mcp_Page_AddServer" xml:space="preserve"><value>서버 추가</value></data>
+  <data name="Mcp_Page_Desc" xml:space="preserve"><value>Claude CLI의 MCP 서버 설정</value></data>
+  <data name="Mcp_Page_ImportFailed" xml:space="preserve"><value>JSON 가져오기 실패: {0}</value></data>
+  <data name="Mcp_Page_ImportJson" xml:space="preserve"><value>JSON 가져오기</value></data>
+  <data name="Mcp_Page_ImportSuccess" xml:space="preserve"><value>JSON을 성공적으로 가져왔습니다.</value></data>
+  <data name="Mcp_Page_ServerAdded" xml:space="preserve"><value>{0} 서버가 추가되었습니다.</value></data>
+  <data name="Mcp_Page_ServerRemoved" xml:space="preserve"><value>{0} 서버가 제거되었습니다.</value></data>
+  <data name="Mcp_Page_ServerUpdated" xml:space="preserve"><value>{0} 서버가 업데이트되었습니다.</value></data>
+  <data name="Mcp_Page_Template" xml:space="preserve"><value>템플릿</value></data>
+  <data name="Mcp_Page_Title" xml:space="preserve"><value>MCP 서버</value></data>
+  <data name="Memory_All" xml:space="preserve"><value>전체</value></data>
+  <data name="Memory_ContentLabel" xml:space="preserve"><value>내용</value></data>
+  <data name="Memory_CreatedModified" xml:space="preserve"><value>생성: {0}, 수정: {1}</value></data>
+  <data name="Memory_DeleteError" xml:space="preserve"><value>메모리 삭제 실패: {0}</value></data>
+  <data name="Memory_Deleted" xml:space="preserve"><value>메모리가 삭제되었습니다.</value></data>
+  <data name="Memory_Desc" xml:space="preserve"><value>프로젝트 메모리 및 컨텍스트 관리</value></data>
+  <data name="Memory_DescriptionLabel" xml:space="preserve"><value>설명</value></data>
+  <data name="Memory_Empty" xml:space="preserve"><value>메모리가 없습니다.</value></data>
+  <data name="Memory_NameLabel" xml:space="preserve"><value>이름</value></data>
+  <data name="Memory_SaveError" xml:space="preserve"><value>메모리 저장 실패: {0}</value></data>
+  <data name="Memory_Saved" xml:space="preserve"><value>메모리가 저장되었습니다.</value></data>
+  <data name="Memory_SearchPlaceholder" xml:space="preserve"><value>메모리 검색...</value></data>
+  <data name="Memory_SelectHint" xml:space="preserve"><value>항목을 선택하세요.</value></data>
+  <data name="Memory_Title" xml:space="preserve"><value>메모리</value></data>
+  <data name="Memory_TypeFeedback" xml:space="preserve"><value>피드백</value></data>
+  <data name="Memory_TypeLabel" xml:space="preserve"><value>타입</value></data>
+  <data name="Memory_TypeOther" xml:space="preserve"><value>기타</value></data>
+  <data name="Memory_TypeProject" xml:space="preserve"><value>프로젝트</value></data>
+  <data name="Memory_TypeReference" xml:space="preserve"><value>참조</value></data>
+  <data name="Memory_TypeUser" xml:space="preserve"><value>사용자 메모</value></data>
+  <data name="Notifications_BackToApp" xml:space="preserve"><value>앱으로 돌아가기</value></data>
+  <data name="Notifications_DeletedSession" xml:space="preserve"><value>세션이 삭제되었습니다.</value></data>
+  <data name="Notifications_Empty" xml:space="preserve"><value>알림이 없습니다.</value></data>
+  <data name="Notifications_MarkAllRead" xml:space="preserve"><value>모두 읽음으로 표시</value></data>
+  <data name="Notifications_Title" xml:space="preserve"><value>알림</value></data>
+  <data name="Onboarding_Feature1" xml:space="preserve"><value>세션 관리</value></data>
+  <data name="Onboarding_Feature2" xml:space="preserve"><value>Git 통합</value></data>
+  <data name="Onboarding_Feature3" xml:space="preserve"><value>플러그인 확장</value></data>
+  <data name="Onboarding_Layout_Chat" xml:space="preserve"><value>채팅 영역 - Claude와 상호작용</value></data>
+  <data name="Onboarding_Layout_Desc" xml:space="preserve"><value>주요 UI 구성 요소를 알아보세요.</value></data>
+  <data name="Onboarding_Layout_Panel" xml:space="preserve"><value>패널 - 파일 및 옵션</value></data>
+  <data name="Onboarding_Layout_Settings" xml:space="preserve"><value>설정 - 앱 구성</value></data>
+  <data name="Onboarding_Layout_Sidebar" xml:space="preserve"><value>사이드바 - 세션과 도구</value></data>
+  <data name="Onboarding_Layout_Title" xml:space="preserve"><value>UI 레이아웃</value></data>
+  <data name="Onboarding_Next" xml:space="preserve"><value>다음</value></data>
+  <data name="Onboarding_Prev" xml:space="preserve"><value>이전</value></data>
+  <data name="Onboarding_Session_Desc" xml:space="preserve"><value>새로운 Claude 세션을 만듭니다.</value></data>
+  <data name="Onboarding_Session_Step1" xml:space="preserve"><value>세션 이름을 정하세요.</value></data>
+  <data name="Onboarding_Session_Step2" xml:space="preserve"><value>프롬프트를 입력하세요.</value></data>
+  <data name="Onboarding_Session_Step3" xml:space="preserve"><value>전송하고 응답을 기다리세요.</value></data>
+  <data name="Onboarding_Session_Title" xml:space="preserve"><value>세션 시작</value></data>
+  <data name="Onboarding_Skip" xml:space="preserve"><value>건너뛰기</value></data>
+  <data name="Onboarding_Start" xml:space="preserve"><value>시작</value></data>
+  <data name="Onboarding_Title" xml:space="preserve"><value>가이드</value></data>
+  <data name="Onboarding_Welcome_Desc" xml:space="preserve"><value>Claude와의 상호작용을 위한 완벽한 도구</value></data>
+  <data name="Onboarding_Welcome_Title" xml:space="preserve"><value>Seoro에 오신 것을 환영합니다</value></data>
+  <data name="Onboarding_Workspace_Desc" xml:space="preserve"><value>작업을 시작할 준비가 되셨나요?</value></data>
+  <data name="Onboarding_Workspace_Step1" xml:space="preserve"><value>Git 저장소를 선택하세요.</value></data>
+  <data name="Onboarding_Workspace_Step2" xml:space="preserve"><value>기본 설정을 구성하세요.</value></data>
+  <data name="Onboarding_Workspace_Step3" xml:space="preserve"><value>첫 세션을 시작하세요.</value></data>
+  <data name="Onboarding_Workspace_Title" xml:space="preserve"><value>워크스페이스 설정</value></data>
+  <data name="Plugins_Activated" xml:space="preserve"><value>활성화됨</value></data>
+  <data name="Plugins_AddFolderHint" xml:space="preserve"><value>플러그인 폴더를 추가하세요.</value></data>
+  <data name="Plugins_Blocked" xml:space="preserve"><value>차단됨</value></data>
+  <data name="Plugins_Deactivated" xml:space="preserve"><value>비활성화됨</value></data>
+  <data name="Plugins_Desc" xml:space="preserve"><value>플러그인 설치 및 관리</value></data>
+  <data name="Plugins_Install" xml:space="preserve"><value>설치</value></data>
+  <data name="Plugins_InstallFailed" xml:space="preserve"><value>플러그인 설치 실패: {0}</value></data>
+  <data name="Plugins_InstallSuccess" xml:space="preserve"><value>{0}이(가) 설치되었습니다.</value></data>
+  <data name="Plugins_Installing" xml:space="preserve"><value>설치 중...</value></data>
+  <data name="Plugins_Inactive" xml:space="preserve"><value>비활성</value></data>
+  <data name="Plugins_MarketplaceHint" xml:space="preserve"><value>마켓플레이스에서 플러그인을 찾아보세요.</value></data>
+  <data name="Plugins_NoMarketplace" xml:space="preserve"><value>마켓플레이스를 사용할 수 없습니다.</value></data>
+  <data name="Plugins_NoneInstalled" xml:space="preserve"><value>설치된 플러그인이 없습니다.</value></data>
+  <data name="Plugins_NoneInstalledHint" xml:space="preserve"><value>플러그인을 설치하여 기능을 확장하세요.</value></data>
+  <data name="Plugins_NoResults" xml:space="preserve"><value>결과가 없습니다.</value></data>
+  <data name="Plugins_OpenDirFailed" xml:space="preserve"><value>폴더 열기 실패: {0}</value></data>
+  <data name="Plugins_OpenDirectory" xml:space="preserve"><value>폴더 열기</value></data>
+  <data name="Plugins_RemoveFailed" xml:space="preserve"><value>플러그인 제거 실패: {0}</value></data>
+  <data name="Plugins_RemoveSuccess" xml:space="preserve"><value>{0}이(가) 제거되었습니다.</value></data>
+  <data name="Plugins_SearchInstalled" xml:space="preserve"><value>설치된 플러그인 검색...</value></data>
+  <data name="Plugins_SearchMarketplace" xml:space="preserve"><value>마켓플레이스 검색...</value></data>
+  <data name="Plugins_StatusChecking" xml:space="preserve"><value>확인 중...</value></data>
+  <data name="Plugins_StatusError" xml:space="preserve"><value>오류</value></data>
+  <data name="Plugins_StatusLoaded" xml:space="preserve"><value>로드됨</value></data>
+  <data name="Plugins_StatusNormal" xml:space="preserve"><value>정상</value></data>
+  <data name="Plugins_TabInstalled" xml:space="preserve"><value>설치됨</value></data>
+  <data name="Plugins_TabMarketplace" xml:space="preserve"><value>마켓플레이스</value></data>
+  <data name="Plugins_Title" xml:space="preserve"><value>플러그인</value></data>
+  <data name="Plugins_ToggleFailed" xml:space="preserve"><value>플러그인 토글 실패: {0}</value></data>
+  <data name="Plugins_ToggleSuccess" xml:space="preserve"><value>{0}이(가) {1}되었습니다.</value></data>
+  <data name="Plugins_Uninstall" xml:space="preserve"><value>제거</value></data>
+  <data name="Plugins_UninstallConfirm" xml:space="preserve"><value>{0}을(를) 제거하시겠습니까?</value></data>
+  <data name="Plugins_UninstallTitle" xml:space="preserve"><value>플러그인 제거</value></data>
+  <data name="Plugins_Update" xml:space="preserve"><value>업데이트</value></data>
+  <data name="Plugins_UpdateFailed" xml:space="preserve"><value>플러그인 업데이트 실패: {0}</value></data>
+  <data name="Plugins_UpdateSuccess" xml:space="preserve"><value>{0}이(가) 업데이트되었습니다.</value></data>
+  <data name="Rules_DeleteConfirm" xml:space="preserve"><value>{0}을(를) 삭제하시겠습니까?</value></data>
+  <data name="Rules_DeleteError" xml:space="preserve"><value>규칙 삭제 실패: {0}</value></data>
+  <data name="Rules_DeleteTitle" xml:space="preserve"><value>규칙 삭제</value></data>
+  <data name="Rules_Deleted" xml:space="preserve"><value>규칙이 삭제되었습니다.</value></data>
+  <data name="Rules_Desc" xml:space="preserve"><value>프로젝트 규칙 및 가이드라인 관리</value></data>
+  <data name="Rules_Empty" xml:space="preserve"><value>규칙이 없습니다.</value></data>
+  <data name="Rules_FileName" xml:space="preserve"><value>파일명</value></data>
+  <data name="Rules_Name" xml:space="preserve"><value>규칙</value></data>
+  <data name="Rules_New" xml:space="preserve"><value>새 규칙</value></data>
+  <data name="Rules_SaveError" xml:space="preserve"><value>규칙 저장 실패: {0}</value></data>
+  <data name="Rules_Saved" xml:space="preserve"><value>규칙이 저장되었습니다.</value></data>
+  <data name="Rules_SearchPlaceholder" xml:space="preserve"><value>규칙 검색...</value></data>
+  <data name="Rules_TemplateApplied" xml:space="preserve"><value>{0} 템플릿이 적용되었습니다.</value></data>
+  <data name="Sessions_CountLabel" xml:space="preserve"><value>세션</value></data>
+  <data name="Sessions_Desc" xml:space="preserve"><value>세션 기록 및 재생</value></data>
+  <data name="Sessions_Empty" xml:space="preserve"><value>세션이 없습니다.</value></data>
+  <data name="Sessions_Realtime" xml:space="preserve"><value>실시간</value></data>
+  <data name="Sessions_Reset" xml:space="preserve"><value>초기화</value></data>
+  <data name="Sessions_Results" xml:space="preserve"><value>검색 결과</value></data>
+  <data name="Sessions_Searching" xml:space="preserve"><value>검색 중...</value></data>
+  <data name="Sessions_SearchPlaceholder" xml:space="preserve"><value>세션 검색...</value></data>
+  <data name="Sessions_SortBy" xml:space="preserve"><value>정렬</value></data>
+  <data name="Sessions_Title" xml:space="preserve"><value>세션 히스토리</value></data>
+  <data name="Sessions_UsageAnalytics" xml:space="preserve"><value>사용량 분석</value></data>
+  <data name="Setup_Desc" xml:space="preserve"><value>Claude CLI 설정</value></data>
+  <data name="Setup_HowToInstall" xml:space="preserve"><value>설치 방법</value></data>
+  <data name="Setup_Installed" xml:space="preserve"><value>설치됨</value></data>
+  <data name="Setup_Recheck" xml:space="preserve"><value>다시 확인</value></data>
+  <data name="Setup_Skip" xml:space="preserve"><value>건너뛰기</value></data>
+  <data name="Setup_Start" xml:space="preserve"><value>시작</value></data>
+  <data name="Setup_Title" xml:space="preserve"><value>설정</value></data>
+  <data name="TemplateGallery_All" xml:space="preserve"><value>전체</value></data>
+  <data name="TemplateGallery_Agent" xml:space="preserve"><value>에이전트</value></data>
+  <data name="TemplateGallery_Hook" xml:space="preserve"><value>훅</value></data>
+  <data name="TemplateGallery_Mcp" xml:space="preserve"><value>MCP</value></data>
+  <data name="TemplateGallery_NoResults" xml:space="preserve"><value>결과가 없습니다.</value></data>
+  <data name="TemplateGallery_Rules" xml:space="preserve"><value>규칙</value></data>
+  <data name="TemplateGallery_SearchPlaceholder" xml:space="preserve"><value>템플릿 검색...</value></data>
+  <data name="TemplateGallery_Skill" xml:space="preserve"><value>스킬</value></data>
+  <data name="TemplateGallery_Title" xml:space="preserve"><value>템플릿 갤러리</value></data>
+  <data name="Tool_Card_Collapse" xml:space="preserve"><value>축소</value></data>
+  <data name="Tool_Card_ExpandAll" xml:space="preserve"><value>모두 확장</value></data>
+  <data name="Tool_Card_Input" xml:space="preserve"><value>입력</value></data>
+  <data name="Tool_Card_Lines" xml:space="preserve"><value>{0}줄</value></data>
+  <data name="Tool_Card_Output" xml:space="preserve"><value>출력</value></data>
+  <data name="WhatsNew_CurrentVersion" xml:space="preserve"><value>현재 버전</value></data>
+  <data name="WhatsNew_DateDayBeforeYesterday" xml:space="preserve"><value>그저께</value></data>
+  <data name="WhatsNew_DateFormat" xml:space="preserve"><value>{0}일 전</value></data>
+  <data name="WhatsNew_DateToday" xml:space="preserve"><value>오늘</value></data>
+  <data name="WhatsNew_DateYesterday" xml:space="preserve"><value>어제</value></data>
+  <data name="WhatsNew_Empty" xml:space="preserve"><value>변경 사항이 없습니다.</value></data>
+  <data name="WhatsNew_Title" xml:space="preserve"><value>새로운 기능</value></data>
+  <data name="WhatsNew_TypeDocs" xml:space="preserve"><value>문서</value></data>
+  <data name="WhatsNew_TypeFeature" xml:space="preserve"><value>기능</value></data>
+  <data name="WhatsNew_TypeFix" xml:space="preserve"><value>수정</value></data>
+  <data name="WhatsNew_TypeImprove" xml:space="preserve"><value>개선</value></data>
+  <data name="WhatsNew_TypeOther" xml:space="preserve"><value>기타</value></data>
+  <data name="WhatsNew_TypeStyle" xml:space="preserve"><value>스타일</value></data>
+  <data name="WhatsNew_TypeTranslation" xml:space="preserve"><value>번역</value></data>
+  <data name="Rules_ContentLabel" xml:space="preserve"><value>내용</value></data>
 
 </root>

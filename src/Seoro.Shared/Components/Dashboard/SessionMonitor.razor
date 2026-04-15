@@ -6,7 +6,7 @@
     <div class="session-monitor-header">
         <div class="session-monitor-title">
             <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small"/>
-            최근 세션
+            @Strings.Dashboard_Session_Title
         </div>
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                        Class="@(_loading ? "session-monitor-spin" : "")"
@@ -29,13 +29,13 @@
                                    Style="font-size: 0.6rem;"/> @session.MessageCount</span>
                     <span><MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small"
                                    Style="font-size: 0.6rem;"/> @session.ToolCallCount</span>
-                    <span title="추정 비용 (엔트리 수 기반)"><MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small"
+                    <span title="@Strings.Dashboard_Session_CostTooltip"><MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small"
                                                             Style="font-size: 0.6rem;"/> ~$@EstimateCost(session.EntryCount)</span>
                 </div>
             </button>
         }
     </div>
-    <button class="session-monitor-footer-link" @onclick="GoToSessions">모든 세션 보기 →</button>
+    <button class="session-monitor-footer-link" @onclick="GoToSessions">@Strings.Dashboard_Session_ViewAll</button>
 </div>
 
 @code {
@@ -80,11 +80,7 @@
     private static string FormatTime(DateTime? ts)
     {
         if (ts is null) return "";
-        var diff = DateTime.UtcNow - ts.Value;
-        if (diff.TotalMinutes < 1) return "방금";
-        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}분 전";
-        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}시간 전";
-        return $"{(int)diff.TotalDays}일 전";
+        return Strings.FormatRelativeTime(DateTime.UtcNow - ts.Value);
     }
 
     private static string Truncate(string s, int max)

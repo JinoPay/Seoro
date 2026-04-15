@@ -25,7 +25,7 @@
     {
         <div class="sidebar-explorer-empty">
             <MudIcon Icon="@Icons.Material.Filled.FolderOff" Size="Size.Large" Style="opacity: 0.15;"/>
-            <span>파일을 찾을 수 없습니다</span>
+            <span>@Strings.Sidebar_Explorer_NoFilesFound</span>
         </div>
     }
     else
@@ -235,7 +235,7 @@
         }
         catch (Exception ex)
         {
-            ChatState.Tabs.OpenFileContentTab(filePath, $"파일 읽기 오류: {ex.Message}");
+            ChatState.Tabs.OpenFileContentTab(filePath, Strings.Sidebar_Explorer_FileReadError(ex.Message));
         }
     }
 

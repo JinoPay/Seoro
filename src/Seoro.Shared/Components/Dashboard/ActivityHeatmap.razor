@@ -1,5 +1,5 @@
 <div class="heatmap-card">
-    <div class="heatmap-title">활동</div>
+    <div class="heatmap-title">@Strings.Dashboard_Heatmap_Title</div>
     <div class="heatmap-container">
         @* Day labels *@
         <div class="heatmap-day-labels">
@@ -28,9 +28,7 @@
                                 <TooltipContent>
                                     <div style="font-size: 0.75rem;">
                                         <div style="font-weight: 500;">@FormatDate(day.Date)</div>
-                                        <div>@FormatNumber(day.Count) 메시지 · @day.Sessions 세션
-                                            · @FormatNumber(day.Tools) 도구
-                                        </div>
+                                        <div>@Strings.Dashboard_Heatmap_Tooltip(day.Count, day.Sessions, day.Tools)</div>
                                     </div>
                                 </TooltipContent>
                             </MudTooltip>
@@ -42,7 +40,7 @@
     </div>
     @* Legend *@
     <div class="heatmap-legend">
-        <span>적음</span>
+        <span>@Strings.Dashboard_Heatmap_Less</span>
         <div class="heatmap-legend-blocks">
             <div class="heatmap-legend-block level-0"></div>
             <div class="heatmap-legend-block level-1"></div>
@@ -50,8 +48,8 @@
             <div class="heatmap-legend-block level-3"></div>
             <div class="heatmap-legend-block level-4"></div>
         </div>
-        <span>많음</span>
-        <span class="heatmap-legend-count">@(TrackedDays)일 추적됨</span>
+        <span>@Strings.Dashboard_Heatmap_More</span>
+        <span class="heatmap-legend-count">@Strings.Dashboard_Heatmap_DaysTracked(TrackedDays)</span>
     </div>
 </div>
 
@@ -61,8 +59,8 @@
     private List<DayCell[]> _weeks = [];
     private int TrackedDays => DailyActivity.Count(d => d.MessageCount > 0);
 
-    private static readonly (string label, int idx)[] DayLabels =
-        [("일", 0), ("월", 1), ("화", 2), ("수", 3), ("목", 4), ("금", 5), ("토", 6)];
+    private IEnumerable<(string label, int idx)> DayLabels =>
+        CultureInfo.CurrentCulture.DateTimeFormat.ShortestDayNames.Select((name, i) => (name, i));
 
     protected override void OnParametersSet()
     {
@@ -131,7 +129,7 @@
     private static string FormatDate(string dateStr)
     {
         if (DateTime.TryParse(dateStr, out var dt))
-            return dt.ToString("yyyy년 M월 d일 dddd");
+            return dt.ToString(Strings.Dashboard_Heatmap_DateFormat);
         return dateStr;
     }
 

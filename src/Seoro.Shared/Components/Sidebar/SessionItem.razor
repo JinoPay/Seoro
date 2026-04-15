@@ -11,20 +11,20 @@
 
     @if (IsSynced)
     {
-        <span class="status-badge synced" title="동기화">동기화</span>
+        <span class="status-badge synced" title="@Strings.Common_Status_Synced">@Strings.Common_Status_Synced</span>
     }
 
     @if (IsCompleted)
     {
-        <span class="status-badge completed" title="완료">완료</span>
+        <span class="status-badge completed" title="@Strings.Common_Status_Completed">@Strings.Common_Status_Completed</span>
     }
     else if (Session.Status == SessionStatus.Error)
     {
-        <span class="status-badge error" title="오류">@GetStatusLabel(Session.Status)</span>
+        <span class="status-badge error" title="@Strings.Common_Status_Error">@GetStatusLabel(Session.Status)</span>
     }
     else if (Session.Status == SessionStatus.Archived)
     {
-        <span class="status-badge archived" title="보관">@GetStatusLabel(Session.Status)</span>
+        <span class="status-badge archived" title="@Strings.Common_Status_Archived">@GetStatusLabel(Session.Status)</span>
     }
 
     <div class="tree-session-info">
@@ -36,7 +36,7 @@
                 @if (!string.IsNullOrEmpty(Session.Git.BranchName))
                 {
                     <span class="tree-session-branch">
-                        <span class="local-badge">로컬</span> @Session.Git.BranchName
+                        <span class="local-badge">@Strings.Common_Status_Local</span> @Session.Git.BranchName
                     </span>
                 }
                 else
@@ -100,7 +100,7 @@
          Style="position: absolute; visibility: hidden; width: 0; height: 0;">
     <MudMenuItem OnClick="@HandleOpenFolder"
                  Icon="@Icons.Material.Outlined.FolderOpen">
-        폴더 열기
+        @Strings.Sidebar_OpenFolder
     </MudMenuItem>
     @if (AvailableIdes?.Count > 0)
     {
@@ -108,14 +108,14 @@
         {
             <MudMenuItem OnClick="@(() => OnOpenInIde.InvokeAsync(ide.Command))"
                          Icon="@Icons.Material.Outlined.Code">
-                @ide.Name 에서 열기
+                @Strings.Sidebar_OpenInIde(ide.Name)
             </MudMenuItem>
         }
     }
     <MudDivider/>
     <MudMenuItem OnClick="@(() => OnDelete.InvokeAsync())"
                  Icon="@Icons.Material.Filled.Close">
-        삭제
+        @Strings.Common_Delete
     </MudMenuItem>
 </MudMenu>
 
@@ -169,8 +169,8 @@
     {
         return status switch
         {
-            SessionStatus.Error => "오류",
-            SessionStatus.Archived => "보관",
+            SessionStatus.Error => Strings.Common_Status_Error,
+            SessionStatus.Archived => Strings.Common_Status_Archived,
             _ => ""
         };
     }

@@ -19,7 +19,7 @@
             </MudTooltip>
         }
 
-        <MudTooltip Text="파일 첨부" Placement="Placement.Top">
+        <MudTooltip Text="@Strings.Chat_Toolbar_AttachFile" Placement="Placement.Top">
             <MudIconButton Icon="@Icons.Material.Filled.AttachFile"
                            Color="Color.Default"
                            Size="Size.Small"
@@ -29,7 +29,7 @@
 
         @if (CurrentSession?.IsCodex == true)
         {
-            <MudTooltip Text="@(WebSearchEnabled ? "웹 검색 켜짐" : "웹 검색 꺼짐")" Placement="Placement.Top">
+            <MudTooltip Text="@(WebSearchEnabled ? Strings.Chat_Toolbar_WebSearchOn : Strings.Chat_Toolbar_WebSearchOff)" Placement="Placement.Top">
                 <MudIconButton Icon="@Icons.Material.Filled.TravelExplore"
                                Color="@(WebSearchEnabled ? Color.Info : Color.Default)"
                                Size="Size.Small"
@@ -42,7 +42,7 @@
     <div class="input-toolbar-right">
         @if (!string.IsNullOrEmpty(PlanFilePath))
         {
-            <MudTooltip Text="플랜 보기" Placement="Placement.Top">
+            <MudTooltip Text="@Strings.Chat_Toolbar_ViewPlan" Placement="Placement.Top">
                 <MudIconButton Icon="@Icons.Material.Filled.Map"
                                Color="Color.Warning"
                                Size="Size.Small"
@@ -66,7 +66,7 @@
                        OnClick="@(() => OnCancel.InvokeAsync())"
                        Class="stop-button-glow"
                        Style="border-radius: 20px; text-transform: none; min-width: 72px;">
-                중지
+                @Strings.Chat_Toolbar_Stop
             </MudButton>
         }
         else
@@ -117,8 +117,8 @@
     {
         return PermissionMode switch
         {
-            "plan" => "플랜 모드 (읽기 전용)",
-            _ => "일반 모드 (모든 권한 우회)"
+            "plan" => Strings.Chat_PermissionMode_PlanTooltip,
+            _ => Strings.Chat_PermissionMode_NormalTooltip
         };
     }
 
@@ -154,7 +154,7 @@
         {
             "max" => "Effort: Max (Thinking)",
             "high" => "Effort: High",
-            _ => $"Effort: Auto (최대 {maxLevel})"
+            _ => Strings.Chat_EffortLevel_AutoTooltip(maxLevel)
         };
     }
 

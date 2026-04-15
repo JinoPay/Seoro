@@ -123,12 +123,12 @@
 
 </div>
 
-<MudMessageBox @ref="_closeConfirmBox" Title="앱 종료" CancelText="취소">
+<MudMessageBox @ref="_closeConfirmBox" Title="@Strings.Layout_AppClose_Title" CancelText="@Strings.Common_Cancel">
     <MessageContent>
-        진행 중인 세션이 있습니다. 지금 종료하면 세션이 중단됩니다. 종료하시겠습니까?
+        @Strings.Layout_AppClose_Message
     </MessageContent>
     <YesButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error">종료</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error">@Strings.Layout_AppClose_Confirm</MudButton>
     </YesButton>
 </MudMessageBox>
 
@@ -161,6 +161,7 @@
         ChatState.OnRequestShowOnboarding += HandleShowOnboarding;
         ChatState.OnRequestShowWhatsNew += HandleShowWhatsNew;
         _closeRequestedSub = EventBus.Subscribe<WindowCloseRequestedEvent>(_ => HandleCloseRequested());
+        Strings.CultureChanged += OnCultureChanged;
 
         try
         {
@@ -377,13 +378,13 @@
                     if (update == null) continue;
 
                     NotificationHistory.Record(
-                        "업데이트 사용 가능",
-                        $"새 버전 {update.TargetVersion}이(가) 있습니다.",
+                        Strings.Layout_Update_Available,
+                        Strings.Layout_Update_AvailableDesc(update.TargetVersion),
                         NotificationType.Info);
 
                     await NotificationService.SendAsync(
-                        "Seoro 업데이트",
-                        $"새 버전 {update.TargetVersion}이(가) 사용 가능합니다.");
+                        Strings.Layout_Update_NotificationTitle,
+                        Strings.Layout_Update_NotificationBody(update.TargetVersion));
 
                     await InvokeAsync(() =>
                     {
@@ -472,11 +473,9 @@
             await InvokeAsync(async () =>
             {
                 var result = await DialogService.ShowMessageBoxAsync(
-                    "Cominomi 데이터 발견",
-                    $"기존 Cominomi 데이터가 발견되었습니다 ({summary.TotalFiles}개 항목).\n" +
-                    "Seoro로 데이터를 가져오시겠습니까?\n\n" +
-                    "가져오기를 선택하면 데이터가 복사된 후 기존 Cominomi 폴더가 삭제됩니다.",
-                    "가져오기", cancelText: "나중에", noText: "가져오지 않기");
+                    Strings.Layout_Migration_Title,
+                    Strings.Layout_Migration_Message(summary.TotalFiles),
+                    Strings.Layout_Migration_Import, cancelText: Strings.Layout_Migration_Later, noText: Strings.Layout_Migration_Skip);
 
                 if (result is null) return; // "나중에" - 다음 실행 시 다시 물어봄
 
@@ -488,18 +487,18 @@
                     if (migrationResult.Copied > 0)
                     {
                         await DialogService.ShowMessageBoxAsync(
-                            "가져오기 완료",
-                            $"{migrationResult.Copied}개 항목을 가져왔습니다. 변경사항을 반영하기 위해 앱을 다시 시작합니다.",
-                            "확인");
+                            Strings.Layout_Migration_DoneTitle,
+                            Strings.Layout_Migration_DoneRestart(migrationResult.Copied),
+                            Strings.Common_Confirm);
                         RestartApp();
                         return;
                     }
 
-                    var msg = $"가져오기 완료: {migrationResult.Copied}개 복사, {migrationResult.Skipped}개 스킵";
+                    var msg = Strings.Layout_Migration_Summary(migrationResult.Copied, migrationResult.Skipped);
                     if (migrationResult.Failed > 0)
-                        msg += $", {migrationResult.Failed}개 실패";
+                        msg += Strings.Layout_Migration_SummaryFailed(migrationResult.Failed);
                     if (!deleted)
-                        msg += " (Cominomi 폴더 삭제 실패 - 수동으로 삭제해주세요)";
+                        msg += Strings.Layout_Migration_FolderDeleteFailed;
 
                     Snackbar.Add(msg, migrationResult.Failed > 0 || !deleted ? Severity.Warning : Severity.Success);
                 }
@@ -508,7 +507,7 @@
                     // "가져오지 않기" - Cominomi 폴더만 삭제
                     var deleted = CominomiMigration.DeleteCominomiFolder();
                     if (!deleted)
-                        Snackbar.Add("Cominomi 폴더 삭제에 실패했습니다. 수동으로 삭제해주세요.", Severity.Warning);
+                        Snackbar.Add(Strings.Layout_Migration_DeleteFolderFailed, Severity.Warning);
                 }
             });
         }
@@ -615,6 +614,22 @@
         Environment.Exit(0);
     }
 
+    private void OnCultureChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            // 렌더러 스레드에서도 culture를 명시적으로 동기화
+            var uiCulture = CultureInfo.DefaultThreadCurrentUICulture;
+            if (uiCulture != null)
+            {
+                CultureInfo.CurrentUICulture = uiCulture;
+                CultureInfo.CurrentCulture = CultureInfo.DefaultThreadCurrentCulture ?? uiCulture;
+            }
+            StateHasChanged();
+            ChatState.NotifyStateChanged();
+        });
+    }
+
     private void HandleCloseRequested()
     {
         _ = InvokeAsync(async () =>
@@ -660,6 +675,7 @@
         ChatState.OnRequestShowOnboarding -= HandleShowOnboarding;
         ChatState.OnRequestShowWhatsNew -= HandleShowWhatsNew;
         _closeRequestedSub?.Dispose();
+        Strings.CultureChanged -= OnCultureChanged;
         try
         {
             await JS.InvokeVoidAsync("unregisterPanelShortcuts");

@@ -9,7 +9,7 @@
         {
             <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
                        Size="Size.Small" Style="text-transform: none;">
-                저장
+                @Strings.Common_Save
             </MudButton>
         }
     </div>
@@ -60,20 +60,22 @@
 
     private string GetSectionTitle() => Section switch
     {
-        "general" => "일반",
-        "ai" => "AI 모델",
-        "notifications" => "알림",
-        "terminal" => "터미널",
-        "shortcuts" => "단축키",
-        "integrations" => "연동",
-        "advanced" => "고급",
-        "updates" => "업데이트",
-        "git-merge" => "Git / 머지",
-        _ => "설정"
+        "general" => Strings.Nav_General,
+        "ai" => Strings.Nav_AiModel,
+        "notifications" => Strings.Nav_Notifications,
+        "terminal" => Strings.Nav_Terminal,
+        "shortcuts" => Strings.Nav_Shortcuts,
+        "integrations" => Strings.Nav_Integrations,
+        "advanced" => Strings.Nav_Advanced,
+        "updates" => Strings.Nav_Updates,
+        "git-merge" => Strings.Nav_GitMerge,
+        _ => Strings.Common_Settings
     };
 
     private async Task Save()
     {
+        // culture를 먼저 확정해야 OnSettingsChanged cascade 시 올바른 culture로 렌더링됨
+        Strings.SetCulture(_settings.UiLanguage);
         await SettingsService.SaveAsync(_settings);
         Snackbar.SettingsSaved();
     }

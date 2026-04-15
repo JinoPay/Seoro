@@ -2,14 +2,14 @@
 @inject INotificationService NotificationService
 @inject ISnackbar Snackbar
 
-<div class="settings-section-title">알림</div>
-<div class="settings-section-desc">작업 완료, 응답 대기, 플랜 리뷰 시 OS 알림을 발송합니다.</div>
+<div class="settings-section-title">@Strings.Settings_Notifications_Title</div>
+<div class="settings-section-desc">@Strings.Settings_Notifications_Desc</div>
 
 <div class="stack gap-3">
     <div class="settings-toggle-row">
         <div>
-            <span class="typo-body2">데스크톱 알림</span>
-            <div class="typo-caption text-secondary">작업 완료 시 OS 알림을 표시합니다.</div>
+            <span class="typo-body2">@Strings.Settings_Notifications_DesktopLabel</span>
+            <div class="typo-caption text-secondary">@Strings.Settings_Notifications_DesktopHint</div>
         </div>
         <MudSwitch T="bool" @bind-Value="Settings.NotificationsEnabled"
                    Color="Color.Primary" UncheckedColor="Color.Default"/>
@@ -17,8 +17,8 @@
 
     <div class="settings-toggle-row">
         <div>
-            <span class="typo-body2">알림 사운드</span>
-            <div class="typo-caption text-secondary">알림 발생 시 소리를 재생합니다.</div>
+            <span class="typo-body2">@Strings.Settings_Notifications_SoundLabel</span>
+            <div class="typo-caption text-secondary">@Strings.Settings_Notifications_SoundHint</div>
         </div>
         <MudSwitch T="bool" @bind-Value="Settings.NotificationSound"
                    Color="Color.Primary" UncheckedColor="Color.Default"
@@ -28,14 +28,14 @@
     @if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
     {
         <div>
-            <div class="settings-field-label">사운드 종류</div>
+            <div class="settings-field-label">@Strings.Settings_Notifications_SoundTypeLabel</div>
             <div class="settings-pill-group">
                 @foreach (var sound in _sounds)
                 {
                     <button class="settings-pill @(Settings.NotificationSoundName == sound.Value ? "active" : "")"
                             disabled="@(!Settings.NotificationsEnabled || !Settings.NotificationSound)"
                             @onclick="@(() => Settings.NotificationSoundName = sound.Value)">
-                        @sound.Label
+                        @(sound.Value == "default" ? Strings.Settings_Notifications_SoundDefault : sound.Label)
                     </button>
                 }
             </div>
@@ -46,7 +46,7 @@
                OnClick="SendTestNotification" StartIcon="@Icons.Material.Filled.NotificationsActive"
                Disabled="@(!Settings.NotificationsEnabled)"
                Style="text-transform: none; align-self: flex-start;">
-        테스트 알림 보내기
+        @Strings.Settings_Notifications_TestButton
     </MudButton>
 
     @if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
@@ -54,13 +54,13 @@
         @if (NotificationService.CurrentBackend == NotificationBackend.Native)
         {
             <MudAlert Severity="Severity.Success" Dense="true" NoIcon="false" Class="mt-2">
-                Seoro 알림이 활성화되어 있습니다. 시스템 설정 > 알림에서 세부 설정을 변경할 수 있습니다.
+                @Strings.Settings_Notifications_NativeActive
             </MudAlert>
         }
         else
         {
             <MudAlert Severity="Severity.Warning" Dense="true" NoIcon="false" Class="mt-2">
-                알림 권한이 없어 스크립트 방식으로 전송됩니다. 시스템 설정 > 알림에 Seoro가 없다면 앱 재설치 또는 코드 서명이 필요합니다.
+                @Strings.Settings_Notifications_ScriptFallback
             </MudAlert>
         }
     }
@@ -81,8 +81,8 @@
     private async Task SendTestNotification()
     {
         await OnSave.InvokeAsync();
-        await NotificationService.SendAsync("Seoro", "테스트 알림입니다!", NotificationType.Info);
-        Snackbar.Add("테스트 알림을 발송했습니다.", Severity.Success);
+        await NotificationService.SendAsync("Seoro", Strings.Settings_Notifications_TestMsg, NotificationType.Info);
+        Snackbar.Add(Strings.Settings_Notifications_TestSent, Severity.Success);
     }
 
 }

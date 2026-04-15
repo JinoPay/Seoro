@@ -1,10 +1,37 @@
+@using Seoro.Shared.Resources
+@implements IDisposable
+
 <div class="sidebar-footer">
-    <button class="sidebar-footer-btn" @onclick="@OnOpenSettings" title="설정">
+    <button class="sidebar-footer-btn" @onclick="@OnOpenSettings" title="@Strings.Common_Settings">
         <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Style="width: 18px; height: 18px;"/>
-        <span>설정</span>
+        <span>@Strings.Common_Settings</span>
     </button>
 </div>
 
 @code {
     [Parameter] public EventCallback OnOpenSettings { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Strings.CultureChanged += HandleCultureChanged;
+    }
+
+    private void HandleCultureChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            var uiCulture = CultureInfo.DefaultThreadCurrentUICulture;
+            if (uiCulture != null)
+            {
+                CultureInfo.CurrentUICulture = uiCulture;
+                CultureInfo.CurrentCulture = CultureInfo.DefaultThreadCurrentCulture ?? uiCulture;
+            }
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        Strings.CultureChanged -= HandleCultureChanged;
+    }
 }

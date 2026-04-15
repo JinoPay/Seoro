@@ -78,13 +78,13 @@
                                     <MudMenuItem
                                         OnClick="@(() => ChatState.OpenSettings("ws-general", row.WorkspacesInGroup!.First().Id))"
                                         Icon="@Icons.Material.Filled.Settings">
-                                        워크스페이스 설정
+                                        @Strings.Sidebar_WorkspaceSettings
                                     </MudMenuItem>
                                     <MudDivider/>
                                     <MudMenuItem OnClick="@(() => DeleteWorkspace(row.WorkspacesInGroup!.First()))"
                                                  Icon="@Icons.Material.Filled.Delete"
                                                  IconColor="Color.Error">
-                                        워크스페이스 삭제
+                                        @Strings.Sidebar_DeleteWorkspace
                                     </MudMenuItem>
                                 </MudMenu>
                             </div>
@@ -144,13 +144,13 @@
         <div class="welcome-container" style="padding: var(--space-6);">
             <MudIcon Icon="@Icons.Material.Filled.Workspaces" Size="Size.Large" Style="opacity: 0.2;"/>
             <p class="typo-body2 text-secondary" style="opacity: 0.4;">
-                워크스페이스를 만들어 시작하세요
+                @Strings.Sidebar_WelcomeMessage
             </p>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Add"
                        OnClick="@(() => _createDialogOpen = true)"
                        Style="text-transform: none; border-radius: var(--radius-full);">
-                새 워크스페이스
+                @Strings.Sidebar_NewWorkspace
             </MudButton>
         </div>
     }
@@ -461,21 +461,21 @@
         {
             return phase switch
             {
-                StreamingPhase.Preparing or StreamingPhase.Sending => "준비 중...",
-                StreamingPhase.Thinking => "생각 중...",
-                StreamingPhase.WritingText => "작성 중...",
+                StreamingPhase.Preparing or StreamingPhase.Sending => Strings.Chat_Streaming_Preparing,
+                StreamingPhase.Thinking => Strings.Chat_Thinking,
+                StreamingPhase.WritingText => Strings.Sidebar_Status_Writing,
                 StreamingPhase.UsingTool => GetSidebarToolLabel(ChatState.GetSessionToolName(session.Id)),
-                _ => "계획 중..."
+                _ => Strings.Sidebar_Status_Planning
             };
         }
 
         return phase switch
         {
-            StreamingPhase.Preparing or StreamingPhase.Sending => "준비 중...",
-            StreamingPhase.Thinking => "생각 중...",
-            StreamingPhase.WritingText => "작성 중...",
+            StreamingPhase.Preparing or StreamingPhase.Sending => Strings.Chat_Streaming_Preparing,
+            StreamingPhase.Thinking => Strings.Chat_Thinking,
+            StreamingPhase.WritingText => Strings.Sidebar_Status_Writing,
             StreamingPhase.UsingTool => GetSidebarToolLabel(ChatState.GetSessionToolName(session.Id)),
-            _ => "작업 중..."
+            _ => Strings.Sidebar_Status_Working
         };
     }
 
@@ -483,14 +483,14 @@
     {
         return toolName?.ToLowerInvariant() switch
         {
-            "bash" or "execute_bash" => "명령 실행 중...",
-            "read" or "read_file" => "파일 읽는 중...",
-            "write" or "write_file" => "파일 작성 중...",
-            "edit" or "edit_file" => "파일 수정 중...",
-            "glob" => "파일 검색 중...",
-            "grep" => "내용 검색 중...",
-            "agent" => "에이전트...",
-            _ => "도구 사용 중..."
+            "bash" or "execute_bash" => Strings.Sidebar_Tool_Bash,
+            "read" or "read_file" => Strings.Sidebar_Tool_Read,
+            "write" or "write_file" => Strings.Sidebar_Tool_Write,
+            "edit" or "edit_file" => Strings.Sidebar_Tool_Edit,
+            "glob" => Strings.Sidebar_Tool_Glob,
+            "grep" => Strings.Sidebar_Tool_Grep,
+            "agent" => Strings.Sidebar_Tool_Agent,
+            _ => Strings.Sidebar_Tool_Default
         };
     }
 
