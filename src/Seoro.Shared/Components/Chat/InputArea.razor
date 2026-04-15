@@ -21,6 +21,18 @@
                                         StateHasChanged();
                                     })"/>
 
+        @if (_pendingSkill != null)
+        {
+            <div class="attachment-chips">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                         Icon="@Icons.Material.Filled.Terminal"
+                         OnClose="@RemovePendingSkill"
+                         Style="font-size: 0.75rem;">
+                    /@_pendingSkill.Name
+                </MudChip>
+            </div>
+        }
+
         <AttachmentChips Attachments="_pendingAttachments" OnRemove="RemoveAttachment"/>
 
         <MudTextField T="string" Value="@_inputText" ValueChanged="@HandleInputValueChanged"
@@ -44,7 +56,7 @@
                       CurrentSession="CurrentSession"
                       IsStreaming="IsStreaming"
                       Disabled="Disabled"
-                      HasInput="@(!string.IsNullOrWhiteSpace(_inputText))"
+                      HasInput="@(!string.IsNullOrWhiteSpace(_inputText) || _pendingSkill != null)"
                       HasAttachments="@(_pendingAttachments.Count > 0)"
                       OnSend="Send"
                       OnCancel="@(() => OnCancel.InvokeAsync())"
@@ -82,6 +94,7 @@
 
     private string _inputText = string.Empty;
     private readonly List<PendingAttachment> _pendingAttachments = [];
+    private SkillDefinition? _pendingSkill;
     private const int DraftSaveDebounceMs = 400;
     private DotNetObjectReference<InputArea>? _dotNetRef;
     private bool _handlersRegistered;
@@ -130,10 +143,13 @@
 
             _inputText = string.Empty;
             _pendingAttachments.Clear();
+            _pendingSkill = null;
             if (CurrentSession != null)
             {
                 _inputText = GetRestoredInputDraft(CurrentSession);
                 _pendingAttachments.AddRange(GetRestoredAttachmentDraft(CurrentSession));
+                var skillName = ChatState.GetSkillDraft(CurrentSession.Id) ?? CurrentSession.DraftSkillName;
+                _pendingSkill = !string.IsNullOrEmpty(skillName) ? SkillRegistry.Find(skillName) : null;
                 SyncDraftState(CurrentSession, _inputText, _pendingAttachments);
             }
 
@@ -402,6 +418,9 @@
         if (Disabled) return Strings.Chat_Placeholder_NoSession;
         if (IsStreaming) return Strings.Chat_Placeholder_Streaming;
         if (IsPlanReviewVisible) return Strings.Chat_Placeholder_PlanFeedback;
+        if (_pendingSkill != null)
+            return $"/{_pendingSkill.Name} 에 전달할 내용을 입력하세요...";
+
         return _currentPermissionMode switch
         {
             "plan" => Strings.Chat_Placeholder_PlanMode,
@@ -502,15 +521,23 @@
     {
         _slashPopupOpen = false;
         _slashSelectedIndex = 0;
-
-        var newText = $"/{command.Name} ";
-        _inputText = newText;
+        _pendingSkill = command;
+        _inputText = string.Empty;
 
         _forceRender = true;
         StateHasChanged();
 
         await JSRuntime.InvokeVoidAsync("setSlashPopupState", "input-area", false);
-        await JSRuntime.InvokeVoidAsync("replaceSlashCommand", "input-area", newText);
+        await JSRuntime.InvokeVoidAsync("clearInputArea", "input-area");
+    }
+
+    private async Task RemovePendingSkill()
+    {
+        _pendingSkill = null;
+        PersistDraftState(_trackedSession, _inputText, _pendingAttachments);
+        _forceRender = true;
+        StateHasChanged();
+        await RefocusTextarea();
     }
 
     private void OpenPlanTab()
@@ -528,15 +555,23 @@
     private async Task Send()
     {
         _forceRender = true;
-        if (Disabled || (string.IsNullOrWhiteSpace(_inputText) && _pendingAttachments.Count == 0))
+        if (Disabled || (string.IsNullOrWhiteSpace(_inputText) && _pendingAttachments.Count == 0 && _pendingSkill == null))
             return;
 
         var text = _inputText.Trim();
         List<SkillChainStep>? pendingChain = null;
 
-        // 스킬 체이닝 먼저 시도 (파이프 문법 또는 정의 체인)
-        if (CurrentSession != null && SkillRegistry.TryParseSkillChain(text, CurrentSession, out var chainSteps))
+        if (_pendingSkill != null)
         {
+            // 칩 기반 슬래시 명령어: 입력란 텍스트를 인자로 사용
+            var skill = _pendingSkill;
+            _pendingSkill = null;
+            if (CurrentSession != null)
+                text = SkillRegistry.ExpandSkill(skill, string.IsNullOrEmpty(text) ? null : text, CurrentSession);
+        }
+        else if (CurrentSession != null && SkillRegistry.TryParseSkillChain(text, CurrentSession, out var chainSteps))
+        {
+            // 스킬 체이닝 먼저 시도 (파이프 문법 또는 정의 체인)
             text = chainSteps[0].ExpandedText;
             pendingChain = chainSteps.Count > 1 ? chainSteps.GetRange(1, chainSteps.Count - 1) : null;
         }
@@ -567,6 +602,7 @@
         {
             ChatState.SetInputDraft(_trackedSessionId, string.Empty);
             ChatState.SetAttachmentDraft(_trackedSessionId, []);
+            ChatState.SetSkillDraft(_trackedSessionId, null);
         }
         PersistDraftState(_trackedSession, string.Empty, [], immediate: true);
         _pendingAttachments.Clear();
@@ -643,8 +679,10 @@
     {
         ChatState.SetInputDraft(session.Id, text);
         ChatState.SetAttachmentDraft(session.Id, attachments);
+        ChatState.SetSkillDraft(session.Id, _pendingSkill?.Name);
         session.DraftInputText = text;
         session.DraftAttachments = CloneAttachments(attachments);
+        session.DraftSkillName = _pendingSkill?.Name;
     }
 
     private void QueueDraftSave(Session session)
