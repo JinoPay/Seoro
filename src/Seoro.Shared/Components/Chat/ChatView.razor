@@ -99,7 +99,9 @@
                            PlanContent="@_lastPlanContent"
                            IsPlanReviewVisible="_planReviewVisible"
                            WebSearchEnabled="_codexWebSearch"
-                           WebSearchEnabledChanged="HandleWebSearchChanged"/>
+                           WebSearchEnabledChanged="HandleWebSearchChanged"
+                           DisabledMcpServers="@(session.DisabledMcpServers)"
+                           DisabledMcpServersChanged="HandleDisabledMcpServersChanged"/>
             }
         </div>
     };
@@ -649,6 +651,14 @@
         var settings = await SettingsService.LoadAsync();
         settings.CodexWebSearch = enabled;
         await SettingsService.SaveAsync(settings);
+    }
+
+    private async Task HandleDisabledMcpServersChanged(HashSet<string> disabled)
+    {
+        if (ChatState.CurrentSession == null) return;
+        ChatState.CurrentSession.DisabledMcpServers = disabled;
+        ChatState.NotifyStateChanged();
+        await SessionService.SaveSessionAsync(ChatState.CurrentSession);
     }
 
     private async Task SendNotificationIfNeeded(Session session, string body, NotificationType type)

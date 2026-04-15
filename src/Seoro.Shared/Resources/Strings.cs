@@ -384,6 +384,11 @@ public static class Strings
     public static string Chat_Toolbar_WebSearchOff => Get(nameof(Chat_Toolbar_WebSearchOff));
     public static string Chat_Toolbar_ViewPlan => Get(nameof(Chat_Toolbar_ViewPlan));
     public static string Chat_Toolbar_Stop => Get(nameof(Chat_Toolbar_Stop));
+    public static string Chat_Toolbar_ToolPicker => Get(nameof(Chat_Toolbar_ToolPicker));
+    public static string Chat_ToolPicker_McpServers => Get(nameof(Chat_ToolPicker_McpServers));
+    public static string Chat_ToolPicker_ManageMcp => Get(nameof(Chat_ToolPicker_ManageMcp));
+    public static string Chat_ToolPicker_AllEnabled => Get(nameof(Chat_ToolPicker_AllEnabled));
+    public static string Chat_ToolPicker_DisabledCount(int count) => Get(nameof(Chat_ToolPicker_DisabledCount), count.ToString());
     public static string Chat_PermissionMode_PlanTooltip => Get(nameof(Chat_PermissionMode_PlanTooltip));
     public static string Chat_PermissionMode_NormalTooltip => Get(nameof(Chat_PermissionMode_NormalTooltip));
     public static string Chat_EffortLevel_AutoTooltip(string maxLevel) => Get(nameof(Chat_EffortLevel_AutoTooltip), maxLevel);

@@ -362,6 +362,11 @@
   <data name="Chat_Toolbar_WebSearchOff" xml:space="preserve"><value>웹 검색 꺼짐</value></data>
   <data name="Chat_Toolbar_ViewPlan" xml:space="preserve"><value>플랜 보기</value></data>
   <data name="Chat_Toolbar_Stop" xml:space="preserve"><value>중지</value></data>
+  <data name="Chat_Toolbar_ToolPicker" xml:space="preserve"><value>도구</value></data>
+  <data name="Chat_ToolPicker_McpServers" xml:space="preserve"><value>MCP 서버</value></data>
+  <data name="Chat_ToolPicker_ManageMcp" xml:space="preserve"><value>MCP 설정 관리...</value></data>
+  <data name="Chat_ToolPicker_AllEnabled" xml:space="preserve"><value>모든 MCP 서버 활성</value></data>
+  <data name="Chat_ToolPicker_DisabledCount" xml:space="preserve"><value>{0}개 비활성화됨</value></data>
   <data name="Chat_PermissionMode_PlanTooltip" xml:space="preserve"><value>플랜 모드 (읽기 전용)</value></data>
   <data name="Chat_PermissionMode_NormalTooltip" xml:space="preserve"><value>일반 모드 (모든 권한 우회)</value></data>
   <data name="Chat_EffortLevel_AutoTooltip" xml:space="preserve"><value>Effort: Auto (최대 {0})</value></data>

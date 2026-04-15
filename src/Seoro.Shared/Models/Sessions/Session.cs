@@ -95,6 +95,12 @@ public class Session
     public List<PendingAttachment> DraftAttachments { get; set; } = [];
 
     /// <summary>
+    ///     이 세션에서 비활성화된 MCP 서버 이름 목록.
+    ///     bypassAll 모드에서 해당 서버의 mcp__name__* 패턴이 AllowedTools에서 제외됩니다.
+    /// </summary>
+    public HashSet<string> DisabledMcpServers { get; set; } = [];
+
+    /// <summary>
     ///     진행 중인 스트리밍 턴의 예상 토큰 사용량.
     ///     MessageStartHandler / MessageDeltaHandler에 의해 스트리밍 중 업데이트되고,
     ///     ResultHandler에 의해 완료 시 초기화됩니다 (오케스트레이터의 finally 블록에 의해서도).

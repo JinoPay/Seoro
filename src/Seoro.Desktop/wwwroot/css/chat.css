@@ -902,3 +902,112 @@
     overflow-y: auto;
 }
 
+/* ===== Tool Picker ===== */
+.tool-picker-btn-wrapper {
+    position: relative;
+    display: inline-flex;
+}
+
+.tool-picker-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    border-radius: 7px;
+    background: var(--mud-palette-warning);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.tool-picker-popover {
+    width: 280px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: var(--space-2) 0;
+}
+
+.tool-picker-header {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tool-picker-loading,
+.tool-picker-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+}
+
+.tool-picker-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 2px var(--space-2);
+    min-height: 36px;
+}
+
+.tool-picker-server-name {
+    flex: 1;
+    font-size: var(--text-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tool-picker-disabled-text {
+    opacity: 0.45;
+}
+
+.tool-picker-scope-badge {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.tool-picker-scope-global {
+    background: var(--mud-palette-primary-lighten);
+    color: var(--mud-palette-primary-darken);
+}
+
+.tool-picker-scope-project {
+    background: var(--mud-palette-success-lighten);
+    color: var(--mud-palette-success-darken);
+}
+
+.tool-picker-scope-local {
+    background: var(--mud-palette-warning-lighten);
+    color: var(--mud-palette-warning-darken);
+}
+
+.tool-picker-manage {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    margin: 0 var(--space-1);
+}
+
+.tool-picker-manage:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+

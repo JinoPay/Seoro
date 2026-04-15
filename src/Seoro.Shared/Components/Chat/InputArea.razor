@@ -54,7 +54,9 @@
                       PlanContent="@PlanContent"
                       OnViewPlan="OpenPlanTab"
                       WebSearchEnabled="_currentWebSearch"
-                      OnWebSearchChanged="HandleWebSearchChangedLocal"/>
+                      OnWebSearchChanged="HandleWebSearchChangedLocal"
+                      DisabledMcpServers="_currentDisabledMcpServers"
+                      OnDisabledMcpServersChanged="HandleDisabledMcpServersChangedLocal"/>
     </div>
 </div>
 
@@ -75,6 +77,8 @@
     [Parameter] public bool IsPlanReviewVisible { get; set; }
     [Parameter] public bool WebSearchEnabled { get; set; }
     [Parameter] public EventCallback<bool> WebSearchEnabledChanged { get; set; }
+    [Parameter] public HashSet<string> DisabledMcpServers { get; set; } = [];
+    [Parameter] public EventCallback<HashSet<string>> DisabledMcpServersChanged { get; set; }
 
     private string _inputText = string.Empty;
     private readonly List<PendingAttachment> _pendingAttachments = [];
@@ -93,6 +97,7 @@
     private string _currentEffortLevel = "auto";
     private string _currentModel = string.Empty;
     private bool _currentWebSearch;
+    private HashSet<string> _currentDisabledMcpServers = [];
 
     // 불필요한 리렌더를 방지하기 위한 파라미터 추적 (커서 이동 수정)
     private bool _prevIsStreaming;
@@ -105,6 +110,7 @@
     private string? _prevPlanContent;
     private bool _prevIsPlanReviewVisible;
     private bool _prevWebSearch;
+    private HashSet<string> _prevDisabledMcpServers = [];
     private bool _forceRender;
     private bool _isComposing;
     private readonly string _shortcutHint = OperatingSystem.IsMacOS() ? "⌘⇧L" : "Ctrl+Shift+L";
@@ -139,6 +145,7 @@
             _currentModel = Model;
             _currentEffortLevel = EffortLevel;
             _currentWebSearch = WebSearchEnabled;
+            _currentDisabledMcpServers = DisabledMcpServers;
 
             _forceRender = true;
         }
@@ -152,6 +159,8 @@
             _currentEffortLevel = EffortLevel;
         if (_prevWebSearch != WebSearchEnabled)
             _currentWebSearch = WebSearchEnabled;
+        if (!ReferenceEquals(_prevDisabledMcpServers, DisabledMcpServers))
+            _currentDisabledMcpServers = DisabledMcpServers;
 
         if (_prevIsStreaming != IsStreaming ||
             _prevDisabled != Disabled ||
@@ -161,7 +170,8 @@
             _prevPlanFilePath != PlanFilePath ||
             _prevPlanContent != PlanContent ||
             _prevIsPlanReviewVisible != IsPlanReviewVisible ||
-            _prevWebSearch != WebSearchEnabled)
+            _prevWebSearch != WebSearchEnabled ||
+            !ReferenceEquals(_prevDisabledMcpServers, DisabledMcpServers))
         {
             _prevIsStreaming = IsStreaming;
             _prevDisabled = Disabled;
@@ -172,6 +182,7 @@
             _prevPlanContent = PlanContent;
             _prevIsPlanReviewVisible = IsPlanReviewVisible;
             _prevWebSearch = WebSearchEnabled;
+            _prevDisabledMcpServers = DisabledMcpServers;
             _forceRender = true;
         }
     }
@@ -212,6 +223,14 @@
         StateHasChanged();
         await WebSearchEnabledChanged.InvokeAsync(enabled);
         await RefocusTextarea();
+    }
+
+    private async Task HandleDisabledMcpServersChangedLocal(HashSet<string> disabled)
+    {
+        _currentDisabledMcpServers = disabled;
+        _forceRender = true;
+        StateHasChanged();
+        await DisabledMcpServersChanged.InvokeAsync(disabled);
     }
 
     private async Task HandleModelChangedLocal(string model)

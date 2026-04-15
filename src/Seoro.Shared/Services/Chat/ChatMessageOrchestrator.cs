@@ -128,7 +128,13 @@ public class ChatMessageOrchestrator(
             var permissionMode = session.PermissionMode ?? SeoroConstants.DefaultPermissionMode;
             List<string>? mcpAllowedTools = null;
             if (permissionMode == "bypassAll")
+            {
                 mcpAllowedTools = await CollectMcpToolPatternsAsync(session.Git.WorktreePath);
+                // 세션에서 비활성화된 MCP 서버 패턴 제거
+                if (session.DisabledMcpServers is { Count: > 0 } disabled && mcpAllowedTools != null)
+                    mcpAllowedTools.RemoveAll(p =>
+                        disabled.Any(s => p.Equals($"mcp__{s}__*", StringComparison.OrdinalIgnoreCase)));
+            }
 
             var sendOptions = new CliSendOptions
             {

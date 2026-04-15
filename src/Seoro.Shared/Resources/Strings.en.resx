@@ -362,6 +362,11 @@
   <data name="Chat_Toolbar_WebSearchOff" xml:space="preserve"><value>Web search off</value></data>
   <data name="Chat_Toolbar_ViewPlan" xml:space="preserve"><value>View plan</value></data>
   <data name="Chat_Toolbar_Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="Chat_Toolbar_ToolPicker" xml:space="preserve"><value>Tools</value></data>
+  <data name="Chat_ToolPicker_McpServers" xml:space="preserve"><value>MCP Servers</value></data>
+  <data name="Chat_ToolPicker_ManageMcp" xml:space="preserve"><value>Manage MCP Settings...</value></data>
+  <data name="Chat_ToolPicker_AllEnabled" xml:space="preserve"><value>All MCP servers enabled</value></data>
+  <data name="Chat_ToolPicker_DisabledCount" xml:space="preserve"><value>{0} disabled</value></data>
   <data name="Chat_PermissionMode_PlanTooltip" xml:space="preserve"><value>Plan mode (read-only)</value></data>
   <data name="Chat_PermissionMode_NormalTooltip" xml:space="preserve"><value>Normal mode (bypass all permissions)</value></data>
   <data name="Chat_EffortLevel_AutoTooltip" xml:space="preserve"><value>Effort: Auto (max {0})</value></data>

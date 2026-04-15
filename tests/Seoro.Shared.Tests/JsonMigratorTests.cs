@@ -147,11 +147,11 @@ public class SchemaMigrationTests
     }
 
     [Fact]
-    public void SchemaMigratorRegistry_SessionVersionIs5()
+    public void SchemaMigratorRegistry_SessionVersionIs6()
     {
         var migrator = SchemaMigratorRegistry.GetMigrator<Session>();
         Assert.NotNull(migrator);
-        Assert.Equal(5, migrator!.CurrentVersion);
+        Assert.Equal(6, migrator!.CurrentVersion);
     }
 
     [Fact]

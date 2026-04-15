@@ -27,6 +27,12 @@
                            Disabled="Disabled || IsStreaming"/>
         </MudTooltip>
 
+        <ToolPicker DisabledMcpServers="DisabledMcpServers"
+                    DisabledMcpServersChanged="OnDisabledMcpServersChanged"
+                    Disabled="Disabled"
+                    IsStreaming="IsStreaming"
+                    ProjectPath="@CurrentSession?.Git?.WorktreePath"/>
+
         @if (CurrentSession?.IsCodex == true)
         {
             <MudTooltip Text="@(WebSearchEnabled ? Strings.Chat_Toolbar_WebSearchOn : Strings.Chat_Toolbar_WebSearchOff)" Placement="Placement.Top">
@@ -105,6 +111,8 @@
     [Parameter] public EventCallback OnViewPlan { get; set; }
     [Parameter] public bool WebSearchEnabled { get; set; }
     [Parameter] public EventCallback<bool> OnWebSearchChanged { get; set; }
+    [Parameter] public HashSet<string> DisabledMcpServers { get; set; } = [];
+    [Parameter] public EventCallback<HashSet<string>> OnDisabledMcpServersChanged { get; set; }
 
     private static readonly string[] PermissionModes = ["bypassAll", "plan"];
 

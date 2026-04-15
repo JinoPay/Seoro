@@ -1,0 +1,157 @@
+@inject IClaudeSettingsService ClaudeSettingsService
+@inject IChatState ChatState
+@implements IDisposable
+
+<MudTooltip Text="@GetTooltipText()" Placement="Placement.Top">
+    <div class="tool-picker-btn-wrapper">
+        <MudIconButton Icon="@Icons.Material.Filled.Extension"
+                       Color="@(DisabledMcpServers.Count > 0 ? Color.Warning : Color.Default)"
+                       Size="Size.Small"
+                       OnClick="TogglePopover"
+                       Disabled="Disabled || IsStreaming"/>
+        @if (DisabledMcpServers.Count > 0)
+        {
+            <span class="tool-picker-badge">@DisabledMcpServers.Count</span>
+        }
+    </div>
+</MudTooltip>
+
+<MudPopover Open="_open" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft"
+            Class="tool-picker-popover">
+    <div class="tool-picker-header">@Strings.Chat_ToolPicker_McpServers</div>
+
+    @if (_loading)
+    {
+        <div class="tool-picker-loading">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true"/>
+        </div>
+    }
+    else if (_servers.Count == 0)
+    {
+        <div class="tool-picker-empty">MCP 서버가 없습니다</div>
+    }
+    else
+    {
+        @foreach (var server in _servers)
+        {
+            var isEnabled = !DisabledMcpServers.Contains(server.Name);
+            <div class="tool-picker-row">
+                <MudSwitch T="bool"
+                           Value="isEnabled"
+                           ValueChanged="@(v => ToggleServer(server.Name, v))"
+                           Color="Color.Primary"
+                           Size="Size.Small"/>
+                <span class="tool-picker-server-name @(isEnabled ? "" : "tool-picker-disabled-text")">
+                    @server.Name
+                </span>
+                <span class="tool-picker-scope-badge tool-picker-scope-@server.Scope">
+                    @server.Scope
+                </span>
+            </div>
+        }
+    }
+
+    <MudDivider Class="my-1"/>
+    <div class="tool-picker-manage" @onclick="NavigateToMcp">
+        <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small"/>
+        <span>@Strings.Chat_ToolPicker_ManageMcp</span>
+    </div>
+</MudPopover>
+
+@if (_open)
+{
+    <MudOverlay Visible="true" OnClick="ClosePopover" DarkBackground="false" ZIndex="1"/>
+}
+
+@code {
+    [Parameter] public HashSet<string> DisabledMcpServers { get; set; } = [];
+    [Parameter] public EventCallback<HashSet<string>> DisabledMcpServersChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool IsStreaming { get; set; }
+    [Parameter] public string? ProjectPath { get; set; }
+
+    private bool _open;
+    private bool _loading;
+    private string? _loadedForProject;
+
+    private record ServerEntry(string Name, string Scope);
+    private List<ServerEntry> _servers = [];
+
+    private string GetTooltipText()
+    {
+        if (DisabledMcpServers.Count == 0)
+            return Strings.Chat_ToolPicker_AllEnabled;
+        return Strings.Chat_ToolPicker_DisabledCount(DisabledMcpServers.Count);
+    }
+
+    private async Task TogglePopover()
+    {
+        _open = !_open;
+        if (_open && (_servers.Count == 0 || _loadedForProject != ProjectPath))
+            await LoadServersAsync();
+    }
+
+    private void ClosePopover() => _open = false;
+
+    private async Task LoadServersAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        _servers = [];
+        _loadedForProject = ProjectPath;
+
+        try
+        {
+            var global = await ClaudeSettingsService.ReadAsync(ClaudeSettingsScope.Global);
+            if (global.McpServers != null)
+                foreach (var key in global.McpServers.Keys)
+                    _servers.Add(new ServerEntry(key, "global"));
+
+            if (!string.IsNullOrEmpty(ProjectPath))
+            {
+                try
+                {
+                    var project = await ClaudeSettingsService.ReadAsync(ClaudeSettingsScope.Project, ProjectPath);
+                    if (project.McpServers != null)
+                        foreach (var key in project.McpServers.Keys)
+                            _servers.Add(new ServerEntry(key, "project"));
+                }
+                catch { /* 파일 없으면 무시 */ }
+
+                try
+                {
+                    var local = await ClaudeSettingsService.ReadAsync(ClaudeSettingsScope.Local, ProjectPath);
+                    if (local.McpServers != null)
+                        foreach (var key in local.McpServers.Keys)
+                            _servers.Add(new ServerEntry(key, "local"));
+                }
+                catch { /* 파일 없으면 무시 */ }
+            }
+        }
+        catch { /* 글로벌 설정 읽기 실패 무시 */ }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleServer(string serverName, bool enabled)
+    {
+        var updated = new HashSet<string>(DisabledMcpServers, StringComparer.OrdinalIgnoreCase);
+        if (enabled)
+            updated.Remove(serverName);
+        else
+            updated.Add(serverName);
+        await DisabledMcpServersChanged.InvokeAsync(updated);
+    }
+
+    private void NavigateToMcp()
+    {
+        _open = false;
+        ChatState.OpenSettings("mcp");
+    }
+
+    public void Dispose() { }
+}

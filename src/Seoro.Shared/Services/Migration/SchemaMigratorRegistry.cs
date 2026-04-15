@@ -17,7 +17,7 @@ public static class SchemaMigratorRegistry
         // v3 removed PrContext and PR-related status values (Pushed, PrOpen, ConflictDetected, Merged)
         // v4 reintroduced a single manual-only git.lastPrUrl (user-pasted, never auto-populated)
         // v5 promoted git.lastPrUrl → git.trackedPr object for full PR tracking
-        Register<Session>(new SchemaMigrator(5, [new SessionV3ToV4Migration(), new SessionV4ToV5Migration()]));
+        Register<Session>(new SchemaMigrator(6, [new SessionV3ToV4Migration(), new SessionV4ToV5Migration(), new SessionV5ToV6Migration()]));
 
         // All other models start at v1 with no migrations yet.
         // When a schema change is needed, bump the version and add migrations.
