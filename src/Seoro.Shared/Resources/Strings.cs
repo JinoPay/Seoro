@@ -231,6 +231,7 @@ public static class Strings
     public static string Settings_GitMerge_CreatePrPromptLabel => Get(nameof(Settings_GitMerge_CreatePrPromptLabel));
     public static string Settings_GitMerge_PushPromptLabel => Get(nameof(Settings_GitMerge_PushPromptLabel));
     public static string Settings_GitMerge_ConflictPromptLabel => Get(nameof(Settings_GitMerge_ConflictPromptLabel));
+    public static string Settings_GitMerge_RebasePromptLabel => Get(nameof(Settings_GitMerge_RebasePromptLabel));
     public static string Settings_GitMerge_ResetToDefault => Get(nameof(Settings_GitMerge_ResetToDefault));
 
     // ── Settings: Advanced Section ──

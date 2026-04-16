@@ -68,4 +68,6 @@ public class AppSettings
     public string? MergePromptPush { get; set; }
     /// <summary>충돌 해결 시 AI에게 전달하는 프롬프트. {conflictFiles} 변수 지원.</summary>
     public string? MergePromptResolveConflict { get; set; }
+    /// <summary>충돌 예상 시 타겟 브랜치로 rebase하는 AI 프롬프트. {branch}, {target} 변수 지원.</summary>
+    public string? MergePromptRebaseOnTarget { get; set; }
 }

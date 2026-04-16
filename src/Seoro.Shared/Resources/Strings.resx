@@ -209,6 +209,7 @@
   <data name="Settings_GitMerge_CreatePrPromptLabel" xml:space="preserve"><value>PR 생성 프롬프트</value></data>
   <data name="Settings_GitMerge_PushPromptLabel" xml:space="preserve"><value>커밋·푸시 프롬프트</value></data>
   <data name="Settings_GitMerge_ConflictPromptLabel" xml:space="preserve"><value>충돌 해결 프롬프트</value></data>
+  <data name="Settings_GitMerge_RebasePromptLabel" xml:space="preserve"><value>충돌 예상 시 리베이스 프롬프트</value></data>
   <data name="Settings_GitMerge_ResetToDefault" xml:space="preserve"><value>기본값으로</value></data>
 
   <!-- Settings Sections: Advanced -->

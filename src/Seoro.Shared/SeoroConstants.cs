@@ -103,6 +103,23 @@ public static class SeoroConstants
         이 파일들의 충돌을 해결한 뒤 `git merge --continue` (또는 커밋)까지 완료해주세요.
         **중요**: 워크트리 경로 바깥은 절대 읽거나 쓰지 마세요.
         """;
+
+    public const string DefaultMergePromptRebaseOnTarget =
+        """
+        현재 브랜치(`{branch}`)를 타겟 브랜치(`{target}`)에 rebase해주세요. 순서대로 진행하세요:
+
+        1. `git fetch origin`으로 최신 상태를 가져오세요.
+        2. `git rebase origin/{target}`를 실행하세요.
+        3. 충돌이 발생하면:
+           - 각 충돌 파일을 열어 충돌을 해결하세요.
+           - `git add <해결된 파일>`로 스테이지하세요.
+           - `git rebase --continue`로 rebase를 계속하세요.
+           - 모든 충돌이 해결될 때까지 반복하세요.
+        4. rebase 완료 후 `git push origin {branch} --force-with-lease`로 푸시하세요.
+
+        **중요**: 워크트리 경로 바깥은 절대 읽거나 쓰지 마세요.
+        """;
+
     public const string TruncationMarker = "\n\n[...truncated, {0:N0} tokens total]";
     public static readonly TimeSpan ShellCacheTtl = TimeSpan.FromMinutes(10);
 

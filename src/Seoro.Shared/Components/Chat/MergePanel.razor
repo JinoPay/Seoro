@@ -81,12 +81,23 @@
 
             @if (localHasChanges && remoteInfo.Mode == RemoteMode.GitHub)
             {
+                var ldHasUncommitted = status.UncommittedChangeCount > 0;
+                var ldHasUnpushed = (status.AheadCount ?? 0) > 0;
+                var ldPushLabel = (ldHasUncommitted, ldHasUnpushed) switch
+                {
+                    (true, true) => "AI에게 커밋 · 푸시 요청",
+                    (true, false) => "AI에게 커밋 요청",
+                    _ => "AI에게 푸시 요청"
+                };
+                var ldPushIcon = ldHasUnpushed
+                    ? Icons.Material.Outlined.CloudUpload
+                    : Icons.Material.Outlined.SaveAlt;
                 <MudTooltip Text="@BuildLocalDirPushTooltip(status, _diffStats)" Placement="Placement.Bottom">
                     <button class="mp-main-btn @(blocked ? "disabled" : "")"
                             @onclick="HandlePush"
                             disabled="@blocked">
-                        <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Style="width: 13px; height: 13px;"/>
-                        <span>AI에게 커밋 · 푸시 요청</span>
+                        <MudIcon Icon="@ldPushIcon" Style="width: 13px; height: 13px;"/>
+                        <span>@ldPushLabel</span>
                     </button>
                 </MudTooltip>
             }
@@ -290,12 +301,42 @@
                             <span>미푸시 커밋 @(_upstreamAhead)개</span>
                         }
                     </div>
-                    <MudTooltip Text="미커밋 변경을 커밋하고 origin에 푸시합니다" Placement="Placement.Bottom">
+                    var wtHasUncommitted = status.UncommittedChangeCount > 0;
+                    var wtHasUnpushed = _upstreamAhead > 0;
+                    var wtPushLabel = (wtHasUncommitted, wtHasUnpushed) switch
+                    {
+                        (true, true) => "AI에게 커밋 · 푸시 요청",
+                        (true, false) => "AI에게 커밋 요청",
+                        _ => "AI에게 푸시 요청"
+                    };
+                    var wtPushTooltip = (wtHasUncommitted, wtHasUnpushed) switch
+                    {
+                        (true, true) => "미커밋 변경을 커밋하고 origin에 푸시합니다",
+                        (true, false) => "미커밋 변경을 커밋합니다",
+                        _ => "미푸시 커밋을 origin에 푸시합니다"
+                    };
+                    var wtPushIcon = wtHasUnpushed
+                        ? Icons.Material.Outlined.CloudUpload
+                        : Icons.Material.Outlined.SaveAlt;
+                    <MudTooltip Text="@wtPushTooltip" Placement="Placement.Bottom">
                         <button class="mp-main-btn mp-main-btn-push @(blocked ? "disabled" : "")"
                                 @onclick="HandlePush"
                                 disabled="@blocked">
-                            <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Style="width: 13px; height: 13px;"/>
-                            <span>AI에게 커밋 · 푸시 요청</span>
+                            <MudIcon Icon="@wtPushIcon" Style="width: 13px; height: 13px;"/>
+                            <span>@wtPushLabel</span>
+                        </button>
+                    </MudTooltip>
+                }
+
+                @* 충돌 예상 / PR DIRTY — 리베이스 해결 버튼 *@
+                @if (status.Kind == MergeStatusKind.ConflictExpected || session.Git.TrackedPr.IsMergeable == false)
+                {
+                    <MudTooltip Text="타겟 브랜치에 rebase하여 충돌을 해결합니다" Placement="Placement.Bottom">
+                        <button class="mp-main-btn mp-main-btn-conflict @(blocked ? "disabled" : "")"
+                                @onclick="HandleResolveExpectedConflict"
+                                disabled="@blocked">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Style="width: 13px; height: 13px;"/>
+                            <span>충돌 해결 요청 (rebase)</span>
                         </button>
                     </MudTooltip>
                 }
@@ -882,6 +923,25 @@
         Snackbar.Add("AI에게 충돌 해결을 요청했습니다.", Severity.Info);
     }
 
+    private void HandleResolveExpectedConflict()
+    {
+        var session = ChatState.CurrentSession;
+        if (session == null || string.IsNullOrEmpty(_targetBranch)) return;
+
+        var branch = session.Git.BranchName ?? "";
+        var target = BranchRefNormalizer.Normalize(_targetBranch);
+
+        var template = _appSettings?.MergePromptRebaseOnTarget ?? SeoroConstants.DefaultMergePromptRebaseOnTarget;
+        var prompt = template
+            .Replace("{branch}", branch)
+            .Replace("{target}", target);
+
+        // 충돌 해결은 세션 현재 모델 사용 (ModelOverride 없음)
+        var msg = BuildPromptMessage("첨부된 프롬프트를 읽고 타겟 브랜치에 rebase해주세요.", prompt, "merge-rebase-on-target.txt");
+        EventBus.Publish(new MergeRequestedEvent(msg));
+        Snackbar.Add("AI에게 충돌 해결(rebase)을 요청했습니다.", Severity.Info);
+    }
+
     private void HandleCreatePrViaAi()
     {
         var session = ChatState.CurrentSession;
@@ -938,14 +998,26 @@
     private void HandlePushViaAi(Session session)
     {
         var branch = session.Git.BranchName ?? "";
+        var status = MergeStatusService.GetCurrent(session.Id);
+        var hasUncommitted = status.UncommittedChangeCount > 0;
+        var hasUnpushed = session.Git.IsLocalDir
+            ? (status.AheadCount ?? 0) > 0
+            : _upstreamAhead > 0;
 
         var template = _appSettings?.MergePromptPush ?? SeoroConstants.DefaultMergePromptPush;
         var prompt = template.Replace("{branch}", branch);
 
-        var msg = BuildPromptMessage("첨부된 프롬프트를 읽고 커밋 후 푸시해주세요.", prompt, "merge-push.txt");
+        var (chatText, snackText) = (hasUncommitted, hasUnpushed) switch
+        {
+            (true, true)  => ("첨부된 프롬프트를 읽고 커밋 후 푸시해주세요.", "AI에게 커밋 및 푸시를 요청했습니다."),
+            (true, false) => ("첨부된 프롬프트를 읽고 변경사항을 커밋해주세요.", "AI에게 커밋을 요청했습니다."),
+            _             => ("첨부된 프롬프트를 읽고 origin에 푸시해주세요.", "AI에게 푸시를 요청했습니다.")
+        };
+
+        var msg = BuildPromptMessage(chatText, prompt, "merge-push.txt");
         msg.ModelOverride = "haiku";
         EventBus.Publish(new MergeRequestedEvent(msg));
-        Snackbar.Add("AI에게 커밋 및 푸시를 요청했습니다.", Severity.Info);
+        Snackbar.Add(snackText, Severity.Info);
     }
 
     private static ChatInputMessage BuildPromptMessage(string chatText, string promptContent, string fileName)

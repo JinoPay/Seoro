@@ -94,6 +94,26 @@
                       Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
     </div>
 
+    @* ── 충돌 예상 시 리베이스 프롬프트 ── *@
+    <div>
+        <div class="stack-row items-center gap-1" style="margin-bottom: 4px;">
+            <div class="settings-field-label" style="flex: 1; margin-bottom: 0;">@Strings.Settings_GitMerge_RebasePromptLabel</div>
+            <div class="settings-field-hint" style="margin: 0;">변수: <code>{branch}</code> <code>{target}</code></div>
+            @if (!string.IsNullOrEmpty(Settings.MergePromptRebaseOnTarget))
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+                           OnClick="@(() => Settings.MergePromptRebaseOnTarget = null)"
+                           Style="text-transform: none; padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
+                    @Strings.Settings_GitMerge_ResetToDefault
+                </MudButton>
+            }
+        </div>
+        <MudTextField T="string" @bind-Value="Settings.MergePromptRebaseOnTarget"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="6"
+                      Placeholder="@SeoroConstants.DefaultMergePromptRebaseOnTarget"
+                      Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
+    </div>
+
 </div>
 
 @code {

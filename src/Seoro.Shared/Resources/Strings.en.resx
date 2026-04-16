@@ -209,6 +209,7 @@
   <data name="Settings_GitMerge_CreatePrPromptLabel" xml:space="preserve"><value>Create PR Prompt</value></data>
   <data name="Settings_GitMerge_PushPromptLabel" xml:space="preserve"><value>Commit &amp; Push Prompt</value></data>
   <data name="Settings_GitMerge_ConflictPromptLabel" xml:space="preserve"><value>Conflict Resolution Prompt</value></data>
+  <data name="Settings_GitMerge_RebasePromptLabel" xml:space="preserve"><value>Rebase on Target Prompt</value></data>
   <data name="Settings_GitMerge_ResetToDefault" xml:space="preserve"><value>Reset to default</value></data>
 
   <!-- Settings Sections: Advanced -->
