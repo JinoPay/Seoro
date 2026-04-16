@@ -138,8 +138,6 @@ public static class Strings
     public static string Settings_General_CloneDirPlaceholder => Get(nameof(Settings_General_CloneDirPlaceholder));
     public static string Settings_General_CloneDirHint => Get(nameof(Settings_General_CloneDirHint));
     public static string Settings_General_BrowseDir => Get(nameof(Settings_General_BrowseDir));
-    public static string Settings_General_SessionLangLabel => Get(nameof(Settings_General_SessionLangLabel));
-    public static string Settings_General_SessionLangHint => Get(nameof(Settings_General_SessionLangHint));
     public static string Settings_General_HelpTitle => Get(nameof(Settings_General_HelpTitle));
     public static string Settings_General_ShowTutorial => Get(nameof(Settings_General_ShowTutorial));
     public static string Settings_General_ShowWhatsNew => Get(nameof(Settings_General_ShowWhatsNew));

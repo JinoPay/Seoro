@@ -5,7 +5,6 @@ namespace Seoro.Shared.Services.Chat;
 public class SystemPromptBuilder(
     IContextService contextService,
     IMemoryService memoryService,
-    ISettingsService settingsService,
     ICliProviderFactory cliProviderFactory,
     ILogger<SystemPromptBuilder> logger)
     : ISystemPromptBuilder
@@ -14,14 +13,9 @@ public class SystemPromptBuilder(
     {
         var parts = new List<string>();
 
-        if (!session.TitleLocked)
-        {
-            var settings = await settingsService.LoadAsync();
-            var lang = settings.SessionLanguage ?? "en";
-            parts.Add(session.Git.IsLocalDir
-                ? SeoroConstants.GetSystemInstructionLocalDir(lang)
-                : SeoroConstants.GetSystemInstructionWorktree(lang));
-        }
+        // 워크트리 세션에서 브랜치가 아직 초기 타임스탬프 이름일 때만 이름 변경 지시 주입
+        if (!session.Git.IsLocalDir && SeoroConstants.IsTimestampBranch(session.Git.BranchName))
+            parts.Add(SeoroConstants.GetSystemInstructionWorktree());
 
         if (!session.Git.IsLocalDir && !string.IsNullOrEmpty(session.Git.WorktreePath))
             parts.Add(string.Format(SeoroConstants.SystemInstructionWorktreeDir, session.Git.WorktreePath));

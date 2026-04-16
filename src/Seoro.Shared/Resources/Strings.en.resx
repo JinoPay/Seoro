@@ -116,8 +116,6 @@
   <data name="Settings_General_CloneDirPlaceholder" xml:space="preserve"><value>~/Seoro</value></data>
   <data name="Settings_General_CloneDirHint" xml:space="preserve"><value>Where repositories are cloned. Leave blank to use the default.</value></data>
   <data name="Settings_General_BrowseDir" xml:space="preserve"><value>Browse...</value></data>
-  <data name="Settings_General_SessionLangLabel" xml:space="preserve"><value>Session Name Language</value></data>
-  <data name="Settings_General_SessionLangHint" xml:space="preserve"><value>Language Claude uses when generating worktree branch names and local session titles.</value></data>
   <data name="Settings_General_HelpTitle" xml:space="preserve"><value>Help</value></data>
   <data name="Settings_General_ShowTutorial" xml:space="preserve"><value>Show Tutorial Again</value></data>
   <data name="Settings_General_ShowWhatsNew" xml:space="preserve"><value>What's New</value></data>

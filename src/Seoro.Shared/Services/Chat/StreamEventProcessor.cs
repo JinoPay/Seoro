@@ -124,9 +124,6 @@ public class StreamEventProcessor : IStreamEventProcessor
             }
         }
 
-        // Title marker extraction for local dir sessions
-        if (ctx.Session.Git.IsLocalDir)
-            ExtractAndApplyTitleMarker(ctx);
     }
 
     public async Task ProcessEventAsync(StreamEvent evt, StreamProcessingContext ctx)
@@ -293,44 +290,6 @@ public class StreamEventProcessor : IStreamEventProcessor
         return normalizedPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase)
                && (normalizedPath.Contains(".claude/plans/", StringComparison.OrdinalIgnoreCase)
                    || normalizedPath.Contains(".context/plans/", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private void ExtractAndApplyTitleMarker(StreamProcessingContext ctx)
-    {
-        var text = ctx.AssistantMessage.Text;
-        if (string.IsNullOrEmpty(text))
-            return;
-
-        var startIdx = text.IndexOf(SeoroConstants.TitleMarkerPrefix, StringComparison.Ordinal);
-        if (startIdx < 0)
-            return;
-
-        var titleStart = startIdx + SeoroConstants.TitleMarkerPrefix.Length;
-        var endIdx = text.IndexOf(SeoroConstants.TitleMarkerSuffix, titleStart, StringComparison.Ordinal);
-        if (endIdx < 0)
-            return;
-
-        var title = text[titleStart..endIdx].Trim();
-        if (string.IsNullOrEmpty(title))
-            return;
-
-        if (title.Length > 30)
-            title = title[..30];
-
-        if (!ctx.Session.TitleLocked)
-        {
-            ctx.Session.Title = title;
-            ctx.Session.TitleLocked = true;
-            _chatState.Tabs.UpdateChatTabTitle(title);
-        }
-
-        // Strip the marker from message text and parts
-        var marker = text[startIdx..(endIdx + SeoroConstants.TitleMarkerSuffix.Length)];
-        ctx.AssistantMessage.Text = text.Replace(marker, "").TrimStart();
-
-        foreach (var part in ctx.AssistantMessage.Parts)
-            if (part.Type == ContentPartType.Text && part.Text != null)
-                part.Text = part.Text.Replace(marker, "").TrimStart();
     }
 
     /// <summary>

@@ -116,8 +116,6 @@
   <data name="Settings_General_CloneDirPlaceholder" xml:space="preserve"><value>~/Seoro</value></data>
   <data name="Settings_General_CloneDirHint" xml:space="preserve"><value>저장소가 클론되는 위치입니다. 비워두면 기본값을 사용합니다.</value></data>
   <data name="Settings_General_BrowseDir" xml:space="preserve"><value>찾아보기...</value></data>
-  <data name="Settings_General_SessionLangLabel" xml:space="preserve"><value>세션 이름 언어</value></data>
-  <data name="Settings_General_SessionLangHint" xml:space="preserve"><value>Claude가 워크트리 브랜치 이름과 로컬 세션 타이틀을 생성할 때 사용할 언어입니다.</value></data>
   <data name="Settings_General_HelpTitle" xml:space="preserve"><value>도움말</value></data>
   <data name="Settings_General_ShowTutorial" xml:space="preserve"><value>튜토리얼 다시 보기</value></data>
   <data name="Settings_General_ShowWhatsNew" xml:space="preserve"><value>새로운 기능 보기</value></data>

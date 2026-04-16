@@ -188,14 +188,15 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
     private void ApplyDerivedTitle(Session session, string branch)
     {
         if (session.TitleLocked)
-            return;
+            return; // ai-title이 이미 최종 타이틀을 설정함
 
         var title = DeriveTitleFromBranch(branch);
         if (title != null)
         {
             session.Title = title;
-            session.TitleLocked = true;
+            // TitleLocked는 설정하지 않음 — ai-title 이벤트가 최종 권한을 가짐
             _chatState.Tabs.UpdateChatTabTitle(title);
+            _eventBus.Publish(new SessionTitleChangedEvent(session.Id, title));
         }
     }
 
