@@ -42,6 +42,7 @@ public class PlanModeTests
         var sut = new SystemPromptBuilder(
             new FakeContextService(),
             new FakeMemoryService(),
+            new FakeSettingsService(),
             new FakeCliProviderFactory(new FakeCliProvider("codex")),
             NullLogger<SystemPromptBuilder>.Instance);
 

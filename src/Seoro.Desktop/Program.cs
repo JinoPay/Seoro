@@ -247,7 +247,6 @@ public static class Program
         appBuilder.Services.AddSingleton<IStreamEventHandler, MessageDeltaHandler>();
         appBuilder.Services.AddSingleton<IStreamEventHandler, ResultHandler>();
         appBuilder.Services.AddSingleton<IStreamEventHandler, ErrorHandler>();
-        appBuilder.Services.AddSingleton<IStreamEventHandler, AiTitleHandler>();
         appBuilder.Services.AddSingleton<IStreamEventProcessor, StreamEventProcessor>();
         appBuilder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
         appBuilder.Services.AddSingleton<ITerminalService, TerminalService>();

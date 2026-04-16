@@ -80,6 +80,19 @@
                        OnClick="BrowseCloneDirectory" title="@Strings.Settings_General_BrowseDir"/>
     </div>
 
+    <div>
+        <div class="settings-field-label">@Strings.Settings_General_SessionLangLabel</div>
+        <div class="settings-segmented">
+            <button class="settings-seg-item @(Settings.SessionLanguage == "en" ? "active" : "")"
+                    @onclick="@(() => Settings.SessionLanguage = "en")">English</button>
+            <button class="settings-seg-item @(Settings.SessionLanguage == "ko" ? "active" : "")"
+                    @onclick="@(() => Settings.SessionLanguage = "ko")">한국어</button>
+        </div>
+        <small class="typo-caption text-secondary">
+            @Strings.Settings_General_SessionLangHint
+        </small>
+    </div>
+
     <div class="settings-group-title mt">@Strings.Settings_General_HelpTitle</div>
 
     <div class="stack-row gap-2" style="flex-wrap: wrap;">

@@ -1,11 +1,9 @@
-using System.Text.RegularExpressions;
-
 namespace Seoro.Shared;
 
 /// <summary>
 ///     여러 서비스와 모델에서 사용되는 공유 상수들입니다.
 /// </summary>
-public static partial class SeoroConstants
+public static class SeoroConstants
 {
     // 세션 제한
     public const int MaxActiveSessionsPerWorkspace = 20;
@@ -36,29 +34,34 @@ public static partial class SeoroConstants
         "사용자가 명시적으로 지정한 경로가 아닌 한, 워크트리 외부로 나가지 마세요.";
 
     // 세션 제목이 결정될 때까지 주입되는 내장 시스템 지시사항
-    public static string GetSystemInstructionWorktree()
+    public static string GetSystemInstructionWorktree(string language = "en")
     {
+        var langRule = language == "en"
+            ? "use lowercase-kebab-case English words"
+            : "한글 또는 영문 소문자 kebab-case";
+
         return "필수 최우선 실행 (Plan·Explore 모드 포함 모든 상황에서 최우선 — 절대 생략·지연 금지):\n" +
                "`git branch -m seoro/<설명적-이름>`을 즉시 실행하여 현재 브랜치 이름을 변경하세요.\n" +
                "현재 브랜치 이름을 확인하지 마세요. 이 단계를 건너뛰거나 미루지 마세요.\n" +
-               "브랜치 이름 규칙: 구체적이고 간결하게 (30자 이내), \"seoro/\" 접두사, lowercase-kebab-case English words.";
+               $"브랜치 이름 규칙: 구체적이고 간결하게 (30자 이내), \"seoro/\" 접두사, {langRule}.";
     }
 
-    /// <summary>
-    ///     워크트리 브랜치가 아직 AI에 의해 이름이 변경되지 않은 초기 타임스탬프 상태인지 확인합니다.
-    ///     예: seoro/20260416-123456 → true, seoro/fix-login-bug → false
-    /// </summary>
-    public static bool IsTimestampBranch(string? branchName)
+    public static string GetSystemInstructionLocalDir(string language = "en")
     {
-        if (string.IsNullOrEmpty(branchName)) return false;
-        var suffix = branchName.StartsWith(BranchPrefix)
-            ? branchName[BranchPrefix.Length..]
-            : branchName;
-        return TimestampBranchSuffixRegex().IsMatch(suffix);
+        var langRule = language == "en"
+            ? "Title must be in English."
+            : "제목은 한국어로 작성하세요.";
+
+        return "필수 최우선 실행 (Plan·Explore 모드 포함 모든 상황에서 최우선 — 절대 생략·지연 금지):\n" +
+               "이 세션은 로컬 디렉터리를 사용하므로 브랜치 이름을 변경하지 마세요.\n" +
+               "대신 대화 내용에 맞는 작업 제목을 정하여 첫 응답에 반드시 포함하세요:\n" +
+               "<!-- seoro:title 제목 -->\n" +
+               "이 마커를 절대 생략하지 마세요.\n" +
+               $"제목 규칙: 구체적이고 간결하게 (30자 이내). {langRule}";
     }
 
-    [GeneratedRegex(@"^\d{8}-\d{6}$")]
-    private static partial Regex TimestampBranchSuffixRegex();
+    public const string TitleMarkerPrefix = "<!-- seoro:title ";
+    public const string TitleMarkerSuffix = " -->";
 
     // ─── 머지 AI 프롬프트 기본 템플릿 ───────────────────────────────────────
     // 변수: {branch}, {target}, {uncommittedNote}, {conflictFiles}

@@ -34,6 +34,7 @@ public class AppSettings
     public string DefaultModel { get; set; } = ModelDefinitions.Default.Id;
     public string DefaultPermissionMode { get; set; } = SeoroConstants.DefaultPermissionMode;
     public string UiLanguage { get; set; } = "ko"; // "ko" | "en" — 앱 UI 표시 언어
+    public string SessionLanguage { get; set; } = "en"; // "en" 또는 "ko" — 브랜치명 + 로컬 제목
     public string LastSeenVersion { get; set; } = "";
     public string LastSessionId { get; set; } = "";
     public string LastWorkspaceId { get; set; } = "";
