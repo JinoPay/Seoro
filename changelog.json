@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.17.22",
+    "date": "2026-04-16",
+    "changes": [
+      { "type": "feat", "description": "대시보드 파이프라인 정합성 및 Explorer 헤더 개선" }
+    ]
+  },
+  {
     "version": "1.17.21",
     "date": "2026-04-15",
     "changes": [
