@@ -25,6 +25,7 @@ public static class SeoroConstants
     public const string DefaultPermissionMode = "bypassAll";
     public const string PathCaptureSentinel = "___SEORO_PATH___";
     public const string RequiredClaudeVersion = "2.1.81";
+    public const string Claude47MinVersion = "2.1.111";
 
     // 영구 워크트리 디렉터리 제약 — 항상 워크트리 세션에 주입됨
     public const string SystemInstructionWorktreeDir =

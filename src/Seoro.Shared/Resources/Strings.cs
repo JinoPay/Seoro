@@ -647,6 +647,7 @@ public static class Strings
     public static string Layout_MainToolbar_SyncError(string message) => Get(nameof(Layout_MainToolbar_SyncError), message);
     public static string Layout_MainToolbar_EffortLow => Get(nameof(Layout_MainToolbar_EffortLow));
     public static string Layout_MainToolbar_EffortHigh => Get(nameof(Layout_MainToolbar_EffortHigh));
+    public static string Layout_MainToolbar_EffortXHigh => Get(nameof(Layout_MainToolbar_EffortXHigh));
     public static string Layout_AppClose_Title => Get(nameof(Layout_AppClose_Title));
     public static string Layout_AppClose_Message => Get(nameof(Layout_AppClose_Message));
     public static string Layout_AppClose_Confirm => Get(nameof(Layout_AppClose_Confirm));

@@ -426,8 +426,12 @@ public class ClaudeService(
             var help = await _cliResolver.RunSimpleCommandAsync(fileName, $"{baseArgs}--help");
             if (help != null) caps.SupportsVerbose = help.Contains("--verbose", StringComparison.OrdinalIgnoreCase);
 
-            logger.LogInformation("Claude CLI 감지됨: version={Version}, verbose={SupportsVerbose}", caps.Version,
-                caps.SupportsVerbose);
+            caps.SupportsOpus47 = !VersionComparer.IsOutdated(caps.Version, SeoroConstants.Claude47MinVersion);
+            caps.SupportsXHighEffort = caps.SupportsOpus47;
+            ModelDefinitions.ApplyCliVersion(caps.Version);
+
+            logger.LogInformation("Claude CLI 감지됨: version={Version}, verbose={SupportsVerbose}, opus47={SupportsOpus47}",
+                caps.Version, caps.SupportsVerbose, caps.SupportsOpus47);
             _capabilities = caps;
             return caps;
         }

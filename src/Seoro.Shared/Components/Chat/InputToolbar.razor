@@ -161,6 +161,7 @@
         return EffortLevel switch
         {
             "max" => "Effort: Max (Thinking)",
+            "xhigh" => "Effort: X-High",
             "high" => "Effort: High",
             _ => Strings.Chat_EffortLevel_AutoTooltip(maxLevel)
         };
@@ -170,7 +171,7 @@
     {
         return EffortLevel switch
         {
-            "max" or "high" => Color.Secondary,
+            "max" or "xhigh" or "high" => Color.Secondary,
             _ => Color.Default
         };
     }

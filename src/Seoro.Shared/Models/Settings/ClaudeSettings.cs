@@ -86,7 +86,9 @@ public enum EffortLevel
 {
     Low,
     Medium,
-    High
+    High,
+    XHigh,
+    Max
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

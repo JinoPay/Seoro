@@ -8,7 +8,7 @@ namespace Seoro.Shared.Services.Settings;
 /// </summary>
 public static class SettingsValidator
 {
-    private static readonly HashSet<string> ValidEffortLevels = ["auto", "low", "medium", "high", "max"];
+    private static readonly HashSet<string> ValidEffortLevels = ["auto", "low", "medium", "high", "xhigh", "max"];
     private static readonly HashSet<string> ValidLanguages = ["ko", "en"];
     private static readonly HashSet<string> ValidMergeStrategies = ["Merge", "Squash", "Rebase"];
 
