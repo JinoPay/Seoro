@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.17.24",
+    "date": "2026-04-17",
+    "changes": [
+      { "type": "feat", "description": "Claude 4.7 지원 — CLI 2.1.111+ 감지 시 Opus 4.7 (1M 컨텍스트) · Sonnet 4.6 모델 자동 전환" },
+      { "type": "feat", "description": "XHigh 노력 수준 추가 — Opus 4.7 전용 xhigh 옵션 및 UI(설정·툴바) 지원" },
+      { "type": "fix", "description": "Opus 4.7 가격 수정 — 장문 컨텍스트 할증 없이 표준 요금($5/$25 MTok) 적용" }
+    ]
+  },
+  {
     "version": "1.17.23",
     "date": "2026-04-16",
     "changes": [
