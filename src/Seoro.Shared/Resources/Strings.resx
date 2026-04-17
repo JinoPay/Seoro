@@ -144,7 +144,7 @@
   <data name="Settings_Ai_DefaultModelHint" xml:space="preserve"><value>전역 기본값입니다. 워크스페이스별로 다른 모델을 지정할 수 있습니다.</value></data>
   <data name="Settings_Ai_EffortLevelLabel" xml:space="preserve"><value>기본 Effort 레벨</value></data>
   <data name="Settings_Ai_EffortLevelMax" xml:space="preserve"><value>최대</value></data>
-  <data name="Settings_Ai_EffortLevelHint" xml:space="preserve"><value>auto: 모델 기본값, 최대: 모델별 최고 사고 수준 (Opus: max, 그 외: high)</value></data>
+  <data name="Settings_Ai_EffortLevelHint" xml:space="preserve"><value>auto: 모델 기본값, 최대: 모델별 최고 사고 수준 (Opus 4.7: xhigh, 이전 Opus: max, 그 외: high)</value></data>
   <data name="Settings_Ai_PermissionModeLabel" xml:space="preserve"><value>기본 권한 모드</value></data>
   <data name="Settings_Ai_PermissionModeNormal" xml:space="preserve"><value>일반 모드</value></data>
   <data name="Settings_Ai_PermissionModePlan" xml:space="preserve"><value>플랜 모드</value></data>
@@ -517,6 +517,7 @@
   <data name="Layout_MainToolbar_EffortLow" xml:space="preserve"><value>낮음 (low)</value></data>
   <data name="Layout_MainToolbar_EffortHigh" xml:space="preserve"><value>높음 (high)</value></data>
   <data name="Layout_MainToolbar_EffortXHigh" xml:space="preserve"><value>최고 (xhigh)</value></data>
+  <data name="Layout_MainToolbar_EffortMax" xml:space="preserve"><value>최대 (max)</value></data>
   <data name="Layout_AppClose_Title" xml:space="preserve"><value>앱 종료</value></data>
   <data name="Layout_AppClose_Message" xml:space="preserve"><value>진행 중인 세션이 있습니다. 지금 종료하면 세션이 중단됩니다. 종료하시겠습니까?</value></data>
   <data name="Layout_AppClose_Confirm" xml:space="preserve"><value>종료</value></data>

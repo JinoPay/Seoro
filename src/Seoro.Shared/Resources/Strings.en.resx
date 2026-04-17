@@ -144,7 +144,7 @@
   <data name="Settings_Ai_DefaultModelHint" xml:space="preserve"><value>Global default. Each workspace can override this with a different model.</value></data>
   <data name="Settings_Ai_EffortLevelLabel" xml:space="preserve"><value>Default Effort Level</value></data>
   <data name="Settings_Ai_EffortLevelMax" xml:space="preserve"><value>Max</value></data>
-  <data name="Settings_Ai_EffortLevelHint" xml:space="preserve"><value>auto: model default, max: highest thinking level per model (Opus: max, others: high)</value></data>
+  <data name="Settings_Ai_EffortLevelHint" xml:space="preserve"><value>auto: model default, max: highest thinking level per model (Opus 4.7: xhigh, older Opus: max, others: high)</value></data>
   <data name="Settings_Ai_PermissionModeLabel" xml:space="preserve"><value>Default Permission Mode</value></data>
   <data name="Settings_Ai_PermissionModeNormal" xml:space="preserve"><value>Normal Mode</value></data>
   <data name="Settings_Ai_PermissionModePlan" xml:space="preserve"><value>Plan Mode</value></data>
@@ -518,6 +518,7 @@
   <data name="Layout_MainToolbar_EffortLow" xml:space="preserve"><value>Low</value></data>
   <data name="Layout_MainToolbar_EffortHigh" xml:space="preserve"><value>High</value></data>
   <data name="Layout_MainToolbar_EffortXHigh" xml:space="preserve"><value>X-High</value></data>
+  <data name="Layout_MainToolbar_EffortMax" xml:space="preserve"><value>Max</value></data>
   <data name="Layout_AppClose_Title" xml:space="preserve"><value>Quit App</value></data>
   <data name="Layout_AppClose_Message" xml:space="preserve"><value>There are active sessions. Quitting now will interrupt them. Are you sure?</value></data>
   <data name="Layout_AppClose_Confirm" xml:space="preserve"><value>Quit</value></data>

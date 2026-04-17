@@ -52,6 +52,10 @@
                                         @onclick="@(() => _settings.EffortLevel = EffortLevel.Medium)">Medium</button>
                                 <button class="settings-seg-item @(_settings.EffortLevel == EffortLevel.High ? "active" : "")"
                                         @onclick="@(() => _settings.EffortLevel = EffortLevel.High)">High</button>
+                                <button class="settings-seg-item @(_settings.EffortLevel == EffortLevel.XHigh ? "active" : "")"
+                                        @onclick="@(() => _settings.EffortLevel = EffortLevel.XHigh)">X-High</button>
+                                <button class="settings-seg-item @(_settings.EffortLevel == EffortLevel.Max ? "active" : "")"
+                                        @onclick="@(() => _settings.EffortLevel = EffortLevel.Max)">Max</button>
                             </div>
                             <div class="settings-field-hint">@Strings.Settings_Claude_EffortHint</div>
                         </div>

@@ -105,10 +105,15 @@ public static class ModelDefinitions
             {
                 DisplayName = "Claude Opus 4.7",
                 ContextWindow = 1_000_000,
-                Description = "최고 지능, 적응형 사고 (Opus 4.7)"
+                Description = "최고 지능 · 128K 출력 · 1M 컨텍스트 (Opus 4.7)"
             },
             "sonnet" => m with { DisplayName = "Claude Sonnet 4.6" },
-            "opus[1m]" => m with { DisplayName = "Opus 4.7 (Extended 1M)" },
+            "opus[1m]" => m with
+            {
+                DisplayName = "Opus 4.7 (1M)",
+                Pricing = new ModelPricing(5.0m, 25.0m, 6.25m, 0.50m),
+                Description = "Opus 4.7 — 1M 컨텍스트, 표준 가격 (할증 없음)"
+            },
             "sonnet[1m]" => m with { DisplayName = "Sonnet 4.6 (Extended 1M)" },
             "opusplan" => m with { Description = "Opus 4.7이 플래닝, Sonnet 4.6이 실행" },
             _ => m
