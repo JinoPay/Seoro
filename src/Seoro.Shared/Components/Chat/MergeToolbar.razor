@@ -10,16 +10,19 @@
     상세 머지 컨트롤은 MergePanel.razor (Merge 탭 내부) 에서 처리.
 *@
 
-<div class="merge-toolbar" @onclick="HandleToolbarClick" title="클릭하여 Merge 탭 열기">
-    @{
-        var session = ChatState.CurrentSession;
-        var workspace = ChatState.CurrentWorkspace;
-    }
-    @if (session != null && session.Status != SessionStatus.Pending)
-    {
-        var status = MergeStatusService.GetCurrent(session.Id);
-        var remoteInfo = workspace != null ? WorkspaceService.GetRemoteInfo(workspace.Id) : RemoteInfo.None;
-
+@{
+    var _toolbarSession = ChatState.CurrentSession;
+    var _toolbarWorkspace = ChatState.CurrentWorkspace;
+    var _toolbarRemote = _toolbarWorkspace != null ? WorkspaceService.GetRemoteInfo(_toolbarWorkspace.Id) : RemoteInfo.None;
+    var _showToolbar = _toolbarSession != null
+                       && _toolbarSession.Status != SessionStatus.Pending
+                       && _toolbarRemote.Mode == RemoteMode.GitHub;
+}
+@if (_showToolbar)
+{
+    var session = _toolbarSession!;
+    var status = MergeStatusService.GetCurrent(session.Id);
+    <div class="merge-toolbar" @onclick="HandleToolbarClick" title="클릭하여 Merge 탭 열기">
         <span class="merge-status-icon @MergePanel.StatusCssClass(status.Kind)">
             <MudIcon Icon="@MergePanel.StatusIcon(status.Kind, status.AheadCount ?? 0)" Style="width: 14px; height: 14px;"/>
         </span>
@@ -27,7 +30,7 @@
         @if (session.Git.IsLocalDir)
         {
             <span class="merge-toolbar-label">
-                @BuildLocalDirSummary(status, remoteInfo)
+                @BuildLocalDirSummary(status, _toolbarRemote)
             </span>
         }
         else
@@ -48,8 +51,8 @@
 
         <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
                  Style="width: 14px; height: 14px; opacity: 0.3; flex-shrink: 0; margin-left: auto;"/>
-    }
-</div>
+    </div>
+}
 
 @code {
     private IDisposable? _statusChangedSub;
@@ -88,7 +91,6 @@
     private static string BuildWorktreeSummary(Session session, MergeStatus status)
     {
         var branch = session.Git.BranchName ?? "";
-        var target = MergeStatusService_GetTargetLabel(status);
         var statusText = status.Kind switch
         {
             MergeStatusKind.Clean when (status.AheadCount ?? 0) == 0 => "변경사항 없음",
@@ -100,17 +102,7 @@
             MergeStatusKind.NetworkError => "오프라인",
             _ => "확인 중..."
         };
-
-        if (!string.IsNullOrEmpty(target))
-            return $"{branch} → {target} · {statusText}";
         return $"{branch} · {statusText}";
-    }
-
-    private static string MergeStatusService_GetTargetLabel(MergeStatus status)
-    {
-        // 툴바는 타겟 브랜치를 직접 관리하지 않으므로 상태에서 추출 불가 — 빈 문자열 반환.
-        // 실제 타겟은 MergePanel 에서 관리됨.
-        return "";
     }
 
     private static string PrStatusIcon(TrackedPullRequest pr) => pr switch

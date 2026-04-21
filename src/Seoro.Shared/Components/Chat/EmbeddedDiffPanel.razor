@@ -1,6 +1,7 @@
 @inject IChatState ChatState
 @inject IJSRuntime JS
 @inject IChatEventBus EventBus
+@inject IWorkspaceService WorkspaceService
 @implements IAsyncDisposable
 
 <div class="embedded-diff-panel">
@@ -16,10 +17,13 @@
                       @onclick="@(() => _activeTab = DiffPanelTab.Changes)">
                     Changes
                 </span>
-                <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Merge ? "active" : "")"
-                      @onclick="@(() => _activeTab = DiffPanelTab.Merge)">
-                    Merge
-                </span>
+                @if (IsMergeTabVisible())
+                {
+                    <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Merge ? "active" : "")"
+                          @onclick="@(() => _activeTab = DiffPanelTab.Merge)">
+                        Merge
+                    </span>
+                }
             </div>
         </div>
 
@@ -36,11 +40,14 @@
                 <SidebarChanges OnChangesDetected="HandleChangesDetected"/>
             </div>
 
-            <div style="@(_activeTab == DiffPanelTab.Merge
-                            ? "flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto"
-                            : "display:none;height:0;overflow:hidden")">
-                <MergePanel/>
-            </div>
+            @if (IsMergeTabVisible())
+            {
+                <div style="@(_activeTab == DiffPanelTab.Merge
+                                ? "flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto"
+                                : "display:none;height:0;overflow:hidden")">
+                    <MergePanel/>
+                </div>
+            }
         </div>
     </div>
 
@@ -65,14 +72,26 @@
     private IDisposable? _conflictSub;
     private IDisposable? _changesTabSub;
 
+    private bool IsMergeTabVisible()
+    {
+        var workspace = ChatState.CurrentWorkspace;
+        if (workspace == null) return false;
+        return WorkspaceService.GetRemoteInfo(workspace.Id).Mode == RemoteMode.GitHub;
+    }
+
     protected override void OnInitialized()
     {
         _lastSessionId = ChatState.CurrentSession?.Id;
         ChatState.OnChange += HandleStateChanged;
 
-        // 슬림 MergeToolbar 클릭 또는 외부 요청 시 Merge 탭으로 전환
+        // 슬림 MergeToolbar 클릭 또는 외부 요청 시 Merge 탭으로 전환 (비-GitHub 원격은 무시)
         _mergeTabSub = EventBus.Subscribe<MergeTabRequestedEvent>(_ =>
-            InvokeAsync(() => { _activeTab = DiffPanelTab.Merge; StateHasChanged(); }));
+            InvokeAsync(() =>
+            {
+                if (!IsMergeTabVisible()) return;
+                _activeTab = DiffPanelTab.Merge;
+                StateHasChanged();
+            }));
 
         // 충돌 진입 시 자동으로 Merge 탭 전환 (충돌 해결 버튼을 즉시 노출)
         _conflictSub = EventBus.Subscribe<ConflictDetectedEvent>(e =>
@@ -97,6 +116,10 @@
                 _hasAutoSwitched = false;
                 _activeTab = DiffPanelTab.Explorer;
             }
+
+            // 워크스페이스 변경으로 Merge 탭이 숨겨진 경우 폴백
+            if (_activeTab == DiffPanelTab.Merge && !IsMergeTabVisible())
+                _activeTab = DiffPanelTab.Explorer;
 
             StateHasChanged();
         });

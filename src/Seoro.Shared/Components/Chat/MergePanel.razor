@@ -44,28 +44,6 @@
         var status = MergeStatusService.GetCurrent(session.Id);
         var blocked = isStreaming || _busy;
 
-        @* ─── 머지 후 세션 삭제 확인 배너 ─── *@
-        @if (_pendingDeleteAfterMerge)
-        {
-            <div class="mp-post-merge-prompt">
-                <div class="mp-post-merge-prompt-msg">
-                    <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Style="width: 14px; height: 14px;"/>
-                    <span>머지가 완료되었습니다. 이 세션을 삭제할까요?</span>
-                </div>
-                <div class="mp-post-merge-prompt-actions">
-                    <button class="mp-main-btn mp-main-btn-danger"
-                            @onclick="ConfirmDeleteAfterMerge">
-                        <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Style="width: 13px; height: 13px;"/>
-                        <span>삭제</span>
-                    </button>
-                    <button class="mp-pill"
-                            @onclick="() => _pendingDeleteAfterMerge = false">
-                        나중에
-                    </button>
-                </div>
-            </div>
-        }
-
         @* ─── 로컬 디렉토리 세션 ─── *@
         @if (session.Git.IsLocalDir)
         {
@@ -132,6 +110,7 @@
             var isEmpty = status.Kind != MergeStatusKind.InConflict
                           && (status.AheadCount ?? 0) == 0
                           && status.UncommittedChangeCount == 0;
+            var action = ResolveWorktreeAction(session, status, _upstreamAhead, isEmpty);
 
             @* 브랜치 행 — 현재 브랜치 → 타겟 *@
             <div class="mp-branch-row">
@@ -238,91 +217,74 @@
             </MudTooltip>
 
             <div class="mp-action-area">
-            @* PR 카드 *@
-            @if (session.Git.TrackedPr != null)
-            {
-                var pr = session.Git.TrackedPr;
-                <div class="mp-pr-card">
-                    <div class="mp-pr-top">
-                        <span class="pr-badge @PrBadgeCssClass(pr)">
-                            <MudIcon Icon="@PrStatusIcon(pr)" Style="width: 11px; height: 11px;"/>
-                            <span>#@pr.Number</span>
-                        </span>
-                        <span class="mp-pr-title" title="@pr.Title">@pr.Title</span>
-                        <MudTooltip Text="PR 상태 새로고침" Placement="Placement.Top">
-                            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                           Size="Size.Small" Disabled="@(blocked || _prLoading)"
-                                           OnClick="HandleRefreshPr"
-                                           Style="width: 22px; height: 22px; flex-shrink: 0; opacity: 0.5;"/>
-                        </MudTooltip>
-                        <MudTooltip Text="PR 링크 해제" Placement="Placement.Top">
-                            <MudIconButton Icon="@Icons.Material.Outlined.Close"
-                                           Size="Size.Small" Disabled="@blocked"
-                                           OnClick="ClearSavedPr"
-                                           Style="width: 22px; height: 22px; flex-shrink: 0; opacity: 0.4;"/>
-                        </MudTooltip>
-                    </div>
-
-                    @{
-                        var metaParts = new List<string>();
-                        if (!string.IsNullOrEmpty(pr.MergeStateStatus)) metaParts.Add(pr.MergeStateStatus);
-                        if (!string.IsNullOrEmpty(pr.ReviewDecision)) metaParts.Add(pr.ReviewDecision);
-                        if (!string.IsNullOrEmpty(pr.ChecksSummary)) metaParts.Add(pr.ChecksSummary);
-                    }
-                    @if (metaParts.Count > 0)
-                    {
-                        <div class="mp-pr-meta">@string.Join(" · ", metaParts)</div>
-                    }
-
-                    <button class="mp-pr-open-btn @(blocked ? "disabled" : "")"
-                            @onclick="OpenSavedPr" disabled="@blocked">
-                        <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Style="width: 11px; height: 11px;"/>
-                        <span>PR 열기</span>
-                    </button>
-                </div>
-            }
-
-            @* 액션 영역 *@
-            @if (status.Kind == MergeStatusKind.InConflict)
-            {
-                <MudTooltip Text="워크트리 충돌을 AI에게 위임해 해결" Placement="Placement.Bottom">
-                    <button class="mp-main-btn mp-main-btn-conflict @(blocked ? "disabled" : "")"
-                            @onclick="HandleResolveConflict"
-                            disabled="@blocked">
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Style="width: 13px; height: 13px;"/>
-                        <span>충돌 해결 요청</span>
-                    </button>
-                </MudTooltip>
-            }
-            else if (!_pendingDeleteAfterMerge && session.Git.TrackedPr is { IsMerged: true })
-            {
-                <button class="mp-main-btn mp-main-btn-danger @(blocked ? "disabled" : "")"
-                        @onclick="ConfirmDeleteAfterMerge"
-                        disabled="@blocked">
-                    <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Style="width: 13px; height: 13px;"/>
-                    <span>세션 삭제</span>
-                </button>
-            }
-            else if (session.Git.TrackedPr is { State: PullRequestLifecycleState.Open })
-            {
-                @* 미푸시 경고 *@
-                if (_upstreamAhead > 0 || status.UncommittedChangeCount > 0)
+                @* PR 카드 — CreatePr·None 상태에서는 숨김 *@
+                @if (action != WorktreeAction.CreatePr && action != WorktreeAction.None
+                     && session.Git.TrackedPr != null)
                 {
-                    <div class="mp-unpushed-warning">
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Style="width: 13px; height: 13px;"/>
-                        @if (status.UncommittedChangeCount > 0 && _upstreamAhead > 0)
-                        {
-                            <span>미커밋 @(status.UncommittedChangeCount)개 + 미푸시 커밋 @(_upstreamAhead)개</span>
+                    var pr = session.Git.TrackedPr;
+                    <div class="mp-pr-card">
+                        <div class="mp-pr-top">
+                            <span class="pr-badge @PrBadgeCssClass(pr)">
+                                <MudIcon Icon="@PrStatusIcon(pr)" Style="width: 11px; height: 11px;"/>
+                                <span>#@pr.Number</span>
+                            </span>
+                            <span class="mp-pr-title" title="@pr.Title">@pr.Title</span>
+                            <MudTooltip Text="PR 상태 새로고침" Placement="Placement.Top">
+                                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                               Size="Size.Small" Disabled="@(blocked || _prLoading)"
+                                               OnClick="HandleRefreshPr"
+                                               Style="width: 22px; height: 22px; flex-shrink: 0; opacity: 0.5;"/>
+                            </MudTooltip>
+                            <MudTooltip Text="PR 링크 해제" Placement="Placement.Top">
+                                <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                                               Size="Size.Small" Disabled="@blocked"
+                                               OnClick="ClearSavedPr"
+                                               Style="width: 22px; height: 22px; flex-shrink: 0; opacity: 0.4;"/>
+                            </MudTooltip>
+                        </div>
+
+                        @{
+                            var metaParts = new List<string>();
+                            if (!string.IsNullOrEmpty(pr.MergeStateStatus)) metaParts.Add(pr.MergeStateStatus);
+                            if (!string.IsNullOrEmpty(pr.ReviewDecision)) metaParts.Add(pr.ReviewDecision);
+                            if (!string.IsNullOrEmpty(pr.ChecksSummary)) metaParts.Add(pr.ChecksSummary);
                         }
-                        else if (status.UncommittedChangeCount > 0)
+                        @if (metaParts.Count > 0)
                         {
-                            <span>미커밋 변경 @(status.UncommittedChangeCount)개</span>
+                            <div class="mp-pr-meta">@string.Join(" · ", metaParts)</div>
                         }
-                        else
-                        {
-                            <span>미푸시 커밋 @(_upstreamAhead)개</span>
-                        }
+
+                        <button class="mp-pr-open-btn @(blocked ? "disabled" : "")"
+                                @onclick="OpenSavedPr" disabled="@blocked">
+                            <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Style="width: 11px; height: 11px;"/>
+                            <span>PR 열기</span>
+                        </button>
                     </div>
+                }
+
+                @* 상황별 단일 기본 액션 *@
+                @if (action == WorktreeAction.InConflict)
+                {
+                    <MudTooltip Text="워크트리 충돌을 AI에게 위임해 해결" Placement="Placement.Bottom">
+                        <button class="mp-main-btn mp-main-btn-conflict @(blocked ? "disabled" : "")"
+                                @onclick="HandleResolveConflict"
+                                disabled="@blocked">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Style="width: 13px; height: 13px;"/>
+                            <span>충돌 해결 요청</span>
+                        </button>
+                    </MudTooltip>
+                }
+                else if (action == WorktreeAction.PostMerged)
+                {
+                    <button class="mp-main-btn mp-main-btn-danger @(blocked ? "disabled" : "")"
+                            @onclick="HandleDeleteSession"
+                            disabled="@blocked">
+                        <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Style="width: 13px; height: 13px;"/>
+                        <span>세션 삭제</span>
+                    </button>
+                }
+                else if (action == WorktreeAction.NeedsPush)
+                {
                     var wtHasUncommitted = status.UncommittedChangeCount > 0;
                     var wtHasUnpushed = _upstreamAhead > 0;
                     var wtPushLabel = (wtHasUncommitted, wtHasUnpushed) switch
@@ -340,6 +302,21 @@
                     var wtPushIcon = wtHasUnpushed
                         ? Icons.Material.Outlined.CloudUpload
                         : Icons.Material.Outlined.SaveAlt;
+                    <div class="mp-unpushed-warning">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Style="width: 13px; height: 13px;"/>
+                        @if (wtHasUncommitted && wtHasUnpushed)
+                        {
+                            <span>미커밋 @(status.UncommittedChangeCount)개 + 미푸시 커밋 @(_upstreamAhead)개</span>
+                        }
+                        else if (wtHasUncommitted)
+                        {
+                            <span>미커밋 변경 @(status.UncommittedChangeCount)개</span>
+                        }
+                        else
+                        {
+                            <span>미푸시 커밋 @(_upstreamAhead)개</span>
+                        }
+                    </div>
                     <MudTooltip Text="@wtPushTooltip" Placement="Placement.Bottom">
                         <button class="mp-main-btn mp-main-btn-push @(blocked ? "disabled" : "")"
                                 @onclick="HandlePush"
@@ -349,9 +326,7 @@
                         </button>
                     </MudTooltip>
                 }
-
-                @* 충돌 예상 / PR DIRTY — 리베이스 해결 버튼 *@
-                @if (status.Kind == MergeStatusKind.ConflictExpected || session.Git.TrackedPr.IsMergeable == false)
+                else if (action == WorktreeAction.NeedsRebase)
                 {
                     <MudTooltip Text="타겟 브랜치에 rebase하여 충돌을 해결합니다" Placement="Placement.Bottom">
                         <button class="mp-main-btn mp-main-btn-conflict @(blocked ? "disabled" : "")"
@@ -362,79 +337,89 @@
                         </button>
                     </MudTooltip>
                 }
-
-                @* 전략 pills + 머지 버튼 *@
-                <div class="mp-strategy-pills">
-                    <button class="mp-pill @(_selectedMergeStrategy == PullRequestMergeStrategy.Merge ? "active" : "")"
-                            @onclick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Merge"
-                            disabled="@blocked">
-                        Merge
-                    </button>
-                    <button class="mp-pill @(_selectedMergeStrategy == PullRequestMergeStrategy.Squash ? "active" : "")"
-                            @onclick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Squash"
-                            disabled="@blocked">
-                        Squash
-                    </button>
-                    <button class="mp-pill @(_selectedMergeStrategy == PullRequestMergeStrategy.Rebase ? "active" : "")"
-                            @onclick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Rebase"
-                            disabled="@blocked">
-                        Rebase
-                    </button>
-                </div>
-                <MudTooltip Text="@PrMergeButtonTooltip(session.Git.TrackedPr)" Placement="Placement.Bottom">
-                    <button class="mp-main-btn @(!session.Git.TrackedPr.CanMerge || blocked || _prMerging ? "disabled" : "")"
-                            @onclick="HandleMergePr"
-                            disabled="@(!session.Git.TrackedPr.CanMerge || blocked || _prMerging)">
-                        @if (_prMerging)
-                        {
-                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                 Style="width: 13px; height: 13px;"/>
-                        }
-                        else
-                        {
-                            <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
-                        }
-                        <span>@MergeMethodLabel(_selectedMergeStrategy) 머지</span>
-                    </button>
-                </MudTooltip>
-            }
-            else if (!isEmpty)
-            {
-                @* PR 없음 또는 닫힌 상태 *@
-                <MudTooltip Text="@BuildPrTooltip(noTarget, _targetBranch)" Placement="Placement.Bottom">
-                    <button class="mp-main-btn @(blocked || noTarget ? "disabled" : "")"
-                            @onclick="HandleCreatePrViaAi"
-                            disabled="@(blocked || noTarget)">
-                        <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
-                        <span>PR 생성 요청</span>
-                    </button>
-                </MudTooltip>
-                @if (remoteInfo.Mode == RemoteMode.GitHub)
+                else if (action == WorktreeAction.CanMerge)
                 {
-                    <MudTooltip Text="이 브랜치에 연결된 PR을 GitHub에서 조회" Placement="Placement.Bottom">
-                        <button class="mp-secondary-btn @(blocked || _prLoading ? "disabled" : "")"
-                                @onclick="HandleCheckPr"
-                                disabled="@(blocked || _prLoading)">
-                            @if (_prLoading)
+                    <div class="mp-strategy-pills">
+                        <button class="mp-pill @(_selectedMergeStrategy == PullRequestMergeStrategy.Merge ? "active" : "")"
+                                @onclick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Merge"
+                                disabled="@blocked">
+                            Merge
+                        </button>
+                        <button class="mp-pill @(_selectedMergeStrategy == PullRequestMergeStrategy.Squash ? "active" : "")"
+                                @onclick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Squash"
+                                disabled="@blocked">
+                            Squash
+                        </button>
+                        <button class="mp-pill @(_selectedMergeStrategy == PullRequestMergeStrategy.Rebase ? "active" : "")"
+                                @onclick="() => _selectedMergeStrategy = PullRequestMergeStrategy.Rebase"
+                                disabled="@blocked">
+                            Rebase
+                        </button>
+                    </div>
+                    <MudTooltip Text="@PrMergeButtonTooltip(session.Git.TrackedPr!)" Placement="Placement.Bottom">
+                        <button class="mp-main-btn @(!session.Git.TrackedPr!.CanMerge || blocked || _prMerging ? "disabled" : "")"
+                                @onclick="HandleMergePr"
+                                disabled="@(!session.Git.TrackedPr!.CanMerge || blocked || _prMerging)">
+                            @if (_prMerging)
                             {
                                 <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                     Style="width: 11px; height: 11px;"/>
+                                                     Style="width: 13px; height: 13px;"/>
                             }
                             else
                             {
-                                <MudIcon Icon="@Icons.Material.Outlined.Search" Style="width: 11px; height: 11px;"/>
+                                <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
                             }
-                            <span>PR 확인</span>
+                            <span>@MergeMethodLabel(_selectedMergeStrategy) 머지</span>
                         </button>
                     </MudTooltip>
                 }
-            }
+                else if (action == WorktreeAction.CreatePr)
+                {
+                    <MudTooltip Text="@BuildPrTooltip(noTarget, _targetBranch)" Placement="Placement.Bottom">
+                        <button class="mp-main-btn @(blocked || noTarget ? "disabled" : "")"
+                                @onclick="HandleCreatePrViaAi"
+                                disabled="@(blocked || noTarget)">
+                            <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
+                            <span>PR 생성 요청</span>
+                        </button>
+                    </MudTooltip>
+                    @if (remoteInfo.Mode == RemoteMode.GitHub)
+                    {
+                        <MudTooltip Text="이 브랜치에 연결된 PR을 GitHub에서 조회" Placement="Placement.Bottom">
+                            <button class="mp-secondary-btn @(blocked || _prLoading ? "disabled" : "")"
+                                    @onclick="HandleCheckPr"
+                                    disabled="@(blocked || _prLoading)">
+                                @if (_prLoading)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                         Style="width: 11px; height: 11px;"/>
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Outlined.Search" Style="width: 11px; height: 11px;"/>
+                                }
+                                <span>PR 확인</span>
+                            </button>
+                        </MudTooltip>
+                    }
+                }
             </div>@* mp-action-area *@
         }
     }
 </div>
 
 @code {
+    private enum WorktreeAction
+    {
+        None,
+        InConflict,
+        PostMerged,
+        NeedsPush,
+        NeedsRebase,
+        CanMerge,
+        CreatePr,
+    }
+
     private List<BranchGroup> _branchGroups = [];
     private string? _targetBranch;
     private bool _branchMenuOpen;
@@ -442,7 +427,6 @@
     private bool _busy;
     private bool _prLoading;
     private bool _prMerging;
-    private bool _pendingDeleteAfterMerge;
     private PullRequestMergeStrategy _selectedMergeStrategy = PullRequestMergeStrategy.Squash;
     private (int Additions, int Deletions)? _diffStats;
     private AppSettings? _appSettings;
@@ -637,120 +621,35 @@
     }
 
     // ─────────────────────────────────────────────
-    //  액션 핸들러
+    //  상태 머신
     // ─────────────────────────────────────────────
 
-    private async Task HandleSquashMerge()
+    private WorktreeAction ResolveWorktreeAction(Session session, MergeStatus status, int upstreamAhead, bool isEmpty)
     {
-        var session = ChatState.CurrentSession;
-        var workspace = ChatState.CurrentWorkspace;
-        if (session == null || workspace == null || string.IsNullOrEmpty(_targetBranch))
-            return;
+        if (status.Kind == MergeStatusKind.InConflict)
+            return WorktreeAction.InConflict;
 
-        var normalizedTarget = BranchRefNormalizer.Normalize(_targetBranch);
-        _busy = true;
-        StateHasChanged();
-        try
+        if (session.Git.TrackedPr?.IsMerged == true)
+            return WorktreeAction.PostMerged;
+
+        if (session.Git.TrackedPr?.State == PullRequestLifecycleState.Open)
         {
-            await MergeStatusService.RefreshAsync(session.Id, normalizedTarget);
-            var status = MergeStatusService.GetCurrent(session.Id);
-
-            if (status.Kind == MergeStatusKind.NetworkError)
-            {
-                Snackbar.Add("오프라인 상태입니다. 네트워크 확인 후 다시 시도하세요.", Severity.Warning);
-                return;
-            }
-
-            if (status.UncommittedChangeCount > 0)
-            {
-                var ok = await ConfirmAsync(
-                    "미커밋 변경 있음",
-                    $"워크트리에 미커밋 변경이 {status.UncommittedChangeCount}개 있습니다. 먼저 커밋 또는 stash 를 권장합니다. 그래도 머지할까요?");
-                if (!ok) return;
-            }
-
-            if (status.Kind == MergeStatusKind.ConflictExpected)
-            {
-                var files = status.ConflictingFiles?.Count ?? 0;
-                var ok = await ConfirmAsync(
-                    "충돌 예상",
-                    $"{files}개 파일에서 타겟 브랜치와 충돌이 예상됩니다. 충돌이 발생하면 머지가 중단되고 세션 내 해결이 필요합니다. 계속할까요?");
-                if (!ok) return;
-            }
-
-            if (status.Kind == MergeStatusKind.BehindTarget && (status.BehindCount ?? 0) > 0)
-            {
-                var ok = await ConfirmAsync(
-                    "타겟이 앞섰습니다",
-                    $"타겟 브랜치가 {status.BehindCount}커밋 앞서 있습니다. 구버전 기반으로 머지하면 일부 변경이 묻힐 수 있습니다. 계속할까요?");
-                if (!ok) return;
-            }
-
-            var defaultMessage = $"Squash merge '{session.Git.BranchName}' into '{normalizedTarget}'";
-            var commitMessage = await PromptTextAsync(
-                "커밋 메시지",
-                "스쿼시 머지 커밋 메시지를 입력하세요.",
-                defaultMessage);
-            if (string.IsNullOrWhiteSpace(commitMessage))
-                return;
-
-            Snackbar.Add("스쿼시 머지 진행 중...", Severity.Info);
-            Logger.LogInformation("MergePanel 스쿼시 머지 시작: session={Id} source={Src} target={Tgt}",
-                session.Id, session.Git.BranchName, normalizedTarget);
-
-            var result = await GitService.SquashMergeViaTempCloneAsync(
-                workspace.RepoLocalPath,
-                session.Git.WorktreePath,
-                session.Git.BranchName,
-                normalizedTarget,
-                commitMessage);
-
-            if (result.Success)
-            {
-                Snackbar.Add(
-                    $"스쿼시 머지 완료: 메인 레포의 {normalizedTarget} 브랜치에 반영되었습니다.",
-                    Severity.Success);
-
-                var settings = await SettingsService.LoadAsync();
-                if (settings.AutoArchiveOnMergeSuccess)
-                {
-                    try
-                    {
-                        await SessionListFacade.RemoveSessionAsync(session);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogWarning(ex, "자동 아카이브 실패: session={Id}", session.Id);
-                    }
-                }
-
-                await MergeStatusService.RefreshAsync(session.Id, normalizedTarget);
-            }
-            else if (result.Conflict)
-            {
-                Snackbar.Add(
-                    $"충돌 발생: {result.ConflictingFiles.Count}개 파일. 세션 채팅에 '머지 충돌을 해결해줘'라고 입력해 AI에게 도움을 요청하세요.",
-                    Severity.Warning);
-                Logger.LogWarning("스쿼시 머지 충돌: session={Id} files={Files}", session.Id,
-                    string.Join(", ", result.ConflictingFiles));
-            }
-            else
-            {
-                Snackbar.Add($"머지 실패: {result.Error}", Severity.Error);
-                Logger.LogError("스쿼시 머지 실패: session={Id} err={Err}", session.Id, result.Error);
-            }
+            if (upstreamAhead > 0 || status.UncommittedChangeCount > 0)
+                return WorktreeAction.NeedsPush;
+            if (status.Kind == MergeStatusKind.ConflictExpected || session.Git.TrackedPr.IsMergeable == false)
+                return WorktreeAction.NeedsRebase;
+            return WorktreeAction.CanMerge;
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"머지 처리 중 예외: {ex.Message}", Severity.Error);
-            Logger.LogError(ex, "HandleSquashMerge 예외");
-        }
-        finally
-        {
-            _busy = false;
-            StateHasChanged();
-        }
+
+        if (!isEmpty)
+            return WorktreeAction.CreatePr;
+
+        return WorktreeAction.None;
     }
+
+    // ─────────────────────────────────────────────
+    //  액션 핸들러
+    // ─────────────────────────────────────────────
 
     private Task HandlePush()
     {
@@ -885,8 +784,6 @@
             {
                 await SessionService.SaveSessionAsync(session);
                 Snackbar.Add($"PR #{session.Git.TrackedPr.Number} 머지 완료!", Severity.Success);
-
-                _pendingDeleteAfterMerge = true;
             }
             else
             {
@@ -906,9 +803,8 @@
         }
     }
 
-    private async Task ConfirmDeleteAfterMerge()
+    private async Task HandleDeleteSession()
     {
-        _pendingDeleteAfterMerge = false;
         var session = ChatState.CurrentSession;
         if (session == null) return;
 
@@ -1184,16 +1080,6 @@
     {
         var result = await DialogService.ShowMessageBoxAsync(title, message, yesText: yesText, cancelText: noText);
         return result == true;
-    }
-
-    private async Task<string?> PromptTextAsync(string title, string message, string defaultValue)
-    {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            title,
-            $"{message}\n\n기본값: {defaultValue}",
-            yesText: "기본값 사용",
-            cancelText: "취소");
-        return confirmed == true ? defaultValue : null;
     }
 
     public void Dispose()
