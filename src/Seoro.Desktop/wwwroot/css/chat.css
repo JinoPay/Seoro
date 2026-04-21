@@ -947,6 +947,17 @@
     padding: var(--space-2) 0;
 }
 
+.add-dir-popover {
+    width: 360px;
+    max-width: calc(100vw - var(--space-4, 16px));
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.add-dir-popover-content {
+    padding: var(--space-3, 12px);
+}
+
 .tool-picker-header {
     padding: var(--space-1) var(--space-3);
     font-size: var(--text-xs);

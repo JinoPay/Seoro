@@ -35,11 +35,12 @@
 
         <div class="tool-picker-wrapper">
             <MudTooltip Text="추가 디렉터리" Placement="Placement.Top">
-                <div class="tool-picker-trigger" @onclick="ToggleAddDirPopover">
+                <div class="tool-picker-btn-wrapper">
                     <MudIconButton Icon="@Icons.Material.Filled.CreateNewFolder"
                                    Color="@(AdditionalDirs is { Count: > 0 } ? Color.Primary : Color.Default)"
                                    Size="Size.Small"
-                                   Disabled="@(Disabled || IsStreaming)"/>
+                                   OnClick="ToggleAddDirPopover"
+                                   Disabled="@Disabled"/>
                     @if (AdditionalDirs is { Count: > 0 })
                     {
                         <div class="tool-picker-badge">@AdditionalDirs.Count</div>
@@ -48,9 +49,9 @@
             </MudTooltip>
 
             <MudPopover Open="_addDirPopoverOpen" AnchorOrigin="Origin.BottomLeft"
-                        TransformOrigin="Origin.TopLeft" Class="tool-picker-popover">
+                        TransformOrigin="Origin.TopLeft" Class="add-dir-popover">
                 <MudClickAwayListener OnClickAway="CloseAddDirPopover"/>
-                <div style="padding: 12px; min-width: 360px;">
+                <div class="add-dir-popover-content">
                     <div class="typo-subtitle2 mb-2">추가 작업 디렉터리</div>
                     <AdditionalDirectoriesEditor Directories="AdditionalDirs"
                                                  DirectoriesChanged="OnAdditionalDirsChangedInternal"
