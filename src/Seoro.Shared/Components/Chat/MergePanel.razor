@@ -294,7 +294,7 @@
                     </button>
                 </MudTooltip>
             }
-            else if (session.Git.TrackedPr is { IsMerged: true })
+            else if (!_pendingDeleteAfterMerge && session.Git.TrackedPr is { IsMerged: true })
             {
                 <button class="mp-main-btn mp-main-btn-danger @(blocked ? "disabled" : "")"
                         @onclick="ConfirmDeleteAfterMerge"
