@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.17.25",
+    "date": "2026-04-21",
+    "changes": [
+      { "type": "feat", "description": "세션별 추가 작업 디렉토리(AddDir) 지원 — InputToolbar에서 디렉토리 추가·제거, 툴바 배지 및 헤더 카운트 표시" },
+      { "type": "feat", "description": "머지 완료 후 삭제 확인을 채팅 탭 인라인 배너로 변경 — 전체 모달 대신 해당 탭에만 표시" },
+      { "type": "fix", "description": "'아카이브' 용어를 '삭제'로 통일 — 실제 동작(파일 완전 삭제)과 일치하도록 수정" }
+    ]
+  },
+  {
     "version": "1.17.24",
     "date": "2026-04-17",
     "changes": [
