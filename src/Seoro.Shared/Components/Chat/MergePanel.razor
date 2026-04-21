@@ -44,6 +44,28 @@
         var status = MergeStatusService.GetCurrent(session.Id);
         var blocked = isStreaming || _busy;
 
+        @* ─── 머지 후 세션 삭제 확인 배너 ─── *@
+        @if (_pendingDeleteAfterMerge)
+        {
+            <div class="mp-post-merge-prompt">
+                <div class="mp-post-merge-prompt-msg">
+                    <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Style="width: 14px; height: 14px;"/>
+                    <span>머지가 완료되었습니다. 이 세션을 삭제할까요?</span>
+                </div>
+                <div class="mp-post-merge-prompt-actions">
+                    <button class="mp-main-btn mp-main-btn-danger"
+                            @onclick="ConfirmDeleteAfterMerge">
+                        <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Style="width: 13px; height: 13px;"/>
+                        <span>삭제</span>
+                    </button>
+                    <button class="mp-pill"
+                            @onclick="() => _pendingDeleteAfterMerge = false">
+                        나중에
+                    </button>
+                </div>
+            </div>
+        }
+
         @* ─── 로컬 디렉토리 세션 ─── *@
         @if (session.Git.IsLocalDir)
         {
@@ -274,11 +296,11 @@
             }
             else if (session.Git.TrackedPr is { IsMerged: true })
             {
-                <button class="mp-main-btn @(blocked ? "disabled" : "")"
-                        @onclick="HandleArchiveAfterMerge"
+                <button class="mp-main-btn mp-main-btn-danger @(blocked ? "disabled" : "")"
+                        @onclick="ConfirmDeleteAfterMerge"
                         disabled="@blocked">
-                    <MudIcon Icon="@Icons.Material.Outlined.Archive" Style="width: 13px; height: 13px;"/>
-                    <span>세션 아카이브</span>
+                    <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Style="width: 13px; height: 13px;"/>
+                    <span>세션 삭제</span>
                 </button>
             }
             else if (session.Git.TrackedPr is { State: PullRequestLifecycleState.Open })
@@ -420,6 +442,7 @@
     private bool _busy;
     private bool _prLoading;
     private bool _prMerging;
+    private bool _pendingDeleteAfterMerge;
     private PullRequestMergeStrategy _selectedMergeStrategy = PullRequestMergeStrategy.Squash;
     private (int Additions, int Deletions)? _diffStats;
     private AppSettings? _appSettings;
@@ -863,13 +886,7 @@
                 await SessionService.SaveSessionAsync(session);
                 Snackbar.Add($"PR #{session.Git.TrackedPr.Number} 머지 완료!", Severity.Success);
 
-                var archive = await ConfirmAsync(
-                    "PR 머지 완료",
-                    "세션을 아카이브할까요?",
-                    yesText: "아카이브",
-                    noText: "나중에");
-                if (archive)
-                    await HandleArchiveAfterMerge();
+                _pendingDeleteAfterMerge = true;
             }
             else
             {
@@ -889,8 +906,9 @@
         }
     }
 
-    private async Task HandleArchiveAfterMerge()
+    private async Task ConfirmDeleteAfterMerge()
     {
+        _pendingDeleteAfterMerge = false;
         var session = ChatState.CurrentSession;
         if (session == null) return;
 
@@ -900,8 +918,8 @@
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "세션 아카이브 실패: session={Id}", session.Id);
-            Snackbar.Add($"아카이브 실패: {ex.Message}", Severity.Warning);
+            Logger.LogWarning(ex, "머지 후 세션 삭제 실패: session={Id}", session.Id);
+            Snackbar.Add($"세션 삭제 실패: {ex.Message}", Severity.Warning);
         }
     }
 

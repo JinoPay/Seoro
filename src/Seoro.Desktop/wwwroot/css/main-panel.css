@@ -1014,8 +1014,38 @@
     background: var(--color-error) !important;
 }
 
+.mp-main-btn-danger {
+    background: var(--color-error) !important;
+}
+
 .mp-main-btn-push {
     background: var(--color-warning) !important;
+}
+
+/* ── 머지 후 삭제 확인 배너 ── */
+.mp-post-merge-prompt {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--color-success-bg);
+    border: 1px solid var(--color-success-border);
+    font-size: var(--text-xs);
+    color: var(--text-default);
+}
+
+.mp-post-merge-prompt-msg {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    color: var(--color-success);
+}
+
+.mp-post-merge-prompt-actions {
+    display: flex;
+    gap: 6px;
 }
 
 /* ── 미푸시 경고 배너 ── */
