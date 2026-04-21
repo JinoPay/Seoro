@@ -147,7 +147,8 @@ public class ChatMessageOrchestrator(
                 ConversationId = conversationId,
                 SystemPrompt = systemPrompt,
                 ContinueMode = continueMode,
-                AllowedTools = mcpAllowedTools
+                AllowedTools = mcpAllowedTools,
+                AdditionalDirs = session.Git.AdditionalDirs.Count > 0 ? session.Git.AdditionalDirs : null
             };
 
             await foreach (var evt in provider.SendMessageAsync(sendOptions, ct).WithCancellation(ct))

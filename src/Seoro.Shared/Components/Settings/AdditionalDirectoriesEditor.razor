@@ -1,6 +1,13 @@
 @inject IFolderPickerService FolderPickerService
 
 <div class="stack gap-3">
+    @if (Disabled)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-1">
+            첫 메시지 이후에는 추가 디렉터리를 변경할 수 없습니다.
+        </MudAlert>
+    }
+
     @if (Directories is { Count: > 0 })
     {
         <MudSimpleTable Dense="true" Hover="true" Elevation="0"
@@ -19,14 +26,15 @@
                     <td>
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                        Color="Color.Error" OnClick="@(() => Remove(dir))"
-                                       Class="settings-delete-btn"/>
+                                       Class="settings-delete-btn"
+                                       Disabled="@Disabled"/>
                     </td>
                 </tr>
             }
             </tbody>
         </MudSimpleTable>
     }
-    else
+    else if (!Disabled)
     {
         <div class="settings-add-area" @onclick="BrowseFolder">
             <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Size="Size.Medium"
@@ -35,26 +43,30 @@
         </div>
     }
 
-    <div class="d-flex gap-2 align-end">
-        <MudTextField T="string" @bind-Value="_newPath" Label="경로" Variant="Variant.Outlined"
-                      Margin="Margin.Dense" Placeholder="/path/to/directory" Style="flex: 1;"
-                      OnKeyUp="@(e =>
-                               {
-                                   if (e.Key == "Enter") Add();
-                               })"/>
-        <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
-                       OnClick="BrowseFolder" Size="Size.Small" title="찾아보기..."/>
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                   OnClick="Add" Disabled="@(string.IsNullOrWhiteSpace(_newPath))"
-                   Style="text-transform: none; min-width: 60px; height: 40px;">
-            추가
-        </MudButton>
-    </div>
+    @if (!Disabled)
+    {
+        <div class="d-flex gap-2 align-end">
+            <MudTextField T="string" @bind-Value="_newPath" Label="경로" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Placeholder="/path/to/directory" Style="flex: 1;"
+                          OnKeyUp="@(e =>
+                                   {
+                                       if (e.Key == "Enter") Add();
+                                   })"/>
+            <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
+                           OnClick="BrowseFolder" Size="Size.Small" title="찾아보기..."/>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       OnClick="Add" Disabled="@(string.IsNullOrWhiteSpace(_newPath))"
+                       Style="text-transform: none; min-width: 60px; height: 40px;">
+                추가
+            </MudButton>
+        </div>
+    }
 </div>
 
 @code {
     [Parameter] public List<string>? Directories { get; set; }
     [Parameter] public EventCallback<List<string>> DirectoriesChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
 
     private string _newPath = "";
 

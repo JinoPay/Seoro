@@ -101,7 +101,10 @@
                            WebSearchEnabled="_codexWebSearch"
                            WebSearchEnabledChanged="HandleWebSearchChanged"
                            DisabledMcpServers="@(session.DisabledMcpServers)"
-                           DisabledMcpServersChanged="HandleDisabledMcpServersChanged"/>
+                           DisabledMcpServersChanged="HandleDisabledMcpServersChanged"
+                           AdditionalDirs="@(session.Git.AdditionalDirs)"
+                           AdditionalDirsChanged="HandleAdditionalDirsChanged"
+                           IsAddDirEditable="@(string.IsNullOrEmpty(session.ConversationId))"/>
             }
         </div>
     };
@@ -657,6 +660,14 @@
     {
         if (ChatState.CurrentSession == null) return;
         ChatState.CurrentSession.DisabledMcpServers = disabled;
+        ChatState.NotifyStateChanged();
+        await SessionService.SaveSessionAsync(ChatState.CurrentSession);
+    }
+
+    private async Task HandleAdditionalDirsChanged(List<string> dirs)
+    {
+        if (ChatState.CurrentSession == null) return;
+        ChatState.CurrentSession.Git.AdditionalDirs = dirs;
         ChatState.NotifyStateChanged();
         await SessionService.SaveSessionAsync(ChatState.CurrentSession);
     }

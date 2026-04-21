@@ -44,6 +44,28 @@
                 </span>
             </MudTooltip>
         }
+
+        @if (ChatState.CurrentSession.Git.AdditionalDirs is { Count: > 0 } addDirs)
+        {
+            <MudTooltip Placement="Placement.Bottom">
+                <TooltipContent>
+                    <div style="text-align: left;">
+                        <div style="font-weight: 600; margin-bottom: 4px;">추가 작업 디렉터리</div>
+                        @foreach (var d in addDirs)
+                        {
+                            <div style="font-family: monospace; font-size: 0.8em;">@d</div>
+                        }
+                    </div>
+                </TooltipContent>
+                <ChildContent>
+                    <span class="toolbar-indicator" style="gap: 3px;">
+                        <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Size="Size.Small"
+                                 Style="width: 14px; height: 14px;"/>
+                        <span style="font-size: 0.7rem;">@addDirs.Count</span>
+                    </span>
+                </ChildContent>
+            </MudTooltip>
+        }
     }
     else
     {

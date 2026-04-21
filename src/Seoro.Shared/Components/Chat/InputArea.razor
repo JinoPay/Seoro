@@ -68,7 +68,10 @@
                       WebSearchEnabled="_currentWebSearch"
                       OnWebSearchChanged="HandleWebSearchChangedLocal"
                       DisabledMcpServers="_currentDisabledMcpServers"
-                      OnDisabledMcpServersChanged="HandleDisabledMcpServersChangedLocal"/>
+                      OnDisabledMcpServersChanged="HandleDisabledMcpServersChangedLocal"
+                      AdditionalDirs="_currentAdditionalDirs"
+                      OnAdditionalDirsChanged="HandleAdditionalDirsChangedLocal"
+                      IsAddDirEditable="IsAddDirEditable"/>
     </div>
 </div>
 
@@ -91,6 +94,9 @@
     [Parameter] public EventCallback<bool> WebSearchEnabledChanged { get; set; }
     [Parameter] public HashSet<string> DisabledMcpServers { get; set; } = [];
     [Parameter] public EventCallback<HashSet<string>> DisabledMcpServersChanged { get; set; }
+    [Parameter] public List<string> AdditionalDirs { get; set; } = [];
+    [Parameter] public EventCallback<List<string>> AdditionalDirsChanged { get; set; }
+    [Parameter] public bool IsAddDirEditable { get; set; } = true;
 
     private string _inputText = string.Empty;
     private readonly List<PendingAttachment> _pendingAttachments = [];
@@ -111,6 +117,7 @@
     private string _currentModel = string.Empty;
     private bool _currentWebSearch;
     private HashSet<string> _currentDisabledMcpServers = [];
+    private List<string> _currentAdditionalDirs = [];
 
     // 불필요한 리렌더를 방지하기 위한 파라미터 추적 (커서 이동 수정)
     private bool _prevIsStreaming;
@@ -124,6 +131,8 @@
     private bool _prevIsPlanReviewVisible;
     private bool _prevWebSearch;
     private HashSet<string> _prevDisabledMcpServers = [];
+    private List<string> _prevAdditionalDirs = [];
+    private bool _prevIsAddDirEditable = true;
     private bool _forceRender;
     private bool _isComposing;
     private readonly string _shortcutHint = OperatingSystem.IsMacOS() ? "⌘⇧L" : "Ctrl+Shift+L";
@@ -162,6 +171,7 @@
             _currentEffortLevel = EffortLevel;
             _currentWebSearch = WebSearchEnabled;
             _currentDisabledMcpServers = DisabledMcpServers;
+            _currentAdditionalDirs = AdditionalDirs;
 
             _forceRender = true;
         }
@@ -177,6 +187,8 @@
             _currentWebSearch = WebSearchEnabled;
         if (!ReferenceEquals(_prevDisabledMcpServers, DisabledMcpServers))
             _currentDisabledMcpServers = DisabledMcpServers;
+        if (!ReferenceEquals(_prevAdditionalDirs, AdditionalDirs))
+            _currentAdditionalDirs = AdditionalDirs;
 
         if (_prevIsStreaming != IsStreaming ||
             _prevDisabled != Disabled ||
@@ -187,7 +199,9 @@
             _prevPlanContent != PlanContent ||
             _prevIsPlanReviewVisible != IsPlanReviewVisible ||
             _prevWebSearch != WebSearchEnabled ||
-            !ReferenceEquals(_prevDisabledMcpServers, DisabledMcpServers))
+            !ReferenceEquals(_prevDisabledMcpServers, DisabledMcpServers) ||
+            !ReferenceEquals(_prevAdditionalDirs, AdditionalDirs) ||
+            _prevIsAddDirEditable != IsAddDirEditable)
         {
             _prevIsStreaming = IsStreaming;
             _prevDisabled = Disabled;
@@ -199,6 +213,8 @@
             _prevIsPlanReviewVisible = IsPlanReviewVisible;
             _prevWebSearch = WebSearchEnabled;
             _prevDisabledMcpServers = DisabledMcpServers;
+            _prevAdditionalDirs = AdditionalDirs;
+            _prevIsAddDirEditable = IsAddDirEditable;
             _forceRender = true;
         }
     }
@@ -248,6 +264,15 @@
         StateHasChanged();
         await DisabledMcpServersChanged.InvokeAsync(disabled);
     }
+
+    private async Task HandleAdditionalDirsChangedLocal(List<string> dirs)
+    {
+        _currentAdditionalDirs = dirs;
+        _forceRender = true;
+        StateHasChanged();
+        await AdditionalDirsChanged.InvokeAsync(dirs);
+    }
+
 
     private async Task HandleModelChangedLocal(string model)
     {

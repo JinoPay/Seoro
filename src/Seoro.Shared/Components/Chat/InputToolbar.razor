@@ -33,6 +33,44 @@
                     IsStreaming="IsStreaming"
                     ProjectPath="@CurrentSession?.Git?.WorktreePath"/>
 
+        <div class="tool-picker-wrapper">
+            <MudTooltip Text="추가 디렉터리" Placement="Placement.Top">
+                <div class="tool-picker-trigger" @onclick="ToggleAddDirPopover">
+                    <MudIconButton Icon="@Icons.Material.Filled.CreateNewFolder"
+                                   Color="@(AdditionalDirs is { Count: > 0 } ? Color.Primary : Color.Default)"
+                                   Size="Size.Small"
+                                   Disabled="@(Disabled || IsStreaming)"/>
+                    @if (AdditionalDirs is { Count: > 0 })
+                    {
+                        <div class="tool-picker-badge">@AdditionalDirs.Count</div>
+                    }
+                </div>
+            </MudTooltip>
+
+            <MudPopover Open="_addDirPopoverOpen" AnchorOrigin="Origin.BottomLeft"
+                        TransformOrigin="Origin.TopLeft" Class="tool-picker-popover">
+                <MudClickAwayListener OnClickAway="CloseAddDirPopover"/>
+                <div style="padding: 12px; min-width: 360px;">
+                    <div class="typo-subtitle2 mb-2">추가 작업 디렉터리</div>
+                    <AdditionalDirectoriesEditor Directories="AdditionalDirs"
+                                                 DirectoriesChanged="OnAdditionalDirsChangedInternal"
+                                                 Disabled="@(!IsAddDirEditable)"/>
+                </div>
+            </MudPopover>
+        </div>
+
+        @foreach (var dir in AdditionalDirs)
+        {
+            <MudTooltip Text="@dir" Placement="Placement.Top">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                         Color="Color.Primary"
+                         OnClose="@(IsAddDirEditable ? () => RemoveDirChip(dir) : null)"
+                         Style="font-size: 0.7rem; font-family: monospace; height: 22px; margin: 0;">
+                    @GetDirDisplayName(dir)
+                </MudChip>
+            </MudTooltip>
+        }
+
         @if (CurrentSession?.IsCodex == true)
         {
             <MudTooltip Text="@(WebSearchEnabled ? Strings.Chat_Toolbar_WebSearchOn : Strings.Chat_Toolbar_WebSearchOff)" Placement="Placement.Top">
@@ -113,6 +151,31 @@
     [Parameter] public EventCallback<bool> OnWebSearchChanged { get; set; }
     [Parameter] public HashSet<string> DisabledMcpServers { get; set; } = [];
     [Parameter] public EventCallback<HashSet<string>> OnDisabledMcpServersChanged { get; set; }
+    [Parameter] public List<string> AdditionalDirs { get; set; } = [];
+    [Parameter] public EventCallback<List<string>> OnAdditionalDirsChanged { get; set; }
+    [Parameter] public bool IsAddDirEditable { get; set; } = true;
+
+    private bool _addDirPopoverOpen;
+
+    private void ToggleAddDirPopover() => _addDirPopoverOpen = !_addDirPopoverOpen;
+    private void CloseAddDirPopover() => _addDirPopoverOpen = false;
+
+    private async Task OnAdditionalDirsChangedInternal(List<string> dirs)
+    {
+        await OnAdditionalDirsChanged.InvokeAsync(dirs);
+    }
+
+    private async Task RemoveDirChip(string dir)
+    {
+        var updated = AdditionalDirs.Where(d => d != dir).ToList();
+        await OnAdditionalDirsChanged.InvokeAsync(updated);
+    }
+
+    private static string GetDirDisplayName(string path)
+    {
+        var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        return string.IsNullOrEmpty(name) ? path : name;
+    }
 
     private static readonly string[] PermissionModes = ["bypassAll", "plan"];
 
