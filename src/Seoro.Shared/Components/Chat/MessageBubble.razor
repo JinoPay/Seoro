@@ -54,7 +54,9 @@
                         {
                             <div style="cursor: pointer;"
                                  title="@attachment.OriginalFileName"
-                                 @onclick="@(() => Lightbox.Open(GetImageSrc(attachment), attachment.OriginalFileName))">
+                                 @onclick="@(() => Lightbox.Open(GetImageSrc(attachment), attachment.OriginalFileName))"
+                                 @oncontextmenu="@(async () => await OpenImageContextMenu(attachment))"
+                                 @oncontextmenu:preventDefault="true">
                                 <img src="@GetImageSrc(attachment)"
                                      alt="@attachment.OriginalFileName"
                                      style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover;"/>
@@ -205,6 +207,19 @@
     </div>
 </div>
 
+<MudMenu @ref="_imageContextMenu"
+         ActivationEvent="@MouseEvent.RightClick"
+         PositionAtCursor="true"
+         Dense="true"
+         Style="position: absolute; visibility: hidden; width: 0; height: 0;">
+    <MudMenuItem OnClick="SaveContextImage" Icon="@Icons.Material.Filled.Download">
+        @Strings.Common_Save
+    </MudMenuItem>
+    <MudMenuItem OnClick="CopyContextImage" Icon="@Icons.Material.Filled.ContentCopy">
+        @Strings.Common_Copy
+    </MudMenuItem>
+</MudMenu>
+
 @code {
     [Parameter][EditorRequired] public ChatMessage Message { get; set; } = null!;
 
@@ -217,6 +232,10 @@
     private readonly Dictionary<string, string> _imageCache = new();
     private readonly HashSet<int> _thinkingExpanded = [];
     private int _lastThinkingGroupCount;
+
+    private MudMenu? _imageContextMenu;
+    private string _contextImageSrc = string.Empty;
+    private string _contextImageFilename = string.Empty;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -298,6 +317,24 @@
 
         var content = File.ReadAllText(filePath);
         ChatState.Tabs.OpenFileContentTab(filePath, content);
+    }
+
+    private async Task OpenImageContextMenu(FileAttachment attachment)
+    {
+        _contextImageSrc = GetImageSrc(attachment);
+        _contextImageFilename = attachment.OriginalFileName;
+        if (_imageContextMenu != null)
+            await _imageContextMenu.OpenMenuAsync(EventArgs.Empty);
+    }
+
+    private async Task SaveContextImage()
+    {
+        await JS.InvokeVoidAsync("saveImage", _contextImageSrc, _contextImageFilename);
+    }
+
+    private async Task CopyContextImage()
+    {
+        await JS.InvokeAsync<bool>("copyImageToClipboard", _contextImageSrc);
     }
 
     private string GetImageSrc(FileAttachment attachment)

@@ -1,4 +1,5 @@
 @inject LightboxService Lightbox
+@inject IJSRuntime JS
 @implements IDisposable
 
 @if (Lightbox.IsOpen)
@@ -10,7 +11,10 @@
 
         <img src="@Lightbox.ImageSrc" alt="@Lightbox.AltText"
              class="image-lightbox-img"
-             @onclick:stopPropagation="true"/>
+             @onclick:stopPropagation="true"
+             @oncontextmenu="OpenContextMenu"
+             @oncontextmenu:preventDefault="true"
+             @oncontextmenu:stopPropagation="true"/>
 
         @if (!string.IsNullOrEmpty(Lightbox.AltText))
         {
@@ -19,7 +23,22 @@
     </div>
 }
 
+<MudMenu @ref="_contextMenu"
+         ActivationEvent="@MouseEvent.RightClick"
+         PositionAtCursor="true"
+         Dense="true"
+         Style="position: absolute; visibility: hidden; width: 0; height: 0;">
+    <MudMenuItem OnClick="SaveImage" Icon="@Icons.Material.Filled.Download">
+        @Strings.Common_Save
+    </MudMenuItem>
+    <MudMenuItem OnClick="CopyImage" Icon="@Icons.Material.Filled.ContentCopy">
+        @Strings.Common_Copy
+    </MudMenuItem>
+</MudMenu>
+
 @code {
+
+    private MudMenu? _contextMenu;
 
     protected override void OnInitialized()
     {
@@ -40,6 +59,23 @@
     {
         if (e.Key == "Escape")
             Lightbox.Close();
+    }
+
+    private async Task OpenContextMenu()
+    {
+        if (_contextMenu != null)
+            await _contextMenu.OpenMenuAsync(EventArgs.Empty);
+    }
+
+    private async Task SaveImage()
+    {
+        var filename = string.IsNullOrEmpty(Lightbox.AltText) ? "image" : Lightbox.AltText;
+        await JS.InvokeVoidAsync("saveImage", Lightbox.ImageSrc, filename);
+    }
+
+    private async Task CopyImage()
+    {
+        await JS.InvokeAsync<bool>("copyImageToClipboard", Lightbox.ImageSrc);
     }
 
     public void Dispose()

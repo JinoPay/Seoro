@@ -91,6 +91,27 @@
             if (el) el.scrollTop = el.scrollHeight;
         };
 
+        window.saveImage = function(src, filename) {
+            var a = document.createElement('a');
+            a.href = src;
+            a.download = filename || 'image';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        window.copyImageToClipboard = async function(src) {
+            try {
+                var res = await fetch(src);
+                var blob = await res.blob();
+                await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+                return true;
+            } catch (e) {
+                console.error('[Seoro] copyImageToClipboard failed:', e);
+                return false;
+            }
+        };
+
         // Scroll position watcher — reports whether user is near bottom
         window.registerScrollWatcher = function(elementId, dotNetRef) {
             var el = document.getElementById(elementId);
