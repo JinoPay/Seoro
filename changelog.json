@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.17.29",
+    "date": "2026-05-14",
+    "changes": [
+      { "type": "feat", "description": "분할(side-by-side) Diff 뷰 추가 — 헤더 토글로 unified ↔ split 전환, 두 pane 가로·세로 스크롤 동기화, 라인 번호 sticky 고정, 변경된 라인 단어 단위 하이라이트" }
+    ]
+  },
+  {
     "version": "1.17.28",
     "date": "2026-04-27",
     "changes": [
