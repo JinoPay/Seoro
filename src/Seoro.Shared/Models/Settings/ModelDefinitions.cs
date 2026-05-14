@@ -52,8 +52,6 @@ public record ModelConfig
 public static class ModelDefinitions
 {
     private static ModelConfig _config = CreateDefaultConfig();
-    private static bool _isCliV47 = false;
-    private static bool _customConfigLoaded = false;
 
     public static ModelInfo Default => All.FirstOrDefault(m => m.Id == _config.DefaultModelId) ?? All[0];
     public static ModelInfo DefaultCodex => All.FirstOrDefault(m => m.Provider == "codex") ?? Default;
@@ -74,52 +72,11 @@ public static class ModelDefinitions
         return normalized is "opus" or "opus[1m]" or "opusplan";
     }
 
-    public static bool SupportsXHighEffort(string modelId)
-    {
-        return _isCliV47 && SupportsMaxEffort(modelId);
-    }
+    public static bool SupportsXHighEffort(string modelId) => SupportsMaxEffort(modelId);
 
     public static string GetMaxEffortLevel(string modelId)
     {
-        var normalized = NormalizeModelId(modelId);
-        if (normalized is not ("opus" or "opus[1m]" or "opusplan"))
-            return "high";
-        return _isCliV47 ? "xhigh" : "max";
-    }
-
-    /// <summary>
-    ///     CLI 버전에 따라 모델 표시명과 컨텍스트를 갱신합니다.
-    ///     CLI >= 2.1.111이면 Opus 4.7 / Sonnet 4.6으로 업데이트합니다.
-    /// </summary>
-    public static void ApplyCliVersion(string cliVersion)
-    {
-        // models.json 커스텀 파일이 로드된 경우 버전 분기 적용 안 함
-        if (_customConfigLoaded) return;
-
-        _isCliV47 = !VersionComparer.IsOutdated(cliVersion, SeoroConstants.Claude47MinVersion);
-        if (!_isCliV47) return;
-
-        var updated = _config.Models.Select(m => m.Id switch
-        {
-            "opus" => m with
-            {
-                DisplayName = "Claude Opus 4.7",
-                ContextWindow = 1_000_000,
-                Description = "최고 지능 · 128K 출력 · 1M 컨텍스트 (Opus 4.7)"
-            },
-            "sonnet" => m with { DisplayName = "Claude Sonnet 4.6" },
-            "opus[1m]" => m with
-            {
-                DisplayName = "Opus 4.7 (1M)",
-                Pricing = new ModelPricing(5.0m, 25.0m, 6.25m, 0.50m),
-                Description = "Opus 4.7 — 1M 컨텍스트, 표준 가격 (할증 없음)"
-            },
-            "sonnet[1m]" => m with { DisplayName = "Sonnet 4.6 (Extended 1M)" },
-            "opusplan" => m with { Description = "Opus 4.7이 플래닝, Sonnet 4.6이 실행" },
-            _ => m
-        }).ToArray();
-
-        _config = _config with { Models = updated };
+        return SupportsMaxEffort(modelId) ? "xhigh" : "high";
     }
 
     public static ModelPricing? GetPricing(string modelId)
@@ -172,7 +129,6 @@ public static class ModelDefinitions
             if (config?.Models is { Length: > 0 })
             {
                 _config = config;
-                _customConfigLoaded = true;
             }
         }
         catch
@@ -242,16 +198,16 @@ public static class ModelDefinitions
             Models =
             [
                 // ── 표준 ──
-                new ModelInfo("opus", "Claude Opus 4.6")
+                new ModelInfo("opus", "Claude Opus 4.7")
                 {
                     Keywords = ["opus"],
                     Pricing = new ModelPricing(5.0m, 25.0m, 6.25m, 0.50m),
-                    ContextWindow = 200_000,
-                    Description = "최고 지능, 적응형 사고",
+                    ContextWindow = 1_000_000,
+                    Description = "최고 지능 · 128K 출력 · 1M 컨텍스트 (Opus 4.7)",
                     SpeedTier = 1,
                     Category = "standard"
                 },
-                new ModelInfo("sonnet", "Claude Sonnet 4.5")
+                new ModelInfo("sonnet", "Claude Sonnet 4.6")
                 {
                     Keywords = ["sonnet"],
                     Pricing = new ModelPricing(3.0m, 15.0m, 3.75m, 0.30m),
@@ -273,18 +229,16 @@ public static class ModelDefinitions
                 // Anthropic 가격 책정 문서의 확장 가격:
                 // 입력 >200K: 2배 표준. 출력 >200K: 1.5배 표준.
                 // 캐시 배수 (1.25배 쓰기, 0.1배 읽기)는 확장 기본 위에 적용.
-                new ModelInfo("opus[1m]", "Opus (Extended 1M)")
+                new ModelInfo("opus[1m]", "Opus 4.7 (1M)")
                 {
                     Keywords = ["opus[1m]"],
-                    Pricing = new ModelPricing(5.0m, 25.0m, 6.25m, 0.50m,
-                        ExtendedInput: 10.0m, ExtendedOutput: 37.5m,
-                        ExtendedCacheWrite: 12.5m, ExtendedCacheRead: 1.0m),
+                    Pricing = new ModelPricing(5.0m, 25.0m, 6.25m, 0.50m),
                     ContextWindow = 1_000_000,
-                    Description = "Opus + 1M 컨텍스트 윈도우",
+                    Description = "Opus 4.7 — 1M 컨텍스트, 표준 가격 (할증 없음)",
                     SpeedTier = 1,
                     Category = "extended"
                 },
-                new ModelInfo("sonnet[1m]", "Sonnet (Extended 1M)")
+                new ModelInfo("sonnet[1m]", "Sonnet 4.6 (Extended 1M)")
                 {
                     Keywords = ["sonnet[1m]"],
                     Pricing = new ModelPricing(3.0m, 15.0m, 3.75m, 0.30m,
@@ -299,7 +253,7 @@ public static class ModelDefinitions
                 new ModelInfo("opusplan", "Opus Plan")
                 {
                     Keywords = ["opusplan"],
-                    Description = "Opus가 플래닝, Sonnet이 실행",
+                    Description = "Opus 4.7이 플래닝, Sonnet 4.6이 실행",
                     SpeedTier = 1,
                     IsAlias = true,
                     Category = "hybrid"

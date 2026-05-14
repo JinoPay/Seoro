@@ -28,6 +28,9 @@ public class McpServer
     public string Transport { get; set; } = "stdio"; // "stdio" or "sse"
     public string? Command { get; set; }
     public string? Url { get; set; }
+
+    // Claude CLI 2.1.121+: true이면 도구가 ToolSearch 지연 없이 항상 로드됩니다.
+    public bool AlwaysLoad { get; set; }
 }
 
 public enum McpConnectionStatus

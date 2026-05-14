@@ -8,7 +8,7 @@ public class ClaudeArgumentBuilderTests
 {
     private static CliCapabilities DefaultCaps(bool verbose = false) => new()
     {
-        Version = "1.0.0",
+        Version = SeoroConstants.RequiredClaudeVersion,
         SupportsVerbose = verbose
     };
 

@@ -131,6 +131,9 @@ public class ClaudeMcpServerConfig
 
     // sse fields
     public string? Url { get; set; }
+
+    // Claude CLI 2.1.121+: true이면 도구가 ToolSearch 지연 없이 항상 로드됩니다.
+    public bool? AlwaysLoad { get; set; }
 }
 
 /// <summary>

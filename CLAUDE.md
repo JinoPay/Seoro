@@ -12,7 +12,7 @@
 - **Test**: `dotnet test`
 - **Auto-update**: Velopack v0.0.1298 (`vpk` tool)
 - **CI/CD**: GitHub Actions (`release.yml`) - triggered on `v*` tags
-- **Required CLI**: Claude CLI >= 2.1.81
+- **Required CLI**: Claude CLI >= 2.1.128
 - **Required Runtime**: Node.js 20 (CI/CodeMirror 빌드)
 - **Codebase**: ~55,300 lines (.cs, .razor, .css, .js)
 - **Latest Version**: 1.17.19 (2026-04-14)
@@ -238,7 +238,7 @@ tests/
 - `BranchPrefix`: `seoro/`
 - `DefaultEffortLevel`: `auto`
 - `PasteAsFileThreshold`: 500 (붙여넣기 자동 파일 변환 기준)
-- `RequiredClaudeVersion`: `2.1.81`
+- `RequiredClaudeVersion`: `2.1.128`
 - `ShellCacheTtl`: 10분
 - `WhichTimeout`: 5초
 
