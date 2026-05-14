@@ -340,7 +340,11 @@ public class ChatState : IChatState
         Tabs.Reset(session?.Title);
 
         if (session != null)
+        {
             Streaming.ClearCompleted(session.Id);
+            RightPanel = RightPanelMode.Explorer;
+            _eventBus.Publish(new RightPanelChangedEvent(RightPanel));
+        }
 
         _eventBus.Publish(new SessionChangedEvent(old, session));
         NotifyStateChanged();

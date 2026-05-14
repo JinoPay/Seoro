@@ -1,0 +1,37 @@
+@inject IChatState ChatState
+@implements IDisposable
+
+<div class="right-panel-bottom-bar">
+    <button type="button"
+            class="panel-toggle-btn @(ChatState.RightPanel == RightPanelMode.Explorer ? "active" : "")"
+            @onclick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Explorer))"
+            title="Explorer">
+        <MudIcon Icon="@Icons.Material.Outlined.FolderOpen" Style="width: 16px; height: 16px;"/>
+    </button>
+    <button type="button"
+            class="panel-toggle-btn @(ChatState.RightPanel == RightPanelMode.Git ? "active" : "")"
+            @onclick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Git))"
+            title="Git">
+        <MudIcon Icon="@Icons.Material.Outlined.CallSplit" Style="width: 16px; height: 16px;"/>
+    </button>
+    <button type="button"
+            class="panel-toggle-btn @(ChatState.RightPanel == RightPanelMode.Terminal ? "active" : "")"
+            @onclick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Terminal))"
+            title="Terminal">
+        <MudIcon Icon="@Icons.Material.Outlined.Terminal" Style="width: 16px; height: 16px;"/>
+    </button>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ChatState.OnChange += HandleStateChanged;
+    }
+
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= HandleStateChanged;
+    }
+}

@@ -74,6 +74,7 @@
 
     private void HandleToolbarClick()
     {
+        ChatState.SetRightPanel(RightPanelMode.Git);
         EventBus.Publish(new MergeTabRequestedEvent());
     }
 

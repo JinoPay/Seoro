@@ -1,0 +1,138 @@
+@inject IChatState ChatState
+@inject IChatEventBus EventBus
+@inject IWorkspaceService WorkspaceService
+@implements IDisposable
+
+@*
+    GitPanel — 오른쪽 패널의 "Git" 모드 콘텐츠.
+    Changes + Merge sub-tab을 통합. GitHub 원격이 아닐 때는 sub-tab UI를 숨기고 SidebarChanges만 표시.
+*@
+
+<div class="git-panel">
+    @if (IsMergeSubTabVisible())
+    {
+        <div class="git-panel-subtabs">
+            <span class="git-panel-subtab @(_activeSubTab == SubTab.Changes ? "active" : "")"
+                  @onclick="@(() => _activeSubTab = SubTab.Changes)">
+                Changes
+            </span>
+            <span class="git-panel-subtab @(_activeSubTab == SubTab.Merge ? "active" : "")"
+                  @onclick="@(() => _activeSubTab = SubTab.Merge)">
+                Merge
+            </span>
+        </div>
+    }
+
+    <div class="git-panel-content">
+        <div style="@(IsChangesVisible()
+                        ? "flex:1;min-height:0;display:flex;flex-direction:column"
+                        : "display:none;height:0;overflow:hidden")">
+            <SidebarChanges OnChangesDetected="HandleChangesDetected"/>
+        </div>
+
+        @if (IsMergeSubTabVisible())
+        {
+            <div style="@(_activeSubTab == SubTab.Merge
+                            ? "flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto"
+                            : "display:none;height:0;overflow:hidden")">
+                <MergePanel/>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private SubTab _activeSubTab = SubTab.Changes;
+    private bool _hasAutoSwitched;
+    private string? _lastSessionId;
+    private IDisposable? _mergeTabSub;
+    private IDisposable? _conflictSub;
+    private IDisposable? _changesTabSub;
+
+    private bool IsMergeSubTabVisible()
+    {
+        var workspace = ChatState.CurrentWorkspace;
+        if (workspace == null) return false;
+        return WorkspaceService.GetRemoteInfo(workspace.Id).Mode == RemoteMode.GitHub;
+    }
+
+    private bool IsChangesVisible()
+    {
+        // GitHub 원격이 아니면 sub-tab UI가 숨겨지고 SidebarChanges만 단독 노출.
+        return !IsMergeSubTabVisible() || _activeSubTab == SubTab.Changes;
+    }
+
+    protected override void OnInitialized()
+    {
+        _lastSessionId = ChatState.CurrentSession?.Id;
+        ChatState.OnChange += HandleStateChanged;
+
+        _mergeTabSub = EventBus.Subscribe<MergeTabRequestedEvent>(_ =>
+            InvokeAsync(() =>
+            {
+                if (!IsMergeSubTabVisible()) return;
+                _activeSubTab = SubTab.Merge;
+                StateHasChanged();
+            }));
+
+        _conflictSub = EventBus.Subscribe<ConflictDetectedEvent>(e =>
+            InvokeAsync(() =>
+            {
+                if (e.Entered && IsMergeSubTabVisible())
+                {
+                    _activeSubTab = SubTab.Merge;
+                    StateHasChanged();
+                }
+            }));
+
+        _changesTabSub = EventBus.Subscribe<ChangesTabRequestedEvent>(_ =>
+            InvokeAsync(() =>
+            {
+                _activeSubTab = SubTab.Changes;
+                StateHasChanged();
+            }));
+    }
+
+    private void HandleStateChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            var sessionId = ChatState.CurrentSession?.Id;
+            if (sessionId != _lastSessionId)
+            {
+                _lastSessionId = sessionId;
+                _hasAutoSwitched = false;
+                _activeSubTab = SubTab.Changes;
+            }
+
+            if (_activeSubTab == SubTab.Merge && !IsMergeSubTabVisible())
+                _activeSubTab = SubTab.Changes;
+
+            StateHasChanged();
+        });
+    }
+
+    private void HandleChangesDetected()
+    {
+        if (_activeSubTab != SubTab.Changes && _activeSubTab != SubTab.Merge && !_hasAutoSwitched)
+        {
+            _hasAutoSwitched = true;
+            _activeSubTab = SubTab.Changes;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= HandleStateChanged;
+        _mergeTabSub?.Dispose();
+        _conflictSub?.Dispose();
+        _changesTabSub?.Dispose();
+    }
+
+    private enum SubTab
+    {
+        Changes,
+        Merge
+    }
+}

@@ -1,166 +1,66 @@
 @inject IChatState ChatState
-@inject IJSRuntime JS
 @inject IChatEventBus EventBus
-@inject IWorkspaceService WorkspaceService
 @implements IAsyncDisposable
 
-<div class="embedded-diff-panel">
-    @* === 상단 섹션: Explorer / Changes / Merge === *@
-    <div class="right-panel-top" style="height: @(_topPanelStyle);">
-        <div class="embedded-diff-toolbar">
-            <div class="embedded-diff-tabs">
-                <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Explorer ? "active" : "")"
-                      @onclick="@(() => _activeTab = DiffPanelTab.Explorer)">
-                    Explorer
-                </span>
-                <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Changes ? "active" : "")"
-                      @onclick="@(() => _activeTab = DiffPanelTab.Changes)">
-                    Changes
-                </span>
-                @if (IsMergeTabVisible())
-                {
-                    <span class="embedded-diff-tab @(_activeTab == DiffPanelTab.Merge ? "active" : "")"
-                          @onclick="@(() => _activeTab = DiffPanelTab.Merge)">
-                        Merge
-                    </span>
-                }
-            </div>
+@*
+    EmbeddedDiffPanel — 오른쪽 패널의 호스트.
+    상단 콘텐츠 영역 + 하단 RightPanelBottomBar.
+    ChatState.RightPanel 모드에 따라 한 번에 하나의 패널만 표시(display:none으로 마운트 유지).
+*@
+
+<div class="right-panel-host">
+    <div class="right-panel-content">
+        <div style="@(ChatState.RightPanel == RightPanelMode.Explorer
+                        ? "flex:1;min-height:0;display:flex;flex-direction:column"
+                        : "display:none;height:0;overflow:hidden")">
+            <SidebarExplorer/>
         </div>
 
-        <div class="embedded-diff-content">
-            <div style="@(_activeTab == DiffPanelTab.Explorer
-                            ? "flex:1;min-height:0;display:flex;flex-direction:column"
-                            : "display:none;height:0;overflow:hidden")">
-                <SidebarExplorer/>
-            </div>
-
-            <div style="@(_activeTab == DiffPanelTab.Changes
-                            ? "flex:1;min-height:0;display:flex;flex-direction:column"
-                            : "display:none;height:0;overflow:hidden")">
-                <SidebarChanges OnChangesDetected="HandleChangesDetected"/>
-            </div>
-
-            @if (IsMergeTabVisible())
-            {
-                <div style="@(_activeTab == DiffPanelTab.Merge
-                                ? "flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto"
-                                : "display:none;height:0;overflow:hidden")">
-                    <MergePanel/>
-                </div>
-            }
+        <div style="@(ChatState.RightPanel == RightPanelMode.Git
+                        ? "flex:1;min-height:0;display:flex;flex-direction:column"
+                        : "display:none;height:0;overflow:hidden")">
+            <GitPanel/>
         </div>
+
+        <div style="@(ChatState.RightPanel == RightPanelMode.Terminal
+                        ? "flex:1;min-height:0;display:flex;flex-direction:column"
+                        : "display:none;height:0;overflow:hidden")">
+            <TerminalPanel @ref="_terminalPanel"/>
+        </div>
+
+        @if (ChatState.RightPanel == RightPanelMode.None)
+        {
+            <div class="right-panel-empty"></div>
+        }
     </div>
 
-    @* === 수직 리사이저 === *@
-    <VerticalPanelResizer CurrentSize="_topPanelHeight ?? 0" MinSize="120" MaxSize="800"
-                          OnResize="HandleVerticalResize"/>
-
-    @* === 하단 섹션: Terminal === *@
-    <div class="right-panel-bottom">
-        <TerminalPanel @ref="_terminalPanel"/>
-    </div>
+    <RightPanelBottomBar/>
 </div>
 
 @code {
-    private DiffPanelTab _activeTab = DiffPanelTab.Explorer;
-    private string? _lastSessionId;
-    private bool _hasAutoSwitched;
-    private int? _topPanelHeight;
-    private string _topPanelStyle = "calc(50% - 3px)";
     private TerminalPanel? _terminalPanel;
-    private IDisposable? _mergeTabSub;
     private IDisposable? _conflictSub;
-    private IDisposable? _changesTabSub;
-
-    private bool IsMergeTabVisible()
-    {
-        var workspace = ChatState.CurrentWorkspace;
-        if (workspace == null) return false;
-        return WorkspaceService.GetRemoteInfo(workspace.Id).Mode == RemoteMode.GitHub;
-    }
 
     protected override void OnInitialized()
     {
-        _lastSessionId = ChatState.CurrentSession?.Id;
         ChatState.OnChange += HandleStateChanged;
 
-        // 슬림 MergeToolbar 클릭 또는 외부 요청 시 Merge 탭으로 전환 (비-GitHub 원격은 무시)
-        _mergeTabSub = EventBus.Subscribe<MergeTabRequestedEvent>(_ =>
-            InvokeAsync(() =>
-            {
-                if (!IsMergeTabVisible()) return;
-                _activeTab = DiffPanelTab.Merge;
-                StateHasChanged();
-            }));
-
-        // 충돌 진입 시 자동으로 Merge 탭 전환 (충돌 해결 버튼을 즉시 노출)
+        // 충돌 진입 시 자동으로 Git 모드로 전환 (GitPanel 내부에서 Merge sub-tab으로 추가 전환).
         _conflictSub = EventBus.Subscribe<ConflictDetectedEvent>(e =>
             InvokeAsync(() =>
             {
-                if (e.Entered) { _activeTab = DiffPanelTab.Merge; StateHasChanged(); }
+                if (e.Entered && ChatState.RightPanel != RightPanelMode.Git)
+                    ChatState.SetRightPanel(RightPanelMode.Git);
             }));
-
-        // MergePanel diff stats 클릭 시 Changes 탭으로 전환
-        _changesTabSub = EventBus.Subscribe<ChangesTabRequestedEvent>(_ =>
-            InvokeAsync(() => { _activeTab = DiffPanelTab.Changes; StateHasChanged(); }));
     }
 
-    private void HandleStateChanged()
-    {
-        _ = InvokeAsync(() =>
-        {
-            var sessionId = ChatState.CurrentSession?.Id;
-            if (sessionId != _lastSessionId)
-            {
-                _lastSessionId = sessionId;
-                _hasAutoSwitched = false;
-                _activeTab = DiffPanelTab.Explorer;
-            }
-
-            // 워크스페이스 변경으로 Merge 탭이 숨겨진 경우 폴백
-            if (_activeTab == DiffPanelTab.Merge && !IsMergeTabVisible())
-                _activeTab = DiffPanelTab.Explorer;
-
-            StateHasChanged();
-        });
-    }
-
-    private async Task HandleVerticalResize(int newHeight)
-    {
-        _topPanelHeight = newHeight;
-        _topPanelStyle = $"{newHeight}px";
-
-        // 리사이즈 후 xterm.js 다시 맞춤
-        if (_terminalPanel != null)
-            await _terminalPanel.FitAsync();
-    }
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
 
     public async ValueTask DisposeAsync()
     {
         ChatState.OnChange -= HandleStateChanged;
-        _mergeTabSub?.Dispose();
         _conflictSub?.Dispose();
-        _changesTabSub?.Dispose();
-
         if (_terminalPanel != null)
             await _terminalPanel.DisposeAsync();
     }
-
-    private void HandleChangesDetected()
-    {
-        if (_activeTab != DiffPanelTab.Changes && _activeTab != DiffPanelTab.Merge && !_hasAutoSwitched)
-        {
-            _hasAutoSwitched = true;
-            _activeTab = DiffPanelTab.Changes;
-            StateHasChanged();
-        }
-    }
-
-    private enum DiffPanelTab
-    {
-        Changes,
-        Explorer,
-        Merge
-    }
-
 }
