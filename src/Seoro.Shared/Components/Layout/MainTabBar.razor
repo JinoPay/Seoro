@@ -1,4 +1,5 @@
 @inject IChatState ChatState
+@inject IDialogService DialogService
 @implements IDisposable
 
 <div class="main-tab-bar">
@@ -10,9 +11,13 @@
              @oncontextmenu:preventDefault="true">
             <MudIcon Icon="@GetTabIcon(tab)" Size="Size.Small" Style="width: 14px; height: 14px;"/>
             <span class="main-tab-title">@(tab.DisambiguatedTitle ?? tab.Title)</span>
+            @if (tab.IsDirty)
+            {
+                <span class="main-tab-dirty" title="저장되지 않은 변경 사항">•</span>
+            }
             @if (tab.Type != MainTabType.Chat)
             {
-                <button class="main-tab-close" @onclick="@(() => ChatState.Tabs.CloseTab(tab.Id))"
+                <button class="main-tab-close" @onclick="@(() => HandleCloseAsync(tab))"
                         @onclick:stopPropagation="true">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" Style="width: 12px; height: 12px;"/>
                 </button>
@@ -71,27 +76,55 @@
             await _contextMenu.OpenMenuAsync(EventArgs.Empty);
     }
 
-    private void HandleCloseTab()
+    private async Task HandleCloseAsync(MainTab tab)
     {
-        if (_contextTab != null)
-            ChatState.Tabs.CloseTab(_contextTab.Id);
+        if (tab.IsDirty && !await ConfirmCloseDirtyAsync(1)) return;
+        ChatState.Tabs.CloseTab(tab.Id);
     }
 
-    private void HandleCloseOtherTabs()
+    private async Task HandleCloseTab()
     {
-        if (_contextTab != null)
-            ChatState.Tabs.CloseOtherTabs(_contextTab.Id);
+        if (_contextTab == null) return;
+        if (_contextTab.IsDirty && !await ConfirmCloseDirtyAsync(1)) return;
+        ChatState.Tabs.CloseTab(_contextTab.Id);
     }
 
-    private void HandleCloseTabsToRight()
+    private async Task HandleCloseOtherTabs()
     {
-        if (_contextTab != null)
-            ChatState.Tabs.CloseTabsToTheRight(_contextTab.Id);
+        if (_contextTab == null) return;
+        var dirtyCount = ChatState.Tabs.OpenTabs.Count(t =>
+            t.Type != MainTabType.Chat && t.Id != _contextTab.Id && t.IsDirty);
+        if (dirtyCount > 0 && !await ConfirmCloseDirtyAsync(dirtyCount)) return;
+        ChatState.Tabs.CloseOtherTabs(_contextTab.Id);
     }
 
-    private void HandleCloseAllTabs()
+    private async Task HandleCloseTabsToRight()
     {
+        if (_contextTab == null) return;
+        var idx = ChatState.Tabs.OpenTabs.IndexOf(_contextTab);
+        if (idx < 0) return;
+        var dirtyCount = ChatState.Tabs.OpenTabs.Skip(idx + 1).Count(t => t.IsDirty);
+        if (dirtyCount > 0 && !await ConfirmCloseDirtyAsync(dirtyCount)) return;
+        ChatState.Tabs.CloseTabsToTheRight(_contextTab.Id);
+    }
+
+    private async Task HandleCloseAllTabs()
+    {
+        var dirtyCount = ChatState.Tabs.OpenTabs.Count(t => t.Type != MainTabType.Chat && t.IsDirty);
+        if (dirtyCount > 0 && !await ConfirmCloseDirtyAsync(dirtyCount)) return;
         ChatState.Tabs.CloseAllFileTabs();
+    }
+
+    private async Task<bool> ConfirmCloseDirtyAsync(int dirtyCount)
+    {
+        var msg = dirtyCount == 1
+            ? "저장되지 않은 변경 사항이 있습니다. 그래도 닫을까요?"
+            : $"저장되지 않은 변경이 {dirtyCount}개 있습니다. 그래도 닫을까요?";
+        var result = await DialogService.ShowMessageBoxAsync(
+            "변경 사항 버리기",
+            msg,
+            yesText: "그대로 닫기", cancelText: "취소");
+        return result == true;
     }
 
     private bool IsNoTabsToRight()

@@ -1,6 +1,7 @@
-import { EditorView, lineNumbers, drawSelection, highlightActiveLine, highlightSpecialChars } from '@codemirror/view';
+import { EditorView, lineNumbers, drawSelection, highlightActiveLine, highlightSpecialChars, keymap } from '@codemirror/view';
 import { EditorState, Compartment } from '@codemirror/state';
 import { syntaxHighlighting, LanguageSupport, Language } from '@codemirror/language';
+import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { classHighlighter, highlightTree } from '@lezer/highlight';
 
 // Language imports
@@ -112,6 +113,8 @@ function highlightToHtml(code: string, lang: string): string | null {
 
 const editorInstances = new Map<string, EditorView>();
 const themeCompartments = new Map<string, Compartment>();
+const dirtyFlags = new Map<string, boolean>();
+const dotNetRefs = new Map<string, any>();
 
 const baseThemeDark = EditorView.theme({
   '&': {
@@ -200,7 +203,7 @@ function getCurrentTheme() {
 
 // --- Window Functions ---
 
-(window as any).createCodeMirrorView = function (elementId: string, content: string, language: string, readOnly: boolean) {
+(window as any).createCodeMirrorView = function (elementId: string, content: string, language: string, readOnly: boolean, dotNetRef?: any) {
   // Destroy existing instance if any
   const existing = editorInstances.get(elementId);
   if (existing) {
@@ -217,8 +220,11 @@ function getCurrentTheme() {
 
   const themeCompartment = new Compartment();
   themeCompartments.set(elementId, themeCompartment);
+  dirtyFlags.set(elementId, false);
+  if (dotNetRef) dotNetRefs.set(elementId, dotNetRef);
+  else dotNetRefs.delete(elementId);
 
-  const extensions = [
+  const extensions: any[] = [
     lineNumbers(),
     highlightSpecialChars(),
     drawSelection(),
@@ -228,6 +234,30 @@ function getCurrentTheme() {
     EditorState.readOnly.of(readOnly),
     EditorView.lineWrapping,
   ];
+
+  if (!readOnly) {
+    extensions.push(history());
+    extensions.push(keymap.of([
+      {
+        key: 'Mod-s',
+        preventDefault: true,
+        run: () => {
+          const ref = dotNetRefs.get(elementId);
+          if (ref) ref.invokeMethodAsync('OnSaveRequested');
+          return true;
+        }
+      },
+      ...defaultKeymap,
+      ...historyKeymap,
+    ]));
+    extensions.push(EditorView.updateListener.of((u) => {
+      if (!u.docChanged) return;
+      if (dirtyFlags.get(elementId)) return;
+      dirtyFlags.set(elementId, true);
+      const ref = dotNetRefs.get(elementId);
+      if (ref) ref.invokeMethodAsync('OnFirstDirty');
+    }));
+  }
 
   const langSupport = getLanguageSupport(language);
   if (langSupport) {
@@ -247,12 +277,33 @@ function getCurrentTheme() {
   editorInstances.set(elementId, view);
 };
 
+(window as any).getEditorContent = function (elementId: string): string {
+  const view = editorInstances.get(elementId);
+  if (!view) return '';
+  return view.state.doc.toString();
+};
+
+(window as any).setEditorContent = function (elementId: string, content: string) {
+  const view = editorInstances.get(elementId);
+  if (!view) return;
+  view.dispatch({
+    changes: { from: 0, to: view.state.doc.length, insert: content }
+  });
+  dirtyFlags.set(elementId, false);
+};
+
+(window as any).clearDirty = function (elementId: string) {
+  dirtyFlags.set(elementId, false);
+};
+
 (window as any).destroyCodeMirrorView = function (elementId: string) {
   const view = editorInstances.get(elementId);
   if (view) {
     view.destroy();
     editorInstances.delete(elementId);
     themeCompartments.delete(elementId);
+    dirtyFlags.delete(elementId);
+    dotNetRefs.delete(elementId);
   }
 };
 

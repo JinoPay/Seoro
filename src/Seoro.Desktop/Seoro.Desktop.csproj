@@ -15,9 +15,10 @@
     <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- Build CodeMirror interop bundle if not present -->
+  <!-- Build CodeMirror interop bundle when source is newer than bundle -->
   <Target Name="BuildCodemirror" BeforeTargets="Build"
-          Condition="!Exists('wwwroot/lib/codemirror/codemirror-interop.js')">
+          Inputs="wwwroot/js/codemirror-interop.ts;wwwroot/js/package.json;wwwroot/js/esbuild.mjs"
+          Outputs="wwwroot/lib/codemirror/codemirror-interop.js">
     <Exec Command="npm ci &amp;&amp; node esbuild.mjs" WorkingDirectory="wwwroot/js" />
   </Target>
 

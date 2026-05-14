@@ -114,4 +114,15 @@ public interface IGitService
 
     Task<string> GetNameStatusAsync(string workingDir, string baseBranch, CancellationToken ct = default);
     Task<string> ReadFileAsync(string workingDir, string relativePath, CancellationToken ct = default);
+
+    /// <summary>
+    ///     워크스페이스 경계 검증 후 파일을 원자적으로 쓴다 (<see cref="AtomicFileWriter"/> 사용).
+    ///     <paramref name="relativePath"/>가 <paramref name="workingDir"/> 밖을 가리키면 <see cref="UnauthorizedAccessException"/>.
+    /// </summary>
+    Task WriteFileAsync(string workingDir, string relativePath, string content, CancellationToken ct = default);
+
+    /// <summary>
+    ///     워크스페이스 경계 검증 후 파일의 마지막 쓰기 시각을 UTC로 반환한다. 파일이 없으면 null.
+    /// </summary>
+    Task<DateTime?> GetFileMtimeUtcAsync(string workingDir, string relativePath);
 }

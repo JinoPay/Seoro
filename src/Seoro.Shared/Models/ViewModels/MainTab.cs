@@ -19,4 +19,10 @@ public class MainTab
     public string? DisambiguatedTitle { get; set; }
     public string? FileContent { get; set; }
     public string? FilePath { get; init; }
+
+    // --- 편집 추적 (FileContent 탭 전용) ---
+    public string? OriginalContent { get; set; }
+    public bool IsDirty { get; set; }
+    public DateTime? LastSavedAt { get; set; }
+    public DateTime? LastLoadedMtimeUtc { get; set; }
 }

@@ -1,25 +1,27 @@
 @using Markdig
 @using Seoro.Shared.Helpers
+@using Seoro.Shared.Services.Git
+@using Seoro.Shared.Services.Chat
+@using Timer = System.Timers.Timer
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject IGitService GitService
+@inject IChatState ChatState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <div class="filediff-view">
     <div class="filediff-header">
         <MudIcon Icon="@Icons.Material.Filled.InsertDriveFile" Size="Size.Small"
                  Style="width: 16px; height: 16px; opacity: 0.5;"/>
         <span class="filediff-path">@FilePath</span>
+        @if (_readOnlyOversize)
+        {
+            <span class="filediff-badge" title="파일이 너무 커서 읽기 전용입니다">읽기 전용 (큰 파일)</span>
+        }
     </div>
 
-    @if (string.IsNullOrEmpty(Content))
-    {
-        <div class="filecontent-body">
-            <div class="filediff-empty">
-                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Style="opacity: 0.3;"/>
-                <span>빈 파일</span>
-            </div>
-        </div>
-    }
-    else if (_viewMode == FileViewMode.Markdown)
+    @if (_viewMode == FileViewMode.Markdown)
     {
         <div class="filecontent-markdown">
             <div id="@_elementId" class="filecontent-markdown-inner markdown-body">
@@ -27,26 +29,9 @@
             </div>
         </div>
     }
-    else if (_viewMode == FileViewMode.Code)
-    {
-        <div id="@_elementId" class="cm-host"></div>
-    }
     else
     {
-        <div class="filecontent-body">
-            @{
-                var lines = Content.Split('\n');
-            }
-            @for (var i = 0; i < lines.Length; i++)
-            {
-                var lineNum = i + 1;
-                var line = lines[i];
-                <div class="filecontent-line">
-                    <span class="filecontent-linenum">@lineNum</span>
-                    <span class="filecontent-text">@line</span>
-                </div>
-            }
-        </div>
+        <div id="@_elementId" class="cm-host"></div>
     }
 </div>
 
@@ -55,33 +40,36 @@
 
     [Parameter][EditorRequired] public string Content { get; set; } = "";
 
+    [Parameter] public string? WorkingDir { get; set; }
+
     private enum FileViewMode
     {
         Code,
-        Markdown,
-        PlainText
+        Markdown
     }
 
     private FileViewMode _viewMode;
     private string _language = "";
     private string _elementId = "";
     private string _renderedHtml = "";
-    private bool _needsHighlight;
+    private bool _needsCreate;
+    private bool _readOnlyOversize;
     private string? _lastFilePath;
+    private DotNetObjectReference<FileContentView>? _selfRef;
+    private FileSystemWatcher? _watcher;
+    private Timer? _watchDebounce;
+    private readonly Lock _watcherLock = new();
+    private bool _saveInProgress;
+    private bool _conflictDialogOpen;
 
+    private string EffectiveWorkingDir => WorkingDir ?? ChatState.CurrentSession?.Git?.WorktreePath ?? "";
 
     protected override void OnParametersSet()
     {
         if (_lastFilePath == FilePath) return;
         _lastFilePath = FilePath;
 
-        // UI 멈춤을 피하기 위해 큰 파일은 일반 텍스트로 폴백합니다
-        if (Content.Length > 500_000)
-        {
-            _viewMode = FileViewMode.PlainText;
-            return;
-        }
-
+        _readOnlyOversize = Content.Length > 500_000;
         _viewMode = GetViewMode(FilePath);
         _language = GetLanguage(FilePath);
         _elementId = $"cm-{FilePath.GetHashCode():x8}";
@@ -91,41 +79,243 @@
             _renderedHtml = Markdown.ToHtml(Content, MarkdownHelper.TrustedPipeline);
         }
 
-        _needsHighlight = (_viewMode == FileViewMode.Code || _viewMode == FileViewMode.Markdown) && !string.IsNullOrEmpty(Content);
+        _needsCreate = true;
+        StartWatching();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_needsHighlight)
+        if (!_needsCreate) return;
+        _needsCreate = false;
+
+        try
         {
-            _needsHighlight = false;
+            if (_viewMode == FileViewMode.Markdown)
+            {
+                if (!string.IsNullOrEmpty(Content))
+                    await JS.InvokeVoidAsync("enhanceMarkdownCodeBlocks", _elementId, false);
+            }
+            else
+            {
+                _selfRef ??= DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync(
+                    "createCodeMirrorView",
+                    _elementId,
+                    Content,
+                    _language,
+                    _readOnlyOversize,
+                    _readOnlyOversize ? null : _selfRef);
+            }
+        }
+        catch
+        {
+            // JS interop이 처리 중에 실패할 수 있습니다
+        }
+    }
+
+    [JSInvokable]
+    public Task OnFirstDirty()
+    {
+        ChatState.Tabs.MarkDirty(FilePath);
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public async Task OnSaveRequested()
+    {
+        await SaveAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_saveInProgress || _readOnlyOversize || _viewMode == FileViewMode.Markdown) return;
+        var workingDir = EffectiveWorkingDir;
+        if (string.IsNullOrEmpty(workingDir))
+        {
+            Snackbar.Add("워크스페이스 경로를 확인할 수 없습니다.", Severity.Error);
+            return;
+        }
+
+        _saveInProgress = true;
+        try
+        {
+            var text = await JS.InvokeAsync<string>("getEditorContent", _elementId);
+
+            // mtime 충돌 검사
+            var diskMtime = await GitService.GetFileMtimeUtcAsync(workingDir, FilePath);
+            var tab = ChatState.Tabs.OpenTabs
+                .FirstOrDefault(t => t.FilePath == FilePath && t.Type == Models.ViewModels.MainTabType.FileContent);
+            var loadedMtime = tab?.LastLoadedMtimeUtc;
+            if (diskMtime.HasValue && loadedMtime.HasValue &&
+                Math.Abs((diskMtime.Value - loadedMtime.Value).TotalMilliseconds) > 1)
+            {
+                var overwrite = await DialogService.ShowMessageBoxAsync(
+                    "외부 변경 감지",
+                    "이 파일이 외부에서 변경되었습니다. 그래도 덮어쓸까요?",
+                    yesText: "덮어쓰기", cancelText: "취소");
+                if (overwrite != true)
+                {
+                    Snackbar.Add("저장이 취소되었습니다.", Severity.Normal);
+                    return;
+                }
+            }
+
+            await GitService.WriteFileAsync(workingDir, FilePath, text);
+            var newMtime = (await GitService.GetFileMtimeUtcAsync(workingDir, FilePath)) ?? DateTime.UtcNow;
+            ChatState.Tabs.MarkSaved(FilePath, text, newMtime);
+            await JS.InvokeVoidAsync("clearDirty", _elementId);
+            Snackbar.Add("저장됨", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saveInProgress = false;
+        }
+    }
+
+    public Task SaveExternallyAsync() => SaveAsync();
+
+    private void StartWatching()
+    {
+        StopWatching();
+        var workingDir = EffectiveWorkingDir;
+        if (string.IsNullOrEmpty(workingDir) || string.IsNullOrEmpty(FilePath)) return;
+
+        try
+        {
+            var fullPath = Path.Combine(workingDir, FilePath.Replace('/', Path.DirectorySeparatorChar));
+            var dir = Path.GetDirectoryName(fullPath);
+            var fileName = Path.GetFileName(fullPath);
+            if (string.IsNullOrEmpty(dir) || string.IsNullOrEmpty(fileName) || !Directory.Exists(dir))
+                return;
+
+            _watcher = new FileSystemWatcher(dir, fileName)
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
+                EnableRaisingEvents = true
+            };
+
+            _watchDebounce = new Timer(1000) { AutoReset = false };
+            _watchDebounce.Elapsed += async (_, _) =>
+            {
+                try { await InvokeAsync(HandleExternalChangeAsync); } catch { /* disposed */ }
+            };
+
+            void OnChange(object _, FileSystemEventArgs __)
+            {
+                lock (_watcherLock)
+                {
+                    _watchDebounce?.Stop();
+                    _watchDebounce?.Start();
+                }
+            }
+
+            _watcher.Changed += OnChange;
+            _watcher.Created += OnChange;
+            _watcher.Renamed += (_, e) => OnChange(_, e);
+        }
+        catch
+        {
+            // 워처 시작 실패는 치명적이지 않음
+        }
+    }
+
+    private void StopWatching()
+    {
+        if (_watcher != null)
+        {
             try
             {
-                if (_viewMode == FileViewMode.Markdown)
-                    await JS.InvokeVoidAsync("enhanceMarkdownCodeBlocks", _elementId, false);
-                else
-                    await JS.InvokeVoidAsync("createCodeMirrorView", _elementId, Content, _language, true);
+                _watcher.EnableRaisingEvents = false;
+                _watcher.Dispose();
             }
-            catch
+            catch { /* ignore */ }
+            _watcher = null;
+        }
+        lock (_watcherLock)
+        {
+            _watchDebounce?.Dispose();
+            _watchDebounce = null;
+        }
+    }
+
+    private async Task HandleExternalChangeAsync()
+    {
+        if (_saveInProgress || _conflictDialogOpen) return;
+
+        var workingDir = EffectiveWorkingDir;
+        if (string.IsNullOrEmpty(workingDir) || string.IsNullOrEmpty(FilePath)) return;
+
+        var tab = ChatState.Tabs.OpenTabs
+            .FirstOrDefault(t => t.FilePath == FilePath && t.Type == Models.ViewModels.MainTabType.FileContent);
+        if (tab == null) return;
+
+        DateTime? diskMtime;
+        try { diskMtime = await GitService.GetFileMtimeUtcAsync(workingDir, FilePath); }
+        catch { return; }
+
+        if (!diskMtime.HasValue) return;
+        if (tab.LastLoadedMtimeUtc.HasValue &&
+            Math.Abs((diskMtime.Value - tab.LastLoadedMtimeUtc.Value).TotalMilliseconds) <= 1)
+            return; // 동일 mtime
+
+        if (!tab.IsDirty)
+        {
+            try
             {
-                // JS interop이 처리 중에 실패할 수 있습니다
+                var fresh = await GitService.ReadFileAsync(workingDir, FilePath);
+                await JS.InvokeVoidAsync("setEditorContent", _elementId, fresh);
+                ChatState.Tabs.UpdateLoadedMtime(FilePath, diskMtime.Value);
+                tab.FileContent = fresh;
+                tab.OriginalContent = fresh;
+                tab.ContentSizeBytes = (long)fresh.Length * 2;
+                Snackbar.Add("디스크에서 변경되어 다시 불러왔습니다.", Severity.Info);
             }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"외부 변경 적용 실패: {ex.Message}", Severity.Error);
+            }
+            return;
+        }
+
+        // 더티 상태 + 외부 변경 → 충돌 다이얼로그
+        _conflictDialogOpen = true;
+        try
+        {
+            var keepDisk = await DialogService.ShowMessageBoxAsync(
+                "충돌: 외부 변경 감지",
+                "에디터에 저장되지 않은 변경이 있는데 디스크가 외부에서 변경되었습니다. 디스크 내용으로 다시 불러올까요? (현재 변경 사항은 사라집니다)",
+                yesText: "디스크로 덮어쓰기", cancelText: "내 변경 유지");
+            if (keepDisk == true)
+            {
+                var fresh = await GitService.ReadFileAsync(workingDir, FilePath);
+                await JS.InvokeVoidAsync("setEditorContent", _elementId, fresh);
+                ChatState.Tabs.MarkSaved(FilePath, fresh, diskMtime.Value);
+            }
+            else
+            {
+                ChatState.Tabs.UpdateLoadedMtime(FilePath, diskMtime.Value);
+            }
+        }
+        finally
+        {
+            _conflictDialogOpen = false;
         }
     }
 
     public async ValueTask DisposeAsync()
     {
+        StopWatching();
         if (_viewMode == FileViewMode.Code && !string.IsNullOrEmpty(_elementId))
         {
-            try
-            {
-                await JS.InvokeVoidAsync("destroyCodeMirrorView", _elementId);
-            }
-            catch
-            {
-                // 폐기 중에 JS interop이 실패할 수 있습니다
-            }
+            try { await JS.InvokeVoidAsync("destroyCodeMirrorView", _elementId); }
+            catch { /* 폐기 중 JS interop 실패 가능 */ }
         }
+        _selfRef?.Dispose();
+        _selfRef = null;
     }
 
     private static FileViewMode GetViewMode(string filePath)
@@ -134,17 +324,7 @@
         return ext switch
         {
             ".md" or ".mdx" => FileViewMode.Markdown,
-            ".cs" or ".js" or ".jsx" or ".ts" or ".tsx" or ".py" or ".rs" or ".go"
-                or ".java" or ".html" or ".razor" or ".css" or ".scss" or ".json"
-                or ".yaml" or ".yml" or ".xml" or ".csproj" or ".sln" or ".rb"
-                or ".swift" or ".kt" or ".dart" or ".php" or ".sql" or ".sh"
-                or ".bash" or ".zsh" or ".ps1" or ".dockerfile" or ".toml"
-                or ".ini" or ".cfg" or ".vue" or ".svelte" or ".c" or ".cpp"
-                or ".h" or ".hpp" or ".m" or ".mm" or ".r" or ".lua" or ".pl"
-                or ".makefile" or ".gradle" or ".graphql" or ".proto"
-                or ".xaml"
-                => FileViewMode.Code,
-            _ => FileViewMode.PlainText
+            _ => FileViewMode.Code
         };
     }
 

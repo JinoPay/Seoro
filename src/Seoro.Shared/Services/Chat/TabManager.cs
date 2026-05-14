@@ -78,7 +78,7 @@ public class TabManager
         if (ActiveTab == null) ActiveTab = OpenTabs.First(t => t.Type == MainTabType.Chat);
     }
 
-    public void OpenFileContentTab(string filePath, string content)
+    public void OpenFileContentTab(string filePath, string content, DateTime? mtimeUtc = null)
     {
         var sizeBytes = (long)content.Length * 2; // UTF-16
 
@@ -97,6 +97,9 @@ public class TabManager
             existing.ContentSizeBytes = sizeBytes;
             existing.ContentEvicted = false;
             existing.LastAccessedAt = DateTime.UtcNow;
+            existing.OriginalContent = content;
+            existing.IsDirty = false;
+            existing.LastLoadedMtimeUtc = mtimeUtc;
             ActiveTab = existing;
         }
         else
@@ -109,7 +112,10 @@ public class TabManager
                 FilePath = filePath,
                 FileContent = content,
                 ContentSizeBytes = sizeBytes,
-                LastAccessedAt = DateTime.UtcNow
+                LastAccessedAt = DateTime.UtcNow,
+                OriginalContent = content,
+                IsDirty = false,
+                LastLoadedMtimeUtc = mtimeUtc
             };
             OpenTabs.Add(tab);
             ActiveTab = tab;
@@ -119,6 +125,38 @@ public class TabManager
         RecalculateDisambiguatedTitles();
         OnTabChanged?.Invoke();
     }
+
+    public void MarkDirty(string filePath)
+    {
+        var tab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileContent && t.FilePath == filePath);
+        if (tab == null || tab.IsDirty) return;
+        tab.IsDirty = true;
+        OnTabChanged?.Invoke();
+    }
+
+    public void MarkSaved(string filePath, string savedContent, DateTime mtimeUtc)
+    {
+        var tab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileContent && t.FilePath == filePath);
+        if (tab == null) return;
+        tab.FileContent = savedContent;
+        tab.OriginalContent = savedContent;
+        tab.IsDirty = false;
+        tab.LastSavedAt = DateTime.UtcNow;
+        tab.LastLoadedMtimeUtc = mtimeUtc;
+        tab.ContentSizeBytes = (long)savedContent.Length * 2;
+        OnTabChanged?.Invoke();
+    }
+
+    public void UpdateLoadedMtime(string filePath, DateTime mtimeUtc)
+    {
+        var tab = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileContent && t.FilePath == filePath);
+        if (tab == null) return;
+        tab.LastLoadedMtimeUtc = mtimeUtc;
+    }
+
+    public bool HasAnyDirty() => OpenTabs.Any(t => t.IsDirty);
+
+    public IReadOnlyList<MainTab> GetDirtyTabs() => OpenTabs.Where(t => t.IsDirty).ToList();
 
     public void OpenFileContentTab(string filePath)
     {
@@ -209,7 +247,7 @@ public class TabManager
 
         var candidates = OpenTabs
             .Where(t => t.Type == MainTabType.FileContent && t.FileContent != null && !t.ContentEvicted &&
-                        t.Id != ActiveTab?.Id)
+                        !t.IsDirty && t.Id != ActiveTab?.Id)
             .OrderBy(t => t.LastAccessedAt)
             .ToList();
 

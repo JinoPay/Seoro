@@ -98,7 +98,8 @@
                     {
                         <FileContentView @key="ChatState.Tabs.ActiveTab.Id"
                                          FilePath="@ChatState.Tabs.ActiveTab.FilePath"
-                                         Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")"/>
+                                         Content="@(ChatState.Tabs.ActiveTab.FileContent ?? "")"
+                                         WorkingDir="@(ChatState.CurrentSession?.Git?.WorktreePath)"/>
                     }
                 }
                 else if (activeType == MainTabType.FileDiff && ChatState.Tabs.ActiveTab?.DiffData != null)

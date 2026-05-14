@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Seoro.Shared.Services.Infrastructure;
 
 namespace Seoro.Shared.Services.Git;
 
@@ -643,8 +644,42 @@ public class GitService(
 
     public async Task<string> ReadFileAsync(string workingDir, string relativePath, CancellationToken ct = default)
     {
-        var fullPath = Path.Combine(workingDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        var fullPath = ResolveSafePath(workingDir, relativePath);
         return await File.ReadAllTextAsync(fullPath, ct);
+    }
+
+    public async Task WriteFileAsync(string workingDir, string relativePath, string content, CancellationToken ct = default)
+    {
+        var fullPath = ResolveSafePath(workingDir, relativePath);
+        ct.ThrowIfCancellationRequested();
+        await AtomicFileWriter.WriteAsync(fullPath, content);
+    }
+
+    public Task<DateTime?> GetFileMtimeUtcAsync(string workingDir, string relativePath)
+    {
+        var fullPath = ResolveSafePath(workingDir, relativePath);
+        DateTime? mtime = File.Exists(fullPath) ? File.GetLastWriteTimeUtc(fullPath) : null;
+        return Task.FromResult(mtime);
+    }
+
+    private static string ResolveSafePath(string workingDir, string relativePath)
+    {
+        if (string.IsNullOrEmpty(workingDir))
+            throw new ArgumentException("workingDir must not be empty", nameof(workingDir));
+
+        var root = Path.GetFullPath(workingDir);
+        var combined = Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        var full = Path.GetFullPath(combined);
+
+        var rootWithSep = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
+        if (!full.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(full, root, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException(
+                $"Path '{relativePath}' resolves outside working directory '{workingDir}'.");
+        }
+
+        return full;
     }
 
     public async Task<bool> BranchExistsAsync(string repoDir, string branchName)

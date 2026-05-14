@@ -123,4 +123,95 @@ public class TabManagerTests
         Assert.Equal(MainTabType.Chat, mgr.OpenTabs[0].Type);
     }
 
+    [Fact]
+    public void OpenFileContentTab_InitializesOriginalContentAndCleanState()
+    {
+        var mgr = new TabManager();
+        mgr.EnsureChatTab();
+
+        mgr.OpenFileContentTab("a.txt", "hello", DateTime.UtcNow);
+
+        var tab = mgr.OpenTabs.First(t => t.FilePath == "a.txt");
+        Assert.Equal("hello", tab.OriginalContent);
+        Assert.False(tab.IsDirty);
+        Assert.NotNull(tab.LastLoadedMtimeUtc);
+    }
+
+    [Fact]
+    public void MarkDirty_SetsDirtyFlag()
+    {
+        var mgr = new TabManager();
+        mgr.EnsureChatTab();
+        mgr.OpenFileContentTab("a.txt", "hello");
+
+        mgr.MarkDirty("a.txt");
+
+        var tab = mgr.OpenTabs.First(t => t.FilePath == "a.txt");
+        Assert.True(tab.IsDirty);
+    }
+
+    [Fact]
+    public void MarkSaved_UpdatesOriginalContentAndClearsDirty()
+    {
+        var mgr = new TabManager();
+        mgr.EnsureChatTab();
+        mgr.OpenFileContentTab("a.txt", "hello");
+        mgr.MarkDirty("a.txt");
+        var mtime = DateTime.UtcNow;
+
+        mgr.MarkSaved("a.txt", "hello world", mtime);
+
+        var tab = mgr.OpenTabs.First(t => t.FilePath == "a.txt");
+        Assert.False(tab.IsDirty);
+        Assert.Equal("hello world", tab.OriginalContent);
+        Assert.Equal("hello world", tab.FileContent);
+        Assert.Equal(mtime, tab.LastLoadedMtimeUtc);
+        Assert.NotNull(tab.LastSavedAt);
+    }
+
+    [Fact]
+    public void EvictLruContent_SkipsDirtyTabs()
+    {
+        var mgr = new TabManager();
+        mgr.EnsureChatTab();
+
+        var charsFor9MB = (int)(9 * 1024 * 1024 / 2);
+        var content = new string('c', charsFor9MB);
+
+        for (var i = 1; i <= 5; i++)
+        {
+            mgr.OpenFileContentTab($"file{i}.txt", content);
+            mgr.OpenTabs.First(t => t.FilePath == $"file{i}.txt").LastAccessedAt = DateTime.UtcNow.AddMinutes(-10 + i);
+        }
+
+        // 가장 오래된 file1을 더티로 표시 — eviction 후보에서 제외되어야 함
+        mgr.MarkDirty("file1.txt");
+
+        mgr.OpenFileContentTab("file6.txt", content);
+
+        var file1 = mgr.OpenTabs.First(t => t.FilePath == "file1.txt");
+        Assert.False(file1.ContentEvicted);
+        Assert.NotNull(file1.FileContent);
+
+        // 더티가 아닌 가장 오래된 탭(file2)이 대신 evict
+        var file2 = mgr.OpenTabs.First(t => t.FilePath == "file2.txt");
+        Assert.True(file2.ContentEvicted);
+    }
+
+    [Fact]
+    public void OpenFileContentTab_ReopenResetsDirty()
+    {
+        var mgr = new TabManager();
+        mgr.EnsureChatTab();
+        mgr.OpenFileContentTab("a.txt", "hello");
+        mgr.MarkDirty("a.txt");
+        Assert.True(mgr.OpenTabs.First(t => t.FilePath == "a.txt").IsDirty);
+
+        mgr.OpenFileContentTab("a.txt", "hello fresh");
+
+        var tab = mgr.OpenTabs.First(t => t.FilePath == "a.txt");
+        Assert.False(tab.IsDirty);
+        Assert.Equal("hello fresh", tab.OriginalContent);
+    }
+
 }

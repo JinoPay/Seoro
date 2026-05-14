@@ -87,6 +87,15 @@
     font-weight: 500;
 }
 
+.filediff-badge {
+    font-size: var(--text-xs);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-selected);
+    color: var(--text-secondary);
+    margin-left: auto;
+}
+
 .filediff-content {
     flex: 1;
     overflow-y: auto;
