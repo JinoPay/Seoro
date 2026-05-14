@@ -278,6 +278,12 @@ public class ShellService(ILogger<ShellService> logger, IProcessRunner processRu
         if (bashPath != null)
             return new ShellInfo(bashPath, "-c ", ShellType.Bash);
 
+        // Claude CLI 2.1.120+가 Git Bash 부재 시 PowerShell을 셸 도구로 사용하는 동작과 정렬:
+        // cmd.exe로 떨어지기 전에 pwsh / Windows PowerShell을 시도합니다.
+        var pwshPath = await FindPowerShellAsync();
+        if (pwshPath != null)
+            return new ShellInfo(pwshPath, "-Command ", ShellType.PowerShell);
+
         // Fallback to cmd.exe
         return new ShellInfo("cmd.exe", "/c ", ShellType.Cmd);
     }

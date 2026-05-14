@@ -120,6 +120,12 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         foreach (var arg in options.Arguments)
             psi.ArgumentList.Add(arg);
 
+        // Claude CLI 2.1.120이 자식 프로세스에 AI_AGENT를 주입하는 패턴을 따라,
+        // Seoro가 직접 spawn하는 gh·git 등도 어트리뷰션될 수 있도록 기본값을 셋팅합니다.
+        // 호출자가 명시적으로 지정했다면 보존합니다.
+        if (!psi.Environment.ContainsKey("AI_AGENT"))
+            psi.Environment["AI_AGENT"] = "seoro";
+
         if (options.EnvironmentVariables != null)
             foreach (var (key, value) in options.EnvironmentVariables)
                 psi.Environment[key] = value;

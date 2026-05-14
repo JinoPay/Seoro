@@ -21,7 +21,7 @@ public interface IShellService
 
     /// <summary>
     ///     Returns the resolved shell for internal commands (which, git, hooks, etc.).
-    ///     On Windows, prefers Git Bash; falls back to cmd.exe.
+    ///     On Windows, prefers Git Bash; falls back to PowerShell (pwsh → Windows PowerShell), then cmd.exe.
     ///     On macOS/Linux, detects from $SHELL; falls back to /bin/zsh → /bin/bash → /bin/sh.
     ///     Result is cached with a TTL; call <see cref="InvalidateCache" /> to force re-resolution.
     /// </summary>

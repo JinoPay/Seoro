@@ -31,10 +31,22 @@ public class McpService(
 
     private readonly SemaphoreSlim _lock = new(1, 1);
 
+    // Claude CLI 2.1.128+에서 "workspace"는 예약된 MCP 서버 이름이라 무시됩니다.
+    private const string ReservedServerName = "workspace";
+
+    private static McpOperationResult? ValidateServerName(string name)
+    {
+        if (string.Equals(name, ReservedServerName, StringComparison.OrdinalIgnoreCase))
+            return McpOperationResult.Fail($"'{ReservedServerName}'은 Claude CLI 예약어입니다. 다른 이름을 사용하세요.");
+        return null;
+    }
+
     // ── CRUD ────────────────────────────────────────────────────────────────
 
     public async Task<McpOperationResult> AddServerAsync(McpServer server)
     {
+        if (ValidateServerName(server.Name) is { } reservedError) return reservedError;
+
         await _lock.WaitAsync();
         try
         {
@@ -89,6 +101,8 @@ public class McpService(
 
     public async Task<McpOperationResult> UpdateServerAsync(string oldName, string oldScope, McpServer server)
     {
+        if (ValidateServerName(server.Name) is { } reservedError) return reservedError;
+
         await _lock.WaitAsync();
         try
         {
@@ -331,6 +345,7 @@ public class McpService(
                     Args = entry.Args ?? [],
                     Env = entry.Env ?? new Dictionary<string, string>(),
                     Url = entry.Url,
+                    AlwaysLoad = entry.AlwaysLoad ?? false,
                     Scope = scope,
                     IsActive = true,
                     Status = new McpServerStatus { ConnectionStatus = McpConnectionStatus.Unknown }
@@ -453,7 +468,8 @@ public class McpService(
         Args = server.Args.Count > 0 ? server.Args : null,
         Env = server.Env.Count > 0 ? server.Env : null,
         Type = server.Transport != "stdio" ? server.Transport : null,
-        Url = string.IsNullOrEmpty(server.Url) ? null : server.Url
+        Url = string.IsNullOrEmpty(server.Url) ? null : server.Url,
+        AlwaysLoad = server.AlwaysLoad ? true : null
     };
 
     // ── Scope-aware CRUD ─────────────────────────────────────────────────────
@@ -828,6 +844,7 @@ public class McpService(
             Args = kvp.Value.Args ?? [],
             Env = kvp.Value.Env ?? new Dictionary<string, string>(),
             Url = kvp.Value.Url,
+            AlwaysLoad = kvp.Value.AlwaysLoad ?? false,
             Scope = scopeStr,
             IsActive = true,
             Status = new McpServerStatus { ConnectionStatus = McpConnectionStatus.Unknown }
@@ -846,7 +863,8 @@ public class McpService(
         Command = string.IsNullOrEmpty(server.Command) ? null : server.Command,
         Args = server.Args.Count > 0 ? server.Args : null,
         Env = server.Env.Count > 0 ? server.Env : null,
-        Url = string.IsNullOrEmpty(server.Url) ? null : server.Url
+        Url = string.IsNullOrEmpty(server.Url) ? null : server.Url,
+        AlwaysLoad = server.AlwaysLoad ? true : null
     };
 
     // ── JSON models ──────────────────────────────────────────────────────────
@@ -863,6 +881,7 @@ public class McpService(
         [JsonPropertyName("command")] public string? Command { get; set; }
         [JsonPropertyName("type")] public string? Type { get; set; }
         [JsonPropertyName("url")] public string? Url { get; set; }
+        [JsonPropertyName("alwaysLoad")] public bool? AlwaysLoad { get; set; }
 
         [JsonExtensionData]
         public Dictionary<string, JsonElement>? ExtraData { get; set; }

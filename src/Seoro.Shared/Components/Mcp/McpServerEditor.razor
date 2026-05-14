@@ -59,6 +59,14 @@
             }
 
             <div class="mt-3">
+                <MudSwitch T="bool" Value="@_alwaysLoad" ValueChanged="@(v => _alwaysLoad = v)"
+                           Label="항상 로드 (ToolSearch 지연 건너뛰기)" Color="Color.Primary" Size="Size.Small"/>
+                <div class="typo-caption text-secondary" style="margin-left:42px;">
+                    켜면 이 서버의 도구가 매 세션 시작 시 즉시 가용해집니다. CLI 2.1.121 이상에서만 적용.
+                </div>
+            </div>
+
+            <div class="mt-3">
                 <div class="typo-subtitle2 mb-1">환경변수</div>
                 @for (var i = 0; i < _envKeys.Count; i++)
                 {
@@ -127,6 +135,7 @@
     private readonly List<string> _argsList = [];
     private readonly List<string> _envKeys = [];
     private readonly List<string> _envValues = [];
+    private bool _alwaysLoad;
     private string _formError = "";
     private bool _saving;
 
@@ -147,6 +156,7 @@
             _envKeys.Clear();
             _envValues.Clear();
             foreach (var (k, v) in Server.Env) { _envKeys.Add(k); _envValues.Add(v); }
+            _alwaysLoad = Server.AlwaysLoad;
         }
         else
         {
@@ -158,6 +168,7 @@
             _argsList.Clear();
             _envKeys.Clear();
             _envValues.Clear();
+            _alwaysLoad = false;
         }
     }
 
@@ -180,6 +191,7 @@
         Args = _transport == "stdio" ? _argsList.ToList() : [],
         Url = _transport != "stdio" ? _url.Trim() : null,
         Env = BuildEnv(),
+        AlwaysLoad = _alwaysLoad,
         Scope = Scope.ToString().ToLowerInvariant()
     };
 
