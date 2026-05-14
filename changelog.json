@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.18.1",
+    "date": "2026-05-14",
+    "changes": [
+      { "type": "feat", "description": "채팅 메시지 예약(큐) 기능 추가 — 스트리밍 중에도 메시지를 예약하여 순차 전송, Alt+Enter로 즉시 큐 추가 가능" },
+      { "type": "feat", "description": "예약 메시지 관리 UI 추가 — 입력창 상단 Chip 목록으로 예약 메시지 확인·편집·삭제 및 전체 비우기 지원" }
+    ]
+  },
+  {
     "version": "1.18.0",
     "date": "2026-05-14",
     "changes": [
