@@ -56,6 +56,10 @@ public static partial class ContentGrouper
                 if (part.ToolCall.ParentToolUseId != null)
                     continue;
 
+                // TodoWrite 인라인 렌더링 건너뛰기 — TodoFloater(좌하단 토글)에서만 표시
+                if (TodoSnapshotParser.IsTodoWriteTool(part.ToolCall.Name))
+                    continue;
+
                 currentToolGroup ??= new ContentGroup { Type = ContentGroupType.ToolGroup };
                 currentToolGroup.Parts.Add(part);
             }

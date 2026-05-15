@@ -1,8 +1,8 @@
 .todo-floater {
     position: absolute;
-    right: 24px;
+    left: 24px;
     z-index: 11;
-    bottom: 170px;
+    bottom: 120px;
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
     background: var(--mud-palette-surface, #1e1e1e);
     color: var(--mud-palette-text-primary, #e6e6e6);
@@ -12,7 +12,7 @@
 
 /* askbar 활성 시 위치 위로 */
 .askbar-active .todo-floater {
-    bottom: 350px;
+    bottom: 300px;
 }
 
 /* ===== Chip ===== */
