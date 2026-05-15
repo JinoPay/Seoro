@@ -344,6 +344,13 @@ public class SessionServiceTests : IDisposable
             => Task.FromResult(NextResult);
         public Task<GitResult> PullAsync(string workingDir, bool rebase = true, CancellationToken ct = default)
             => Task.FromResult(NextResult);
+
+        public Task<IReadOnlyList<CommitInfo>> GetCommitHistoryAsync(string repoDir, int limit = 500, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<CommitInfo>>([]);
+        public Task<IReadOnlyList<(string Path, string Status)>> GetCommitChangedFilesAsync(string repoDir, string sha, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<(string, string)>>([]);
+        public Task<FileDiff?> GetCommitFileDiffAsync(string repoDir, string sha, string filePath, CancellationToken ct = default)
+            => Task.FromResult<FileDiff?>(null);
     }
 
     private class FakeWorkspaceService : IWorkspaceService

@@ -166,4 +166,28 @@ public interface IGitService
     ///     워크스페이스 경계 검증 후 파일의 마지막 쓰기 시각을 UTC로 반환한다. 파일이 없으면 null.
     /// </summary>
     Task<DateTime?> GetFileMtimeUtcAsync(string workingDir, string relativePath);
+
+    /// <summary>
+    ///     <c>git log --all --format=…</c>로 로컬+리모트 모든 ref의 커밋 히스토리를 가져온다.
+    ///     각 커밋의 부모 SHA들과 ref 데코를 포함해 Git Graph 뷰어가 lane을 그리는 데 사용.
+    ///     출력은 NUL/RS 구분자로 안전하게 파싱한다(메시지에 개행이 있어도 안전).
+    /// </summary>
+    Task<IReadOnlyList<CommitInfo>> GetCommitHistoryAsync(string repoDir, int limit = 500,
+        CancellationToken ct = default);
+
+    /// <summary>
+    ///     단일 커밋의 변경 파일 목록을 <c>git diff-tree --name-status -M</c>로 가져온다.
+    ///     머지 커밋은 첫 부모(parent #1) 기준 단순화. 결과는 <c>(Path, Status)</c> 튜플 — Status는
+    ///     A/M/D/R/C 등 git porcelain 코드.
+    /// </summary>
+    Task<IReadOnlyList<(string Path, string Status)>> GetCommitChangedFilesAsync(string repoDir, string sha,
+        CancellationToken ct = default);
+
+    /// <summary>
+    ///     특정 커밋의 단일 파일 diff을 <see cref="FileDiff"/>로 반환한다(<c>git show {sha} -- {path}</c>).
+    ///     <see cref="FileDiff.UnifiedDiff"/>에 raw unified diff가 담기며, <see cref="FileDiffView"/>가
+    ///     <c>DiffParser</c>로 파싱한다. 파일이 없거나 binary면 IsBinary가 true.
+    /// </summary>
+    Task<FileDiff?> GetCommitFileDiffAsync(string repoDir, string sha, string filePath,
+        CancellationToken ct = default);
 }

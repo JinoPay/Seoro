@@ -1,0 +1,296 @@
+@inject IGitService GitService
+@inject IChatState ChatState
+@inject ISnackbar Snackbar
+@inject ILogger<GitGraphView> Logger
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+
+@*
+    GitGraphView — VSCode "Git Graph" extension 스타일의 커밋 히스토리 뷰어.
+    좌측: 모든 브랜치의 커밋 리스트(가상화). 우측: 선택된 커밋의 변경 파일 패널.
+    파일 클릭 시 TabManager.OpenFileDiffTab(sha) 호출 → 별도 FileDiff 탭으로 diff 표시.
+*@
+
+<div class="git-graph-view">
+    @if (string.IsNullOrEmpty(_repoPath))
+    {
+        <div class="git-graph-empty">
+            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Large" Style="opacity:0.3;"/>
+            <span>@Strings.GitGraph_NoRepo</span>
+        </div>
+    }
+    else
+    {
+        <div class="git-graph-header">
+            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small"
+                     Style="width:16px; height:16px; opacity:0.7;"/>
+            <span class="git-graph-title">@Strings.GitGraph_Title</span>
+            @if (_commits.Count > 0)
+            {
+                <span class="git-graph-meta">@Strings.GitGraph_CommitCount(_commits.Count)</span>
+            }
+            <div style="flex:1"></div>
+            <MudTooltip Text="@Strings.Git_Refresh" Placement="Placement.Bottom">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Size="Size.Small"
+                               Disabled="@_loading"
+                               OnClick="LoadAsync"
+                               Style="width: 22px; height: 22px; opacity: 0.7;"/>
+            </MudTooltip>
+        </div>
+
+        <div class="git-graph-body">
+            <div class="git-graph-list">
+                <div class="git-graph-list-header">
+                    <div class="col-graph"></div>
+                    <div class="col-desc">@Strings.GitGraph_Col_Description</div>
+                    <div class="col-date">@Strings.GitGraph_Col_Date</div>
+                    <div class="col-author">@Strings.GitGraph_Col_Author</div>
+                    <div class="col-sha">@Strings.GitGraph_Col_Commit</div>
+                </div>
+                <div class="git-graph-list-body">
+                    @if (_loading && _commits.Count == 0)
+                    {
+                        <div class="git-graph-loading">
+                            <MudProgressLinear Indeterminate="true" Color="Color.Primary"/>
+                            <span>@Strings.GitGraph_Loading</span>
+                        </div>
+                    }
+                    else if (_commits.Count == 0)
+                    {
+                        <div class="git-graph-empty">
+                            <span>@Strings.GitGraph_NoCommits</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <Virtualize Items="_commits" Context="commit" ItemSize="28">
+                            <div class="git-graph-row @(commit.Sha == _selectedSha ? "selected" : "")"
+                                 @onclick="@(() => SelectCommitAsync(commit.Sha))">
+                                <div class="col-graph">
+                                    <span class="graph-dot"></span>
+                                </div>
+                                <div class="col-desc">
+                                    @foreach (var refName in commit.Refs)
+                                    {
+                                        <span class="ref-badge @RefClass(refName)">@FormatRef(refName)</span>
+                                    }
+                                    <span class="commit-subject" title="@commit.Subject">@commit.Subject</span>
+                                </div>
+                                <div class="col-date" title="@commit.AuthoredAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm")">
+                                    @FormatDate(commit.AuthoredAt)
+                                </div>
+                                <div class="col-author" title="@($"{commit.AuthorName} <{commit.AuthorEmail}>")">
+                                    @commit.AuthorName
+                                </div>
+                                <div class="col-sha">@(commit.Sha.Length >= 7 ? commit.Sha[..7] : commit.Sha)</div>
+                            </div>
+                        </Virtualize>
+                    }
+                </div>
+            </div>
+
+            <div class="git-graph-files">
+                @if (_selectedSha == null)
+                {
+                    <div class="git-graph-empty">
+                        <MudIcon Icon="@Icons.Material.Outlined.Description" Size="Size.Large" Style="opacity:0.3;"/>
+                        <span>@Strings.GitGraph_SelectCommit</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="git-graph-files-header">
+                        <span>@Strings.GitGraph_ChangedFiles</span>
+                        @if (!_filesLoading)
+                        {
+                            <span class="git-graph-meta">(@_selectedFiles.Count)</span>
+                        }
+                    </div>
+                    @if (_filesLoading)
+                    {
+                        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2"/>
+                    }
+                    else if (_selectedFiles.Count == 0)
+                    {
+                        <div class="git-graph-empty">
+                            <span>@Strings.GitGraph_NoFiles</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="git-graph-files-list">
+                            @foreach (var entry in _selectedFiles)
+                            {
+                                <div class="git-graph-file" @onclick="@(() => OpenFileDiffAsync(entry.Path, entry.Status))">
+                                    <span class="file-status @StatusClass(entry.Status)">@entry.Status</span>
+                                    <span class="file-path" title="@entry.Path">@entry.Path</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string? _repoPath;
+    private string? _lastSessionId;
+    private List<CommitInfo> _commits = [];
+    private bool _loading;
+
+    private string? _selectedSha;
+    private List<(string Path, string Status)> _selectedFiles = [];
+    private bool _filesLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ChatState.OnChange += HandleStateChanged;
+        SyncRepoFromState();
+        if (!string.IsNullOrEmpty(_repoPath))
+            await LoadAsync();
+    }
+
+    private void SyncRepoFromState()
+    {
+        _repoPath = ChatState.CurrentSession?.Git?.WorktreePath;
+        _lastSessionId = ChatState.CurrentSession?.Id;
+    }
+
+    private void HandleStateChanged()
+    {
+        var sid = ChatState.CurrentSession?.Id;
+        if (sid == _lastSessionId) return;
+
+        _lastSessionId = sid;
+        _repoPath = ChatState.CurrentSession?.Git?.WorktreePath;
+        _selectedSha = null;
+        _selectedFiles = [];
+        _commits = [];
+
+        _ = InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            if (!string.IsNullOrEmpty(_repoPath))
+                await LoadAsync();
+        });
+    }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrEmpty(_repoPath)) return;
+        _loading = true;
+        StateHasChanged();
+        try
+        {
+            var commits = await GitService.GetCommitHistoryAsync(_repoPath);
+            _commits = commits.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Git Graph 커밋 히스토리 로드 실패");
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectCommitAsync(string sha)
+    {
+        if (string.IsNullOrEmpty(_repoPath) || sha == _selectedSha) return;
+        _selectedSha = sha;
+        _selectedFiles = [];
+        _filesLoading = true;
+        StateHasChanged();
+        try
+        {
+            var files = await GitService.GetCommitChangedFilesAsync(_repoPath, sha);
+            _selectedFiles = files.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "커밋 파일 목록 로드 실패");
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _filesLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenFileDiffAsync(string path, string status)
+    {
+        if (string.IsNullOrEmpty(_repoPath) || _selectedSha == null) return;
+        try
+        {
+            var diff = await GitService.GetCommitFileDiffAsync(_repoPath, _selectedSha, path);
+            if (diff == null)
+            {
+                Snackbar.Add(Strings.GitGraph_DiffLoadFailed, Severity.Warning);
+                return;
+            }
+            diff.ChangeType = MapStatus(status);
+            ChatState.Tabs.OpenFileDiffTab(path, diff, _selectedSha);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "커밋 diff 로드 실패");
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private static FileChangeType MapStatus(string status) => status switch
+    {
+        "A" => FileChangeType.Added,
+        "D" => FileChangeType.Deleted,
+        "R" => FileChangeType.Renamed,
+        "C" => FileChangeType.Renamed,
+        _ => FileChangeType.Modified
+    };
+
+    private static string StatusClass(string status) => status switch
+    {
+        "A" => "added",
+        "D" => "deleted",
+        "R" => "renamed",
+        "C" => "renamed",
+        _ => "modified"
+    };
+
+    private static string FormatRef(string raw)
+    {
+        // git log --format=%D 결과 예: "HEAD -> main", "tag: v1.0", "origin/main"
+        if (raw.StartsWith("HEAD -> ", StringComparison.Ordinal)) return raw[8..];
+        if (raw.StartsWith("tag: ", StringComparison.Ordinal)) return raw[5..];
+        return raw;
+    }
+
+    private static string RefClass(string raw)
+    {
+        if (raw.StartsWith("HEAD", StringComparison.Ordinal)) return "ref-head";
+        if (raw.StartsWith("tag: ", StringComparison.Ordinal)) return "ref-tag";
+        if (raw.Contains('/')) return "ref-remote";
+        return "ref-local";
+    }
+
+    private static string FormatDate(DateTimeOffset dt)
+    {
+        var local = dt.LocalDateTime;
+        var now = DateTime.Now;
+        if (local.Date == now.Date) return local.ToString("HH:mm");
+        if ((now - local).TotalDays < 365) return local.ToString("MMM d");
+        return local.ToString("yyyy-MM-dd");
+    }
+
+    public void Dispose()
+    {
+        ChatState.OnChange -= HandleStateChanged;
+    }
+}

@@ -476,6 +476,20 @@
   <data name="Git_Group_Changes" xml:space="preserve"><value>Changes</value></data>
   <data name="Git_Group_Untracked" xml:space="preserve"><value>Untracked</value></data>
   <data name="Git_NoSession" xml:space="preserve"><value>Select a session</value></data>
+  <data name="Git_OpenGraph" xml:space="preserve"><value>Open Git Graph</value></data>
+  <data name="GitGraph_Title" xml:space="preserve"><value>Git Graph</value></data>
+  <data name="GitGraph_NoRepo" xml:space="preserve"><value>Open a Git repository</value></data>
+  <data name="GitGraph_NoCommits" xml:space="preserve"><value>No commits found</value></data>
+  <data name="GitGraph_NoFiles" xml:space="preserve"><value>No files changed</value></data>
+  <data name="GitGraph_Loading" xml:space="preserve"><value>Loading commit history...</value></data>
+  <data name="GitGraph_SelectCommit" xml:space="preserve"><value>Select a commit to see changed files</value></data>
+  <data name="GitGraph_ChangedFiles" xml:space="preserve"><value>Changed files</value></data>
+  <data name="GitGraph_Col_Description" xml:space="preserve"><value>Description</value></data>
+  <data name="GitGraph_Col_Date" xml:space="preserve"><value>Date</value></data>
+  <data name="GitGraph_Col_Author" xml:space="preserve"><value>Author</value></data>
+  <data name="GitGraph_Col_Commit" xml:space="preserve"><value>Commit</value></data>
+  <data name="GitGraph_DiffLoadFailed" xml:space="preserve"><value>Failed to load diff</value></data>
+  <data name="GitGraph_CommitCount" xml:space="preserve"><value>{0} commits</value></data>
   <data name="Prompt_AiCommitAuto" xml:space="preserve"><value>Please commit the current changes with an appropriate message.</value></data>
   <data name="Prompt_AiCommitWithMessage" xml:space="preserve"><value>Please commit the current changes with this message: {0}</value></data>
   <data name="Prompt_AiPush" xml:space="preserve"><value>Please push the current branch to origin.</value></data>

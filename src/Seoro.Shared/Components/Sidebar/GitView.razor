@@ -50,6 +50,12 @@
                         @if (_aheadBehind.Value.Behind > 0) { <span class="behind">↓@(_aheadBehind.Value.Behind)</span> }
                     </span>
                 }
+                <MudTooltip Text="@Strings.Git_OpenGraph" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
+                                   Size="Size.Small"
+                                   OnClick="OpenGitGraph"
+                                   Style="width: 22px; height: 22px; opacity: 0.7;"/>
+                </MudTooltip>
                 <MudTooltip Text="@Strings.Git_StageAll" Placement="Placement.Bottom">
                     <MudIconButton Icon="@Icons.Material.Filled.AddCircleOutline"
                                    Size="Size.Small"
@@ -506,6 +512,11 @@
     }
 
     // ─── 액션 ───
+
+    private void OpenGitGraph()
+    {
+        ChatState.Tabs.OpenGitGraphTab();
+    }
 
     private async Task StageAllAsync()
     {

@@ -500,6 +500,22 @@ public static class Strings
     public static string Git_Group_Changes => Get(nameof(Git_Group_Changes));
     public static string Git_Group_Untracked => Get(nameof(Git_Group_Untracked));
     public static string Git_NoSession => Get(nameof(Git_NoSession));
+    public static string Git_OpenGraph => Get(nameof(Git_OpenGraph));
+
+    // ── Git Graph Viewer ──
+    public static string GitGraph_Title => Get(nameof(GitGraph_Title));
+    public static string GitGraph_NoRepo => Get(nameof(GitGraph_NoRepo));
+    public static string GitGraph_NoCommits => Get(nameof(GitGraph_NoCommits));
+    public static string GitGraph_NoFiles => Get(nameof(GitGraph_NoFiles));
+    public static string GitGraph_Loading => Get(nameof(GitGraph_Loading));
+    public static string GitGraph_SelectCommit => Get(nameof(GitGraph_SelectCommit));
+    public static string GitGraph_ChangedFiles => Get(nameof(GitGraph_ChangedFiles));
+    public static string GitGraph_Col_Description => Get(nameof(GitGraph_Col_Description));
+    public static string GitGraph_Col_Date => Get(nameof(GitGraph_Col_Date));
+    public static string GitGraph_Col_Author => Get(nameof(GitGraph_Col_Author));
+    public static string GitGraph_Col_Commit => Get(nameof(GitGraph_Col_Commit));
+    public static string GitGraph_DiffLoadFailed => Get(nameof(GitGraph_DiffLoadFailed));
+    public static string GitGraph_CommitCount(int count) => Get(nameof(GitGraph_CommitCount), count);
     public static string Prompt_AiCommitAuto => Get(nameof(Prompt_AiCommitAuto));
     public static string Prompt_AiCommitWithMessage(string message) => Get(nameof(Prompt_AiCommitWithMessage), message);
     public static string Prompt_AiPush => Get(nameof(Prompt_AiPush));

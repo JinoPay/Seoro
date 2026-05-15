@@ -106,6 +106,10 @@
                 {
                     <FileDiffView @key="ChatState.Tabs.ActiveTab.Id" Diff="ChatState.Tabs.ActiveTab.DiffData"/>
                 }
+                else if (activeType == MainTabType.GitGraph)
+                {
+                    <GitGraphView @key="ChatState.Tabs.ActiveTab?.Id"/>
+                }
             </div>
         </div>
 

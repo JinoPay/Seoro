@@ -1568,6 +1568,119 @@ public class GitService(
         _branchGroupCache.TryRemove(key, out _);
     }
 
+    public async Task<IReadOnlyList<CommitInfo>> GetCommitHistoryAsync(string repoDir, int limit = 500,
+        CancellationToken ct = default)
+    {
+        if (limit <= 0) limit = 500;
+
+        // 필드 구분: NUL(\x00), 레코드 구분: RS(\x1e). 메시지에 개행이 있어도 안전.
+        const string format = "%H%x00%P%x00%an%x00%ae%x00%aI%x00%D%x00%s%x1e";
+        var result = await RunGitBoundedAsync(repoDir, ct,
+            "log", "--all", $"--format={format}", "-n", limit.ToString());
+        if (!result.Success || string.IsNullOrEmpty(result.Output))
+            return Array.Empty<CommitInfo>();
+
+        var commits = new List<CommitInfo>(limit);
+        var records = result.Output.Split('\x1e', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var rawRecord in records)
+        {
+            var record = rawRecord.TrimStart('\n', '\r');
+            if (string.IsNullOrEmpty(record)) continue;
+
+            var fields = record.Split('\x00');
+            if (fields.Length < 7) continue;
+
+            var parents = fields[1].Length == 0
+                ? Array.Empty<string>()
+                : fields[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            DateTimeOffset.TryParse(fields[4], out var authoredAt);
+
+            var refs = string.IsNullOrEmpty(fields[5])
+                ? Array.Empty<string>()
+                : fields[5]
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            commits.Add(new CommitInfo(
+                Sha: fields[0],
+                ParentShas: parents,
+                AuthorName: fields[2],
+                AuthorEmail: fields[3],
+                AuthoredAt: authoredAt,
+                Subject: fields[6],
+                Refs: refs));
+        }
+
+        return commits;
+    }
+
+    public async Task<IReadOnlyList<(string Path, string Status)>> GetCommitChangedFilesAsync(string repoDir,
+        string sha, CancellationToken ct = default)
+    {
+        // --root: 루트 커밋(부모 없음)도 처리. -M: rename 감지.
+        var result = await RunGitBoundedAsync(repoDir, ct,
+            "diff-tree", "--no-commit-id", "--name-status", "-r", "-M", "--root", sha);
+        if (!result.Success || string.IsNullOrEmpty(result.Output))
+            return Array.Empty<(string, string)>();
+
+        var files = new List<(string, string)>();
+        foreach (var rawLine in result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = rawLine.TrimEnd('\r');
+            if (string.IsNullOrEmpty(line)) continue;
+
+            var parts = line.Split('\t');
+            if (parts.Length < 2 || parts[0].Length == 0) continue;
+
+            var statusCode = parts[0][0].ToString(); // "R100" → "R", "M" → "M"
+            var path = parts.Length >= 3 ? parts[^1] : parts[1]; // rename은 마지막 컬럼이 새 경로
+            files.Add((path, statusCode));
+        }
+
+        return files;
+    }
+
+    public async Task<FileDiff?> GetCommitFileDiffAsync(string repoDir, string sha, string filePath,
+        CancellationToken ct = default)
+    {
+        // -m --first-parent: 머지 커밋도 첫 부모 기준 단일 diff. --format=: 커밋 헤더 출력 안 함.
+        var result = await RunGitBoundedAsync(repoDir, ct,
+            "show", "--format=", "-m", "--first-parent", "-M", sha, "--", filePath);
+        if (!result.Success) return null;
+
+        var unified = result.Output ?? string.Empty;
+        var diff = new FileDiff
+        {
+            FilePath = filePath,
+            UnifiedDiff = unified,
+            ChangeType = FileChangeType.Modified
+        };
+
+        if (unified.Contains("Binary files ", StringComparison.Ordinal) &&
+            unified.Contains("differ", StringComparison.Ordinal))
+        {
+            diff.IsBinary = true;
+            return diff;
+        }
+
+        int adds = 0, dels = 0;
+        foreach (var raw in unified.Split('\n'))
+        {
+            if (raw.Length == 0) continue;
+            if (raw.StartsWith("+++") || raw.StartsWith("---") ||
+                raw.StartsWith("@@") || raw.StartsWith("diff ") ||
+                raw.StartsWith("index ") || raw.StartsWith("new file") ||
+                raw.StartsWith("deleted file") || raw.StartsWith("rename ") ||
+                raw.StartsWith("similarity ") || raw.StartsWith("dissimilarity "))
+                continue;
+            if (raw[0] == '+') adds++;
+            else if (raw[0] == '-') dels++;
+        }
+        diff.Additions = adds;
+        diff.Deletions = dels;
+        return diff;
+    }
+
     /// <summary>
     ///     Extracts the file path from a diff header using symmetric path structure.
     ///     Handles paths containing " b/" correctly, unlike LastIndexOf(" b/").

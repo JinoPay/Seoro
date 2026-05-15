@@ -476,6 +476,20 @@
   <data name="Git_Group_Changes" xml:space="preserve"><value>변경됨</value></data>
   <data name="Git_Group_Untracked" xml:space="preserve"><value>추적 안 됨</value></data>
   <data name="Git_NoSession" xml:space="preserve"><value>세션을 선택하세요</value></data>
+  <data name="Git_OpenGraph" xml:space="preserve"><value>Git 그래프 열기</value></data>
+  <data name="GitGraph_Title" xml:space="preserve"><value>Git 그래프</value></data>
+  <data name="GitGraph_NoRepo" xml:space="preserve"><value>Git 저장소를 선택하세요</value></data>
+  <data name="GitGraph_NoCommits" xml:space="preserve"><value>커밋이 없습니다</value></data>
+  <data name="GitGraph_NoFiles" xml:space="preserve"><value>변경된 파일이 없습니다</value></data>
+  <data name="GitGraph_Loading" xml:space="preserve"><value>커밋 히스토리 불러오는 중...</value></data>
+  <data name="GitGraph_SelectCommit" xml:space="preserve"><value>커밋을 선택하면 변경 파일이 표시됩니다</value></data>
+  <data name="GitGraph_ChangedFiles" xml:space="preserve"><value>변경된 파일</value></data>
+  <data name="GitGraph_Col_Description" xml:space="preserve"><value>설명</value></data>
+  <data name="GitGraph_Col_Date" xml:space="preserve"><value>날짜</value></data>
+  <data name="GitGraph_Col_Author" xml:space="preserve"><value>작성자</value></data>
+  <data name="GitGraph_Col_Commit" xml:space="preserve"><value>커밋</value></data>
+  <data name="GitGraph_DiffLoadFailed" xml:space="preserve"><value>변경 내역을 불러오지 못했습니다</value></data>
+  <data name="GitGraph_CommitCount" xml:space="preserve"><value>{0}개 커밋</value></data>
   <data name="Prompt_AiCommitAuto" xml:space="preserve"><value>현재 변경사항을 적절한 메시지로 커밋해줘.</value></data>
   <data name="Prompt_AiCommitWithMessage" xml:space="preserve"><value>현재 변경사항을 다음 메시지로 커밋해줘: {0}</value></data>
   <data name="Prompt_AiPush" xml:space="preserve"><value>현재 브랜치를 origin에 푸시해줘.</value></data>

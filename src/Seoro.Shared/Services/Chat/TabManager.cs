@@ -184,9 +184,10 @@ public class TabManager
         OnTabChanged?.Invoke();
     }
 
-    public void OpenFileDiffTab(string filePath, FileDiff diff)
+    public void OpenFileDiffTab(string filePath, FileDiff diff, string? commitSha = null)
     {
-        var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.FileDiff && t.FilePath == filePath);
+        var existing = OpenTabs.FirstOrDefault(t =>
+            t.Type == MainTabType.FileDiff && t.FilePath == filePath && t.CommitSha == commitSha);
         if (existing != null)
         {
             existing.DiffData = diff;
@@ -202,6 +203,7 @@ public class TabManager
                 Title = fileName,
                 FilePath = filePath,
                 DiffData = diff,
+                CommitSha = commitSha,
                 LastAccessedAt = DateTime.UtcNow
             };
             OpenTabs.Add(tab);
@@ -210,6 +212,30 @@ public class TabManager
 
         RecalculateDisambiguatedTitles();
         OnTabChanged?.Invoke();
+    }
+
+    public MainTab OpenGitGraphTab()
+    {
+        var existing = OpenTabs.FirstOrDefault(t => t.Type == MainTabType.GitGraph);
+        if (existing != null)
+        {
+            existing.LastAccessedAt = DateTime.UtcNow;
+            ActiveTab = existing;
+        }
+        else
+        {
+            existing = new MainTab
+            {
+                Type = MainTabType.GitGraph,
+                Title = "Git Graph",
+                LastAccessedAt = DateTime.UtcNow
+            };
+            OpenTabs.Add(existing);
+            ActiveTab = existing;
+        }
+
+        OnTabChanged?.Invoke();
+        return existing;
     }
 
     public void Reset(string? sessionTitle = null)
@@ -276,14 +302,30 @@ public class TabManager
         {
             var tabs = group.ToList();
 
-            // First: if same path but different types (FileContent vs FileDiff), prefix diff with [diff]
-            var byPath = tabs.GroupBy(t => t.FilePath).Where(g => g.Count() > 1);
+            // 1) 같은 path + 다른 commit sha (또는 working tree vs commit) — sha 접두로 구분.
+            var byPath = tabs.GroupBy(t => t.FilePath).Where(g => g.Count() > 1).ToList();
             foreach (var pathGroup in byPath)
-            foreach (var tab in pathGroup)
-                if (tab.Type == MainTabType.FileDiff)
-                    tab.DisambiguatedTitle = $"[diff] {tab.Title}";
+            {
+                var inPath = pathGroup.ToList();
+                if (inPath.Any(t => t.CommitSha != null))
+                {
+                    foreach (var tab in inPath)
+                    {
+                        var prefix = tab.CommitSha is { Length: > 0 } sha
+                            ? $"[{sha[..Math.Min(7, sha.Length)]}]"
+                            : "[diff]";
+                        tab.DisambiguatedTitle = $"{prefix} {tab.Title}";
+                    }
+                }
+                else
+                {
+                    foreach (var tab in inPath)
+                        if (tab.Type == MainTabType.FileDiff)
+                            tab.DisambiguatedTitle = $"[diff] {tab.Title}";
+                }
+            }
 
-            // Then: for tabs still colliding (same title, different paths), add parent dir
+            // 2) 같은 title + 다른 path — 부모 디렉터리 접두
             var stillColliding = tabs
                 .Where(t => t.DisambiguatedTitle == null)
                 .GroupBy(t => t.Title)
