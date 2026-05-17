@@ -65,15 +65,6 @@
                         <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small"/>
                     </div>
                 }
-                @* TodoWrite 진행 위젯 (우하단 부유) *@
-                @if (session != null)
-                {
-                    <TodoFloater Snapshot="ChatState.CurrentTodos"
-                                 State="ChatState.TodoFloaterState"
-                                 OnRequestExpand="@(() => ChatState.SetTodoFloaterState(TodoFloaterVisibility.Expanded))"
-                                 OnRequestCollapse="@(() => ChatState.SetTodoFloaterState(TodoFloaterVisibility.Chip))"
-                                 OnDismiss="@(() => ChatState.DismissTodoFloater())"/>
-                }
             </CascadingValue>
 
             @* 빠른 응답 막대 *@
@@ -91,6 +82,16 @@
                            PlanContent="@_planContent"
                            PlanFilePath="@_planFilePath"
                            OnAction="HandlePlanReviewAction"/>
+
+            @* TodoWrite 진행 스트립 (인풋 위 인라인) *@
+            @if (session != null)
+            {
+                <TodoInlineStrip Snapshot="ChatState.CurrentTodos"
+                                 State="ChatState.TodoFloaterState"
+                                 OnRequestExpand="@(() => ChatState.SetTodoFloaterState(TodoFloaterVisibility.Expanded))"
+                                 OnRequestCollapse="@(() => ChatState.SetTodoFloaterState(TodoFloaterVisibility.Chip))"
+                                 OnDismiss="@(() => ChatState.DismissTodoFloater())"/>
+            }
 
             @* 입력 영역 *@
             @if (session != null)

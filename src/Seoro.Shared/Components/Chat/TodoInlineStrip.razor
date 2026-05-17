@@ -1,0 +1,119 @@
+@* 채팅 인풋 위에 인라인으로 표시되는 TodoWrite 진행 스트립 (Chip ↔ Expanded) *@
+@if (State == TodoFloaterVisibility.Chip && Snapshot is { Total: > 0 })
+{
+    <div class="todo-inline-strip todo-inline-chip @(Snapshot.HasInProgress ? "has-progress" : "") @(Snapshot.AllDone ? "all-done" : "")">
+        <button class="todo-inline-chip-main"
+                @onclick="HandleExpand"
+                type="button"
+                title="@Strings.Todo_FloaterTitle">
+            @if (Snapshot.AllDone)
+            {
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                         Color="Color.Success" Style="width: 14px; height: 14px;"/>
+            }
+            else if (Snapshot.HasInProgress)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                     Color="Color.Warning"
+                                     Style="width: 12px; height: 12px;"/>
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Filled.Checklist" Size="Size.Small"
+                         Style="width: 14px; height: 14px;"/>
+            }
+            <span class="todo-inline-current">@GetCurrentTaskText()</span>
+            <span class="todo-inline-counter">@Snapshot.Completed/@Snapshot.Total</span>
+        </button>
+        <button class="todo-inline-close"
+                @onclick="HandleDismiss"
+                type="button"
+                title="@Strings.Common_Close">
+            <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                     Style="width: 12px; height: 12px;"/>
+        </button>
+    </div>
+}
+else if (State == TodoFloaterVisibility.Expanded && Snapshot is { Total: > 0 })
+{
+    <div class="todo-inline-strip todo-inline-card">
+        <div class="todo-inline-header" @onclick="HandleCollapse">
+            <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small"
+                     Style="width: 14px; height: 14px; opacity: 0.7;"/>
+            <span class="todo-inline-title">@Strings.Todo_FloaterTitle</span>
+            <span class="todo-inline-counter">@Snapshot.Completed/@Snapshot.Total</span>
+            <button class="todo-inline-close"
+                    @onclick="HandleDismiss"
+                    @onclick:stopPropagation="true"
+                    type="button"
+                    title="@Strings.Common_Close">
+                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                         Style="width: 12px; height: 12px;"/>
+            </button>
+        </div>
+        <div class="todo-inline-progress">
+            <div class="todo-inline-progress-fill" style="width: @ProgressPercent%;"></div>
+        </div>
+        <div class="todo-inline-list">
+            @foreach (var entry in Snapshot.Entries)
+            {
+                <div class="todo-inline-row todo-status-@entry.Status.ToString().ToLowerInvariant()">
+                    @switch (entry.Status)
+                    {
+                        case TodoStatus.Completed:
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                     Color="Color.Success"
+                                     Style="width: 14px; height: 14px;"/>
+                            break;
+                        case TodoStatus.InProgress:
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                 Color="Color.Warning"
+                                                 Style="width: 12px; height: 12px;"/>
+                            break;
+                        default:
+                            <MudIcon Icon="@Icons.Material.Filled.RadioButtonUnchecked" Size="Size.Small"
+                                     Style="width: 14px; height: 14px; opacity: 0.4;"/>
+                            break;
+                    }
+                    <span class="todo-inline-text">@GetDisplayText(entry)</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public TodoSnapshot? Snapshot { get; set; }
+    [Parameter] public TodoFloaterVisibility State { get; set; }
+    [Parameter] public EventCallback OnRequestExpand { get; set; }
+    [Parameter] public EventCallback OnRequestCollapse { get; set; }
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    private int ProgressPercent =>
+        Snapshot is { Total: > 0 } s ? (int)Math.Round(s.Completed * 100.0 / s.Total) : 0;
+
+    private Task HandleExpand() => OnRequestExpand.InvokeAsync();
+    private Task HandleCollapse() => OnRequestCollapse.InvokeAsync();
+    private Task HandleDismiss() => OnDismiss.InvokeAsync();
+
+    private string GetCurrentTaskText()
+    {
+        if (Snapshot is null || Snapshot.Entries.Count == 0) return string.Empty;
+
+        var inProgress = Snapshot.Entries.FirstOrDefault(e => e.Status == TodoStatus.InProgress);
+        if (inProgress is not null)
+            return !string.IsNullOrEmpty(inProgress.ActiveForm) ? inProgress.ActiveForm : inProgress.Content;
+
+        var pending = Snapshot.Entries.FirstOrDefault(e => e.Status == TodoStatus.Pending);
+        if (pending is not null) return pending.Content;
+
+        return Snapshot.Entries[^1].Content;
+    }
+
+    private static string GetDisplayText(TodoEntry entry)
+    {
+        return entry.Status == TodoStatus.InProgress && !string.IsNullOrEmpty(entry.ActiveForm)
+            ? entry.ActiveForm
+            : entry.Content;
+    }
+}

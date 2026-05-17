@@ -146,13 +146,13 @@
             <button class="git-sync-btn @(blocked ? "disabled" : "")"
                     @onclick="FetchAsync" disabled="@blocked"
                     title="@Strings.Git_Fetch">
-                <MudIcon Icon="@Icons.Material.Filled.CloudDownload" Style="width: 14px; height: 14px;"/>
+                <MudIcon Icon="@Icons.Material.Outlined.CloudDownload" Style="width: 15px; height: 15px;"/>
                 <span>@Strings.Git_Fetch</span>
             </button>
-            <button class="git-sync-btn @(blocked ? "disabled" : "")"
+            <button class="git-sync-btn @(blocked ? "disabled" : "") @(_aheadBehind is { Behind: > 0 } ? "highlight" : "")"
                     @onclick="PullAsync" disabled="@blocked"
                     title="@Strings.Git_Pull">
-                <MudIcon Icon="@Icons.Material.Filled.Download" Style="width: 14px; height: 14px;"/>
+                <MudIcon Icon="@Icons.Material.Outlined.ArrowDownward" Style="width: 15px; height: 15px;"/>
                 <span>@Strings.Git_Pull</span>
                 @if (_aheadBehind is { Behind: > 0 })
                 {
@@ -162,7 +162,7 @@
             <button class="git-sync-btn @(blocked ? "disabled" : "") @(_aheadBehind is { Ahead: > 0 } ? "highlight" : "")"
                     @onclick="PushAsync" disabled="@blocked"
                     title="@Strings.Git_Push">
-                <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Style="width: 14px; height: 14px;"/>
+                <MudIcon Icon="@Icons.Material.Outlined.ArrowUpward" Style="width: 15px; height: 15px;"/>
                 <span>@Strings.Git_Push</span>
                 @if (_aheadBehind is { Ahead: > 0 })
                 {
