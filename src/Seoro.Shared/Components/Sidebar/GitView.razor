@@ -36,40 +36,38 @@
     {
         var totalCount = _stagedFiles.Count + _unstagedFiles.Count + _untrackedFiles.Count;
         var hasStaged = _stagedFiles.Count > 0;
+        var canStage = _unstagedFiles.Count + _untrackedFiles.Count > 0;
 
-        @* ── 헤더 ── *@
+        @* ── 헤더 (이미지처럼 단순: "X Changes" + Stage All + ⋯) ── *@
         <div class="git-view-header">
             <span class="git-view-title">
                 @(totalCount > 0 ? $"{totalCount} {Strings.Git_Changes}" : Strings.Git_Changes)
             </span>
             <div class="git-view-header-actions">
-                @if (_aheadBehind is { Ahead: > 0 } or { Behind: > 0 })
+                @if (canStage)
                 {
-                    <span class="ahead-behind-badge">
-                        @if (_aheadBehind.Value.Ahead > 0) { <span class="ahead">↑@(_aheadBehind.Value.Ahead)</span> }
-                        @if (_aheadBehind.Value.Behind > 0) { <span class="behind">↓@(_aheadBehind.Value.Behind)</span> }
-                    </span>
+                    <MudTooltip Text="@Strings.Git_StageAll" Placement="Placement.Bottom">
+                        <MudIconButton Icon="@Icons.Material.Filled.AddCircleOutline"
+                                       Size="Size.Small"
+                                       Disabled="@blocked"
+                                       OnClick="StageAllAsync"
+                                       Class="git-header-icon-btn"/>
+                    </MudTooltip>
                 }
-                <MudTooltip Text="@Strings.Git_OpenGraph" Placement="Placement.Bottom">
-                    <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
-                                   Size="Size.Small"
-                                   OnClick="OpenGitGraph"
-                                   Style="width: 22px; height: 22px; opacity: 0.7;"/>
-                </MudTooltip>
-                <MudTooltip Text="@Strings.Git_StageAll" Placement="Placement.Bottom">
-                    <MudIconButton Icon="@Icons.Material.Filled.AddCircleOutline"
-                                   Size="Size.Small"
-                                   Disabled="@(blocked || totalCount == 0 || _unstagedFiles.Count + _untrackedFiles.Count == 0)"
-                                   OnClick="StageAllAsync"
-                                   Style="width: 22px; height: 22px; opacity: 0.7;"/>
-                </MudTooltip>
-                <MudTooltip Text="@Strings.Git_Refresh" Placement="Placement.Bottom">
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                   Size="Size.Small"
-                                   Disabled="@_loading"
-                                   OnClick="LoadAsync"
-                                   Style="width: 22px; height: 22px; opacity: 0.5;"/>
-                </MudTooltip>
+                <MudMenu Icon="@Icons.Material.Filled.MoreHoriz"
+                         Size="Size.Small" Dense="true"
+                         Class="git-header-icon-btn"
+                         AnchorOrigin="Origin.BottomRight"
+                         TransformOrigin="Origin.TopRight">
+                    <MudMenuItem Icon="@Icons.Material.Filled.AccountTree" OnClick="OpenGitGraph">
+                        @Strings.Git_OpenGraph
+                    </MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Refresh"
+                                 Disabled="@_loading"
+                                 OnClick="@(() => LoadAsync())">
+                        @Strings.Git_Refresh
+                    </MudMenuItem>
+                </MudMenu>
             </div>
         </div>
 
@@ -92,9 +90,7 @@
             else if (totalCount == 0)
             {
                 <div class="git-view-no-changes">
-                    <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline"
-                             Size="Size.Large" Style="opacity: 0.15;"/>
-                    <span>@Strings.Git_NoChanges</span>
+                    <span>@Strings.Git_NoChangesToCommit</span>
                 </div>
             }
             else
@@ -132,6 +128,7 @@
                 <MudMenu Icon="@Icons.Material.Filled.MoreVert"
                          Size="Size.Small" Dense="true"
                          Disabled="@blocked"
+                         Class="git-header-icon-btn"
                          AnchorOrigin="Origin.TopRight"
                          TransformOrigin="Origin.BottomRight">
                     <MudMenuItem Icon="@Icons.Material.Outlined.SmartToy" OnClick="CommitViaAiAsync">
@@ -141,34 +138,46 @@
             </div>
         </div>
 
-        @* ── 동기화 바 ── *@
-        <div class="git-sync-bar">
-            <button class="git-sync-btn @(blocked ? "disabled" : "")"
-                    @onclick="FetchAsync" disabled="@blocked"
-                    title="@Strings.Git_Fetch">
-                <MudIcon Icon="@Icons.Material.Filled.CloudDownload" Style="width: 14px; height: 14px;"/>
-                <span>@Strings.Git_Fetch</span>
-            </button>
-            <button class="git-sync-btn @(blocked ? "disabled" : "")"
-                    @onclick="PullAsync" disabled="@blocked"
-                    title="@Strings.Git_Pull">
-                <MudIcon Icon="@Icons.Material.Filled.Download" Style="width: 14px; height: 14px;"/>
-                <span>@Strings.Git_Pull</span>
-                @if (_aheadBehind is { Behind: > 0 })
+        @* ── 하단 바: 좌측 브랜치, 우측 Sync 드롭다운 (VS Code 스타일) ── *@
+        <div class="git-bottom-bar">
+            <div class="git-bottom-branch" title="@(session.Git.BranchName ?? "")">
+                <MudIcon Icon="@Icons.Material.Filled.CallSplit" Style="width: 12px; height: 12px; opacity: 0.6; flex-shrink: 0;"/>
+                <span class="git-bottom-branch-name">@(session.Git.BranchName ?? "—")</span>
+                @if (_aheadBehind is { Ahead: > 0 } or { Behind: > 0 })
                 {
-                    <span class="git-sync-badge">@_aheadBehind.Value.Behind</span>
+                    <span class="git-bottom-ahead-behind">
+                        @if (_aheadBehind.Value.Ahead > 0) { <span>↑@(_aheadBehind.Value.Ahead)</span> }
+                        @if (_aheadBehind.Value.Behind > 0) { <span>↓@(_aheadBehind.Value.Behind)</span> }
+                    </span>
                 }
-            </button>
-            <button class="git-sync-btn @(blocked ? "disabled" : "") @(_aheadBehind is { Ahead: > 0 } ? "highlight" : "")"
-                    @onclick="PushAsync" disabled="@blocked"
-                    title="@Strings.Git_Push">
-                <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Style="width: 14px; height: 14px;"/>
-                <span>@Strings.Git_Push</span>
-                @if (_aheadBehind is { Ahead: > 0 })
-                {
-                    <span class="git-sync-badge">@_aheadBehind.Value.Ahead</span>
-                }
-            </button>
+            </div>
+            <MudMenu Label="@Strings.Git_Sync"
+                     StartIcon="@Icons.Material.Filled.Sync"
+                     EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
+                     Variant="Variant.Outlined"
+                     Size="Size.Small"
+                     Dense="true"
+                     Disabled="@blocked"
+                     Class="@("git-bottom-sync-mud " + (_aheadBehind is { Ahead: > 0 } ? "highlight" : ""))"
+                     AnchorOrigin="Origin.TopRight"
+                     TransformOrigin="Origin.BottomRight">
+                <MudMenuItem Icon="@Icons.Material.Filled.CloudDownload" OnClick="FetchAsync">
+                    @Strings.Git_Fetch
+                </MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Download" OnClick="PullAsync">
+                    @Strings.Git_Pull
+                </MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Download" OnClick="PullRebaseAsync">
+                    @Strings.Git_PullRebase
+                </MudMenuItem>
+                <MudDivider/>
+                <MudMenuItem Icon="@Icons.Material.Filled.CloudUpload" OnClick="PushAsync">
+                    @Strings.Git_Push
+                </MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Warning" OnClick="ForcePushAsync">
+                    @Strings.Git_ForcePush
+                </MudMenuItem>
+            </MudMenu>
         </div>
     }
 </div>
@@ -650,14 +659,18 @@
         finally { _busy = false; }
     }
 
-    private async Task PullAsync()
+    private Task PullAsync() => PullCoreAsync(rebase: false);
+
+    private Task PullRebaseAsync() => PullCoreAsync(rebase: true);
+
+    private async Task PullCoreAsync(bool rebase)
     {
         var session = ChatState.CurrentSession;
         if (session == null) return;
         _busy = true;
         try
         {
-            var res = await GitService.PullAsync(session.Git.WorktreePath, rebase: true);
+            var res = await GitService.PullAsync(session.Git.WorktreePath, rebase: rebase);
             if (res.Success)
                 Snackbar.Add(Strings.Snackbar_PullSuccess, Severity.Success);
             else
@@ -667,21 +680,34 @@
         finally { _busy = false; }
     }
 
-    private async Task PushAsync()
+    private Task PushAsync() => PushCoreAsync(force: false);
+
+    private async Task ForcePushAsync()
+    {
+        var confirm = await DialogService.ShowMessageBoxAsync(
+            Strings.Git_ForcePushConfirmTitle,
+            Strings.Git_ForcePushConfirmBody,
+            yesText: Strings.Git_ForcePush,
+            cancelText: Strings.Common_Cancel);
+        if (confirm != true) return;
+        await PushCoreAsync(force: true);
+    }
+
+    private async Task PushCoreAsync(bool force)
     {
         var session = ChatState.CurrentSession;
         if (session == null) return;
         _busy = true;
         try
         {
-            var res = await GitService.PushAsync(session.Git.WorktreePath);
+            var res = await GitService.PushAsync(session.Git.WorktreePath, force: force);
             if (!res.Success)
             {
                 // upstream 미설정 자동 재시도
                 if (res.Error.Contains("no upstream", StringComparison.OrdinalIgnoreCase) ||
                     res.Error.Contains("set-upstream", StringComparison.OrdinalIgnoreCase))
                 {
-                    res = await GitService.PushAsync(session.Git.WorktreePath, setUpstream: true);
+                    res = await GitService.PushAsync(session.Git.WorktreePath, setUpstream: true, force: force);
                 }
             }
 

@@ -128,8 +128,10 @@ public interface IGitService
     /// <summary>
     ///     현재 브랜치를 origin에 push 한다 (<c>git push</c> 또는 <c>git push --set-upstream origin &lt;branch&gt;</c>).
     ///     upstream 미설정 시 자동으로 <paramref name="setUpstream"/>를 true로 호출하는 것은 호출자 책임.
+    ///     <paramref name="force"/>가 true이면 <c>--force-with-lease</c>를 사용해 원격 히스토리를 덮어쓴다(파괴 방지).
     /// </summary>
-    Task<GitResult> PushAsync(string workingDir, bool setUpstream = false, CancellationToken ct = default);
+    Task<GitResult> PushAsync(string workingDir, bool setUpstream = false, bool force = false,
+        CancellationToken ct = default);
 
     /// <summary>
     ///     원격에서 pull 한다.
