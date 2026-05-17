@@ -340,7 +340,7 @@ public class SessionServiceTests : IDisposable
             => Task.FromResult(NextResult);
         public Task<GitResult> DiscardFileAsync(string workingDir, string relativePath, CancellationToken ct = default)
             => Task.FromResult(NextResult);
-        public Task<GitResult> PushAsync(string workingDir, bool setUpstream = false, CancellationToken ct = default)
+        public Task<GitResult> PushAsync(string workingDir, bool setUpstream = false, bool force = false, CancellationToken ct = default)
             => Task.FromResult(NextResult);
         public Task<GitResult> PullAsync(string workingDir, bool rebase = true, CancellationToken ct = default)
             => Task.FromResult(NextResult);

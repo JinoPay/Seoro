@@ -495,7 +495,13 @@ public static class Strings
     public static string Git_Refresh => Get(nameof(Git_Refresh));
     public static string Git_Fetch => Get(nameof(Git_Fetch));
     public static string Git_Pull => Get(nameof(Git_Pull));
+    public static string Git_PullRebase => Get(nameof(Git_PullRebase));
     public static string Git_Push => Get(nameof(Git_Push));
+    public static string Git_ForcePush => Get(nameof(Git_ForcePush));
+    public static string Git_ForcePushConfirmTitle => Get(nameof(Git_ForcePushConfirmTitle));
+    public static string Git_ForcePushConfirmBody => Get(nameof(Git_ForcePushConfirmBody));
+    public static string Git_Sync => Get(nameof(Git_Sync));
+    public static string Git_NoChangesToCommit => Get(nameof(Git_NoChangesToCommit));
     public static string Git_Group_Staged => Get(nameof(Git_Group_Staged));
     public static string Git_Group_Changes => Get(nameof(Git_Group_Changes));
     public static string Git_Group_Untracked => Get(nameof(Git_Group_Untracked));

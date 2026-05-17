@@ -501,7 +501,7 @@ public class GitService(
         }
     }
 
-    public async Task<GitResult> PushAsync(string workingDir, bool setUpstream = false,
+    public async Task<GitResult> PushAsync(string workingDir, bool setUpstream = false, bool force = false,
         CancellationToken ct = default)
     {
         GitResult result;
@@ -510,15 +510,19 @@ public class GitService(
             var branch = await GetCurrentBranchAsync(workingDir);
             if (string.IsNullOrEmpty(branch))
                 return new GitResult(false, "", "current branch unknown");
-            result = await RunGitAsync(workingDir, ct, "push", "--set-upstream", "origin", branch);
+            var args = force
+                ? new[] { "push", "--force-with-lease", "--set-upstream", "origin", branch }
+                : new[] { "push", "--set-upstream", "origin", branch };
+            result = await RunGitAsync(workingDir, ct, args);
         }
         else
         {
-            result = await RunGitAsync(workingDir, ct, "push");
+            var args = force ? new[] { "push", "--force-with-lease" } : new[] { "push" };
+            result = await RunGitAsync(workingDir, ct, args);
         }
 
         if (result.Success)
-            logger.LogInformation("push 완료 {WorkingDir}", workingDir);
+            logger.LogInformation("push 완료 {WorkingDir} (force={Force})", workingDir, force);
         else
             logger.LogWarning("push 실패 {WorkingDir}: {Error}", workingDir, result.Error);
         return result;

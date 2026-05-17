@@ -471,7 +471,13 @@
   <data name="Git_Refresh" xml:space="preserve"><value>Refresh</value></data>
   <data name="Git_Fetch" xml:space="preserve"><value>Fetch</value></data>
   <data name="Git_Pull" xml:space="preserve"><value>Pull</value></data>
+  <data name="Git_PullRebase" xml:space="preserve"><value>Pull (Rebase)</value></data>
   <data name="Git_Push" xml:space="preserve"><value>Push</value></data>
+  <data name="Git_ForcePush" xml:space="preserve"><value>Force Push</value></data>
+  <data name="Git_ForcePushConfirmTitle" xml:space="preserve"><value>Force Push</value></data>
+  <data name="Git_ForcePushConfirmBody" xml:space="preserve"><value>This will overwrite remote history. Continue?</value></data>
+  <data name="Git_Sync" xml:space="preserve"><value>Sync</value></data>
+  <data name="Git_NoChangesToCommit" xml:space="preserve"><value>No changes to commit</value></data>
   <data name="Git_Group_Staged" xml:space="preserve"><value>Staged</value></data>
   <data name="Git_Group_Changes" xml:space="preserve"><value>Changes</value></data>
   <data name="Git_Group_Untracked" xml:space="preserve"><value>Untracked</value></data>

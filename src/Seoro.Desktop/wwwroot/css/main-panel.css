@@ -1148,11 +1148,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
+    gap: var(--space-1);
+    padding: 3px var(--space-2) 3px var(--space-3);
     border-bottom: 1px solid var(--border-default);
     flex-shrink: 0;
     background: var(--bg-sidebar);
+    min-height: 26px;
 }
 
 .git-view-title {
@@ -1166,7 +1167,19 @@
 .git-view-header-actions {
     display: flex;
     align-items: center;
-    gap: var(--space-1);
+    gap: 2px;
+}
+
+.git-header-icon-btn.mud-icon-button {
+    width: 20px;
+    height: 20px;
+    min-width: 0;
+    padding: 0;
+    opacity: 0.7;
+}
+
+.git-header-icon-btn .mud-icon-root {
+    font-size: 15px;
 }
 
 .git-view-files {
@@ -1178,13 +1191,13 @@
 
 .git-view-no-changes {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-6) var(--space-3);
+    justify-content: center;
+    padding: 25% var(--space-3) var(--space-3);
     color: var(--text-secondary);
-    font-size: var(--text-xs);
-    opacity: 0.5;
+    font-size: 13px;
+    opacity: 0.45;
+    text-align: center;
 }
 
 .git-group { margin-top: var(--space-1); }
@@ -1193,12 +1206,12 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 8px;
+    padding: 2px 8px;
     cursor: pointer;
     user-select: none;
-    font-size: var(--text-xs);
+    font-size: 11px;
     font-weight: 600;
-    opacity: 0.8;
+    opacity: 0.75;
 }
 
 .git-group-header:hover {
@@ -1230,11 +1243,12 @@
 .git-file-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 3px 8px 3px 22px;
+    gap: 5px;
+    padding: 1px 8px 1px 22px;
     cursor: default;
     position: relative;
     border-radius: 2px;
+    min-height: 20px;
 }
 
 .git-file-row:hover {
@@ -1251,7 +1265,7 @@
 }
 
 .git-file-name {
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1295,8 +1309,8 @@
 }
 
 .git-file-action-btn {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1331,26 +1345,27 @@
 .git-commit-box {
     flex-shrink: 0;
     border-top: 1px solid var(--border-default);
-    padding: var(--space-2) var(--space-3);
+    padding: 6px 10px;
     background: var(--bg-sidebar);
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: 5px;
 }
 
 .git-commit-textarea {
     width: 100%;
     font-family: inherit;
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     background: var(--bg-input, var(--mud-palette-surface));
     color: var(--text-primary);
     border: 1px solid var(--border-default);
     border-radius: 4px;
-    padding: 6px 8px;
+    padding: 4px 6px;
     resize: vertical;
-    min-height: 38px;
-    max-height: 160px;
+    min-height: 28px;
+    max-height: 140px;
     outline: none;
+    line-height: 1.4;
 }
 
 .git-commit-textarea:focus { border-color: var(--accent); }
@@ -1367,16 +1382,17 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 6px 10px;
+    gap: 5px;
+    padding: 4px 8px;
     border: 1px solid transparent;
     border-radius: 4px;
     background: var(--accent, #3b82f6);
     color: white;
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     font-weight: 600;
     cursor: pointer;
     transition: filter 0.12s;
+    min-height: 24px;
 }
 
 .git-btn-primary:hover:not(:disabled):not(.disabled) { filter: brightness(1.08); }
@@ -1387,83 +1403,69 @@
     cursor: not-allowed;
 }
 
-.git-sync-bar {
+/* ── 하단 바: 좌측 브랜치, 우측 Sync 드롭다운 (VS Code 스타일) ── */
+.git-bottom-bar {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 2px;
-    padding: var(--space-1) var(--space-2);
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: 3px 8px;
     border-top: 1px solid var(--border-default);
     background: var(--bg-sidebar);
-}
-
-.git-sync-btn {
-    flex: 1;
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    padding: 5px 8px;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: var(--radius-full);
+    font-size: 11px;
     color: var(--text-secondary);
-    font-size: var(--text-xs);
-    font-weight: 500;
-    cursor: pointer;
-    transition: background var(--transition), color var(--transition), border-color var(--transition);
-    letter-spacing: 0.01em;
+    min-height: 26px;
 }
 
-.git-sync-btn .mud-icon-root {
-    opacity: 0.7;
-    transition: opacity var(--transition);
-}
-
-.git-sync-btn:hover:not(:disabled):not(.disabled) {
-    background: var(--accent-dim);
-    color: var(--text-primary);
-}
-
-.git-sync-btn:hover:not(:disabled):not(.disabled) .mud-icon-root {
-    opacity: 1;
-}
-
-.git-sync-btn:disabled,
-.git-sync-btn.disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.git-sync-btn.highlight {
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-
-.git-sync-btn.highlight .mud-icon-root {
-    opacity: 1;
-}
-
-.git-sync-btn.highlight:hover:not(:disabled):not(.disabled) {
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: var(--accent);
-}
-
-.git-sync-badge {
+.git-bottom-branch {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 16px;
-    height: 14px;
-    padding: 0 4px;
-    background: var(--accent);
-    color: white;
-    font-size: 10px;
-    line-height: 1;
-    font-weight: 600;
-    border-radius: var(--radius-full);
+    gap: 5px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.git-bottom-branch-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.git-bottom-ahead-behind {
+    display: inline-flex;
+    gap: 4px;
+    opacity: 0.7;
     font-variant-numeric: tabular-nums;
+    margin-left: 4px;
+}
+
+/* MudMenu 활성자(MudButton) 톤 다운: 좁은 padding + 작은 폰트 */
+.git-bottom-sync-mud.mud-button-root {
+    min-width: 0;
+    min-height: 0;
+    padding: 1px 6px;
+    font-size: 11px;
+    text-transform: none;
+    border-color: var(--border-default);
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.git-bottom-sync-mud .mud-button-icon-start,
+.git-bottom-sync-mud .mud-button-icon-end {
+    margin: 0 1px;
+}
+
+.git-bottom-sync-mud .mud-button-icon-start .mud-icon-root,
+.git-bottom-sync-mud .mud-button-icon-end .mud-icon-root {
+    font-size: 12px;
+}
+
+.git-bottom-sync-mud.highlight.mud-button-root {
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 /* ═══════════════════════════════════════════════════════
