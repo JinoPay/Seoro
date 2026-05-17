@@ -3,11 +3,13 @@
 
 <MudTooltip Placement="Placement.Top">
     <ChildContent>
-        <button class="model-selector-pill" type="button"
+        <button class="model-selector-pill @(_modelMenuOpen ? "is-open" : "")" type="button"
                 @onclick="ToggleModelMenu"
                 disabled="@(Disabled || IsStreaming)">
+            <span class="model-selector-dot"></span>
             <span class="model-selector-label">@GetModelDisplayName()</span>
-            <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small"/>
+            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small"
+                     Class="model-selector-chevron"/>
         </button>
     </ChildContent>
     <TooltipContent>

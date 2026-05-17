@@ -205,7 +205,7 @@
 
 /* ===== Input Area (Redesigned) ===== */
 .input-area-container {
-    padding: 0 var(--space-4) var(--space-3);
+    padding: 0 var(--space-3) var(--space-2);
     background: transparent;
     flex-shrink: 0;
 }
@@ -214,7 +214,7 @@
     background: var(--bg-surface);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-default);
-    padding: var(--space-3) var(--space-4) var(--space-2);
+    padding: var(--space-2) var(--space-3) var(--space-1);
     transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
@@ -452,7 +452,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: var(--space-1);
+    margin-top: 0;
 }
 
 .input-toolbar-left {
@@ -472,25 +472,32 @@
     align-items: center;
 }
 
-/* Model selector pill */
+/* Model selector — ghost pill (modern, borderless) */
 .model-selector-pill {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
+    gap: 6px;
     background: transparent;
-    border: 1px solid var(--border-default);
+    border: 1px solid transparent;
     border-radius: var(--radius-full);
-    padding: 2px 8px 2px 12px;
+    padding: 2px 6px 2px 8px;
     color: var(--text-secondary);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
+    font-weight: 500;
     font-family: inherit;
     cursor: pointer;
-    transition: all var(--transition);
-    height: 28px;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+    height: 22px;
     white-space: nowrap;
+    letter-spacing: 0.01em;
 }
 
 .model-selector-pill:hover:not(:disabled) {
+    background: var(--accent-dim);
+    color: var(--text-primary);
+}
+
+.model-selector-pill.is-open {
     background: var(--accent-dim);
     border-color: var(--border-active);
     color: var(--text-primary);
@@ -501,9 +508,28 @@
     cursor: not-allowed;
 }
 
-.model-selector-pill .mud-icon-root {
-    font-size: 16px;
-    opacity: 0.5;
+.model-selector-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+    flex-shrink: 0;
+}
+
+.model-selector-chevron.mud-icon-root {
+    font-size: 14px;
+    opacity: 0.55;
+    transition: transform var(--transition), opacity var(--transition);
+}
+
+.model-selector-pill:hover .model-selector-chevron.mud-icon-root,
+.model-selector-pill.is-open .model-selector-chevron.mud-icon-root {
+    opacity: 0.9;
+}
+
+.model-selector-pill.is-open .model-selector-chevron.mud-icon-root {
+    transform: rotate(180deg);
 }
 
 /* Token usage ring */
