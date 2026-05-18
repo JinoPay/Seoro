@@ -504,50 +504,63 @@
 
 
     private Task HandleSend(ChatInputMessage input)
+        => HandleSend(input, null, null, null);
+
+    private Task HandleSend(
+        ChatInputMessage input,
+        Session? targetSession,
+        Workspace? targetWorkspace,
+        string? targetBranch)
     {
-        if (ChatState.CurrentSession == null
+        var session = targetSession ?? ChatState.CurrentSession;
+        if (session == null
             || (string.IsNullOrWhiteSpace(input.Text) && input.Attachments.Count == 0))
             return Task.CompletedTask;
 
-        // 스트리밍 중에는 큐로 라우팅
-        if (ChatState.IsStreaming)
+        var isCurrentSession = ChatState.CurrentSession?.Id == session.Id;
+
+        // 스트리밍 중에는 큐로 라우팅 (해당 세션 기준)
+        if (ChatState.Streaming.IsSessionStreaming(session.Id))
         {
-            MessageQueue.Enqueue(ChatState.CurrentSession.Id, input);
-            Snackbar.Add(Strings.Chat_Queue_Toast_Enqueued, Severity.Info);
+            MessageQueue.Enqueue(session.Id, input);
+            if (isCurrentSession)
+                Snackbar.Add(Strings.Chat_Queue_Toast_Enqueued, Severity.Info);
             return Task.CompletedTask;
         }
 
-        // 지우기 전에 플랜 리뷰 상태 캡처
-        var wasPlanReviewVisible = _planReviewVisible;
+        // 지우기 전에 플랜 리뷰 상태 캡처 (현재 세션일 때만 UI 상태 유효)
+        var wasPlanReviewVisible = isCurrentSession
+            ? _planReviewVisible
+            : (session.PlanCompleted && session.PermissionMode == "plan");
 
-        _quickResponseVisible = false;
-        _quickResponseOptions = [];
-        _askUserBarVisible = false;
-        _askUserQuestionInput = null;
-        _planReviewVisible = false;
-        // 보관된 AskUserQuestion 상태 지우기
-        if (ChatState.CurrentSession != null)
-            ChatState.CurrentSession.PendingAskUserQuestionInput = null;
+        if (isCurrentSession)
+        {
+            _quickResponseVisible = false;
+            _quickResponseOptions = [];
+            _askUserBarVisible = false;
+            _askUserQuestionInput = null;
+            _planReviewVisible = false;
+        }
+        // 보관된 AskUserQuestion 상태 지우기 (세션 객체에 저장된 값)
+        session.PendingAskUserQuestionInput = null;
 
         // 플랜 리뷰가 표시된 경우 사용자 입력을 플랜 피드백으로 취급
         if (wasPlanReviewVisible && !string.IsNullOrWhiteSpace(input.Text))
         {
             input.Text = $"플랜에 대한 피드백: {input.Text}\n\n이 피드백을 반영하여 플랜을 수정해주세요.";
             // HandleStateChanged가 ApplyResultAsync가 새로운 플랜 콘텐츠를 설정할 기회를 가지기 전에 만료된 플랜 리뷰를 복원하지 않도록 PlanCompleted 재설정
-            if (ChatState.CurrentSession != null)
-                ChatState.CurrentSession.PlanCompleted = false;
+            session.PlanCompleted = false;
         }
 
-        // 입력에서 체인 상태 추출
-        if (input.PendingChain is { Count: > 0 })
+        // 입력에서 체인 상태 추출 (_pendingChain은 컴포넌트 변수 → 현재 세션에서만)
+        if (input.PendingChain is { Count: > 0 } && isCurrentSession)
         {
             _pendingChain = input.PendingChain;
             input.PendingChain = null;
         }
 
-        var session = ChatState.CurrentSession;
-        var workspace = ChatState.CurrentWorkspace;
-        var branch = _selectedBranch;
+        var workspace = targetWorkspace ?? (isCurrentSession ? ChatState.CurrentWorkspace : null);
+        var branch = targetBranch ?? (isCurrentSession ? _selectedBranch : (session.Git.BaseBranch ?? ""));
         var sessionId = session.Id;
 
         // 같은 세션에 대해서만 이전 작업 취소
@@ -569,6 +582,7 @@
                 await ApplyResultAsync(result, session);
 
                 // 정상 완료 시 큐 자동 드레인 (사용자가 Stop을 누르면 WasCancelled=true → 건너뜀)
+                // 원래 세션/워크스페이스/브랜치를 명시적으로 전달하여 사용자가 다른 세션으로 전환해도 올바른 세션으로 전송
                 if (!ct.IsCancellationRequested
                     && !result.WasCancelled
                     && MessageQueue.TryDequeue(sessionId, out var next)
@@ -578,7 +592,7 @@
                     await InvokeAsync(async () =>
                     {
                         Snackbar.Add(Strings.Chat_Queue_AutoDispatching(remaining), Severity.Info);
-                        await HandleSend(next.Input);
+                        await HandleSend(next.Input, session, workspace, branch);
                     });
                 }
             }
