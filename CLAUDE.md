@@ -12,10 +12,10 @@
 - **Test**: `dotnet test`
 - **Auto-update**: Velopack v0.0.1298 (`vpk` tool)
 - **CI/CD**: GitHub Actions (`release.yml`) - triggered on `v*` tags
-- **Required CLI**: Claude CLI >= 2.1.128
+- **Required CLI**: Claude CLI >= 2.1.170
 - **Required Runtime**: Node.js 20 (CI/CodeMirror 빌드)
 - **Codebase**: ~55,300 lines (.cs, .razor, .css, .js)
-- **Latest Version**: 1.17.19 (2026-04-14)
+- **Latest Version**: 1.19.0 (2026-06-10)
 - **Single Instance**: Mutex(`SeoroSingleInstance`) — 다중 실행 방지
 
 ## Architecture Overview
@@ -89,6 +89,7 @@ tests/
 - `StreamEventProcessor` - 스트림 이벤트 파이프라인 디스패치
 - `StreamingStateManager` - 스트리밍 상태 추적 (시작/진행/완료)
 - `ContentGrouper` - 연속 콘텐츠 블록 그룹화
+- `TaskListTracker` - TaskCreate/TaskUpdate 도구 호출 누적 → TodoSnapshot 변환 (세션별)
 - `TabManager` - 채팅 탭 관리
 - `SystemPromptBuilder` - 시스템 프롬프트 조립 (토큰 예산 관리)
 - `PlanSessionTransferBuilder` - 플랜 세션 전환 빌더
@@ -238,7 +239,7 @@ tests/
 - `BranchPrefix`: `seoro/`
 - `DefaultEffortLevel`: `auto`
 - `PasteAsFileThreshold`: 500 (붙여넣기 자동 파일 변환 기준)
-- `RequiredClaudeVersion`: `2.1.128`
+- `RequiredClaudeVersion`: `2.1.170`
 - `ShellCacheTtl`: 10분
 - `WhichTimeout`: 5초
 

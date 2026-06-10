@@ -1021,6 +1021,24 @@
     line-height: 1.4;
 }
 
+/* 옵션별 preview (코드/목업 미리보기) — 선택된 옵션에서만 표시 */
+.askbar-option-preview {
+    margin: 6px 0 0;
+    padding: 8px 10px;
+    max-height: 220px;
+    overflow: auto;
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-xs);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--bg-secondary, rgba(0, 0, 0, 0.15));
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    border-radius: 6px;
+    opacity: 0.85;
+    text-align: left;
+}
+
 .askbar-progress {
     font-size: var(--text-xs);
     color: var(--color-info);

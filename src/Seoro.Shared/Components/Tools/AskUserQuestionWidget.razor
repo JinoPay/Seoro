@@ -35,6 +35,10 @@
                             {
                                 <span class="askuser-option-desc">@opt.Description</span>
                             }
+                            @if (!string.IsNullOrEmpty(opt.Preview))
+                            {
+                                <pre class="askbar-option-preview">@opt.Preview</pre>
+                            }
                         </div>
                     }
                 </div>
@@ -46,7 +50,7 @@
 @code {
     [Parameter][EditorRequired] public ToolCall Tool { get; set; } = null!;
 
-    private record AskUserOption(string Label, string? Description);
+    private record AskUserOption(string Label, string? Description, string? Preview = null);
 
     private record AskUserQuestionItem(string? Header, string Question, List<AskUserOption> Options, bool MultiSelect);
 
@@ -91,8 +95,9 @@
                     {
                         var label = opt.TryGetProperty("label", out var lProp) ? lProp.GetString() ?? "" : "";
                         var desc = opt.TryGetProperty("description", out var dProp) ? dProp.GetString() : null;
+                        var preview = opt.TryGetProperty("preview", out var pProp) ? pProp.GetString() : null;
                         if (!string.IsNullOrEmpty(label))
-                            options.Add(new AskUserOption(label, desc));
+                            options.Add(new AskUserOption(label, desc, preview));
                     }
                 }
 

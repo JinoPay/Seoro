@@ -124,7 +124,15 @@ public class ClaudeArgumentBuilderTests
     public void Build_FallbackModel_IncludesFlag()
     {
         var result = ClaudeArgumentBuilder.Build("", "sonnet", "default", DefaultCaps(), fallbackModel: "haiku");
-        Assert.Contains("--fallback-model haiku", result);
+        Assert.Contains("--fallback-model \"haiku\"", result);
+    }
+
+    [Fact]
+    public void Build_MultipleFallbackModels_NormalizesCommaSeparatedList()
+    {
+        var result = ClaudeArgumentBuilder.Build("", "fable", "default", DefaultCaps(),
+            fallbackModel: "opus, sonnet , haiku");
+        Assert.Contains("--fallback-model \"opus,sonnet,haiku\"", result);
     }
 
     [Fact]

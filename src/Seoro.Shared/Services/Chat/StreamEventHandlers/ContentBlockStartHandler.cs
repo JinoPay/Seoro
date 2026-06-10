@@ -40,7 +40,17 @@ public class ContentBlockStartHandler(IChatState chatState, IGitBranchWatcherSer
                 if (TodoSnapshotParser.IsTodoWriteTool(ctx.CurrentToolCall.Name)
                     && TodoSnapshotParser.TryParse(ctx.CurrentToolCall.Input, out var snap))
                 {
-                    chatState.UpdateTodoSnapshot(snap);
+                    chatState.UpdateTodoSnapshot(ctx.Session.Id, snap);
+                }
+                else if (TaskListTracker.IsTaskTool(ctx.CurrentToolCall.Name)
+                         && !string.IsNullOrEmpty(ctx.CurrentToolCall.Input))
+                {
+                    var tracker = chatState.GetTaskTracker(ctx.Session.Id);
+                    var applied = TaskListTracker.IsTaskCreate(ctx.CurrentToolCall.Name)
+                        ? tracker.ApplyTaskCreate(ctx.CurrentToolCall.Id, ctx.CurrentToolCall.Input)
+                        : tracker.ApplyTaskUpdate(ctx.CurrentToolCall.Input);
+                    if (applied)
+                        chatState.UpdateTodoSnapshot(ctx.Session.Id, tracker.ToSnapshot());
                 }
                 break;
 
@@ -61,6 +71,11 @@ public class ContentBlockStartHandler(IChatState chatState, IGitBranchWatcherSer
                             // Codex는 output을 Content가 아닌 ContentBlock.Text에 직접 제공
                             matchingTool.Output = evt.ContentBlock.Text;
                         chatState.NotifyStateChanged();
+
+                        // TaskCreate 결과에서 CLI가 부여한 실제 taskId를 트래커에 바인딩
+                        if (matchingTool.IsError != true && TaskListTracker.IsTaskCreate(matchingTool.Name))
+                            chatState.GetTaskTracker(ctx.Session.Id)
+                                .ApplyTaskCreateResult(matchingTool.Id, matchingTool.Output);
 
                         // Refresh branch from HEAD file after Bash tool completes
                         // Delay slightly to let git finish writing HEAD file

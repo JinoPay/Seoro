@@ -69,13 +69,15 @@ public static class ModelDefinitions
     public static bool SupportsMaxEffort(string modelId)
     {
         var normalized = NormalizeModelId(modelId);
-        return normalized is "opus" or "opus[1m]" or "opusplan";
+        return normalized is "fable" or "opus" or "opus[1m]" or "opusplan";
     }
 
     public static bool SupportsXHighEffort(string modelId) => SupportsMaxEffort(modelId);
 
     public static string GetMaxEffortLevel(string modelId)
     {
+        var normalized = NormalizeModelId(modelId);
+        if (normalized == "fable") return "max";
         return SupportsMaxEffort(modelId) ? "xhigh" : "high";
     }
 
@@ -198,12 +200,21 @@ public static class ModelDefinitions
             Models =
             [
                 // ── 표준 ──
-                new ModelInfo("opus", "Claude Opus 4.7")
+                new ModelInfo("fable", "Claude Fable 5")
+                {
+                    Keywords = ["fable"],
+                    Pricing = new ModelPricing(10.0m, 50.0m, 12.5m, 1.0m),
+                    ContextWindow = 1_000_000,
+                    Description = "최상위 지능 (Mythos급) · 128K 출력 · 1M 컨텍스트",
+                    SpeedTier = 1,
+                    Category = "standard"
+                },
+                new ModelInfo("opus", "Claude Opus 4.8")
                 {
                     Keywords = ["opus"],
                     Pricing = new ModelPricing(5.0m, 25.0m, 6.25m, 0.50m),
                     ContextWindow = 1_000_000,
-                    Description = "최고 지능 · 128K 출력 · 1M 컨텍스트 (Opus 4.7)",
+                    Description = "최고 지능 · 128K 출력 · 1M 컨텍스트 (Opus 4.8)",
                     SpeedTier = 1,
                     Category = "standard"
                 },
@@ -229,12 +240,12 @@ public static class ModelDefinitions
                 // Anthropic 가격 책정 문서의 확장 가격:
                 // 입력 >200K: 2배 표준. 출력 >200K: 1.5배 표준.
                 // 캐시 배수 (1.25배 쓰기, 0.1배 읽기)는 확장 기본 위에 적용.
-                new ModelInfo("opus[1m]", "Opus 4.7 (1M)")
+                new ModelInfo("opus[1m]", "Opus 4.8 (1M)")
                 {
                     Keywords = ["opus[1m]"],
                     Pricing = new ModelPricing(5.0m, 25.0m, 6.25m, 0.50m),
                     ContextWindow = 1_000_000,
-                    Description = "Opus 4.7 — 1M 컨텍스트, 표준 가격 (할증 없음)",
+                    Description = "Opus 4.8 — 1M 컨텍스트, 표준 가격 (할증 없음)",
                     SpeedTier = 1,
                     Category = "extended"
                 },
@@ -253,7 +264,7 @@ public static class ModelDefinitions
                 new ModelInfo("opusplan", "Opus Plan")
                 {
                     Keywords = ["opusplan"],
-                    Description = "Opus 4.7이 플래닝, Sonnet 4.6이 실행",
+                    Description = "Opus 4.8이 플래닝, Sonnet 4.6이 실행",
                     SpeedTier = 1,
                     IsAlias = true,
                     Category = "hybrid"

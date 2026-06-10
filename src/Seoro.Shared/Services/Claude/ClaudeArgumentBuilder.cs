@@ -88,9 +88,14 @@ public static class ClaudeArgumentBuilder
         if (maxBudgetUsd.HasValue)
             sb.Append($" --max-budget-usd {maxBudgetUsd.Value:F2}");
 
-        // Fallback model for overload resilience
+        // Fallback model for overload resilience — CLI 2.1.166+: 쉼표 구분 최대 3개 순서대로 시도
         if (!string.IsNullOrEmpty(fallbackModel))
-            sb.Append($" --fallback-model {fallbackModel}");
+        {
+            var normalized = string.Join(",",
+                fallbackModel.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+            if (normalized.Length > 0)
+                sb.Append($" --fallback-model \"{normalized}\"");
+        }
 
         // MCP server configuration
         if (!string.IsNullOrEmpty(mcpConfigPath))

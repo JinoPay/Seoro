@@ -44,6 +44,9 @@ public static class ToolDisplayHelper
                 "NotebookEdit" => count == 1 ? Strings.Tool_NotebookSingle : Strings.Tool_NotebookMultiple(count),
                 "TodoWrite" => Strings.Tool_TodoWriteDone,
                 "AskUserQuestion" => "질문 대기 중",
+                "TaskCreate" => count == 1 ? "작업 1개 생성" : $"작업 {count}개 생성",
+                "TaskUpdate" => count == 1 ? "작업 1개 업데이트" : $"작업 {count}개 업데이트",
+                "Workflow" => count == 1 ? "워크플로우 실행" : $"워크플로우 {count}개 실행",
                 _ => count > 1 ? Strings.Tool_DefaultMultiple(name, count) : name
             });
 
@@ -102,6 +105,21 @@ public static class ToolDisplayHelper
             "AskUserQuestion" => "질문 대기 중...",
             "Skill" => "스킬 실행 중...",
             "ToolSearch" => "도구 검색 중...",
+            "TaskCreate" => "작업 생성 중...",
+            "TaskUpdate" => "작업 상태 업데이트 중...",
+            "TaskList" or "TaskGet" => "작업 목록 확인 중...",
+            "TaskOutput" => "작업 출력 확인 중...",
+            "TaskStop" => "작업 중지 중...",
+            "Workflow" => "워크플로우 실행 중...",
+            "EnterWorktree" => "워크트리 진입 중...",
+            "ExitWorktree" => "워크트리 종료 중...",
+            "SendMessage" => "메시지 전송 중...",
+            "Monitor" => "모니터링 중...",
+            "EnterPlanMode" or "ExitPlanMode" => "플랜 모드 전환 중...",
+            "ScheduleWakeup" => "예약 작업 설정 중...",
+            "PushNotification" => "알림 전송 중...",
+            "CronCreate" or "CronList" or "CronDelete" => "예약 작업 관리 중...",
+            "ListMcpResources" or "ReadMcpResource" => "MCP 리소스 조회 중...",
             _ => $"{normalized} 사용 중..."
         };
     }
@@ -128,6 +146,18 @@ public static class ToolDisplayHelper
             "AskUserQuestion" => Icons.Material.Filled.QuestionAnswer,
             "Skill" => Icons.Material.Filled.AutoAwesome,
             "ToolSearch" => Icons.Material.Filled.ManageSearch,
+            "TaskCreate" or "TaskUpdate" or "TaskList" or "TaskGet" => Icons.Material.Filled.Checklist,
+            "TaskOutput" => Icons.Material.Filled.Output,
+            "TaskStop" => Icons.Material.Filled.StopCircle,
+            "Workflow" => Icons.Material.Filled.AccountTree,
+            "EnterWorktree" => Icons.Material.Filled.CallSplit,
+            "ExitWorktree" => Icons.Material.Filled.CallMerge,
+            "SendMessage" => Icons.Material.Filled.Send,
+            "Monitor" => Icons.Material.Filled.Visibility,
+            "EnterPlanMode" or "ExitPlanMode" => Icons.Material.Filled.Map,
+            "ScheduleWakeup" or "CronCreate" or "CronList" or "CronDelete" => Icons.Material.Filled.Schedule,
+            "PushNotification" => Icons.Material.Filled.NotificationsActive,
+            "ListMcpResources" or "ReadMcpResource" => Icons.Material.Filled.Hub,
             _ when (name ?? "").StartsWith("mcp__", StringComparison.OrdinalIgnoreCase)
                 => Icons.Material.Filled.Hub,
             _ => Icons.Material.Filled.Extension
@@ -205,6 +235,10 @@ public static class ToolDisplayHelper
                 "WebSearch" => GetStringProperty(root, "query", 50),
                 "NotebookEdit" => GetFilePath(root),
                 "AskUserQuestion" => GetAskUserHeader(root),
+                "TaskCreate" => GetStringProperty(root, "subject", 50),
+                "TaskUpdate" => GetTaskUpdateHeader(root),
+                "Workflow" => GetStringProperty(root, "name", 50) ?? GetStringProperty(root, "description", 50),
+                "SendMessage" => GetStringProperty(root, "to", 40),
                 _ => null
             };
         }
@@ -255,6 +289,14 @@ public static class ToolDisplayHelper
         }
 
         return string.Join(" | ", parts);
+    }
+
+    private static string? GetTaskUpdateHeader(JsonElement root)
+    {
+        var taskId = GetStringProperty(root, "taskId", 10);
+        var status = GetStringProperty(root, "status", 20);
+        if (taskId == null) return status;
+        return status != null ? $"#{taskId} → {status}" : $"#{taskId}";
     }
 
     private static string? GetAskUserHeader(JsonElement root)
@@ -380,6 +422,27 @@ public static class ToolDisplayHelper
             "askuserquestion" or "ask_user_question" => "AskUserQuestion",
             "skill" => "Skill",
             "toolsearch" or "tool_search" => "ToolSearch",
+            "taskcreate" or "task_create" => "TaskCreate",
+            "taskupdate" or "task_update" => "TaskUpdate",
+            "tasklist" or "task_list" => "TaskList",
+            "taskget" or "task_get" => "TaskGet",
+            "taskoutput" or "task_output" => "TaskOutput",
+            "taskstop" or "task_stop" => "TaskStop",
+            "workflow" => "Workflow",
+            "enterworktree" or "enter_worktree" => "EnterWorktree",
+            "exitworktree" or "exit_worktree" => "ExitWorktree",
+            "sendmessage" or "send_message" => "SendMessage",
+            "monitor" => "Monitor",
+            "enterplanmode" or "enter_plan_mode" => "EnterPlanMode",
+            "exitplanmode" or "exit_plan_mode" => "ExitPlanMode",
+            "schedulewakeup" or "schedule_wakeup" => "ScheduleWakeup",
+            "pushnotification" or "push_notification" => "PushNotification",
+            "croncreate" or "cron_create" => "CronCreate",
+            "cronlist" or "cron_list" => "CronList",
+            "crondelete" or "cron_delete" => "CronDelete",
+            "listmcpresourcestool" or "listmcpresources" => "ListMcpResources",
+            "readmcpresourcetool" or "readmcpresource" => "ReadMcpResource",
+            "remotetrigger" or "remote_trigger" => "RemoteTrigger",
             _ when name.StartsWith("mcp__", StringComparison.OrdinalIgnoreCase) => ExtractMcpToolName(name),
             _ => name
         };

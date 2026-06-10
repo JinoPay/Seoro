@@ -17,7 +17,17 @@ public class ContentBlockStopHandler(IChatState chatState, ISessionService sessi
             if (TodoSnapshotParser.IsTodoWriteTool(ctx.CurrentToolCall.Name)
                 && TodoSnapshotParser.TryParse(ctx.CurrentToolCall.Input, out var snap))
             {
-                chatState.UpdateTodoSnapshot(snap);
+                chatState.GetTaskTracker(ctx.Session.Id).ResetFromTodoWrite(snap);
+                chatState.UpdateTodoSnapshot(ctx.Session.Id, snap);
+            }
+            else if (TaskListTracker.IsTaskTool(ctx.CurrentToolCall.Name))
+            {
+                var tracker = chatState.GetTaskTracker(ctx.Session.Id);
+                var applied = TaskListTracker.IsTaskCreate(ctx.CurrentToolCall.Name)
+                    ? tracker.ApplyTaskCreate(ctx.CurrentToolCall.Id, ctx.CurrentToolCall.Input)
+                    : tracker.ApplyTaskUpdate(ctx.CurrentToolCall.Input);
+                if (applied)
+                    chatState.UpdateTodoSnapshot(ctx.Session.Id, tracker.ToSnapshot());
             }
             ctx.CurrentToolCall = null;
             chatState.NotifyStateChanged();

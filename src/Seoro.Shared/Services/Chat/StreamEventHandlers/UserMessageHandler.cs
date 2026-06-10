@@ -49,6 +49,11 @@ public class UserMessageHandler(
                     if (match.Name is "Bash" or "execute_bash")
                         hasBashResult = true;
 
+                    // TaskCreate 결과에서 CLI가 부여한 실제 taskId를 트래커에 바인딩
+                    if (!match.IsError && TaskListTracker.IsTaskCreate(match.Name))
+                        chatState.GetTaskTracker(ctx.Session.Id)
+                            .ApplyTaskCreateResult(match.Id, match.Output);
+
                     // CLI cannot handle AskUserQuestion or ExitPlanMode non-interactively.
                     // Break the loop so Seoro can show the appropriate UI immediately.
                     if (match.IsError)

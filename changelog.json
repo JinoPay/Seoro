@@ -1,734 +1,1484 @@
 [
   {
+    "version": "1.19.0",
+    "date": "2026-06-10",
+    "changes": [
+      {
+        "type": "feat",
+        "description": "Claude CLI 최소 지원 버전을 2.1.170으로 상향 — Claude Fable 5 모델 지원 추가 (최상위 Mythos급, effort max 지원)"
+      },
+      {
+        "type": "feat",
+        "description": "Opus 항목을 Opus 4.8로 갱신 (기본 high effort, xhigh 지원) 및 모델 피커·effort 힌트 최신화"
+      },
+      {
+        "type": "feat",
+        "description": "TaskCreate/TaskUpdate 도구 지원 — 최신 CLI의 작업 목록이 할일 플로터·스트립에 다시 표시되도록 복구"
+      },
+      {
+        "type": "feat",
+        "description": "신규 도구 렌더링 추가 — Workflow, Task 계열, EnterWorktree/ExitWorktree, SendMessage, Monitor, Cron 등 아이콘·라벨·요약 표시"
+      },
+      {
+        "type": "feat",
+        "description": "다중 폴백 모델 지원 — Fallback 모델을 쉼표로 구분해 최대 3개까지 순서대로 시도 (CLI 2.1.166+)"
+      },
+      {
+        "type": "feat",
+        "description": "AskUserQuestion 옵션별 preview(코드/목업 미리보기) 렌더링 지원"
+      }
+    ]
+  },
+  {
     "version": "1.18.4",
     "date": "2026-05-18",
     "changes": [
-      { "type": "fix", "description": "예약 메시지가 다른 세션으로 전송되던 버그 수정 — 큐 드레인 시 원래 세션·워크스페이스·브랜치를 명시적으로 전달하여 사용자가 다른 세션으로 전환해도 원래 세션으로 전송" }
+      {
+        "type": "fix",
+        "description": "예약 메시지가 다른 세션으로 전송되던 버그 수정 — 큐 드레인 시 원래 세션·워크스페이스·브랜치를 명시적으로 전달하여 사용자가 다른 세션으로 전환해도 원래 세션으로 전송"
+      }
     ]
   },
   {
     "version": "1.18.3",
     "date": "2026-05-17",
     "changes": [
-      { "type": "feat", "description": "채팅 입력창 컴팩트화 및 진행표시 인라인 이동 — 입력 영역 높이를 줄이고 진행 표시를 입력창 옆 인라인으로 배치하여 화면 공간 효율 개선" },
-      { "type": "feat", "description": "Git 뷰에 force-push 지원 추가 및 GitView UI 개선 — 강제 푸시 옵션과 시각적 피드백 보강" }
+      {
+        "type": "feat",
+        "description": "채팅 입력창 컴팩트화 및 진행표시 인라인 이동 — 입력 영역 높이를 줄이고 진행 표시를 입력창 옆 인라인으로 배치하여 화면 공간 효율 개선"
+      },
+      {
+        "type": "feat",
+        "description": "Git 뷰에 force-push 지원 추가 및 GitView UI 개선 — 강제 푸시 옵션과 시각적 피드백 보강"
+      }
     ]
   },
   {
     "version": "1.18.2",
     "date": "2026-05-15",
     "changes": [
-      { "type": "feat", "description": "채팅 탭에 Git Graph 뷰어 추가 — 브랜치 그래프를 시각적으로 확인 가능" },
-      { "type": "feat", "description": "TodoWrite 디스플레이를 좌하단 플로팅 토글로 변경 — 인라인 노이즈를 줄이고 필요할 때만 열어볼 수 있도록 개선" },
-      { "type": "chore", "description": "MergePanel 컴포넌트 제거 및 관련 코드 정리 — 머지 탭 상태 머신으로 통합" }
+      {
+        "type": "feat",
+        "description": "채팅 탭에 Git Graph 뷰어 추가 — 브랜치 그래프를 시각적으로 확인 가능"
+      },
+      {
+        "type": "feat",
+        "description": "TodoWrite 디스플레이를 좌하단 플로팅 토글로 변경 — 인라인 노이즈를 줄이고 필요할 때만 열어볼 수 있도록 개선"
+      },
+      {
+        "type": "chore",
+        "description": "MergePanel 컴포넌트 제거 및 관련 코드 정리 — 머지 탭 상태 머신으로 통합"
+      }
     ]
   },
   {
     "version": "1.18.1",
     "date": "2026-05-14",
     "changes": [
-      { "type": "feat", "description": "채팅 메시지 예약(큐) 기능 추가 — 스트리밍 중에도 메시지를 예약하여 순차 전송, Alt+Enter로 즉시 큐 추가 가능" },
-      { "type": "feat", "description": "예약 메시지 관리 UI 추가 — 입력창 상단 Chip 목록으로 예약 메시지 확인·편집·삭제 및 전체 비우기 지원" }
+      {
+        "type": "feat",
+        "description": "채팅 메시지 예약(큐) 기능 추가 — 스트리밍 중에도 메시지를 예약하여 순차 전송, Alt+Enter로 즉시 큐 추가 가능"
+      },
+      {
+        "type": "feat",
+        "description": "예약 메시지 관리 UI 추가 — 입력창 상단 Chip 목록으로 예약 메시지 확인·편집·삭제 및 전체 비우기 지원"
+      }
     ]
   },
   {
     "version": "1.18.0",
     "date": "2026-05-14",
     "changes": [
-      { "type": "feat", "description": "마크다운 편집기 미리보기 모드 추가 — 편집/미리보기 토글로 .md 파일을 렌더링된 상태로 확인 가능" },
-      { "type": "feat", "description": "로컬 이미지 인라인 렌더링 — 마크다운 미리보기에서 상대 경로 이미지를 base64로 자동 임베드하여 표시" }
+      {
+        "type": "feat",
+        "description": "마크다운 편집기 미리보기 모드 추가 — 편집/미리보기 토글로 .md 파일을 렌더링된 상태로 확인 가능"
+      },
+      {
+        "type": "feat",
+        "description": "로컬 이미지 인라인 렌더링 — 마크다운 미리보기에서 상대 경로 이미지를 base64로 자동 임베드하여 표시"
+      }
     ]
   },
   {
     "version": "1.17.29",
     "date": "2026-05-14",
     "changes": [
-      { "type": "feat", "description": "분할(side-by-side) Diff 뷰 추가 — 헤더 토글로 unified ↔ split 전환, 두 pane 가로·세로 스크롤 동기화, 라인 번호 sticky 고정, 변경된 라인 단어 단위 하이라이트" }
+      {
+        "type": "feat",
+        "description": "분할(side-by-side) Diff 뷰 추가 — 헤더 토글로 unified ↔ split 전환, 두 pane 가로·세로 스크롤 동기화, 라인 번호 sticky 고정, 변경된 라인 단어 단위 하이라이트"
+      }
     ]
   },
   {
     "version": "1.17.28",
     "date": "2026-04-27",
     "changes": [
-      { "type": "feat", "description": "이미지 우클릭 컨텍스트 메뉴 추가 — 이미지 저장 및 클립보드 복사 지원" }
+      {
+        "type": "feat",
+        "description": "이미지 우클릭 컨텍스트 메뉴 추가 — 이미지 저장 및 클립보드 복사 지원"
+      }
     ]
   },
   {
     "version": "1.17.27",
     "date": "2026-04-22",
     "changes": [
-      { "type": "fix", "description": "세션별 추가 작업 디렉토리 팝업 클릭 및 오버플로 문제 수정" },
-      { "type": "refactor", "description": "머지 탭 버튼을 상태 머신으로 리팩토링 — 상태별 단일 액션만 표시" }
+      {
+        "type": "fix",
+        "description": "세션별 추가 작업 디렉토리 팝업 클릭 및 오버플로 문제 수정"
+      },
+      {
+        "type": "refactor",
+        "description": "머지 탭 버튼을 상태 머신으로 리팩토링 — 상태별 단일 액션만 표시"
+      }
     ]
   },
   {
     "version": "1.17.26",
     "date": "2026-04-21",
     "changes": [
-      { "type": "fix", "description": "머지 후 세션 삭제 시 사이드바에 반영되지 않던 문제 수정 — OnDataChanged 이벤트 누락 수정" },
-      { "type": "fix", "description": "머지 완료 후 세션 삭제 버튼 중복 표시 제거 — 인라인 확인 배너와 동시에 표시되지 않도록 수정" }
+      {
+        "type": "fix",
+        "description": "머지 후 세션 삭제 시 사이드바에 반영되지 않던 문제 수정 — OnDataChanged 이벤트 누락 수정"
+      },
+      {
+        "type": "fix",
+        "description": "머지 완료 후 세션 삭제 버튼 중복 표시 제거 — 인라인 확인 배너와 동시에 표시되지 않도록 수정"
+      }
     ]
   },
   {
     "version": "1.17.25",
     "date": "2026-04-21",
     "changes": [
-      { "type": "feat", "description": "세션별 추가 작업 디렉토리(AddDir) 지원 — InputToolbar에서 디렉토리 추가·제거, 툴바 배지 및 헤더 카운트 표시" },
-      { "type": "feat", "description": "머지 완료 후 삭제 확인을 채팅 탭 인라인 배너로 변경 — 전체 모달 대신 해당 탭에만 표시" },
-      { "type": "fix", "description": "'아카이브' 용어를 '삭제'로 통일 — 실제 동작(파일 완전 삭제)과 일치하도록 수정" }
+      {
+        "type": "feat",
+        "description": "세션별 추가 작업 디렉토리(AddDir) 지원 — InputToolbar에서 디렉토리 추가·제거, 툴바 배지 및 헤더 카운트 표시"
+      },
+      {
+        "type": "feat",
+        "description": "머지 완료 후 삭제 확인을 채팅 탭 인라인 배너로 변경 — 전체 모달 대신 해당 탭에만 표시"
+      },
+      {
+        "type": "fix",
+        "description": "'아카이브' 용어를 '삭제'로 통일 — 실제 동작(파일 완전 삭제)과 일치하도록 수정"
+      }
     ]
   },
   {
     "version": "1.17.24",
     "date": "2026-04-17",
     "changes": [
-      { "type": "feat", "description": "Claude 4.7 지원 — CLI 2.1.111+ 감지 시 Opus 4.7 (1M 컨텍스트) · Sonnet 4.6 모델 자동 전환" },
-      { "type": "feat", "description": "XHigh 노력 수준 추가 — Opus 4.7 전용 xhigh 옵션 및 UI(설정·툴바) 지원" },
-      { "type": "fix", "description": "Opus 4.7 가격 수정 — 장문 컨텍스트 할증 없이 표준 요금($5/$25 MTok) 적용" }
+      {
+        "type": "feat",
+        "description": "Claude 4.7 지원 — CLI 2.1.111+ 감지 시 Opus 4.7 (1M 컨텍스트) · Sonnet 4.6 모델 자동 전환"
+      },
+      {
+        "type": "feat",
+        "description": "XHigh 노력 수준 추가 — Opus 4.7 전용 xhigh 옵션 및 UI(설정·툴바) 지원"
+      },
+      {
+        "type": "fix",
+        "description": "Opus 4.7 가격 수정 — 장문 컨텍스트 할증 없이 표준 요금($5/$25 MTok) 적용"
+      }
     ]
   },
   {
     "version": "1.17.23",
     "date": "2026-04-16",
     "changes": [
-      { "type": "feat", "description": "MergePanel에 충돌 해결 버튼을 추가하고 푸시 버튼 텍스트를 상태에 맞게 동적으로 표시" }
+      {
+        "type": "feat",
+        "description": "MergePanel에 충돌 해결 버튼을 추가하고 푸시 버튼 텍스트를 상태에 맞게 동적으로 표시"
+      }
     ]
   },
   {
     "version": "1.17.22",
     "date": "2026-04-16",
     "changes": [
-      { "type": "feat", "description": "대시보드 파이프라인 정합성 및 Explorer 헤더 개선" }
+      {
+        "type": "feat",
+        "description": "대시보드 파이프라인 정합성 및 Explorer 헤더 개선"
+      }
     ]
   },
   {
     "version": "1.17.21",
     "date": "2026-04-15",
     "changes": [
-      { "type": "feat", "description": "슬래시 명령어를 칩 UI로 표시하여 입력란 가독성 개선" },
-      { "type": "feat", "description": "PR 오픈 상태에서 미푸시 변경사항 경고 및 푸시 요청 기능 추가" },
-      { "type": "fix", "description": "플랜뷰 코드블록 빈박스 제거 및 승인 단축키 힌트 추가" },
-      { "type": "fix", "description": "워크스페이스 설정에서 변경한 이름이 사이드바에 반영되도록 개선" }
+      {
+        "type": "feat",
+        "description": "슬래시 명령어를 칩 UI로 표시하여 입력란 가독성 개선"
+      },
+      {
+        "type": "feat",
+        "description": "PR 오픈 상태에서 미푸시 변경사항 경고 및 푸시 요청 기능 추가"
+      },
+      {
+        "type": "fix",
+        "description": "플랜뷰 코드블록 빈박스 제거 및 승인 단축키 힌트 추가"
+      },
+      {
+        "type": "fix",
+        "description": "워크스페이스 설정에서 변경한 이름이 사이드바에 반영되도록 개선"
+      }
     ]
   },
   {
     "version": "1.17.20",
     "date": "2026-04-15",
     "changes": [
-      { "type": "feat", "description": "워크트리 세션 생성 시 .claude/settings.local.json 자동 복사" },
-      { "type": "feat", "description": "Input bar에 MCP 서버 토글 기능 추가 (ToolPicker)" },
-      { "type": "feat", "description": "플랜 승인 단축키(Ctrl/Cmd+Enter) 추가 & Windows 플랜 모드 단축키 수정" },
-      { "type": "fix", "description": "i18n 언어 전환 버그 수정 — culture 스레드 전파 및 렌더링 타이밍 개선" }
+      {
+        "type": "feat",
+        "description": "워크트리 세션 생성 시 .claude/settings.local.json 자동 복사"
+      },
+      {
+        "type": "feat",
+        "description": "Input bar에 MCP 서버 토글 기능 추가 (ToolPicker)"
+      },
+      {
+        "type": "feat",
+        "description": "플랜 승인 단축키(Ctrl/Cmd+Enter) 추가 & Windows 플랜 모드 단축키 수정"
+      },
+      {
+        "type": "fix",
+        "description": "i18n 언어 전환 버그 수정 — culture 스레드 전파 및 렌더링 타이밍 개선"
+      }
     ]
   },
   {
     "version": "1.17.19",
     "date": "2026-04-14",
     "changes": [
-      { "type": "feat", "description": "플러그인 독립 설정 탭 승격 및 마켓플레이스·enable/disable/update GUI 추가" },
-      { "type": "feat", "description": "MergePanel AI 프롬프트 커스터마이즈 및 Git/머지 설정 섹션 추가" },
-      { "type": "feat", "description": "슬래시 명령어를 독립 탭으로 이동 및 글로벌/프로젝트 스코프 UX 개선" },
-      { "type": "fix", "description": "스레딩 경쟁 조건으로 인한 SIGSEGV 크래시 수정" },
-      { "type": "fix", "description": "아카이브 후 채팅/사이드바가 닫히지 않는 버그 수정" },
-      { "type": "fix", "description": "삭제된 워크트리 경로에 대한 git 명령 실행 방지" },
-      { "type": "fix", "description": "플러그인 버전 정보 표시, UI 오인식, 캐시 스캔 제외 등 플러그인 안정화" },
-      { "type": "fix", "description": "ClaudeCliResolver DI 싱글톤 등록 누락 수정" },
-      { "type": "fix", "description": "Ctrl 미입력 시 단축키 힌트 컨테이너가 공간을 차지하던 문제 수정" }
+      {
+        "type": "feat",
+        "description": "플러그인 독립 설정 탭 승격 및 마켓플레이스·enable/disable/update GUI 추가"
+      },
+      {
+        "type": "feat",
+        "description": "MergePanel AI 프롬프트 커스터마이즈 및 Git/머지 설정 섹션 추가"
+      },
+      {
+        "type": "feat",
+        "description": "슬래시 명령어를 독립 탭으로 이동 및 글로벌/프로젝트 스코프 UX 개선"
+      },
+      {
+        "type": "fix",
+        "description": "스레딩 경쟁 조건으로 인한 SIGSEGV 크래시 수정"
+      },
+      {
+        "type": "fix",
+        "description": "아카이브 후 채팅/사이드바가 닫히지 않는 버그 수정"
+      },
+      {
+        "type": "fix",
+        "description": "삭제된 워크트리 경로에 대한 git 명령 실행 방지"
+      },
+      {
+        "type": "fix",
+        "description": "플러그인 버전 정보 표시, UI 오인식, 캐시 스캔 제외 등 플러그인 안정화"
+      },
+      {
+        "type": "fix",
+        "description": "ClaudeCliResolver DI 싱글톤 등록 누락 수정"
+      },
+      {
+        "type": "fix",
+        "description": "Ctrl 미입력 시 단축키 힌트 컨테이너가 공간을 차지하던 문제 수정"
+      }
     ]
   },
   {
     "version": "1.17.18",
     "date": "2026-04-14",
     "changes": [
-      { "type": "feat", "description": "GitHub PR 추적 및 앱 내 머지 기능 통합, Merge 탭 UI 전면 리디자인" },
-      { "type": "fix", "description": "Merge 패널 변경없음 표시, 아카이브 시 세션 완전 삭제 등 머지 UX 개선" },
-      { "type": "fix", "description": "thinking 버블 헤더 overflow hidden 추가로 ellipsis 위치 수정" }
+      {
+        "type": "feat",
+        "description": "GitHub PR 추적 및 앱 내 머지 기능 통합, Merge 탭 UI 전면 리디자인"
+      },
+      {
+        "type": "fix",
+        "description": "Merge 패널 변경없음 표시, 아카이브 시 세션 완전 삭제 등 머지 UX 개선"
+      },
+      {
+        "type": "fix",
+        "description": "thinking 버블 헤더 overflow hidden 추가로 ellipsis 위치 수정"
+      }
     ]
   },
   {
     "version": "1.17.17",
     "date": "2026-04-13",
     "changes": [
-      { "type": "fix", "description": "macOS에서 Process.Start()를 AppKit 메인 스레드 밖으로 이동해 SIGSEGV 크래시 수정" }
+      {
+        "type": "fix",
+        "description": "macOS에서 Process.Start()를 AppKit 메인 스레드 밖으로 이동해 SIGSEGV 크래시 수정"
+      }
     ]
   },
   {
     "version": "1.17.16",
     "date": "2026-04-13",
     "changes": [
-      { "type": "fix", "description": "멀티스레드 환경 fork() 호출로 인한 macOS SIGSEGV 크래시 수정 및 초기화 안정성 개선" }
+      {
+        "type": "fix",
+        "description": "멀티스레드 환경 fork() 호출로 인한 macOS SIGSEGV 크래시 수정 및 초기화 안정성 개선"
+      }
     ]
   },
   {
     "version": "1.17.15",
     "date": "2026-04-13",
     "changes": [
-      { "type": "fix", "description": "삭제한 세션이 앱 재시작 후 회색으로 다시 나타나는 버그 수정" }
+      {
+        "type": "fix",
+        "description": "삭제한 세션이 앱 재시작 후 회색으로 다시 나타나는 버그 수정"
+      }
     ]
   },
   {
     "version": "1.17.14",
     "date": "2026-04-13",
     "changes": [
-      { "type": "feat", "description": "세션별 첨부파일 초안 상태 저장으로 채팅 입력 중인 파일 유지" },
-      { "type": "fix", "description": "Codex 플랜 모드 안정화 — 상태 저장, 재개 시 인수 전달 및 컨텍스트 보정" },
-      { "type": "style", "description": "세션 단축키 힌트를 세로 스택 레이아웃으로 정리" }
+      {
+        "type": "feat",
+        "description": "세션별 첨부파일 초안 상태 저장으로 채팅 입력 중인 파일 유지"
+      },
+      {
+        "type": "fix",
+        "description": "Codex 플랜 모드 안정화 — 상태 저장, 재개 시 인수 전달 및 컨텍스트 보정"
+      },
+      {
+        "type": "style",
+        "description": "세션 단축키 힌트를 세로 스택 레이아웃으로 정리"
+      }
     ]
   },
   {
     "version": "1.17.13",
     "date": "2026-04-13",
     "changes": [
-      { "type": "feat", "description": "머지/푸시 버튼을 AI 위임 방식으로 전환 (PR 생성, 커밋+푸시 통합)" },
-      { "type": "feat", "description": "Git 머지 인프라 — 머지 상태 실시간 추적, 충돌 감지, ref 정규화, GitHub URL 생성" },
-      { "type": "feat", "description": "MergeToolbar diff 뱃지에 +/- 라인 수 색상 표시" },
-      { "type": "feat", "description": "터미널 동적 크기 초기화 지원 (cols/rows 자동 감지)" },
-      { "type": "fix", "description": "머지 상태 갱신 타이밍, PR 브랜치 필터링 및 기본 타겟 선택 수정" }
+      {
+        "type": "feat",
+        "description": "머지/푸시 버튼을 AI 위임 방식으로 전환 (PR 생성, 커밋+푸시 통합)"
+      },
+      {
+        "type": "feat",
+        "description": "Git 머지 인프라 — 머지 상태 실시간 추적, 충돌 감지, ref 정규화, GitHub URL 생성"
+      },
+      {
+        "type": "feat",
+        "description": "MergeToolbar diff 뱃지에 +/- 라인 수 색상 표시"
+      },
+      {
+        "type": "feat",
+        "description": "터미널 동적 크기 초기화 지원 (cols/rows 자동 감지)"
+      },
+      {
+        "type": "fix",
+        "description": "머지 상태 갱신 타이밍, PR 브랜치 필터링 및 기본 타겟 선택 수정"
+      }
     ]
   },
   {
     "version": "1.17.12",
     "date": "2026-04-13",
     "changes": [
-      { "type": "refactor", "description": "아이콘 버튼 전반에 툴팁 적용으로 UX 개선" },
-      { "type": "chore", "description": "MudBlazor v9.3.0 업그레이드" },
-      { "type": "chore", "description": "Microsoft.NET.Test.Sdk v18.4.0 업그레이드" }
+      {
+        "type": "refactor",
+        "description": "아이콘 버튼 전반에 툴팁 적용으로 UX 개선"
+      },
+      {
+        "type": "chore",
+        "description": "MudBlazor v9.3.0 업그레이드"
+      },
+      {
+        "type": "chore",
+        "description": "Microsoft.NET.Test.Sdk v18.4.0 업그레이드"
+      }
     ]
   },
   {
     "version": "1.17.11",
     "date": "2026-04-10",
     "changes": [
-      { "type": "fix", "description": "CodexArgumentBuilder에서 미사용 WorkingDir 인수 처리 제거" }
+      {
+        "type": "fix",
+        "description": "CodexArgumentBuilder에서 미사용 WorkingDir 인수 처리 제거"
+      }
     ]
   },
   {
     "version": "1.17.10",
     "date": "2026-04-10",
     "changes": [
-      { "type": "fix", "description": "AskUserQuestion·ExitPlanMode 오류 수신 시 스트림 루프 정상 종료" },
-      { "type": "fix", "description": "YAML 파일 첨부 시 MIME 타입 감지 누락 수정" }
+      {
+        "type": "fix",
+        "description": "AskUserQuestion·ExitPlanMode 오류 수신 시 스트림 루프 정상 종료"
+      },
+      {
+        "type": "fix",
+        "description": "YAML 파일 첨부 시 MIME 타입 감지 누락 수정"
+      }
     ]
   },
   {
     "version": "1.17.9",
     "date": "2026-04-10",
     "changes": [
-      { "type": "feat", "description": "Codex CLI 지원 통합 (실험적 기능)" },
-      { "type": "feat", "description": "사이드바 워크스페이스 드래그 앤 드롭 순서 변경" },
-      { "type": "feat", "description": "탭 바 우클릭 컨텍스트 메뉴 추가" }
+      {
+        "type": "feat",
+        "description": "Codex CLI 지원 통합 (실험적 기능)"
+      },
+      {
+        "type": "feat",
+        "description": "사이드바 워크스페이스 드래그 앤 드롭 순서 변경"
+      },
+      {
+        "type": "feat",
+        "description": "탭 바 우클릭 컨텍스트 메뉴 추가"
+      }
     ]
   },
   {
     "version": "1.17.8",
     "date": "2026-04-10",
     "changes": [
-      { "type": "refactor", "description": "코드 품질 개선 및 미사용 파일 정리" },
-      { "type": "localize", "description": "Components 폴더 영문 주석 전체 한글화" }
+      {
+        "type": "refactor",
+        "description": "코드 품질 개선 및 미사용 파일 정리"
+      },
+      {
+        "type": "localize",
+        "description": "Components 폴더 영문 주석 전체 한글화"
+      }
     ]
   },
   {
     "version": "1.17.7",
     "date": "2026-04-09",
     "changes": [
-      { "type": "fix", "description": "릴리즈 빌드에서 CodeMirror JS 번들 누락 수정" },
-      { "type": "fix", "description": "CI 워크플로우에 Node.js 설정 추가" }
+      {
+        "type": "fix",
+        "description": "릴리즈 빌드에서 CodeMirror JS 번들 누락 수정"
+      },
+      {
+        "type": "fix",
+        "description": "CI 워크플로우에 Node.js 설정 추가"
+      }
     ]
   },
   {
     "version": "1.17.6",
     "date": "2026-04-09",
     "changes": [
-      { "type": "feat", "description": "드래그 앤 드롭 처리 개선 및 CodeMirror 스타일 업데이트" },
-      { "type": "feat", "description": "릴리스 노트에 localize, style, docs, chore 태그 타입 추가" },
-      { "type": "style", "description": "CodeMirror 구문 강조 테마 및 폰트 스타일 업데이트" },
-      { "type": "chore", "description": "미사용 Highlight.js 파일 제거" },
-      { "type": "localize", "description": "서비스·컴포넌트 로그 메시지 한글화 완료" }
+      {
+        "type": "feat",
+        "description": "드래그 앤 드롭 처리 개선 및 CodeMirror 스타일 업데이트"
+      },
+      {
+        "type": "feat",
+        "description": "릴리스 노트에 localize, style, docs, chore 태그 타입 추가"
+      },
+      {
+        "type": "style",
+        "description": "CodeMirror 구문 강조 테마 및 폰트 스타일 업데이트"
+      },
+      {
+        "type": "chore",
+        "description": "미사용 Highlight.js 파일 제거"
+      },
+      {
+        "type": "localize",
+        "description": "서비스·컴포넌트 로그 메시지 한글화 완료"
+      }
     ]
   },
   {
     "version": "1.17.5",
     "date": "2026-04-09",
     "changes": [
-      { "type": "feat", "description": "세션 제목 실시간 감지 및 브랜치 변경 추적 개선" },
-      { "type": "feat", "description": "스크롤 하단 이동 버튼 우하단 배치 및 코드 뷰 레이아웃 개선" },
-      { "type": "feat", "description": "URL 클론 다이얼로그에 디렉터리 선택 기능 추가" },
-      { "type": "feat", "description": "도시 이름 데이터셋 지역별 분류 확장" },
-      { "type": "fix", "description": "브랜치 선택기 워크트리 필터링 및 로컬 배지 스타일 정리" },
-      { "type": "fix", "description": "플랜 피드백 왕복 중 이전 내용 잔류 방지" },
-      { "type": "localize", "description": "모델, 상수, 서비스 로그 메시지 및 주석 한글화" }
+      {
+        "type": "feat",
+        "description": "세션 제목 실시간 감지 및 브랜치 변경 추적 개선"
+      },
+      {
+        "type": "feat",
+        "description": "스크롤 하단 이동 버튼 우하단 배치 및 코드 뷰 레이아웃 개선"
+      },
+      {
+        "type": "feat",
+        "description": "URL 클론 다이얼로그에 디렉터리 선택 기능 추가"
+      },
+      {
+        "type": "feat",
+        "description": "도시 이름 데이터셋 지역별 분류 확장"
+      },
+      {
+        "type": "fix",
+        "description": "브랜치 선택기 워크트리 필터링 및 로컬 배지 스타일 정리"
+      },
+      {
+        "type": "fix",
+        "description": "플랜 피드백 왕복 중 이전 내용 잔류 방지"
+      },
+      {
+        "type": "localize",
+        "description": "모델, 상수, 서비스 로그 메시지 및 주석 한글화"
+      }
     ]
   },
   {
     "version": "1.17.4",
     "date": "2026-04-08",
     "changes": [
-      { "type": "fix", "description": "macOS에서 뷰포트 높이(100vh → 100%) 처리 수정" }
+      {
+        "type": "fix",
+        "description": "macOS에서 뷰포트 높이(100vh → 100%) 처리 수정"
+      }
     ]
   },
   {
     "version": "1.17.3",
     "date": "2026-04-08",
     "changes": [
-      { "type": "fix", "description": "사이드바 트리 레이아웃 스타일 개선" }
+      {
+        "type": "fix",
+        "description": "사이드바 트리 레이아웃 스타일 개선"
+      }
     ]
   },
   {
     "version": "1.17.2",
     "date": "2026-04-08",
     "changes": [
-      { "type": "feat", "description": "계정 추가 마법사로 멀티 계정 관리 흐름 간소화" },
-      { "type": "fix", "description": "자격 증명 및 백업 처리 엣지 케이스 개선" }
+      {
+        "type": "feat",
+        "description": "계정 추가 마법사로 멀티 계정 관리 흐름 간소화"
+      },
+      {
+        "type": "fix",
+        "description": "자격 증명 및 백업 처리 엣지 케이스 개선"
+      }
     ]
   },
   {
     "version": "1.17.1",
     "date": "2026-04-08",
     "changes": [
-      { "type": "feat", "description": "macOS 알림 처리 개선 및 백엔드 감지 통합" },
-      { "type": "style", "description": "랜딩 글로우 효과 숨김 및 미사용 키프레임 제거" }
+      {
+        "type": "feat",
+        "description": "macOS 알림 처리 개선 및 백엔드 감지 통합"
+      },
+      {
+        "type": "style",
+        "description": "랜딩 글로우 효과 숨김 및 미사용 키프레임 제거"
+      }
     ]
   },
   {
     "version": "1.17.0",
     "date": "2026-04-07",
     "changes": [
-      { "type": "feat", "description": "Cominomi에서 Seoro로 데이터 마이그레이션 서비스 추가" },
-      { "type": "feat", "description": "마이그레이션 후 변경 사항이 있으면 앱 재시작 안내" }
+      {
+        "type": "feat",
+        "description": "Cominomi에서 Seoro로 데이터 마이그레이션 서비스 추가"
+      },
+      {
+        "type": "feat",
+        "description": "마이그레이션 후 변경 사항이 있으면 앱 재시작 안내"
+      }
     ]
   },
   {
     "version": "1.16.17",
     "date": "2026-04-07",
     "changes": [
-      { "type": "feat", "description": "앱 아이콘을 그라디언트 채팅 버블 디자인으로 교체" },
-      { "type": "refactor", "description": "앱 브랜딩 명칭을 Cominomi에서 Seoro로 변경" },
-      { "type": "fix", "description": "Changes 패널에서 바이너리 파일의 줄 수 표시 숨김" },
-      { "type": "docs", "description": "GitHub 저장소 참조를 Seoro로 업데이트" }
+      {
+        "type": "feat",
+        "description": "앱 아이콘을 그라디언트 채팅 버블 디자인으로 교체"
+      },
+      {
+        "type": "refactor",
+        "description": "앱 브랜딩 명칭을 Cominomi에서 Seoro로 변경"
+      },
+      {
+        "type": "fix",
+        "description": "Changes 패널에서 바이너리 파일의 줄 수 표시 숨김"
+      },
+      {
+        "type": "docs",
+        "description": "GitHub 저장소 참조를 Seoro로 업데이트"
+      }
     ]
   },
   {
     "version": "1.16.16",
     "date": "2026-04-07",
     "changes": [
-      { "type": "feat", "description": "마크다운 렌더링에 syntax highlighting 및 코드 블록 개선" },
-      { "type": "feat", "description": "사이드바 스트리밍 인디케이터를 conic-gradient 스피너로 교체, 선택 선 제거" }
+      {
+        "type": "feat",
+        "description": "마크다운 렌더링에 syntax highlighting 및 코드 블록 개선"
+      },
+      {
+        "type": "feat",
+        "description": "사이드바 스트리밍 인디케이터를 conic-gradient 스피너로 교체, 선택 선 제거"
+      }
     ]
   },
   {
     "version": "1.16.15",
     "date": "2026-04-06",
     "changes": [
-      { "type": "feat", "description": "세션 히스토리 페이지에 새로 고침 버튼 추가" },
-      { "type": "feat", "description": "시스템 프롬프트에 Worktree 디렉터리 제약 조건 추가" }
+      {
+        "type": "feat",
+        "description": "세션 히스토리 페이지에 새로 고침 버튼 추가"
+      },
+      {
+        "type": "feat",
+        "description": "시스템 프롬프트에 Worktree 디렉터리 제약 조건 추가"
+      }
     ]
   },
   {
     "version": "1.16.14",
     "date": "2026-04-06",
     "changes": [
-      { "type": "feat", "description": "MCP 도구 사전 조회 (Tool Discovery) 기능 추가" },
-      { "type": "feat", "description": "토큰 갱신 시 refresh token 업데이트 지원" },
-      { "type": "feat", "description": "수동 토큰 갱신 기능 추가" },
-      { "type": "feat", "description": "Claude.ai 내장 인테그레이션 UI 추가" }
+      {
+        "type": "feat",
+        "description": "MCP 도구 사전 조회 (Tool Discovery) 기능 추가"
+      },
+      {
+        "type": "feat",
+        "description": "토큰 갱신 시 refresh token 업데이트 지원"
+      },
+      {
+        "type": "feat",
+        "description": "수동 토큰 갱신 기능 추가"
+      },
+      {
+        "type": "feat",
+        "description": "Claude.ai 내장 인테그레이션 UI 추가"
+      }
     ]
   },
   {
     "version": "1.16.13",
     "date": "2026-04-04",
     "changes": [
-      { "type": "feat", "description": "진행 중인 세션 종료 시 확인 다이얼로그 추가" },
-      { "type": "feat", "description": "크래시 시 로그 플러시 보장" },
-      { "type": "feat", "description": "스트리밍 중 사이드바 타이틀/브랜치 실시간 업데이트" },
-      { "type": "feat", "description": "플랜 보기를 다이얼로그에서 탭 방식으로 변경" },
-      { "type": "feat", "description": "TokenUsageRing 도넛 링 인디케이터 개선" },
-      { "type": "feat", "description": "모델 선택기 description 추가 및 ResolvedModel 제거" },
-      { "type": "fix", "description": "입력창 하단 툴팁이 화면 아래로 벗어날 때 위로 표시하도록 개선" },
-      { "type": "fix", "description": "모델 선택기 툴팁 Placement.Top 재적용" }
+      {
+        "type": "feat",
+        "description": "진행 중인 세션 종료 시 확인 다이얼로그 추가"
+      },
+      {
+        "type": "feat",
+        "description": "크래시 시 로그 플러시 보장"
+      },
+      {
+        "type": "feat",
+        "description": "스트리밍 중 사이드바 타이틀/브랜치 실시간 업데이트"
+      },
+      {
+        "type": "feat",
+        "description": "플랜 보기를 다이얼로그에서 탭 방식으로 변경"
+      },
+      {
+        "type": "feat",
+        "description": "TokenUsageRing 도넛 링 인디케이터 개선"
+      },
+      {
+        "type": "feat",
+        "description": "모델 선택기 description 추가 및 ResolvedModel 제거"
+      },
+      {
+        "type": "fix",
+        "description": "입력창 하단 툴팁이 화면 아래로 벗어날 때 위로 표시하도록 개선"
+      },
+      {
+        "type": "fix",
+        "description": "모델 선택기 툴팁 Placement.Top 재적용"
+      }
     ]
   },
   {
     "version": "1.16.12",
     "date": "2026-04-04",
     "changes": [
-      { "type": "feat", "description": "설정 전체 UX/UI 현대화 — 세그먼트 컨트롤, pill 셀렉터, 토글행, Effort binary 선택 등" },
-      { "type": "feat", "description": "MCP 서버 관리를 독립 페이지로 분리 및 UI 개선" },
-      { "type": "feat", "description": "MergeToolbar를 GitHub 스타일 스플릿 버튼으로 리디자인" },
-      { "type": "feat", "description": "채팅 버블 첨부파일 썸네일 크기 축소 및 가로 wrap 레이아웃" },
-      { "type": "fix", "description": "MergeToolbar 소스 브랜치 표시 및 첨부파일 헤더 간격 수정" }
+      {
+        "type": "feat",
+        "description": "설정 전체 UX/UI 현대화 — 세그먼트 컨트롤, pill 셀렉터, 토글행, Effort binary 선택 등"
+      },
+      {
+        "type": "feat",
+        "description": "MCP 서버 관리를 독립 페이지로 분리 및 UI 개선"
+      },
+      {
+        "type": "feat",
+        "description": "MergeToolbar를 GitHub 스타일 스플릿 버튼으로 리디자인"
+      },
+      {
+        "type": "feat",
+        "description": "채팅 버블 첨부파일 썸네일 크기 축소 및 가로 wrap 레이아웃"
+      },
+      {
+        "type": "fix",
+        "description": "MergeToolbar 소스 브랜치 표시 및 첨부파일 헤더 간격 수정"
+      }
     ]
   },
   {
     "version": "1.16.11",
     "date": "2026-04-03",
     "changes": [
-      { "type": "refactor", "description": "텍스트 첨부파일 뷰어를 인라인 다이얼로그에서 탭 시스템으로 교체 (FilePreviewDialog 제거)" }
+      {
+        "type": "refactor",
+        "description": "텍스트 첨부파일 뷰어를 인라인 다이얼로그에서 탭 시스템으로 교체 (FilePreviewDialog 제거)"
+      }
     ]
   },
   {
     "version": "1.6.10",
     "date": "2026-04-03",
     "changes": [
-      { "type": "refactor", "description": "계정 내보내기/가져오기 기능 제거" }
+      {
+        "type": "refactor",
+        "description": "계정 내보내기/가져오기 기능 제거"
+      }
     ]
   },
   {
     "version": "1.6.9",
     "date": "2026-04-03",
     "changes": [
-      { "type": "feat", "description": "계정 관리 UI 추가 — 계정 전환, 등록, 삭제 및 사용량 표시" },
-      { "type": "feat", "description": "계정 내보내기/가져오기 (AES-256-GCM 암호화 지원)" },
-      { "type": "feat", "description": "AI 위임 방식의 머지/스쿼시/PR 툴바 추가" },
-      { "type": "refactor", "description": "MergeToolbar UI 경량화 — MainToolbar 패턴의 아이콘 버튼으로 통일" }
+      {
+        "type": "feat",
+        "description": "계정 관리 UI 추가 — 계정 전환, 등록, 삭제 및 사용량 표시"
+      },
+      {
+        "type": "feat",
+        "description": "계정 내보내기/가져오기 (AES-256-GCM 암호화 지원)"
+      },
+      {
+        "type": "feat",
+        "description": "AI 위임 방식의 머지/스쿼시/PR 툴바 추가"
+      },
+      {
+        "type": "refactor",
+        "description": "MergeToolbar UI 경량화 — MainToolbar 패턴의 아이콘 버튼으로 통일"
+      }
     ]
   },
   {
     "version": "1.6.8",
     "date": "2026-04-03",
     "changes": [
-      { "type": "feat", "description": "AI 모델 선택기 개선 — 최신 가격, 새 모델, 풍부한 UI" },
-      { "type": "feat", "description": "클립보드 붙여넣기 시 이미지와 텍스트 동시 처리" },
-      { "type": "refactor", "description": "AI 모델 설정 UI 배치 및 스타일 개선" }
+      {
+        "type": "feat",
+        "description": "AI 모델 선택기 개선 — 최신 가격, 새 모델, 풍부한 UI"
+      },
+      {
+        "type": "feat",
+        "description": "클립보드 붙여넣기 시 이미지와 텍스트 동시 처리"
+      },
+      {
+        "type": "refactor",
+        "description": "AI 모델 설정 UI 배치 및 스타일 개선"
+      }
     ]
   },
   {
     "version": "1.6.7",
     "date": "2026-04-02",
     "changes": [
-      { "type": "feat", "description": "게이미피케이션 업적 42개 → 105개 대폭 확장" },
-      { "type": "fix", "description": "첨부파일이 세션 간 공유되는 버그 수정 및 중복 파일명 넘버링" },
-      { "type": "fix", "description": "세션 삭제 버튼이 왼쪽에 표시되는 문제 수정" },
-      { "type": "fix", "description": "호버 시 액션 버튼이 텍스트 영역을 줄이지 않는 문제 수정" },
-      { "type": "fix", "description": "Ctrl 단축키 배지가 숨겨진 상태에서 레이아웃 공간 차지하는 문제 수정" },
-      { "type": "fix", "description": "Changes diff 기준을 워크트리 생성 시점 커밋으로 고정" },
-      { "type": "fix", "description": "워크스페이스 생성 실패 시 고스트 항목 남는 문제 수정" },
-      { "type": "style", "description": "드래그 앤 드롭 UI를 부드러운 보더 글로우로 개선" }
+      {
+        "type": "feat",
+        "description": "게이미피케이션 업적 42개 → 105개 대폭 확장"
+      },
+      {
+        "type": "fix",
+        "description": "첨부파일이 세션 간 공유되는 버그 수정 및 중복 파일명 넘버링"
+      },
+      {
+        "type": "fix",
+        "description": "세션 삭제 버튼이 왼쪽에 표시되는 문제 수정"
+      },
+      {
+        "type": "fix",
+        "description": "호버 시 액션 버튼이 텍스트 영역을 줄이지 않는 문제 수정"
+      },
+      {
+        "type": "fix",
+        "description": "Ctrl 단축키 배지가 숨겨진 상태에서 레이아웃 공간 차지하는 문제 수정"
+      },
+      {
+        "type": "fix",
+        "description": "Changes diff 기준을 워크트리 생성 시점 커밋으로 고정"
+      },
+      {
+        "type": "fix",
+        "description": "워크스페이스 생성 실패 시 고스트 항목 남는 문제 수정"
+      },
+      {
+        "type": "style",
+        "description": "드래그 앤 드롭 UI를 부드러운 보더 글로우로 개선"
+      }
     ]
   },
   {
     "version": "1.6.6",
     "date": "2026-04-02",
     "changes": [
-      { "type": "feat", "description": "입력 툴바에 토큰 사용량 도넛 링 인디케이터 추가" },
-      { "type": "feat", "description": "effort 토글을 모델별 최대 지원 레벨로 전환" },
-      { "type": "fix", "description": "모델 전환 시 effort 레벨 양방향 자동 조정" },
-      { "type": "fix", "description": "설정 페이지 고배율 줌에서 하단 콘텐츠 잘림 수정" },
-      { "type": "style", "description": "입력 툴바 및 토큰 사용량 링의 CSS 디스플레이 속성 개선" }
+      {
+        "type": "feat",
+        "description": "입력 툴바에 토큰 사용량 도넛 링 인디케이터 추가"
+      },
+      {
+        "type": "feat",
+        "description": "effort 토글을 모델별 최대 지원 레벨로 전환"
+      },
+      {
+        "type": "fix",
+        "description": "모델 전환 시 effort 레벨 양방향 자동 조정"
+      },
+      {
+        "type": "fix",
+        "description": "설정 페이지 고배율 줌에서 하단 콘텐츠 잘림 수정"
+      },
+      {
+        "type": "style",
+        "description": "입력 툴바 및 토큰 사용량 링의 CSS 디스플레이 속성 개선"
+      }
     ]
   },
   {
     "version": "1.6.5",
     "date": "2026-04-02",
     "changes": [
-      { "type": "refactor", "description": "Grouping logic 리팩터링 및 보조 메서드 통합" },
-      { "type": "fix", "description": "empty tree hash diff 실패 및 로컬 전용 repo의 잘못된 default branch 수정" }
+      {
+        "type": "refactor",
+        "description": "Grouping logic 리팩터링 및 보조 메서드 통합"
+      },
+      {
+        "type": "fix",
+        "description": "empty tree hash diff 실패 및 로컬 전용 repo의 잘못된 default branch 수정"
+      }
     ]
   },
   {
     "version": "1.6.4",
     "date": "2026-04-02",
     "changes": [
-      { "type": "feat", "description": "로컬 워크스페이스 생성 시 비-git 디렉터리 자동 git init 지원" },
-      { "type": "fix", "description": "터미널 PTY ERROR_DIRECTORY 크래시 및 stale WorktreePath 근본 원인 수정" }
+      {
+        "type": "feat",
+        "description": "로컬 워크스페이스 생성 시 비-git 디렉터리 자동 git init 지원"
+      },
+      {
+        "type": "fix",
+        "description": "터미널 PTY ERROR_DIRECTORY 크래시 및 stale WorktreePath 근본 원인 수정"
+      }
     ]
   },
   {
     "version": "1.6.3",
     "date": "2026-04-01",
     "changes": [
-      { "type": "fix", "description": "macOS 알림 크래시 수정 및 릴리스 번들 NSUserNotificationAlertStyle 추가" },
-      { "type": "fix", "description": "Messages 리스트 동시 접근 레이스 컨디션 수정" }
+      {
+        "type": "fix",
+        "description": "macOS 알림 크래시 수정 및 릴리스 번들 NSUserNotificationAlertStyle 추가"
+      },
+      {
+        "type": "fix",
+        "description": "Messages 리스트 동시 접근 레이스 컨디션 수정"
+      }
     ]
   },
   {
     "version": "1.6.2",
     "date": "2026-04-01",
     "changes": [
-      { "type": "feat", "description": "동기화 토글 키보드 단축키 추가 (Ctrl+Shift+S / ⌘+Shift+S)" },
-      { "type": "fix", "description": "세션 전환 시 채팅 스크롤을 맨 아래로 이동" }
+      {
+        "type": "feat",
+        "description": "동기화 토글 키보드 단축키 추가 (Ctrl+Shift+S / ⌘+Shift+S)"
+      },
+      {
+        "type": "fix",
+        "description": "세션 전환 시 채팅 스크롤을 맨 아래로 이동"
+      }
     ]
   },
   {
     "version": "1.6.1",
     "date": "2026-04-01",
     "changes": [
-      { "type": "fix", "description": "동기화 안정성 개선 — git diff 의존 제거, 실제 파일 비교 전환, FSWatcher fallback" }
+      {
+        "type": "fix",
+        "description": "동기화 안정성 개선 — git diff 의존 제거, 실제 파일 비교 전환, FSWatcher fallback"
+      }
     ]
   },
   {
     "version": "1.6.0",
     "date": "2026-04-01",
     "changes": [
-      { "type": "feat", "description": "워크트리 → 로컬 디렉터리 동기화 토글 기능 추가" },
-      { "type": "feat", "description": "서비스 전반 로깅 보강" },
-      { "type": "fix", "description": "동기화 해제 시 수정된 파일이 삭제되는 버그 수정" }
+      {
+        "type": "feat",
+        "description": "워크트리 → 로컬 디렉터리 동기화 토글 기능 추가"
+      },
+      {
+        "type": "feat",
+        "description": "서비스 전반 로깅 보강"
+      },
+      {
+        "type": "fix",
+        "description": "동기화 해제 시 수정된 파일이 삭제되는 버그 수정"
+      }
     ]
   },
   {
     "version": "1.5.11",
     "date": "2026-04-01",
     "changes": [
-      { "type": "feat", "description": "주기적 업데이트 체크 및 네이티브 알림 기능 추가" },
-      { "type": "fix", "description": "cmd.exe에서 괄호 포함 인자 파싱 오류 수정" },
-      { "type": "fix", "description": "초기 커밋 없는 저장소에서 git diff HEAD 실패 수정" }
+      {
+        "type": "feat",
+        "description": "주기적 업데이트 체크 및 네이티브 알림 기능 추가"
+      },
+      {
+        "type": "fix",
+        "description": "cmd.exe에서 괄호 포함 인자 파싱 오류 수정"
+      },
+      {
+        "type": "fix",
+        "description": "초기 커밋 없는 저장소에서 git diff HEAD 실패 수정"
+      }
     ]
   },
   {
     "version": "1.5.10",
     "date": "2026-04-01",
     "changes": [
-      { "type": "feat", "description": "AskUserQuestion에 multiSelect 지원 추가" },
-      { "type": "fix", "description": "Windows에서 npm 설치된 Claude CLI 실행 실패 수정" },
-      { "type": "fix", "description": "Sonnet/Haiku 모델에서 Max Thinking 버튼 비활성화" },
-      { "type": "fix", "description": "모델 설정이 새 세션 생성 시 반영되지 않는 버그 수정" }
+      {
+        "type": "feat",
+        "description": "AskUserQuestion에 multiSelect 지원 추가"
+      },
+      {
+        "type": "fix",
+        "description": "Windows에서 npm 설치된 Claude CLI 실행 실패 수정"
+      },
+      {
+        "type": "fix",
+        "description": "Sonnet/Haiku 모델에서 Max Thinking 버튼 비활성화"
+      },
+      {
+        "type": "fix",
+        "description": "모델 설정이 새 세션 생성 시 반영되지 않는 버그 수정"
+      }
     ]
   },
   {
     "version": "1.5.9",
     "date": "2026-03-31",
     "changes": [
-      { "type": "fix", "description": "AskUserQuestionBar 다중 질문에서 커스텀 답변이 소실되는 버그 수정" }
+      {
+        "type": "fix",
+        "description": "AskUserQuestionBar 다중 질문에서 커스텀 답변이 소실되는 버그 수정"
+      }
     ]
   },
   {
     "version": "1.5.8",
     "date": "2026-03-31",
     "changes": [
-      { "type": "fix", "description": "설정에서 워크스페이스 삭제 시 사이드바에 즉시 반영" }
+      {
+        "type": "fix",
+        "description": "설정에서 워크스페이스 삭제 시 사이드바에 즉시 반영"
+      }
     ]
   },
   {
     "version": "1.5.7",
     "date": "2026-03-31",
     "changes": [
-      { "type": "feat", "description": "온보딩 튜토리얼 및 새 버전 안내 다이얼로그 추가" },
-      { "type": "docs", "description": "README.md 전면 리디자인 — 한국어 기반 비주얼 리치 구성" },
-      { "type": "chore", "description": "MIT 라이센스 추가 (오픈소스 공개 준비)" }
+      {
+        "type": "feat",
+        "description": "온보딩 튜토리얼 및 새 버전 안내 다이얼로그 추가"
+      },
+      {
+        "type": "docs",
+        "description": "README.md 전면 리디자인 — 한국어 기반 비주얼 리치 구성"
+      },
+      {
+        "type": "chore",
+        "description": "MIT 라이센스 추가 (오픈소스 공개 준비)"
+      }
     ]
   },
   {
     "version": "1.5.6",
     "date": "2026-03-31",
     "changes": [
-      { "type": "feat", "description": "RulesPage 개선 — 프리뷰 기능 및 UX 향상" },
-      { "type": "feat", "description": "Claude CLI 설정뷰 전면 개선 — 기능 추가 및 UX 개선" },
-      { "type": "feat", "description": "플랜 모드·Effort 레벨 키보드 단축키 토글 추가" },
-      { "type": "fix", "description": "RulesPage 데이터 손실 버그 수정" },
-      { "type": "fix", "description": "사용량 통계·세션 히스토리·대시보드 정확도 대폭 개선" },
-      { "type": "fix", "description": "웰컴 화면 플로팅 오브 애니메이션 작은 화면에서 잘림 수정" },
-      { "type": "refactor", "description": "세션 통계 집계 로직 최적화 및 정확도 향상" }
+      {
+        "type": "feat",
+        "description": "RulesPage 개선 — 프리뷰 기능 및 UX 향상"
+      },
+      {
+        "type": "feat",
+        "description": "Claude CLI 설정뷰 전면 개선 — 기능 추가 및 UX 개선"
+      },
+      {
+        "type": "feat",
+        "description": "플랜 모드·Effort 레벨 키보드 단축키 토글 추가"
+      },
+      {
+        "type": "fix",
+        "description": "RulesPage 데이터 손실 버그 수정"
+      },
+      {
+        "type": "fix",
+        "description": "사용량 통계·세션 히스토리·대시보드 정확도 대폭 개선"
+      },
+      {
+        "type": "fix",
+        "description": "웰컴 화면 플로팅 오브 애니메이션 작은 화면에서 잘림 수정"
+      },
+      {
+        "type": "refactor",
+        "description": "세션 통계 집계 로직 최적화 및 정확도 향상"
+      }
     ]
   },
   {
     "version": "1.5.5",
     "date": "2026-03-31",
     "changes": [
-      { "type": "feat", "description": "세션 전환 시 채팅 입력 임시 보존" },
-      { "type": "fix", "description": "슬래시 명령 팝업에서 방향키 선택 시 스크롤 추적" },
-      { "type": "fix", "description": "Windows 알림에서 본문 텍스트 미표시 수정" },
-      { "type": "fix", "description": "타이틀 인스트럭션을 첫 메시지에서만 전송" }
+      {
+        "type": "feat",
+        "description": "세션 전환 시 채팅 입력 임시 보존"
+      },
+      {
+        "type": "fix",
+        "description": "슬래시 명령 팝업에서 방향키 선택 시 스크롤 추적"
+      },
+      {
+        "type": "fix",
+        "description": "Windows 알림에서 본문 텍스트 미표시 수정"
+      },
+      {
+        "type": "fix",
+        "description": "타이틀 인스트럭션을 첫 메시지에서만 전송"
+      }
     ]
   },
   {
     "version": "1.5.4",
     "date": "2026-03-30",
     "changes": [
-      { "type": "feat", "description": "통계 대시보드 수동 새로고침 버튼 추가" },
-      { "type": "feat", "description": "설정 대시보드 개선 및 통계 캐시 처리 추가" },
-      { "type": "feat", "description": "워크스페이스 전체 펼치기/접기 단축키 및 Ctrl+N / ⌘+N 번호 불일치 수정" },
-      { "type": "fix", "description": "기본 설정 섹션을 'dashboard'에서 'general'로 변경" },
-      { "type": "fix", "description": "AskUserQuestion 다이얼로그 보기/커스텀 답변 상호배제 및 UI 통일" },
-      { "type": "fix", "description": "사용량 통계 기간 필터 시 총 비용/총 토큰이 변경되지 않는 문제 수정" },
-      { "type": "fix", "description": "macOS 알림이 Script Editor 대신 Cominomi 앱으로 표시되도록 수정" },
-      { "type": "fix", "description": "브랜치명/타이틀 실시간 반영 및 타이틀 잠금" }
+      {
+        "type": "feat",
+        "description": "통계 대시보드 수동 새로고침 버튼 추가"
+      },
+      {
+        "type": "feat",
+        "description": "설정 대시보드 개선 및 통계 캐시 처리 추가"
+      },
+      {
+        "type": "feat",
+        "description": "워크스페이스 전체 펼치기/접기 단축키 및 Ctrl+N / ⌘+N 번호 불일치 수정"
+      },
+      {
+        "type": "fix",
+        "description": "기본 설정 섹션을 'dashboard'에서 'general'로 변경"
+      },
+      {
+        "type": "fix",
+        "description": "AskUserQuestion 다이얼로그 보기/커스텀 답변 상호배제 및 UI 통일"
+      },
+      {
+        "type": "fix",
+        "description": "사용량 통계 기간 필터 시 총 비용/총 토큰이 변경되지 않는 문제 수정"
+      },
+      {
+        "type": "fix",
+        "description": "macOS 알림이 Script Editor 대신 Cominomi 앱으로 표시되도록 수정"
+      },
+      {
+        "type": "fix",
+        "description": "브랜치명/타이틀 실시간 반영 및 타이틀 잠금"
+      }
     ]
   },
   {
     "version": "1.5.3",
     "date": "2026-03-30",
     "changes": [
-      { "type": "feat", "description": "로컬 디렉터리 세션에서 브랜치 rename 대신 작업 타이틀 설정" },
-      { "type": "fix", "description": "사용량 대시보드 활동 요약에 기간 필터 적용" },
-      { "type": "fix", "description": "브라우저 새로고침 단축키(F5, Ctrl+R, Cmd+R) 차단" },
-      { "type": "fix", "description": "macOS에서 mise/nvm/volta 등 버전 매니저 경유 Claude CLI 감지 및 실행 수정" }
+      {
+        "type": "feat",
+        "description": "로컬 디렉터리 세션에서 브랜치 rename 대신 작업 타이틀 설정"
+      },
+      {
+        "type": "fix",
+        "description": "사용량 대시보드 활동 요약에 기간 필터 적용"
+      },
+      {
+        "type": "fix",
+        "description": "브라우저 새로고침 단축키(F5, Ctrl+R, Cmd+R) 차단"
+      },
+      {
+        "type": "fix",
+        "description": "macOS에서 mise/nvm/volta 등 버전 매니저 경유 Claude CLI 감지 및 실행 수정"
+      }
     ]
   },
   {
     "version": "1.5.2",
     "date": "2026-03-30",
     "changes": [
-      { "type": "fix", "description": "설정 기본 탭을 대시보드로 변경 및 최근세션 너비 수정" }
+      {
+        "type": "fix",
+        "description": "설정 기본 탭을 대시보드로 변경 및 최근세션 너비 수정"
+      }
     ]
   },
   {
     "version": "1.5.1",
     "date": "2026-03-28",
     "changes": [
-      { "type": "feat", "description": "커밋 메시지 AI 자동생성 기능 및 커밋 UI 리디자인" },
-      { "type": "refactor", "description": "Haiku 요약/브랜치 rename 제거 → 시스템 인스트럭션 기반으로 전환" },
-      { "type": "fix", "description": "ChatView 렌더링 시 CurrentSession race condition으로 인한 NullReferenceException 수정" }
+      {
+        "type": "feat",
+        "description": "커밋 메시지 AI 자동생성 기능 및 커밋 UI 리디자인"
+      },
+      {
+        "type": "refactor",
+        "description": "Haiku 요약/브랜치 rename 제거 → 시스템 인스트럭션 기반으로 전환"
+      },
+      {
+        "type": "fix",
+        "description": "ChatView 렌더링 시 CurrentSession race condition으로 인한 NullReferenceException 수정"
+      }
     ]
   },
   {
     "version": "1.4.0",
     "date": "2026-03-28",
     "changes": [
-      { "type": "feat", "description": "대시보드 전면 재구성 — ActivityHeatmap, CostOverviewCard, SessionMonitor, StreakCard 등 신규 위젯" },
-      { "type": "feat", "description": "세션 리플레이 시스템 신규 구축 — 과거 세션 타임라인 재생 및 탐색" },
-      { "type": "feat", "description": "사용량 페이지 전면 재구축 — stats-cache.json 기반 통계 및 차트" },
-      { "type": "feat", "description": "게이미피케이션 시스템 추가 — 업적 그리드, 스트릭 카드, 레벨 진행도" },
-      { "type": "feat", "description": "Hooks, Rules, Instructions, Memory Browser 관리 페이지 추가" },
-      { "type": "feat", "description": "Claude 설정 전용 섹션 — 퍼미션, 환경변수, 슬래시 명령어 편집기" },
-      { "type": "feat", "description": "템플릿 갤러리 다이얼로그 및 프로젝트 스코프 피커 추가" },
-      { "type": "refactor", "description": "설정 시스템 분리·재편 — 모놀리식 설정을 독립 섹션별 컴포넌트로 분할" },
-      { "type": "refactor", "description": "기존 Activity/Usage 서비스 제거 및 StatsCacheService로 대체" },
-      { "type": "style", "description": "채팅 뷰 컴팩트 레이아웃 — 패딩·마진·폰트 축소 및 컨테이너 경량화" }
+      {
+        "type": "feat",
+        "description": "대시보드 전면 재구성 — ActivityHeatmap, CostOverviewCard, SessionMonitor, StreakCard 등 신규 위젯"
+      },
+      {
+        "type": "feat",
+        "description": "세션 리플레이 시스템 신규 구축 — 과거 세션 타임라인 재생 및 탐색"
+      },
+      {
+        "type": "feat",
+        "description": "사용량 페이지 전면 재구축 — stats-cache.json 기반 통계 및 차트"
+      },
+      {
+        "type": "feat",
+        "description": "게이미피케이션 시스템 추가 — 업적 그리드, 스트릭 카드, 레벨 진행도"
+      },
+      {
+        "type": "feat",
+        "description": "Hooks, Rules, Instructions, Memory Browser 관리 페이지 추가"
+      },
+      {
+        "type": "feat",
+        "description": "Claude 설정 전용 섹션 — 퍼미션, 환경변수, 슬래시 명령어 편집기"
+      },
+      {
+        "type": "feat",
+        "description": "템플릿 갤러리 다이얼로그 및 프로젝트 스코프 피커 추가"
+      },
+      {
+        "type": "refactor",
+        "description": "설정 시스템 분리·재편 — 모놀리식 설정을 독립 섹션별 컴포넌트로 분할"
+      },
+      {
+        "type": "refactor",
+        "description": "기존 Activity/Usage 서비스 제거 및 StatsCacheService로 대체"
+      },
+      {
+        "type": "style",
+        "description": "채팅 뷰 컴팩트 레이아웃 — 패딩·마진·폰트 축소 및 컨테이너 경량화"
+      }
     ]
   },
   {
     "version": "1.3.7",
     "date": "2026-03-27",
     "changes": [
-      { "type": "fix", "description": "사이드바 워크스페이스 접힘 시 세션 추가/설정 버튼이 사라지는 문제 수정" },
-      { "type": "feat", "description": "접힌 워크스페이스에 세션 수 배지 및 스트리밍 활동 표시기 추가" },
-      { "type": "feat", "description": "워크스페이스 펼침/접힘 쉐브론 아이콘 추가" }
+      {
+        "type": "fix",
+        "description": "사이드바 워크스페이스 접힘 시 세션 추가/설정 버튼이 사라지는 문제 수정"
+      },
+      {
+        "type": "feat",
+        "description": "접힌 워크스페이스에 세션 수 배지 및 스트리밍 활동 표시기 추가"
+      },
+      {
+        "type": "feat",
+        "description": "워크스페이스 펼침/접힘 쉐브론 아이콘 추가"
+      }
     ]
   },
   {
     "version": "1.3.6",
     "date": "2026-03-27",
     "changes": [
-      { "type": "feat", "description": "웰컴뷰 리디자인 — 기능 요소 제거 및 애니메이션 UI 적용" },
-      { "type": "chore", "description": "NuGet 패키지 최신 안정화 버전 업데이트 및 MudBlazor deprecated API 수정" }
+      {
+        "type": "feat",
+        "description": "웰컴뷰 리디자인 — 기능 요소 제거 및 애니메이션 UI 적용"
+      },
+      {
+        "type": "chore",
+        "description": "NuGet 패키지 최신 안정화 버전 업데이트 및 MudBlazor deprecated API 수정"
+      }
     ]
   },
   {
     "version": "1.3.5",
     "date": "2026-03-27",
     "changes": [
-      { "type": "feat", "description": "테마 전환 단축키(Ctrl+Shift+T / ⌘+Shift+T) 추가 및 단축키 목록 보완" },
-      { "type": "feat", "description": "릴리스 노트 UI 개선 — 날짜 표기 및 카드 레이아웃 적용" },
-      { "type": "fix", "description": "테마 전환 시 터미널 색상이 즉시 반영되지 않는 문제 수정" },
-      { "type": "fix", "description": "CI에서 어셈블리 버전이 1.0.0으로 고정되던 문제 수정" }
+      {
+        "type": "feat",
+        "description": "테마 전환 단축키(Ctrl+Shift+T / ⌘+Shift+T) 추가 및 단축키 목록 보완"
+      },
+      {
+        "type": "feat",
+        "description": "릴리스 노트 UI 개선 — 날짜 표기 및 카드 레이아웃 적용"
+      },
+      {
+        "type": "fix",
+        "description": "테마 전환 시 터미널 색상이 즉시 반영되지 않는 문제 수정"
+      },
+      {
+        "type": "fix",
+        "description": "CI에서 어셈블리 버전이 1.0.0으로 고정되던 문제 수정"
+      }
     ]
   },
   {
     "version": "1.3.4",
     "date": "2026-03-27",
     "changes": [
-      { "type": "fix", "description": "터미널 종료 시 PTY Dispose에서 발생하는 렌더링 오류 수정" }
+      {
+        "type": "fix",
+        "description": "터미널 종료 시 PTY Dispose에서 발생하는 렌더링 오류 수정"
+      }
     ]
   },
   {
     "version": "1.3.3",
     "date": "2026-03-26",
     "changes": [
-      { "type": "feat", "description": "Ctrl+Shift+L / ⌘+Shift+L 단축키로 채팅 입력 텍스트박스에 포커스 이동" },
-      { "type": "feat", "description": "설정 업데이트 탭에 릴리스 노트 표시 기능 추가" },
-      { "type": "feat", "description": "터미널 쉘 선택 기능 및 macOS 기본쉘 자동 감지" },
-      { "type": "fix", "description": "사이드바 플랜모드 스트리밍 상태에서 실제 활동 표시" },
-      { "type": "fix", "description": "플랜 리뷰 패널 좌우 마진을 입력 영역과 동일하게 정렬" },
-      { "type": "fix", "description": "세션 삭제 시 알림 읽음 처리 및 포커스 기반 알림 카운트 개선" },
-      { "type": "fix", "description": "툴바 버튼 클릭 후 textarea 자동 포커스 복원" },
-      { "type": "fix", "description": "사이드바 스트리밍 상태 표시를 좌측 보더로 변경하여 마진 정렬 수정" },
-      { "type": "fix", "description": "macOS GUI 실행 시 Homebrew CLI 도구 감지 실패 수정" },
-      { "type": "refactor", "description": "슬래시 명령어 설정 다이얼로그 UI 개선" }
+      {
+        "type": "feat",
+        "description": "Ctrl+Shift+L / ⌘+Shift+L 단축키로 채팅 입력 텍스트박스에 포커스 이동"
+      },
+      {
+        "type": "feat",
+        "description": "설정 업데이트 탭에 릴리스 노트 표시 기능 추가"
+      },
+      {
+        "type": "feat",
+        "description": "터미널 쉘 선택 기능 및 macOS 기본쉘 자동 감지"
+      },
+      {
+        "type": "fix",
+        "description": "사이드바 플랜모드 스트리밍 상태에서 실제 활동 표시"
+      },
+      {
+        "type": "fix",
+        "description": "플랜 리뷰 패널 좌우 마진을 입력 영역과 동일하게 정렬"
+      },
+      {
+        "type": "fix",
+        "description": "세션 삭제 시 알림 읽음 처리 및 포커스 기반 알림 카운트 개선"
+      },
+      {
+        "type": "fix",
+        "description": "툴바 버튼 클릭 후 textarea 자동 포커스 복원"
+      },
+      {
+        "type": "fix",
+        "description": "사이드바 스트리밍 상태 표시를 좌측 보더로 변경하여 마진 정렬 수정"
+      },
+      {
+        "type": "fix",
+        "description": "macOS GUI 실행 시 Homebrew CLI 도구 감지 실패 수정"
+      },
+      {
+        "type": "refactor",
+        "description": "슬래시 명령어 설정 다이얼로그 UI 개선"
+      }
     ]
   },
   {
     "version": "1.3.2",
     "date": "2026-03-26",
     "changes": [
-      { "type": "feat", "description": "설정에 단축키 안내 페이지 및 업데이트 관리 페이지 추가" },
-      { "type": "feat", "description": "Git 브랜치 실시간 추적 및 사이드바 브랜치/삭제 단축키 표시" },
-      { "type": "fix", "description": "macOS 배포 시 icon.ico 파일 못 찾는 크래시 수정" }
+      {
+        "type": "feat",
+        "description": "설정에 단축키 안내 페이지 및 업데이트 관리 페이지 추가"
+      },
+      {
+        "type": "feat",
+        "description": "Git 브랜치 실시간 추적 및 사이드바 브랜치/삭제 단축키 표시"
+      },
+      {
+        "type": "fix",
+        "description": "macOS 배포 시 icon.ico 파일 못 찾는 크래시 수정"
+      }
     ]
   },
   {
     "version": "1.3.1",
     "date": "2026-03-26",
     "changes": [
-      { "type": "fix", "description": "CLI 미설치 시에도 항상 found=true 반환하던 감지 버그 수정" }
+      {
+        "type": "fix",
+        "description": "CLI 미설치 시에도 항상 found=true 반환하던 감지 버그 수정"
+      }
     ]
   },
   {
     "version": "1.3.0",
     "date": "2026-03-26",
     "changes": [
-      { "type": "feat", "description": "PTY 기반 터미널 패널 추가 (50/50 분할, 복사/붙여넣기 지원)" },
-      { "type": "feat", "description": "AskUserQuestion에 자유 텍스트 입력 필드 추가" }
+      {
+        "type": "feat",
+        "description": "PTY 기반 터미널 패널 추가 (50/50 분할, 복사/붙여넣기 지원)"
+      },
+      {
+        "type": "feat",
+        "description": "AskUserQuestion에 자유 텍스트 입력 필드 추가"
+      }
     ]
   },
   {
     "version": "1.2.4",
     "date": "2026-03-26",
     "changes": [
-      { "type": "fix", "description": "Ctrl+D / ⌘+D 세션 삭제 시 사이드바에서 세션이 제거되지 않는 버그 수정" }
+      {
+        "type": "fix",
+        "description": "Ctrl+D / ⌘+D 세션 삭제 시 사이드바에서 세션이 제거되지 않는 버그 수정"
+      }
     ]
   },
   {
     "version": "1.2.3",
     "date": "2026-03-26",
     "changes": [
-      { "type": "feat", "description": "Git 및 GitHub CLI 의존성 체크 추가 (시작 시 검사 + 설정 연동 UI)" },
-      { "type": "feat", "description": "Claude CLI 설치/업데이트 안내를 플랫폼별 다중 방법으로 개선" },
-      { "type": "fix", "description": "Git/gh 리프레시 버튼 개별 로딩 인디케이터 분리" },
-      { "type": "fix", "description": "플랜 승인 후 플랜 파일 보기 버튼이 사라지는 버그 수정" }
+      {
+        "type": "feat",
+        "description": "Git 및 GitHub CLI 의존성 체크 추가 (시작 시 검사 + 설정 연동 UI)"
+      },
+      {
+        "type": "feat",
+        "description": "Claude CLI 설치/업데이트 안내를 플랫폼별 다중 방법으로 개선"
+      },
+      {
+        "type": "fix",
+        "description": "Git/gh 리프레시 버튼 개별 로딩 인디케이터 분리"
+      },
+      {
+        "type": "fix",
+        "description": "플랜 승인 후 플랜 파일 보기 버튼이 사라지는 버그 수정"
+      }
     ]
   },
   {
     "version": "1.2.2",
     "date": "2026-03-26",
     "changes": [
-      { "type": "feat", "description": "앱 아이콘 전체 세팅 (Windows/macOS)" },
-      { "type": "feat", "description": "텍스트 파일 미리보기 기능 추가 (마크다운, YAML, 코드 등)" },
-      { "type": "feat", "description": "Ctrl+D / ⌘+D 단축키로 현재 세션 닫기 지원" },
-      { "type": "feat", "description": "사이드바 세션 상태 표시 개선 (완료 배지 추가)" }
+      {
+        "type": "feat",
+        "description": "앱 아이콘 전체 세팅 (Windows/macOS)"
+      },
+      {
+        "type": "feat",
+        "description": "텍스트 파일 미리보기 기능 추가 (마크다운, YAML, 코드 등)"
+      },
+      {
+        "type": "feat",
+        "description": "Ctrl+D / ⌘+D 단축키로 현재 세션 닫기 지원"
+      },
+      {
+        "type": "feat",
+        "description": "사이드바 세션 상태 표시 개선 (완료 배지 추가)"
+      }
     ]
   },
   {
     "version": "1.2.1",
     "date": "2026-03-25",
     "changes": [
-      { "type": "feat", "description": "UI 전반 배치 개선 및 리팩토링" }
+      {
+        "type": "feat",
+        "description": "UI 전반 배치 개선 및 리팩토링"
+      }
     ]
   },
   {
     "version": "1.2.0",
     "date": "2026-03-25",
     "changes": [
-      { "type": "feat", "description": "GitHub 토큰 주입으로 private 레포 업데이트 지원" },
-      { "type": "fix", "description": "브라우저 기본 우클릭 메뉴 비활성화" },
-      { "type": "fix", "description": "Windows DPI 배율 변경 시 제목표시줄 크기 이상 수정" }
+      {
+        "type": "feat",
+        "description": "GitHub 토큰 주입으로 private 레포 업데이트 지원"
+      },
+      {
+        "type": "fix",
+        "description": "브라우저 기본 우클릭 메뉴 비활성화"
+      },
+      {
+        "type": "fix",
+        "description": "Windows DPI 배율 변경 시 제목표시줄 크기 이상 수정"
+      }
     ]
   },
   {
     "version": "1.1.2",
     "date": "2026-03-25",
     "changes": [
-      { "type": "feat", "description": "알림 설정 탭 분리 및 macOS/Windows 사운드 지원" }
+      {
+        "type": "feat",
+        "description": "알림 설정 탭 분리 및 macOS/Windows 사운드 지원"
+      }
     ]
   },
   {
     "version": "1.1.1",
     "date": "2026-03-25",
     "changes": [
-      { "type": "fix", "description": "macOS Photino 스레드 행 방지를 위한 강제 종료 처리" },
-      { "type": "fix", "description": "osascript/PowerShell 파일피커를 Photino 네이티브 다이얼로그로 전환" }
+      {
+        "type": "fix",
+        "description": "macOS Photino 스레드 행 방지를 위한 강제 종료 처리"
+      },
+      {
+        "type": "fix",
+        "description": "osascript/PowerShell 파일피커를 Photino 네이티브 다이얼로그로 전환"
+      }
     ]
   },
   {
     "version": "1.1.0",
     "date": "2026-03-25",
     "changes": [
-      { "type": "feat", "description": "MAUI에서 Photino.Blazor로 프레임워크 이주" }
+      {
+        "type": "feat",
+        "description": "MAUI에서 Photino.Blazor로 프레임워크 이주"
+      }
     ]
   },
   {
     "version": "1.0.1",
     "date": "2026-03-24",
     "changes": [
-      { "type": "feat", "description": "최초 릴리스 — Velopack 자동 업데이트 및 GitHub Actions CI/CD 파이프라인 구축" }
+      {
+        "type": "feat",
+        "description": "최초 릴리스 — Velopack 자동 업데이트 및 GitHub Actions CI/CD 파이프라인 구축"
+      }
     ]
   }
 ]

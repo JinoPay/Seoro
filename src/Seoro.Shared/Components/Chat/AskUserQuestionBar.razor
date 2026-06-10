@@ -64,6 +64,10 @@
                         {
                             <span class="askbar-option-desc">@opt.Description</span>
                         }
+                        @if (isSelected && !string.IsNullOrEmpty(opt.Preview))
+                        {
+                            <pre class="askbar-option-preview">@opt.Preview</pre>
+                        }
                     </button>
                 }
 
@@ -123,7 +127,7 @@
     [Parameter] public string? QuestionInput { get; set; }
     [Parameter] public EventCallback<string> OnResponse { get; set; }
 
-    private record AskOption(string Label, string? Description);
+    private record AskOption(string Label, string? Description, string? Preview = null);
 
     private record AskQuestion(string? Header, string Question, List<AskOption> Options, bool MultiSelect);
 
@@ -272,8 +276,9 @@
                     {
                         var label = opt.TryGetProperty("label", out var lProp) ? lProp.GetString() ?? "" : "";
                         var desc = opt.TryGetProperty("description", out var dProp) ? dProp.GetString() : null;
+                        var preview = opt.TryGetProperty("preview", out var pProp) ? pProp.GetString() : null;
                         if (!string.IsNullOrEmpty(label))
-                            options.Add(new AskOption(label, desc));
+                            options.Add(new AskOption(label, desc, preview));
                     }
                 }
 

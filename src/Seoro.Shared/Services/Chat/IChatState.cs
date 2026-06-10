@@ -97,7 +97,8 @@ public interface IChatState : IDisposable
     void UnregisterActiveSession(string sessionId);
 
     // Todo floater
-    void UpdateTodoSnapshot(TodoSnapshot snapshot);
+    TaskListTracker GetTaskTracker(string sessionId);
+    void UpdateTodoSnapshot(string sessionId, TodoSnapshot snapshot);
     void SetTodoFloaterState(TodoFloaterVisibility state);
     void DismissTodoFloater();
 }

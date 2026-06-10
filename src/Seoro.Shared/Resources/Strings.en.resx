@@ -144,13 +144,13 @@
   <data name="Settings_Ai_DefaultModelHint" xml:space="preserve"><value>Global default. Each workspace can override this with a different model.</value></data>
   <data name="Settings_Ai_EffortLevelLabel" xml:space="preserve"><value>Default Effort Level</value></data>
   <data name="Settings_Ai_EffortLevelMax" xml:space="preserve"><value>Max</value></data>
-  <data name="Settings_Ai_EffortLevelHint" xml:space="preserve"><value>auto: model default, max: highest thinking level per model (Opus 4.7: xhigh, older Opus: max, others: high)</value></data>
+  <data name="Settings_Ai_EffortLevelHint" xml:space="preserve"><value>auto: model default, max: highest thinking level per model (Fable 5: max, Opus 4.8: xhigh, others: high)</value></data>
   <data name="Settings_Ai_PermissionModeLabel" xml:space="preserve"><value>Default Permission Mode</value></data>
   <data name="Settings_Ai_PermissionModeNormal" xml:space="preserve"><value>Normal Mode</value></data>
   <data name="Settings_Ai_PermissionModePlan" xml:space="preserve"><value>Plan Mode</value></data>
   <data name="Settings_Ai_PermissionModeHint" xml:space="preserve"><value>Permission mode applied when Claude CLI is run from Seoro.</value></data>
   <data name="Settings_Ai_FallbackModelLabel" xml:space="preserve"><value>Fallback Model</value></data>
-  <data name="Settings_Ai_FallbackModelHint" xml:space="preserve"><value>Fallback model when the default is overloaded (leave blank to disable)</value></data>
+  <data name="Settings_Ai_FallbackModelHint" xml:space="preserve"><value>Fallback model when the default is overloaded — comma-separated, up to 3 tried in order (leave blank to disable)</value></data>
   <data name="Settings_Ai_McpConfigPathLabel" xml:space="preserve"><value>MCP Config File Path</value></data>
   <data name="Settings_Ai_McpConfigPathHint" xml:space="preserve"><value>Path to MCP server config JSON file (leave blank to disable)</value></data>
   <data name="Settings_Ai_CodexDefaultModelLabel" xml:space="preserve"><value>Codex Default Model</value></data>

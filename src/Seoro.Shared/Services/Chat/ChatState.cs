@@ -346,11 +346,31 @@ public class ChatState : IChatState
             _eventBus.Publish(new RightPanelChangedEvent(RightPanel));
         }
 
-        // 세션 전환 시 플로터 상태 리셋
+        // 세션 전환 시 플로터 상태 리셋 (해당 세션의 Task 트래커에서 복원)
         if (old?.Id != session?.Id)
         {
             CurrentTodos = null;
             TodoFloaterState = TodoFloaterVisibility.Hidden;
+
+            if (session != null)
+            {
+                var tracker = GetTaskTracker(session.Id);
+
+                // 앱 재시작 등으로 트래커가 비어 있으면 저장된 메시지 히스토리에서 1회 재구성
+                if (tracker is { HasEntries: false, RebuildAttempted: false })
+                {
+                    lock (session.MessagesLock)
+                    {
+                        tracker.RebuildFromMessages(session.Messages);
+                    }
+                }
+
+                if (tracker.HasEntries)
+                {
+                    CurrentTodos = tracker.ToSnapshot();
+                    TodoFloaterState = TodoFloaterVisibility.Chip;
+                }
+            }
         }
 
         _eventBus.Publish(new SessionChangedEvent(old, session));
@@ -400,11 +420,30 @@ public class ChatState : IChatState
     }
 
     // --- Todo floater state ---
+    private readonly Dictionary<string, TaskListTracker> _taskTrackers = new();
     public TodoSnapshot? CurrentTodos { get; private set; }
     public TodoFloaterVisibility TodoFloaterState { get; private set; } = TodoFloaterVisibility.Hidden;
 
-    public void UpdateTodoSnapshot(TodoSnapshot snapshot)
+    public TaskListTracker GetTaskTracker(string sessionId)
     {
+        lock (_taskTrackers)
+        {
+            if (!_taskTrackers.TryGetValue(sessionId, out var tracker))
+            {
+                tracker = new TaskListTracker();
+                _taskTrackers[sessionId] = tracker;
+            }
+
+            return tracker;
+        }
+    }
+
+    public void UpdateTodoSnapshot(string sessionId, TodoSnapshot snapshot)
+    {
+        // 백그라운드 세션의 스냅샷은 플로터에 반영하지 않음 — 트래커에 누적되어 있다가 세션 전환 시 복원됨
+        if (CurrentSession?.Id != sessionId)
+            return;
+
         CurrentTodos = snapshot;
         // 새 스냅샷 도착 시 Hidden 상태였다면 Chip으로 자동 승격 (재등장)
         if (TodoFloaterState == TodoFloaterVisibility.Hidden)
