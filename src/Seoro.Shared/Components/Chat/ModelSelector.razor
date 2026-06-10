@@ -1,95 +1,91 @@
 @inject IChatState ChatState
 @implements IDisposable
 
-<MudTooltip Placement="Placement.Top">
+<Popover Open="_modelMenuOpen" OpenChanged="HandleMenuOpenChanged"
+         Placement="PopoverPlacement.TopEnd" Fixed="true" PopoverClass="model-popover">
+    <AnchorContent>
+        <Tooltip Placement="UiPlacement.Top">
+            <ChildContent>
+                <button class="model-selector-pill @(_modelMenuOpen ? "is-open" : "")" type="button"
+                        @onclick="ToggleModelMenu"
+                        disabled="@(Disabled || IsStreaming)">
+                    <span class="model-selector-dot"></span>
+                    <span class="model-selector-label">@GetModelDisplayName()</span>
+                    <Icon Svg="@Lucide.ChevronDown" Size="14" Class="model-selector-chevron"/>
+                </button>
+            </ChildContent>
+            <TooltipContent>
+                @{
+                    var normalized = ModelDefinitions.NormalizeModelId(EffectiveModel);
+                    var tooltipModel = ModelDefinitions.All.FirstOrDefault(m => m.Id == normalized);
+                }
+                <div>@GetModelDisplayName()</div>
+                @if (!string.IsNullOrEmpty(tooltipModel?.Description))
+                {
+                    <div style="opacity: 0.7; font-size: 0.75rem;">@tooltipModel.Description</div>
+                }
+            </TooltipContent>
+        </Tooltip>
+    </AnchorContent>
     <ChildContent>
-        <button class="model-selector-pill @(_modelMenuOpen ? "is-open" : "")" type="button"
-                @onclick="ToggleModelMenu"
-                disabled="@(Disabled || IsStreaming)">
-            <span class="model-selector-dot"></span>
-            <span class="model-selector-label">@GetModelDisplayName()</span>
-            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small"
-                     Class="model-selector-chevron"/>
-        </button>
-    </ChildContent>
-    <TooltipContent>
-        @{
-            var normalized = ModelDefinitions.NormalizeModelId(EffectiveModel);
-            var tooltipModel = ModelDefinitions.All.FirstOrDefault(m => m.Id == normalized);
-        }
-        <div>@GetModelDisplayName()</div>
-        @if (!string.IsNullOrEmpty(tooltipModel?.Description))
-        {
-            <div style="opacity: 0.7; font-size: 0.75rem;">@tooltipModel.Description</div>
-        }
-    </TooltipContent>
-</MudTooltip>
-
-<MudPopover Open="@_modelMenuOpen" AnchorOrigin="Origin.TopRight"
-            TransformOrigin="Origin.BottomRight" Class="model-popover">
-    <MudList T="string" Dense="true" Class="model-list">
-        @foreach (var group in ModelDefinitions.GetGroupedModels(CurrentProvider))
-        {
-            <div class="model-group-header">@GetCategoryLabel(group.Key)</div>
-            @foreach (var model in group)
+        <div class="model-list">
+            @foreach (var group in ModelDefinitions.GetGroupedModels(CurrentProvider))
             {
-                <MudListItem T="string" OnClick="@(() => SelectModel(model.Id))"
-                             Class="@(IsModelActive(model.Id) ? "model-item-active" : "")">
-                    <div class="model-item-content">
-                        <div class="model-item-row">
-                            <span class="model-item-name">
-                                @model.DisplayName
-                                @if (model.IsAlias)
-                                {
-                                    <span class="model-item-alias-badge">alias</span>
-                                }
-                            </span>
-                            @if (model.Pricing != null)
-                            {
-                                <span class="model-item-price">$@model.Pricing.Input/$@model.Pricing.Output</span>
-                            }
-                        </div>
-                        @if (!string.IsNullOrEmpty(model.Description))
-                        {
+                <div class="model-group-header">@GetCategoryLabel(group.Key)</div>
+                @foreach (var model in group)
+                {
+                    <button type="button"
+                            class="model-item @(IsModelActive(model.Id) ? "model-item-active" : "")"
+                            @onclick="@(() => SelectModel(model.Id))">
+                        <div class="model-item-content">
                             <div class="model-item-row">
-                                <span class="model-item-desc">@model.Description</span>
-                                <span class="speed-dots">
-                                    @for (var i = 0; i < 3; i++)
+                                <span class="model-item-name">
+                                    @model.DisplayName
+                                    @if (model.IsAlias)
                                     {
-                                        <span class="speed-dot @(i < model.SpeedTier ? "speed-dot-filled" : "")"></span>
+                                        <span class="model-item-alias-badge">alias</span>
                                     }
                                 </span>
+                                @if (model.Pricing != null)
+                                {
+                                    <span class="model-item-price">$@model.Pricing.Input/$@model.Pricing.Output</span>
+                                }
                             </div>
-                        }
-                    </div>
-                </MudListItem>
+                            @if (!string.IsNullOrEmpty(model.Description))
+                            {
+                                <div class="model-item-row">
+                                    <span class="model-item-desc">@model.Description</span>
+                                    <span class="speed-dots">
+                                        @for (var i = 0; i < 3; i++)
+                                        {
+                                            <span class="speed-dot @(i < model.SpeedTier ? "speed-dot-filled" : "")"></span>
+                                        }
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </button>
+                }
             }
-        }
-        <MudDivider/>
-        <MudListItem T="string" OnClick="@(() => _customModelInput = true)"
-                     Class="@(_isCustomModel ? "model-item-active" : "")">
-            @if (_customModelInput)
-            {
-                <MudTextField T="string" @bind-Value="_customModelId"
-                              Placeholder="@(CurrentProvider == "codex" ? "o4-mini..." : "claude-sonnet-4-6...")"
-                              Variant="Variant.Text" Margin="Margin.Dense"
-                              Immediate="true" AutoFocus="true"
-                              OnKeyDown="HandleCustomModelKeyDown"
-                              Style="font-size: 0.8rem;"/>
-            }
-            else
-            {
-                <span style="opacity: 0.7;">커스텀 모델...</span>
-            }
-        </MudListItem>
-    </MudList>
-</MudPopover>
-
-@if (_modelMenuOpen)
-{
-    <MudOverlay Visible="true" OnClick="CloseModelMenu"
-                DarkBackground="false" ZIndex="1"/>
-}
+            <Divider/>
+            <div class="model-item @(_isCustomModel ? "model-item-active" : "")"
+                 @onclick="@(() => _customModelInput = true)">
+                @if (_customModelInput)
+                {
+                    <TextField @bind-Value="_customModelId"
+                               Placeholder="@(CurrentProvider == "codex" ? "o4-mini..." : "claude-sonnet-4-6...")"
+                               Immediate="true" AutoFocus="true"
+                               OnKeyDown="HandleCustomModelKeyDown"
+                               Style="font-size: 0.8rem;"/>
+                }
+                else
+                {
+                    <span style="opacity: 0.7;">커스텀 모델...</span>
+                }
+            </div>
+        </div>
+    </ChildContent>
+</Popover>
 
 @code {
     [Parameter] public string Model { get; set; } = string.Empty;
@@ -178,6 +174,13 @@
     private void ToggleModelMenu()
     {
         _modelMenuOpen = !_modelMenuOpen;
+    }
+
+    private async Task HandleMenuOpenChanged(bool open)
+    {
+        _modelMenuOpen = open;
+        if (!open)
+            await CloseModelMenu();
     }
 
     private async Task CloseModelMenu()

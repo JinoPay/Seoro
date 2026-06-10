@@ -1,27 +1,29 @@
 <div class="tree-header">
     <span class="tree-header-label">Workspaces</span>
     <div class="tree-header-actions">
-        <MudIconButton Icon="@(FilterVisible ? Icons.Material.Filled.FilterListOff : Icons.Material.Filled.FilterList)"
-                       Size="Size.Small"
-                       Style="width: 24px; height: 24px; opacity: 0.5;"
-                       OnClick="@OnToggleFilter"/>
-        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
-                       Style="width: 24px; height: 24px; opacity: 0.5;"
-                       OnClick="@OnCreateWorkspace"/>
+        <IconButton Icon="@(FilterVisible ? Lucide.FilterX : Lucide.ListFilter)"
+                    Style="width: 24px; height: 24px; opacity: 0.5;"
+                    OnClick="@OnToggleFilter"/>
+        <IconButton Icon="@Lucide.Plus"
+                    Style="width: 24px; height: 24px; opacity: 0.5;"
+                    OnClick="@OnCreateWorkspace"/>
     </div>
 </div>
 
 @if (FilterVisible)
 {
-    <div class="tree-filter">
-        <MudTextField Value="FilterText" ValueChanged="FilterTextChanged" T="string"
-                      Placeholder="@Strings.Sidebar_Search"
-                      Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Adornment="Adornment.End"
-                      AdornmentIcon="@(FilterText?.Length > 0 ? Icons.Material.Filled.Close : "")"
-                      OnAdornmentClick="@(() => FilterTextChanged.InvokeAsync(""))"
-                      Immediate="true"
-                      Style="font-size: var(--text-xs);"/>
+    <div class="tree-filter" style="position: relative;">
+        <TextField Value="@FilterText"
+                   ValueChanged="@(v => FilterTextChanged.InvokeAsync(v ?? ""))"
+                   Placeholder="@Strings.Sidebar_Search"
+                   Immediate="true"
+                   Style="font-size: var(--text-xs);"/>
+        @if (FilterText?.Length > 0)
+        {
+            <IconButton Icon="@Lucide.X" Size="UiSize.Xs"
+                        Style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);"
+                        OnClick="@(() => FilterTextChanged.InvokeAsync(""))"/>
+        }
     </div>
 }
 

@@ -1,6 +1,6 @@
 @inject IClaudeSettingsService ClaudeSettingsService
 @inject IChatState ChatState
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 
 <div class="settings-content-area wide">
     <ClaudeSettingScopeHeader Scope="_scope" ScopeChanged="OnScopeChanged"
@@ -21,10 +21,10 @@
                         <span class="hooks-event-name">@evt</span>
                         @if (count > 0)
                         {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
-                                     Color="Color.Primary" Class="hooks-event-count">
+                            <Chip ButtonStyle="ButtonStyle.Filled"
+                                  Tone="Tone.Primary" Class="hooks-event-count">
                                 @count
-                            </MudChip>
+                            </Chip>
                         }
                     </button>
                 }
@@ -41,18 +41,18 @@
                                 @(ClaudeHookEvents.Descriptions.TryGetValue(_selectedEvent, out var desc) ? desc : "")
                             </div>
                         </div>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.Add"
-                                   OnClick="AddHookToEvent" Style="text-transform: none;">
+                        <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
+                                StartIcon="@Lucide.Plus"
+                                OnClick="AddHookToEvent">
                             훅 추가
-                        </MudButton>
+                        </Button>
                     </div>
 
                     @if (GetEventConfigs().Count == 0)
                     {
-                        <MudAlert Severity="Severity.Normal" Class="mb-3">
+                        <Alert Tone="Tone.Default" Class="mb-3">
                             이 이벤트에 등록된 훅이 없습니다. "훅 추가" 버튼으로 새 훅을 만드세요.
-                        </MudAlert>
+                        </Alert>
                     }
 
                     @foreach (var (config, configIdx) in GetEventConfigs().Select((c, i) => (c, i)))
@@ -60,9 +60,8 @@
                         @if (!string.IsNullOrEmpty(config.Matcher) || GetEventConfigs().Count > 1)
                         {
                             <div class="d-flex align-center gap-2 mb-2">
-                                <MudTextField T="string" @bind-Value="config.Matcher" Label="매처 패턴"
-                                              Variant="Variant.Outlined" Margin="Margin.Dense"
-                                              Placeholder="Bash, Edit, * 등" Style="max-width: 200px;"/>
+                                <TextField @bind-Value="config.Matcher" Label="매처 패턴"
+                                           Placeholder="Bash, Edit, * 등" Style="max-width: 200px;"/>
                             </div>
                         }
 
@@ -81,7 +80,7 @@
                 else
                 {
                     <div class="d-flex flex-column align-center justify-center" style="height: 200px; opacity: 0.5;">
-                        <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Large"/>
+                        <Icon Svg="@Lucide.Zap" Size="24"/>
                         <div class="typo-body2 mt-2">왼쪽에서 이벤트를 선택하세요</div>
                     </div>
                 }
@@ -197,11 +196,11 @@
         {
             await ClaudeSettingsService.WriteAsync(_scope, _settings,
                 _scope == ClaudeSettingsScope.Global ? null : _projectPath);
-            Snackbar.Add("훅 설정이 저장되었습니다.", Severity.Success);
+            Snackbar.Add("훅 설정이 저장되었습니다.", ToastSeverity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
+            Snackbar.Add($"저장 실패: {ex.Message}", ToastSeverity.Error);
         }
         finally
         {
@@ -221,7 +220,7 @@
     .hooks-event-sidebar {
         width: 220px;
         min-width: 220px;
-        border-right: 1px solid var(--mud-palette-lines-default);
+        border-right: 1px solid var(--border-default);
         padding: 12px 0;
         overflow-y: auto;
         max-height: 70vh;
@@ -239,18 +238,18 @@
         border: none;
         cursor: pointer;
         transition: background 0.1s;
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
     }
 
     .hooks-event-item:hover {
-        background: var(--mud-palette-action-default-hover);
+        background: var(--bg-hover);
     }
 
     .hooks-event-item.active {
-        background: var(--mud-palette-primary-hover);
-        color: var(--mud-palette-primary);
+        background: var(--accent-subtle);
+        color: var(--accent);
         font-weight: 600;
-        border-left: 2px solid var(--mud-palette-primary);
+        border-left: 2px solid var(--accent);
     }
 
     .hooks-event-name {

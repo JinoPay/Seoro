@@ -6,19 +6,19 @@
             class="panel-toggle-btn @(ChatState.RightPanel == RightPanelMode.Explorer ? "active" : "")"
             @onclick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Explorer))"
             title="Explorer">
-        <MudIcon Icon="@Icons.Material.Outlined.FolderOpen" Style="width: 16px; height: 16px;"/>
+        <Icon Svg="@Lucide.FolderOpen" Size="16"/>
     </button>
     <button type="button"
             class="panel-toggle-btn @(ChatState.RightPanel == RightPanelMode.Git ? "active" : "")"
             @onclick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Git))"
             title="Git">
-        <MudIcon Icon="@Icons.Material.Outlined.CallSplit" Style="width: 16px; height: 16px;"/>
+        <Icon Svg="@Lucide.GitBranch" Size="16"/>
     </button>
     <button type="button"
             class="panel-toggle-btn @(ChatState.RightPanel == RightPanelMode.Terminal ? "active" : "")"
             @onclick="@(() => ChatState.ToggleRightPanel(RightPanelMode.Terminal))"
             title="Terminal">
-        <MudIcon Icon="@Icons.Material.Outlined.Terminal" Style="width: 16px; height: 16px;"/>
+        <Icon Svg="@Lucide.Terminal" Size="16"/>
     </button>
 </div>
 

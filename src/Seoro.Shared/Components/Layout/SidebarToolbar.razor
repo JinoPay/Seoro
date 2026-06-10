@@ -10,24 +10,22 @@
     @if (SidebarOpen)
     {
         <div style="display: flex; align-items: center; gap: 6px;">
-            <MudBadge Content="@_unreadCount" Visible="@(_unreadCount > 0)" Color="Color.Error"
-                      Overlap="true" Dot="@(_unreadCount <= 0)" Class="notification-badge">
-                <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit"
-                               Size="Size.Small" OnClick="@OnOpenNotifications"
-                               Style="width: 28px; height: 28px; opacity: 0.5;"
-                               title="@Strings.Layout_SidebarToolbar_NotificationHistory"/>
-            </MudBadge>
+            <Badge Content="@_unreadCount.ToString()" Visible="@(_unreadCount > 0)" Tone="Tone.Error"
+                   Class="notification-badge">
+                <IconButton Icon="@Lucide.Bell"
+                            OnClick="@OnOpenNotifications"
+                            Style="opacity: 0.5;"
+                            Title="@Strings.Layout_SidebarToolbar_NotificationHistory"/>
+            </Badge>
             <button class="sidebar-collapse-btn" @onclick="@OnToggleSidebar" title="@Strings.Layout_SidebarToolbar_CollapseSidebar">
-                <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small"
-                         Style="width: 18px; height: 18px;"/>
+                <Icon Svg="@Lucide.ChevronLeft" Size="18"/>
             </button>
         </div>
     }
     else
     {
         <button class="sidebar-collapse-btn" @onclick="@OnToggleSidebar" title="@Strings.Layout_SidebarToolbar_ExpandSidebar">
-            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small"
-                     Style="width: 18px; height: 18px;"/>
+            <Icon Svg="@Lucide.ChevronRight" Size="18"/>
         </button>
     }
 </div>

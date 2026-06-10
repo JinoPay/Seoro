@@ -1,85 +1,83 @@
-<MudDialog @bind-Visible="IsOpen" Options="_dialogOptions" Class="template-gallery-dialog">
-    <TitleContent>
+<Modal IsOpen="IsOpen" IsOpenChanged="OnModalOpenChanged" Class="template-gallery-dialog"
+       MaxWidth="800px" CloseOnEscape="true" CloseOnBackdropClick="true">
+    <HeaderContent>
         <div class="d-flex align-center gap-2">
-            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome"/>
+            <Icon Svg="@Lucide.Sparkles" Size="18"/>
             <span class="typo-h6">템플릿 갤러리</span>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">
-                @_filtered.Count
-            </MudChip>
+            <Chip>@_filtered.Count</Chip>
         </div>
-    </TitleContent>
-    <DialogContent>
+    </HeaderContent>
+    <ChildContent>
         @* Category chips + search *@
         <div class="d-flex flex-column gap-2 mb-3">
-            <MudChipSet T="string" SelectedValue="@_activeCategory" SelectedValueChanged="OnCategoryChanged"
-                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
-                        Variant="Variant.Outlined" Color="Color.Primary">
-                <MudChip T="string" Value="@("all")" Icon="@Icons.Material.Filled.GridView">
+            <div class="d-flex flex-wrap gap-1">
+                <Chip ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary" Icon="@Lucide.LayoutGrid"
+                      Selected="@(_activeCategory == "all")" OnClick="@(() => OnCategoryChanged("all"))">
                     전체 (@BuiltInTemplates.All.Count)
-                </MudChip>
-                <MudChip T="string" Value="@("Skill")" Icon="@Icons.Material.Filled.AutoFixHigh"
-                         Color="Color.Warning">
+                </Chip>
+                <Chip ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Warning" Icon="@Lucide.WandSparkles"
+                      Selected="@(_activeCategory == "Skill")" OnClick="@(() => OnCategoryChanged("Skill"))">
                     스킬 (@CountByCategory(TemplateCategory.Skill))
-                </MudChip>
-                <MudChip T="string" Value="@("Agent")" Icon="@Icons.Material.Filled.SmartToy"
-                         Color="Color.Secondary">
+                </Chip>
+                <Chip ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Secondary" Icon="@Lucide.Bot"
+                      Selected="@(_activeCategory == "Agent")" OnClick="@(() => OnCategoryChanged("Agent"))">
                     에이전트 (@CountByCategory(TemplateCategory.Agent))
-                </MudChip>
-                <MudChip T="string" Value="@("Rule")" Icon="@Icons.Material.Filled.Shield"
-                         Color="Color.Info">
+                </Chip>
+                <Chip ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Info" Icon="@Lucide.Shield"
+                      Selected="@(_activeCategory == "Rule")" OnClick="@(() => OnCategoryChanged("Rule"))">
                     룰 (@CountByCategory(TemplateCategory.Rule))
-                </MudChip>
-                <MudChip T="string" Value="@("Hook")" Icon="@Icons.Material.Filled.Bolt"
-                         Color="Color.Success">
+                </Chip>
+                <Chip ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Success" Icon="@Lucide.Zap"
+                      Selected="@(_activeCategory == "Hook")" OnClick="@(() => OnCategoryChanged("Hook"))">
                     훅 (@CountByCategory(TemplateCategory.Hook))
-                </MudChip>
-                <MudChip T="string" Value="@("Mcp")" Icon="@Icons.Material.Filled.Hub"
-                         Color="Color.Error">
+                </Chip>
+                <Chip ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Error" Icon="@Lucide.Network"
+                      Selected="@(_activeCategory == "Mcp")" OnClick="@(() => OnCategoryChanged("Mcp"))">
                     MCP (@CountByCategory(TemplateCategory.Mcp))
-                </MudChip>
-            </MudChipSet>
+                </Chip>
+            </div>
 
-            <MudTextField T="string" @bind-Value="_search" Placeholder="템플릿 검색..."
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense"
-                          TextChanged="OnSearchChanged"/>
+            <TextField Value="@_search" Placeholder="템플릿 검색..."
+                       AdornmentIcon="@Lucide.Search"
+                       Immediate="true"
+                       ValueChanged="@(v => OnSearchChanged(v ?? ""))"/>
         </div>
 
         @* Template grid *@
         <div class="template-grid">
             @foreach (var template in _filtered)
             {
-                <MudPaper Class="template-card" Outlined="true" @onclick="@(() => SelectTemplate(template))">
+                <div class="ui-card template-card" @onclick="@(() => SelectTemplate(template))">
                     <div class="d-flex justify-space-between align-start mb-2">
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
-                                 Color="@GetCategoryColor(template.Category)">
+                        <Chip ButtonStyle="ButtonStyle.Filled"
+                              Tone="@GetCategoryTone(template.Category)">
                             @GetCategoryLabel(template.Category)
-                        </MudChip>
-                        <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small"
-                                 Class="template-add-icon" Color="Color.Primary"/>
+                        </Chip>
+                        <Icon Svg="@Lucide.Plus" Size="14"
+                              Class="template-add-icon" Tone="Tone.Primary"/>
                     </div>
                     <div class="typo-subtitle2">@template.Name</div>
                     <div class="typo-caption text-secondary mt-1"
                          style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                         @template.Description
                     </div>
-                </MudPaper>
+                </div>
             }
         </div>
 
         @if (_filtered.Count == 0)
         {
             <div class="d-flex justify-center pa-8">
-                <MudText Typo="Typo.body2" Color="Color.Default" Class="text-secondary">
+                <span class="typo-body2 text-secondary">
                     검색 결과가 없습니다
-                </MudText>
+                </span>
             </div>
         }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Close">닫기</MudButton>
-    </DialogActions>
-</MudDialog>
+    </ChildContent>
+    <Footer>
+        <Button OnClick="Close">닫기</Button>
+    </Footer>
+</Modal>
 
 @code {
     [Parameter] public bool IsOpen { get; set; }
@@ -92,13 +90,6 @@
     /// <summary>Raised when a template is selected.</summary>
     [Parameter]
     public EventCallback<TemplateDefinition> OnTemplateSelected { get; set; }
-
-    private static readonly DialogOptions _dialogOptions = new()
-    {
-        MaxWidth = MaxWidth.Medium,
-        FullWidth = true,
-        CloseOnEscapeKey = true
-    };
 
     private string _activeCategory = "all";
     private string _search = "";
@@ -157,21 +148,27 @@
         await IsOpenChanged.InvokeAsync(false);
     }
 
+    private async Task OnModalOpenChanged(bool open)
+    {
+        IsOpen = open;
+        await IsOpenChanged.InvokeAsync(open);
+    }
+
     private static int CountByCategory(TemplateCategory category)
     {
         return BuiltInTemplates.All.Count(t => t.Category == category);
     }
 
-    private static Color GetCategoryColor(TemplateCategory category)
+    private static Tone GetCategoryTone(TemplateCategory category)
     {
         return category switch
         {
-            TemplateCategory.Skill => Color.Warning,
-            TemplateCategory.Agent => Color.Secondary,
-            TemplateCategory.Rule => Color.Info,
-            TemplateCategory.Hook => Color.Success,
-            TemplateCategory.Mcp => Color.Error,
-            _ => Color.Default
+            TemplateCategory.Skill => Tone.Warning,
+            TemplateCategory.Agent => Tone.Secondary,
+            TemplateCategory.Rule => Tone.Info,
+            TemplateCategory.Hook => Tone.Success,
+            TemplateCategory.Mcp => Tone.Error,
+            _ => Tone.Default
         };
     }
 
@@ -207,7 +204,7 @@
     }
 
     .template-card:hover {
-        border-color: var(--mud-palette-primary) !important;
+        border-color: var(--accent) !important;
     }
 
     .template-add-icon {

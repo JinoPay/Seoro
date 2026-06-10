@@ -1,37 +1,37 @@
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 
 <div class="mcp-editor-panel @(IsOpen ? "open" : "")">
     @if (IsOpen)
     {
         <div class="mcp-editor-header">
             <span class="typo-subtitle1">@(IsNew ? "서버 추가" : $"편집: {_name}")</span>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="Cancel"/>
+            <IconButton Icon="@Lucide.X" OnClick="Cancel"/>
         </div>
 
         <div class="mcp-editor-body">
-            <MudTextField @bind-Value="_name" Label="서버 이름" Variant="Variant.Outlined"
-                          Margin="Margin.Dense" Disabled="@(!IsNew && !string.IsNullOrEmpty(_originalName))"
-                          Required="true"/>
+            <TextField @bind-Value="_name" Label="서버 이름"
+                       Disabled="@(!IsNew && !string.IsNullOrEmpty(_originalName))"/>
 
             <div class="mt-3">
                 <div class="typo-caption text-secondary mb-1">유형</div>
-                <MudChipSet T="string" SelectedValue="@_transport" SelectedValueChanged="OnTransportChanged"
-                            SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
-                            Variant="Variant.Outlined" Color="Color.Primary" Class="d-flex gap-1">
-                    <MudChip T="string" Value="@("stdio")" Icon="@Icons.Material.Filled.Terminal">
+                <div class="d-flex gap-1">
+                    <Chip ButtonStyle="ButtonStyle.Outlined" Icon="@Lucide.Terminal"
+                          Selected="@(_transport == "stdio")"
+                          OnClick="@(() => OnTransportChanged("stdio"))">
                         Command (stdio)
-                    </MudChip>
-                    <MudChip T="string" Value="@("sse")" Icon="@Icons.Material.Filled.Language">
+                    </Chip>
+                    <Chip ButtonStyle="ButtonStyle.Outlined" Icon="@Lucide.Globe"
+                          Selected="@(_transport == "sse")"
+                          OnClick="@(() => OnTransportChanged("sse"))">
                         URL (SSE/HTTP)
-                    </MudChip>
-                </MudChipSet>
+                    </Chip>
+                </div>
             </div>
 
             @if (_transport == "stdio")
             {
-                <MudTextField @bind-Value="_command" Label="명령어" Variant="Variant.Outlined"
-                              Margin="Margin.Dense" Class="mt-3"
-                              Placeholder="npx, node, python..." Required="true"/>
+                <TextField @bind-Value="_command" Label="명령어" Class="mt-3"
+                           Placeholder="npx, node, python..."/>
 
                 <div class="mt-3">
                     <div class="typo-subtitle2 mb-1">인수 (Arguments)</div>
@@ -39,28 +39,27 @@
                     {
                         var idx = i;
                         <div class="d-flex gap-1 align-center mb-1">
-                            <MudTextField T="string" Value="@_argsList[idx]"
-                                          ValueChanged="@(v => _argsList[idx] = v)"
-                                          Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1;"
-                                          Placeholder="@("-y @modelcontextprotocol/server-...")"/>
-                            <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small"
-                                           OnClick="@(() => RemoveArg(idx))"/>
+                            <TextField Value="@_argsList[idx]"
+                                       ValueChanged="@(v => _argsList[idx] = v ?? "")"
+                                       Style="flex:1;"
+                                       Placeholder="@("-y @modelcontextprotocol/server-...")"/>
+                            <IconButton Icon="@Lucide.Minus"
+                                        OnClick="@(() => RemoveArg(idx))"/>
                         </div>
                     }
-                    <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Variant="Variant.Text"
-                               OnClick="AddArg">인수 추가</MudButton>
+                    <Button StartIcon="@Lucide.Plus" ButtonStyle="ButtonStyle.Text"
+                            OnClick="AddArg">인수 추가</Button>
                 </div>
             }
             else
             {
-                <MudTextField @bind-Value="_url" Label="서버 URL" Variant="Variant.Outlined"
-                              Margin="Margin.Dense" Class="mt-3"
-                              Placeholder="http://localhost:3000/sse" Required="true"/>
+                <TextField @bind-Value="_url" Label="서버 URL" Class="mt-3"
+                           Placeholder="http://localhost:3000/sse"/>
             }
 
             <div class="mt-3">
-                <MudSwitch T="bool" Value="@_alwaysLoad" ValueChanged="@(v => _alwaysLoad = v)"
-                           Label="항상 로드 (ToolSearch 지연 건너뛰기)" Color="Color.Primary" Size="Size.Small"/>
+                <Switch Value="@_alwaysLoad" ValueChanged="@(v => _alwaysLoad = v)"
+                        Label="항상 로드 (ToolSearch 지연 건너뛰기)"/>
                 <div class="typo-caption text-secondary" style="margin-left:42px;">
                     켜면 이 서버의 도구가 매 세션 시작 시 즉시 가용해집니다. CLI 2.1.121 이상에서만 적용.
                 </div>
@@ -72,25 +71,25 @@
                 {
                     var idx = i;
                     <div class="d-flex gap-1 align-center mb-1">
-                        <MudTextField T="string" Value="@_envKeys[idx]"
-                                      ValueChanged="@(v => _envKeys[idx] = v)"
-                                      Placeholder="KEY" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                      Style="flex:0.45;"/>
-                        <MudTextField T="string" Value="@_envValues[idx]"
-                                      ValueChanged="@(v => _envValues[idx] = v)"
-                                      Placeholder="VALUE" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                      Style="flex:0.55;" InputType="InputType.Password"/>
-                        <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small"
-                                       OnClick="@(() => RemoveEnvRow(idx))"/>
+                        <TextField Value="@_envKeys[idx]"
+                                   ValueChanged="@(v => _envKeys[idx] = v ?? "")"
+                                   Placeholder="KEY"
+                                   Style="flex:0.45;"/>
+                        <TextField Value="@_envValues[idx]"
+                                   ValueChanged="@(v => _envValues[idx] = v ?? "")"
+                                   Placeholder="VALUE"
+                                   Style="flex:0.55;" Type="password"/>
+                        <IconButton Icon="@Lucide.Minus"
+                                    OnClick="@(() => RemoveEnvRow(idx))"/>
                     </div>
                 }
-                <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Variant="Variant.Text"
-                           OnClick="AddEnvRow">환경변수 추가</MudButton>
+                <Button StartIcon="@Lucide.Plus" ButtonStyle="ButtonStyle.Text"
+                        OnClick="AddEnvRow">환경변수 추가</Button>
             </div>
 
             @if (!string.IsNullOrEmpty(_formError))
             {
-                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@_formError</MudAlert>
+                <Alert Tone="Tone.Error" Dense="true" Class="mt-2">@_formError</Alert>
             }
 
             @if (!IsNew && !string.IsNullOrEmpty(_originalName) && Scope != McpScope.Desktop)
@@ -102,16 +101,15 @@
         @if (Scope != McpScope.Desktop)
         {
             <div class="mcp-editor-footer">
-                <MudButton Variant="Variant.Text" OnClick="Cancel">취소</MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save"
-                           Disabled="@(IsFormInvalid() || _saving)">
+                <Button ButtonStyle="ButtonStyle.Text" OnClick="Cancel">취소</Button>
+                <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary" OnClick="Save"
+                        Disabled="@(IsFormInvalid() || _saving)">
                     @if (_saving)
                     {
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                             Style="width:14px;height:14px;margin-right:6px;"/>
+                        <Spinner Size="14" Style="margin-right:6px;"/>
                     }
                     @(IsNew ? "서버 추가" : "저장")
-                </MudButton>
+                </Button>
             </div>
         }
     }
@@ -242,7 +240,7 @@
     .mcp-editor-panel.open {
         width: 380px;
         min-width: 340px;
-        border-left-color: var(--mud-palette-lines-default);
+        border-left-color: var(--border-default);
         overflow-y: auto;
     }
 
@@ -251,10 +249,10 @@
         align-items: center;
         justify-content: space-between;
         padding: 12px 16px;
-        border-bottom: 1px solid var(--mud-palette-lines-default);
+        border-bottom: 1px solid var(--border-default);
         position: sticky;
         top: 0;
-        background: var(--mud-palette-background);
+        background: var(--bg-base);
         z-index: 1;
     }
 
@@ -269,9 +267,9 @@
         justify-content: flex-end;
         gap: 8px;
         padding: 12px 16px;
-        border-top: 1px solid var(--mud-palette-lines-default);
+        border-top: 1px solid var(--border-default);
         position: sticky;
         bottom: 0;
-        background: var(--mud-palette-background);
+        background: var(--bg-base);
     }
 </style>

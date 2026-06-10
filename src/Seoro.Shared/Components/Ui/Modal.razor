@@ -1,0 +1,64 @@
+@using Seoro.Shared.UiKit
+
+@if (IsOpen)
+{
+    <div class="ui-modal-backdrop @BackdropClass" @onclick="HandleBackdropClick">
+        <div class="ui-modal @Class"
+             role="dialog" aria-modal="true"
+             style="@(MaxWidth is { } w ? $"max-width:{w}" : null);@Style"
+             tabindex="-1"
+             @onclick:stopPropagation="true"
+             @onkeydown="HandleKeyDown">
+            @if (!string.IsNullOrEmpty(Title) || ShowCloseButton || HeaderContent is not null)
+            {
+                <div class="ui-modal__header">
+                    @if (HeaderContent is not null)
+                    {
+                        @HeaderContent
+                    }
+                    else
+                    {
+                        <div class="ui-modal__title">@Title</div>
+                    }
+                    @if (ShowCloseButton)
+                    {
+                        <IconButton Icon="@Lucide.X" Size="UiSize.Xs" Title="닫기" OnClick="CloseAsync" />
+                    }
+                </div>
+            }
+            <div class="ui-modal__body">@ChildContent</div>
+            @if (Footer is not null)
+            {
+                <div class="ui-modal__footer">@Footer</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? HeaderContent { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+    [Parameter] public string? MaxWidth { get; set; }
+    [Parameter] public bool ShowCloseButton { get; set; } = true;
+    [Parameter] public bool CloseOnBackdropClick { get; set; }
+    [Parameter] public bool CloseOnEscape { get; set; } = true;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? BackdropClass { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private Task CloseAsync()
+    {
+        IsOpen = false;
+        return IsOpenChanged.InvokeAsync(false);
+    }
+
+    private Task HandleBackdropClick()
+        => CloseOnBackdropClick ? CloseAsync() : Task.CompletedTask;
+
+    private Task HandleKeyDown(KeyboardEventArgs e)
+        => e.Key == "Escape" && CloseOnEscape ? CloseAsync() : Task.CompletedTask;
+}

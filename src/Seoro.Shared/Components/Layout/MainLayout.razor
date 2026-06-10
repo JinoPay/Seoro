@@ -6,7 +6,7 @@
 @inject ISettingsService SettingsService
 @inject IDependencyCheckService DependencyCheckService
 @inject IClaudeService ClaudeService
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 @inject IUpdateService UpdateService
 @inject ILogger<MainLayout> Logger
 @inject IChatEventBus EventBus
@@ -15,17 +15,15 @@
 @inject INotificationHistoryService NotificationHistory
 @inject IWindowCloseGuardService WindowCloseGuard
 @inject CominomiMigrationService CominomiMigration
-@inject IDialogService DialogService
+@inject IModalService ModalService
 @using System.Diagnostics
 @using System.Reflection
 @using System.Runtime.InteropServices
 @using Microsoft.Extensions.Logging
 @implements IAsyncDisposable
 
-<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="ThemeService.Theme"/>
-<MudPopoverProvider/>
-<MudDialogProvider/>
-<MudSnackbarProvider/>
+<ToastHost/>
+<ModalHost/>
 
 <Seoro.Shared.Components.Chat.ImageLightbox/>
 
@@ -90,7 +88,7 @@
                     @if (ChatState.Tabs.ActiveTab.ContentEvicted)
                     {
                         <div style="display: flex; align-items: center; justify-content: center; flex:1; opacity: 0.5;">
-                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2"/>
+                            <Spinner Size="16" Class="mr-2"/>
                             <span>Reloading…</span>
                         </div>
                     }
@@ -128,15 +126,6 @@
 
 </div>
 
-<MudMessageBox @ref="_closeConfirmBox" Title="@Strings.Layout_AppClose_Title" CancelText="@Strings.Common_Cancel">
-    <MessageContent>
-        @Strings.Layout_AppClose_Message
-    </MessageContent>
-    <YesButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error">@Strings.Layout_AppClose_Confirm</MudButton>
-    </YesButton>
-</MudMessageBox>
-
 <SetupDialog IsOpen="_setupOpen" IsOpenChanged="OnSetupVisibleChanged"/>
 <Seoro.Shared.Components.Onboarding.OnboardingDialog IsOpen="_onboardingOpen"
                                                         IsOpenChanged="OnOnboardingVisibleChanged"
@@ -155,7 +144,6 @@
     private int _rightPanelWidth = 400;
     private DotNetObjectReference<MainLayout>? _panelShortcutRef;
     private CancellationTokenSource? _updateTimerCts;
-    private MudMessageBox _closeConfirmBox = null!;
     private IDisposable? _closeRequestedSub;
 
     protected override async Task OnInitializedAsync()
@@ -486,7 +474,7 @@
 
             await InvokeAsync(async () =>
             {
-                var result = await DialogService.ShowMessageBoxAsync(
+                var result = await ModalService.ShowMessageBoxAsync(
                     Strings.Layout_Migration_Title,
                     Strings.Layout_Migration_Message(summary.TotalFiles),
                     Strings.Layout_Migration_Import, cancelText: Strings.Layout_Migration_Later, noText: Strings.Layout_Migration_Skip);
@@ -500,7 +488,7 @@
 
                     if (migrationResult.Copied > 0)
                     {
-                        await DialogService.ShowMessageBoxAsync(
+                        await ModalService.ShowMessageBoxAsync(
                             Strings.Layout_Migration_DoneTitle,
                             Strings.Layout_Migration_DoneRestart(migrationResult.Copied),
                             Strings.Common_Confirm);
@@ -514,14 +502,14 @@
                     if (!deleted)
                         msg += Strings.Layout_Migration_FolderDeleteFailed;
 
-                    Snackbar.Add(msg, migrationResult.Failed > 0 || !deleted ? Severity.Warning : Severity.Success);
+                    Snackbar.Add(msg, migrationResult.Failed > 0 || !deleted ? ToastSeverity.Warning : ToastSeverity.Success);
                 }
                 else
                 {
                     // "가져오지 않기" - Cominomi 폴더만 삭제
                     var deleted = CominomiMigration.DeleteCominomiFolder();
                     if (!deleted)
-                        Snackbar.Add(Strings.Layout_Migration_DeleteFolderFailed, Severity.Warning);
+                        Snackbar.Add(Strings.Layout_Migration_DeleteFolderFailed, ToastSeverity.Warning);
                 }
             });
         }
@@ -648,7 +636,11 @@
     {
         _ = InvokeAsync(async () =>
         {
-            var confirmed = await _closeConfirmBox.ShowAsync();
+            var confirmed = await ModalService.ShowMessageBoxAsync(
+                Strings.Layout_AppClose_Title,
+                Strings.Layout_AppClose_Message,
+                Strings.Layout_AppClose_Confirm,
+                cancelText: Strings.Common_Cancel);
             if (confirmed == true)
                 WindowCloseGuard.ForceClose();
         });

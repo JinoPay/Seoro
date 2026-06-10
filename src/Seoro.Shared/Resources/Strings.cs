@@ -479,6 +479,7 @@ public static class Strings
 
     // ── Git View (VS Code 스타일 통합 패널) ──
     public static string Git_Changes => Get(nameof(Git_Changes));
+    public static string Git_ChangesCount(int count) => Get(nameof(Git_ChangesCount), count);
     public static string Git_NoChanges => Get(nameof(Git_NoChanges));
     public static string Git_StageAll => Get(nameof(Git_StageAll));
     public static string Git_StageFile => Get(nameof(Git_StageFile));

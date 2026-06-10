@@ -1,0 +1,19 @@
+@using Seoro.Shared.UiKit
+
+<svg class="ui-icon @ToneClass @Class"
+     style="@Style"
+     width="@Size" height="@Size" viewBox="0 0 24 24"
+     fill="none" stroke="currentColor" stroke-width="@StrokeWidth"
+     stroke-linecap="round" stroke-linejoin="round"
+     aria-hidden="true">@((MarkupString)Svg)</svg>
+
+@code {
+    [Parameter, EditorRequired] public string Svg { get; set; } = string.Empty;
+    [Parameter] public int Size { get; set; } = 16;
+    [Parameter] public Tone Tone { get; set; } = Tone.Default;
+    [Parameter] public double StrokeWidth { get; set; } = 2;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private string? ToneClass => Tone == Tone.Default ? null : $"ui-tone-{Tone.ToString().ToLowerInvariant()}";
+}

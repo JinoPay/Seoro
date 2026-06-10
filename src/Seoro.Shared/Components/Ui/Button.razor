@@ -1,0 +1,41 @@
+@using Seoro.Shared.UiKit
+
+<button type="@Type"
+        class="ui-btn ui-btn--@StyleClass ui-btn--@SizeClass @ToneClass @(FullWidth ? "ui-btn--full" : null) @Class"
+        style="@Style"
+        disabled="@Disabled"
+        title="@Title"
+        @onclick="OnClick"
+        @onclick:stopPropagation="StopPropagation">
+    @if (!string.IsNullOrEmpty(StartIcon))
+    {
+        <Icon Svg="@StartIcon" Size="@IconSize" />
+    }
+    @ChildContent
+    @if (!string.IsNullOrEmpty(EndIcon))
+    {
+        <Icon Svg="@EndIcon" Size="@IconSize" />
+    }
+</button>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Subtle;
+    [Parameter] public Tone Tone { get; set; } = Tone.Default;
+    [Parameter] public UiSize Size { get; set; } = UiSize.Sm;
+    [Parameter] public string? StartIcon { get; set; }
+    [Parameter] public string? EndIcon { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool FullWidth { get; set; }
+    [Parameter] public bool StopPropagation { get; set; }
+    [Parameter] public string Type { get; set; } = "button";
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private string StyleClass => ButtonStyle.ToString().ToLowerInvariant();
+    private string SizeClass => Size.ToString().ToLowerInvariant();
+    private string? ToneClass => Tone == Tone.Default ? null : $"ui-btn--{Tone.ToString().ToLowerInvariant()}";
+    private int IconSize => Size switch { UiSize.Xs => 12, UiSize.Md => 16, _ => 14 };
+}

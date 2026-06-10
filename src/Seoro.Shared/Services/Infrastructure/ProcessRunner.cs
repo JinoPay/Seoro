@@ -52,7 +52,8 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
                     options.MaxOutputBytes);
 
             logger.LogDebug("{FileName} 종료 코드 {ExitCode}로 종료됨", options.FileName, process.ExitCode);
-            return new ProcessResult(process.ExitCode == 0, stdout.Trim(), stderr.Trim(), process.ExitCode, truncated);
+            return new ProcessResult(process.ExitCode == 0, options.TrimStdout ? stdout.Trim() : stdout,
+                stderr.Trim(), process.ExitCode, truncated);
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
         {

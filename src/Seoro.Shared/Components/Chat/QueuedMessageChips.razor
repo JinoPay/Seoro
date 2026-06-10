@@ -9,44 +9,46 @@
         }
         @foreach (var (msg, index) in visible.Select((m, i) => (m, i)))
         {
-            <MudTooltip Text="@msg.Input.Text" Placement="Placement.Top">
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                         Color="@(index == 0 ? Color.Primary : Color.Default)"
-                         Icon="@Icons.Material.Filled.Schedule"
-                         OnClose="@(() => HandleRemove(msg))"
-                         OnClick="@(() => HandleEdit(msg))"
-                         Class="@(index == 0 ? "queued-chip-next" : null)"
-                         Style="font-size: 0.75rem; cursor: pointer;">
+            <Tooltip Text="@msg.Input.Text" Placement="UiPlacement.Top">
+                <Chip ButtonStyle="ButtonStyle.Outlined"
+                      Tone="@(index == 0 ? Tone.Primary : Tone.Default)"
+                      Icon="@Lucide.Clock"
+                      OnClose="@(() => HandleRemove(msg))"
+                      OnClick="@(() => HandleEdit(msg))"
+                      Class="@(index == 0 ? "queued-chip-next" : null)"
+                      Style="font-size: 0.75rem; cursor: pointer;">
                     @($"{index + 1}. {msg.PreviewText}")
-                </MudChip>
-            </MudTooltip>
+                </Chip>
+            </Tooltip>
         }
         @if (hidden.Count > 0)
         {
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                     Icon="@Icons.Material.Filled.MoreHoriz"
-                     OnClick="@TogglePopover"
-                     Style="font-size: 0.75rem; cursor: pointer;">
-                @Strings.Chat_Queue_OverflowMore(hidden.Count)
-            </MudChip>
-            <MudPopover Open="_popoverOpen" AnchorOrigin="Origin.TopLeft"
-                        TransformOrigin="Origin.BottomLeft" Class="queued-overflow-popover">
-                <MudClickAwayListener OnClickAway="ClosePopover"/>
-                <div class="queued-overflow-content">
-                    @foreach (var (msg, idx) in Queue.Select((m, i) => (m, i)).Skip(MaxVisible))
-                    {
-                        <div class="queued-overflow-row">
-                            <span class="queued-overflow-index">@($"{idx + 1}.")</span>
-                            <span class="queued-overflow-text" @onclick="@(() => HandleEditFromPopover(msg))">
-                                @msg.PreviewText
-                            </span>
-                            <MudIconButton Icon="@Icons.Material.Filled.Close"
-                                           Size="Size.Small"
-                                           OnClick="@(() => HandleRemove(msg))"/>
-                        </div>
-                    }
-                </div>
-            </MudPopover>
+            <Popover @bind-Open="_popoverOpen" Placement="PopoverPlacement.TopStart" Fixed="true"
+                     PopoverClass="queued-overflow-popover">
+                <AnchorContent>
+                    <Chip ButtonStyle="ButtonStyle.Outlined"
+                          Icon="@Lucide.Ellipsis"
+                          OnClick="@TogglePopover"
+                          Style="font-size: 0.75rem; cursor: pointer;">
+                        @Strings.Chat_Queue_OverflowMore(hidden.Count)
+                    </Chip>
+                </AnchorContent>
+                <ChildContent>
+                    <div class="queued-overflow-content">
+                        @foreach (var (msg, idx) in Queue.Select((m, i) => (m, i)).Skip(MaxVisible))
+                        {
+                            <div class="queued-overflow-row">
+                                <span class="queued-overflow-index">@($"{idx + 1}.")</span>
+                                <span class="queued-overflow-text" @onclick="@(() => HandleEditFromPopover(msg))">
+                                    @msg.PreviewText
+                                </span>
+                                <IconButton Icon="@Lucide.X"
+                                            OnClick="@(() => HandleRemove(msg))"/>
+                            </div>
+                        }
+                    </div>
+                </ChildContent>
+            </Popover>
         }
     </div>
 }

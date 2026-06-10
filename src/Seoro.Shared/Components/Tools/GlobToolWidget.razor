@@ -1,8 +1,7 @@
 @using System.Text.Json
 <div class="tool-widget tool-widget-glob">
     <div class="tool-widget-header">
-        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small"
-                 Style="width: 14px; height: 14px; opacity: 0.6;"/>
+        <Icon Svg="@Lucide.Search" Size="14" Style="opacity: 0.6;"/>
         <span class="tool-widget-pattern">@_pattern</span>
         @if (_fileCount > 0)
         {
@@ -15,8 +14,7 @@
             @foreach (var file in _files.Take(_collapsed ? 10 : _files.Count))
             {
                 <div class="glob-file-item">
-                    <MudIcon Icon="@GetFileIcon(file)" Size="Size.Small"
-                             Style="width: 14px; height: 14px; opacity: 0.5;"/>
+                    <Icon Svg="@GetFileIcon(file)" Size="14" Style="opacity: 0.5;"/>
                     <span>@ShortenPath(file)</span>
                 </div>
             }
@@ -78,8 +76,8 @@
     private static string GetFileIcon(string path)
     {
         if (path.EndsWith('/') || path.EndsWith('\\') || !path.Contains('.'))
-            return Icons.Material.Filled.Folder;
-        return Icons.Material.Filled.InsertDriveFile;
+            return Lucide.Folder;
+        return Lucide.File;
     }
 
     private static string ShortenPath(string path)

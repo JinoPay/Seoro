@@ -10,14 +10,12 @@
     <div class="integration-status">
         @if (_claudeCliChecking)
         {
-            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 18px; height: 18px;"/>
+            <Spinner Size="16"/>
             <span class="status-text">@Strings.Settings_Integrations_Checking</span>
         }
         else if (_claudeCliFound)
         {
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
-                     Class="status-ok"/>
+            <Icon Svg="@Lucide.CircleCheck" Size="14" Class="status-ok"/>
             <span class="status-text">@Strings.Settings_Integrations_Detected</span>
             @if (!string.IsNullOrEmpty(_claudeCliResolvedPath))
             {
@@ -26,12 +24,10 @@
         }
         else
         {
-            <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
-                     Class="status-warn"/>
+            <Icon Svg="@Lucide.TriangleAlert" Size="14" Class="status-warn"/>
             <span class="status-text">@Strings.Settings_Integrations_NotDetected</span>
         }
-        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="CheckClaudeCli" title="@Strings.Settings_Integrations_Recheck"/>
+        <IconButton Icon="@Lucide.RefreshCw" OnClick="CheckClaudeCli" Title="@Strings.Settings_Integrations_Recheck"/>
     </div>
 
     @if (_claudeCliFound && !string.IsNullOrEmpty(_claudeCliVersion))
@@ -39,46 +35,41 @@
         <div class="stack gap-1 mt-2">
             <div class="stack-row items-center gap-2">
                 <span class="typo-body2">@Strings.Settings_Integrations_Version</span>
-                <MudChip T="string" Size="Size.Small"
-                         Color="@(_claudeVersionOutdated ? Color.Warning : Color.Success)"
-                         Variant="Variant.Text">
+                <Chip Tone="@(_claudeVersionOutdated ? Tone.Warning : Tone.Success)">
                     @_claudeCliVersion
-                </MudChip>
+                </Chip>
                 @if (_claudeVersionOutdated)
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Warning"
-                             Variant="Variant.Outlined">
+                    <Chip Tone="Tone.Warning" ButtonStyle="ButtonStyle.Outlined">
                         @Strings.Settings_Integrations_UpdateNeeded(SeoroConstants.RequiredClaudeVersion)
-                    </MudChip>
+                    </Chip>
                 }
             </div>
 
             @if (_claudeVersionOutdated)
             {
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined"
-                          Class="mt-2" Dense="true">
+                <Alert Tone="Tone.Warning" Class="mt-2" Dense="true">
                     <div class="stack gap-1">
                         <span class="typo-body2">@Strings.Settings_Integrations_UpdateMethod</span>
                         @foreach (var method in _isMac ? ClaudeInstallMethods.Mac : ClaudeInstallMethods.Windows)
                         {
                             <div class="stack-row items-center gap-2">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                         Style="min-width: 80px; justify-content: center;">
+                                <Chip ButtonStyle="ButtonStyle.Outlined"
+                                      Style="min-width: 80px; justify-content: center;">
                                     @method.Label
-                                </MudChip>
+                                </Chip>
                                 <code style="flex: 1;">@method.UpdateCommand</code>
                             </div>
                         }
                     </div>
-                </MudAlert>
+                </Alert>
             }
         </div>
     }
 
-    <MudTextField @bind-Value="Settings.ClaudePath" Label="@Strings.Settings_Integrations_ClaudePathLabel"
-                  Variant="Variant.Outlined" Margin="Margin.Dense"
-                  Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
-                  HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
+    <TextField @bind-Value="Settings.ClaudePath" Label="@Strings.Settings_Integrations_ClaudePathLabel"
+               Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
+               HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
 </div>
 
 <div class="settings-group">
@@ -86,14 +77,12 @@
     <div class="integration-status">
         @if (_gitChecking)
         {
-            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 18px; height: 18px;"/>
+            <Spinner Size="16"/>
             <span class="status-text">@Strings.Settings_Integrations_Checking</span>
         }
         else if (_gitFound)
         {
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
-                     Class="status-ok"/>
+            <Icon Svg="@Lucide.CircleCheck" Size="14" Class="status-ok"/>
             <span class="status-text">@Strings.Settings_Integrations_Detected</span>
             @if (!string.IsNullOrEmpty(_gitResolvedPath))
             {
@@ -102,12 +91,10 @@
         }
         else
         {
-            <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
-                     Class="status-warn"/>
+            <Icon Svg="@Lucide.TriangleAlert" Size="14" Class="status-warn"/>
             <span class="status-text">@Strings.Settings_Integrations_NotDetected</span>
         }
-        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="CheckGit" title="@Strings.Settings_Integrations_Recheck"/>
+        <IconButton Icon="@Lucide.RefreshCw" OnClick="CheckGit" Title="@Strings.Settings_Integrations_Recheck"/>
     </div>
 
     @if (_gitFound && !string.IsNullOrEmpty(_gitVersion))
@@ -115,18 +102,16 @@
         <div class="stack gap-1 mt-2">
             <div class="stack-row items-center gap-2">
                 <span class="typo-body2">@Strings.Settings_Integrations_Version</span>
-                <MudChip T="string" Size="Size.Small" Color="Color.Success"
-                         Variant="Variant.Text">
+                <Chip Tone="Tone.Success">
                     @_gitVersion
-                </MudChip>
+                </Chip>
             </div>
         </div>
     }
 
     @if (!_gitChecking && !_gitFound)
     {
-        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined"
-                  Class="mt-2" Dense="true">
+        <Alert Tone="Tone.Warning" Class="mt-2" Dense="true">
             <div class="stack gap-1">
                 <span class="typo-body2">@Strings.Settings_Integrations_InstallMethod</span>
                 @if (_isMac)
@@ -138,13 +123,12 @@
                     <code>winget install Git.Git</code>
                 }
             </div>
-        </MudAlert>
+        </Alert>
     }
 
-    <MudTextField @bind-Value="Settings.GitPath" Label="@Strings.Settings_Integrations_GitPathLabel"
-                  Variant="Variant.Outlined" Margin="Margin.Dense"
-                  Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
-                  HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
+    <TextField @bind-Value="Settings.GitPath" Label="@Strings.Settings_Integrations_GitPathLabel"
+               Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
+               HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
 </div>
 
 <div class="settings-group">
@@ -152,14 +136,12 @@
     <div class="integration-status">
         @if (_ghChecking)
         {
-            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 18px; height: 18px;"/>
+            <Spinner Size="16"/>
             <span class="status-text">@Strings.Settings_Integrations_Checking</span>
         }
         else if (_ghFound)
         {
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
-                     Class="status-ok"/>
+            <Icon Svg="@Lucide.CircleCheck" Size="14" Class="status-ok"/>
             <span class="status-text">@Strings.Settings_Integrations_Detected</span>
             @if (!string.IsNullOrEmpty(_ghResolvedPath))
             {
@@ -168,12 +150,10 @@
         }
         else
         {
-            <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
-                     Class="status-warn"/>
+            <Icon Svg="@Lucide.TriangleAlert" Size="14" Class="status-warn"/>
             <span class="status-text">@Strings.Settings_Integrations_NotDetected</span>
         }
-        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="CheckGh" title="@Strings.Settings_Integrations_Recheck"/>
+        <IconButton Icon="@Lucide.RefreshCw" OnClick="CheckGh" Title="@Strings.Settings_Integrations_Recheck"/>
     </div>
 
     @if (_ghFound && !string.IsNullOrEmpty(_ghVersion))
@@ -181,18 +161,16 @@
         <div class="stack gap-1 mt-2">
             <div class="stack-row items-center gap-2">
                 <span class="typo-body2">@Strings.Settings_Integrations_Version</span>
-                <MudChip T="string" Size="Size.Small" Color="Color.Success"
-                         Variant="Variant.Text">
+                <Chip Tone="Tone.Success">
                     @_ghVersion
-                </MudChip>
+                </Chip>
             </div>
         </div>
     }
 
     @if (!_ghChecking && !_ghFound)
     {
-        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined"
-                  Class="mt-2" Dense="true">
+        <Alert Tone="Tone.Warning" Class="mt-2" Dense="true">
             <div class="stack gap-1">
                 <span class="typo-body2">@Strings.Settings_Integrations_InstallMethod</span>
                 @if (_isMac)
@@ -204,13 +182,12 @@
                     <code>winget install GitHub.cli</code>
                 }
             </div>
-        </MudAlert>
+        </Alert>
     }
 
-    <MudTextField @bind-Value="Settings.GhPath" Label="@Strings.Settings_Integrations_GhPathLabel"
-                  Variant="Variant.Outlined" Margin="Margin.Dense"
-                  Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
-                  HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
+    <TextField @bind-Value="Settings.GhPath" Label="@Strings.Settings_Integrations_GhPathLabel"
+               Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
+               HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
 </div>
 
 <div class="settings-group">
@@ -218,14 +195,12 @@
     <div class="integration-status">
         @if (_codexChecking)
         {
-            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 18px; height: 18px;"/>
+            <Spinner Size="16"/>
             <span class="status-text">@Strings.Settings_Integrations_Checking</span>
         }
         else if (_codexFound)
         {
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
-                     Class="status-ok"/>
+            <Icon Svg="@Lucide.CircleCheck" Size="14" Class="status-ok"/>
             <span class="status-text">@Strings.Settings_Integrations_Detected</span>
             @if (!string.IsNullOrEmpty(_codexResolvedPath))
             {
@@ -234,12 +209,10 @@
         }
         else
         {
-            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small"
-                     Style="color: var(--mud-palette-text-secondary);"/>
+            <Icon Svg="@Lucide.Info" Size="14" Style="color: var(--text-secondary);"/>
             <span class="status-text">@Strings.Settings_Integrations_NotInstalled</span>
         }
-        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="CheckCodex" title="@Strings.Settings_Integrations_Recheck"/>
+        <IconButton Icon="@Lucide.RefreshCw" OnClick="CheckCodex" Title="@Strings.Settings_Integrations_Recheck"/>
     </div>
 
     @if (_codexFound && !string.IsNullOrEmpty(_codexVersion))
@@ -247,29 +220,26 @@
         <div class="stack gap-1 mt-2">
             <div class="stack-row items-center gap-2">
                 <span class="typo-body2">@Strings.Settings_Integrations_Version</span>
-                <MudChip T="string" Size="Size.Small" Color="Color.Success"
-                         Variant="Variant.Text">
+                <Chip Tone="Tone.Success">
                     @_codexVersion
-                </MudChip>
+                </Chip>
             </div>
         </div>
     }
 
     @if (!_codexChecking && !_codexFound)
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined"
-                  Class="mt-2" Dense="true">
+        <Alert Tone="Tone.Info" Class="mt-2" Dense="true">
             <div class="stack gap-1">
                 <span class="typo-body2">@Strings.Settings_Integrations_InstallMethod</span>
                 <code>npm install -g @("@openai/codex")</code>
             </div>
-        </MudAlert>
+        </Alert>
     }
 
-    <MudTextField @bind-Value="Settings.CodexPath" Label="@Strings.Settings_Integrations_CodexPathLabel"
-                  Variant="Variant.Outlined" Margin="Margin.Dense"
-                  Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
-                  HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
+    <TextField @bind-Value="Settings.CodexPath" Label="@Strings.Settings_Integrations_CodexPathLabel"
+               Placeholder="@Strings.Settings_Integrations_AutoDetect" Class="mt-3"
+               HelperText="@Strings.Settings_Integrations_AutoDetectHint"/>
 </div>
 
 @code {

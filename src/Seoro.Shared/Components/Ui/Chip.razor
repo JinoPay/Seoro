@@ -1,0 +1,44 @@
+@using Seoro.Shared.UiKit
+
+<span class="ui-chip ui-chip--@StyleClass ui-chip--@SizeClass @ToneClass @(IsClickable ? "ui-chip--clickable" : null) @(Selected ? "ui-chip--selected" : null) @Class"
+      style="@Style"
+      title="@Title"
+      role="@(IsClickable ? "button" : null)"
+      @onclick="HandleClick"
+      @onclick:stopPropagation="StopPropagation">
+    @if (!string.IsNullOrEmpty(Icon))
+    {
+        <Icon Svg="@Icon" Size="@IconSize" />
+    }
+    @ChildContent
+    @if (OnClose.HasDelegate)
+    {
+        <button type="button" class="ui-chip__close" aria-label="remove" @onclick="OnClose" @onclick:stopPropagation="true">
+            <Icon Svg="@Lucide.X" Size="@IconSize" />
+        </button>
+    }
+</span>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public Tone Tone { get; set; } = Tone.Default;
+    [Parameter] public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Subtle;
+    [Parameter] public UiSize Size { get; set; } = UiSize.Sm;
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public bool Selected { get; set; }
+    [Parameter] public bool StopPropagation { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClose { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private bool IsClickable => OnClick.HasDelegate;
+    private string StyleClass => ButtonStyle.ToString().ToLowerInvariant();
+    private string SizeClass => Size.ToString().ToLowerInvariant();
+    private string? ToneClass => Tone == Tone.Default ? null : $"ui-chip--{Tone.ToString().ToLowerInvariant()}";
+    private int IconSize => Size == UiSize.Xs ? 11 : 13;
+
+    private Task HandleClick(MouseEventArgs e)
+        => IsClickable ? OnClick.InvokeAsync(e) : Task.CompletedTask;
+}

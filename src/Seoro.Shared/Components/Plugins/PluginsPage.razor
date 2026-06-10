@@ -1,6 +1,6 @@
 @using System.Diagnostics
 @inject IPluginService PluginService
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 
 <div class="settings-content-area wide">
     <div class="settings-content-header">
@@ -14,7 +14,7 @@
         @if (_loading)
         {
             <div class="plugins-loading">
-                <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
+                <Spinner Size="16"/>
             </div>
         }
         else
@@ -40,14 +40,12 @@
                     </button>
                 </div>
                 <div style="flex:1;"></div>
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                               Size="Size.Small" title="새로고침"
-                               OnClick="RefreshAll"/>
+                <IconButton Icon="@Lucide.RefreshCw" Title="새로고침"
+                            OnClick="RefreshAll"/>
             </div>
 
             <div class="plugins-search-bar">
-                <MudIcon Icon="@Icons.Material.Filled.Search"
-                         Size="Size.Small" Class="plugins-search-icon"/>
+                <Icon Svg="@Lucide.Search" Size="14" Class="plugins-search-icon"/>
                 <input class="plugins-search-input"
                        type="text"
                        placeholder="@(_activeTab == "installed" ? "설치된 플러그인 검색..." : "마켓플레이스 플러그인 검색...")"
@@ -64,8 +62,7 @@
                 @if (!hasAny)
                 {
                     <div class="plugins-empty-state">
-                        <MudIcon Icon="@Icons.Material.Filled.Extension"
-                                 Style="font-size:36px; opacity:0.18;"/>
+                        <Icon Svg="@Lucide.Puzzle" Size="36" Style="opacity:0.18;"/>
                         <p class="typo-body2 text-secondary mt-2">
                             @(_search.Length > 0 ? "검색 결과가 없습니다" : "설치된 플러그인이 없습니다")
                         </p>
@@ -88,7 +85,7 @@
                             <div class="plugin-card @(!p.Enabled ? "plugin-card--disabled" : "") @(blocked ? "plugin-card--blocked" : "")">
                                 <div class="plugin-card-top">
                                     <div class="plugin-card-avatar @(!p.Enabled ? "plugin-card-avatar--off" : "")">
-                                        <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small"/>
+                                        <Icon Svg="@Lucide.Puzzle" Size="14"/>
                                     </div>
                                     <div class="plugin-card-info">
                                         <span class="plugin-card-name">@p.Name</span>
@@ -97,27 +94,24 @@
                                     <div class="plugin-card-actions">
                                         @if (updating)
                                         {
-                                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                                 Style="width:16px;height:16px;"/>
+                                            <Spinner Size="16"/>
                                         }
                                         else if (p.HasUpdate)
                                         {
-                                            <MudTooltip Text="업데이트">
-                                                <MudIconButton Icon="@Icons.Material.Filled.SystemUpdateAlt"
-                                                               Size="Size.Small"
-                                                               Class="plugin-card-action-btn"
-                                                               OnClick="@(() => UpdatePlugin(p))"/>
-                                            </MudTooltip>
+                                            <Tooltip Text="업데이트">
+                                                <IconButton Icon="@Lucide.HardDriveDownload"
+                                                            Class="plugin-card-action-btn"
+                                                            OnClick="@(() => UpdatePlugin(p))"/>
+                                            </Tooltip>
                                         }
-                                        <MudTooltip Text="제거">
-                                            <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline"
-                                                           Size="Size.Small" Color="Color.Error"
-                                                           Class="plugin-card-action-btn"
-                                                           OnClick="@(() => ConfirmUninstall(p))"/>
-                                        </MudTooltip>
-                                        <MudSwitch T="bool" Value="@p.Enabled"
-                                                   ValueChanged="@(v => ToggleMarketplacePlugin(p, v))"
-                                                   Color="Color.Primary" Size="Size.Small"/>
+                                        <Tooltip Text="제거">
+                                            <IconButton Icon="@Lucide.Trash"
+                                                        Tone="Tone.Error"
+                                                        Class="plugin-card-action-btn"
+                                                        OnClick="@(() => ConfirmUninstall(p))"/>
+                                        </Tooltip>
+                                        <Switch Value="@p.Enabled"
+                                                ValueChanged="@(v => ToggleMarketplacePlugin(p, v))"/>
                                     </div>
                                 </div>
                                 <div class="plugin-card-tags">
@@ -150,16 +144,15 @@
                             <div class="plugin-card">
                                 <div class="plugin-card-top">
                                     <div class="plugin-card-avatar plugin-card-avatar--local">
-                                        <MudIcon Icon="@Icons.Material.Filled.FolderSpecial" Size="Size.Small"/>
+                                        <Icon Svg="@Lucide.FolderDot" Size="14"/>
                                     </div>
                                     <div class="plugin-card-info">
                                         <span class="plugin-card-name">@p.Name</span>
                                         <span class="plugin-card-sub">@(p.Description ?? "로컬")</span>
                                     </div>
-                                    <MudSwitch T="bool" Value="@p.IsEnabled"
-                                               ValueChanged="@(v => ToggleLocalPlugin(p, v))"
-                                               Color="Color.Primary" Size="Size.Small"
-                                               Disabled="@(p.Status is PluginStatus.Invalid or PluginStatus.Error)"/>
+                                    <Switch Value="@p.IsEnabled"
+                                            ValueChanged="@(v => ToggleLocalPlugin(p, v))"
+                                            Disabled="@(p.Status is PluginStatus.Invalid or PluginStatus.Error)"/>
                                 </div>
                                 <div class="plugin-card-tags">
                                     @if (!string.IsNullOrEmpty(p.Version))
@@ -169,18 +162,15 @@
                                     @{
                                         var (_, statusColor, statusLabel) = GetStatusDisplay(p);
                                     }
-                                    <MudChip T="string" Size="Size.Small"
-                                             Variant="Variant.Outlined" Color="@statusColor"
-                                             Style="height:20px; font-size:11px;">
+                                    <Chip ButtonStyle="ButtonStyle.Outlined" Tone="@statusColor">
                                         @statusLabel
-                                    </MudChip>
+                                    </Chip>
                                     @if (!string.IsNullOrEmpty(p.Error))
                                     {
-                                        <MudTooltip Text="@p.Error">
-                                            <MudIcon Icon="@Icons.Material.Filled.Info"
-                                                     Size="Size.Small" Color="Color.Warning"
-                                                     Style="width:14px;height:14px;cursor:help;"/>
-                                        </MudTooltip>
+                                        <Tooltip Text="@p.Error">
+                                            <Icon Svg="@Lucide.Info" Size="14" Tone="Tone.Warning"
+                                                  Style="cursor:help;"/>
+                                        </Tooltip>
                                     }
                                 </div>
                             </div>
@@ -190,7 +180,7 @@
                     @if (_blockedPlugins.Count > 0)
                     {
                         <div class="plugins-section-title mt-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Small"/>
+                            <Icon Svg="@Lucide.Ban" Size="14"/>
                             차단됨
                         </div>
                         <div class="stack gap-1 mt-1">
@@ -209,12 +199,11 @@
                 }
 
                 <div class="mt-3">
-                    <MudButton StartIcon="@Icons.Material.Filled.FolderOpen"
-                               Size="Size.Small" Variant="Variant.Text"
-                               Style="text-transform:none;"
-                               OnClick="OpenPluginsDirectory">
+                    <Button StartIcon="@Lucide.FolderOpen"
+                            ButtonStyle="ButtonStyle.Text"
+                            OnClick="OpenPluginsDirectory">
                         플러그인 디렉토리 열기
-                    </MudButton>
+                    </Button>
                 </div>
             }
 
@@ -226,8 +215,7 @@
                 @if (filtered.Count == 0)
                 {
                     <div class="plugins-empty-state">
-                        <MudIcon Icon="@Icons.Material.Filled.Store"
-                                 Style="font-size:36px; opacity:0.18;"/>
+                        <Icon Svg="@Lucide.Store" Size="36" Style="opacity:0.18;"/>
                         <p class="typo-body2 text-secondary mt-2">
                             @(_search.Length > 0 ? "검색 결과가 없습니다" : "마켓플레이스 데이터가 없습니다")
                         </p>
@@ -250,13 +238,13 @@
                             <div class="plugin-card">
                                 <div class="plugin-card-top">
                                     <div class="plugin-card-avatar">
-                                        <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small"/>
+                                        <Icon Svg="@Lucide.Puzzle" Size="14"/>
                                     </div>
                                     <div class="plugin-card-info">
                                         <span class="plugin-card-name">@name</span>
                                         <span class="plugin-card-sub">
-                                            <MudIcon Icon="@Icons.Material.Filled.Download"
-                                                     Style="width:11px;height:11px;vertical-align:middle;"/>
+                                            <Icon Svg="@Lucide.Download" Size="11"
+                                                  Style="vertical-align:middle;"/>
                                             @FormatInstalls(item.UniqueInstalls) installs
                                         </span>
                                     </div>
@@ -266,8 +254,7 @@
                                     {
                                         var installed = FindInstalledPlugin(item.Plugin);
                                         <div class="plugin-installed-label">
-                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
-                                                     Size="Size.Small"/>
+                                            <Icon Svg="@Lucide.CircleCheck" Size="14"/>
                                             설치됨
                                             @if (installed != null)
                                             {
@@ -282,9 +269,7 @@
                                                 @onclick="@(() => InstallPlugin(item.Plugin))">
                                             @if (installing)
                                             {
-                                                <MudProgressCircular Size="Size.Small"
-                                                                     Indeterminate="true"
-                                                                     Style="width:14px;height:14px;"/>
+                                                <Spinner Size="14"/>
                                                 <span>설치 중...</span>
                                             }
                                             else
@@ -306,17 +291,18 @@
 @* 언인스톨 확인 *@
 @if (_uninstallingPlugin != null)
 {
-    <MudDialog Visible="true" Options="@(new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true })">
-        <TitleContent>플러그인 제거</TitleContent>
-        <DialogContent>
+    <Modal IsOpen="true"
+           IsOpenChanged="@(v => { if (!v) _uninstallingPlugin = null; })"
+           Title="플러그인 제거" MaxWidth="360px">
+        <ChildContent>
             <p>'<strong>@_uninstallingPlugin.Split('@')[0]</strong>'을 제거하시겠습니까?</p>
-        </DialogContent>
-        <DialogActions>
-            <MudButton OnClick="@(() => _uninstallingPlugin = null)">취소</MudButton>
-            <MudButton Color="Color.Error" Variant="Variant.Filled"
-                       OnClick="DoUninstall">제거</MudButton>
-        </DialogActions>
-    </MudDialog>
+        </ChildContent>
+        <Footer>
+            <Button OnClick="@(() => _uninstallingPlugin = null)">취소</Button>
+            <Button Tone="Tone.Error" ButtonStyle="ButtonStyle.Filled"
+                    OnClick="DoUninstall">제거</Button>
+        </Footer>
+    </Modal>
 }
 
 @code {
@@ -448,16 +434,16 @@
     private static string FormatDate(string s) =>
         DateTime.TryParse(s, out var d) ? d.ToString("yyyy-MM-dd") : s;
 
-    private static (string icon, Color color, string label) GetStatusDisplay(PluginInfo p) =>
+    private static (string icon, Tone color, string label) GetStatusDisplay(PluginInfo p) =>
         !p.IsEnabled
-            ? (Icons.Material.Filled.PauseCircle, Color.Default, "비활성")
+            ? (Lucide.CirclePause, Tone.Default, "비활성")
             : p.Status switch
             {
-                PluginStatus.Valid => (Icons.Material.Filled.CheckCircle, Color.Success, "정상"),
-                PluginStatus.Loaded => (Icons.Material.Filled.CheckCircle, Color.Success, "로드됨"),
-                PluginStatus.Invalid => (Icons.Material.Filled.Error, Color.Error, "오류"),
-                PluginStatus.Error => (Icons.Material.Filled.Error, Color.Error, "오류"),
-                _ => (Icons.Material.Filled.RadioButtonUnchecked, Color.Default, "확인 중")
+                PluginStatus.Valid => (Lucide.CircleCheck, Tone.Success, "정상"),
+                PluginStatus.Loaded => (Lucide.CircleCheck, Tone.Success, "로드됨"),
+                PluginStatus.Invalid => (Lucide.CircleAlert, Tone.Error, "오류"),
+                PluginStatus.Error => (Lucide.CircleAlert, Tone.Error, "오류"),
+                _ => (Lucide.Circle, Tone.Default, "확인 중")
             };
 
     // ── Actions ──────────────────────────────────────────────────────────
@@ -470,12 +456,12 @@
         _installingPlugin = null;
         if (success)
         {
-            Snackbar.Add($"'{pluginName.Split('@')[0]}' 설치 완료", Severity.Success);
+            Snackbar.Add($"'{pluginName.Split('@')[0]}' 설치 완료", ToastSeverity.Success);
             await LoadAllAsync();
         }
         else
         {
-            Snackbar.Add($"설치 실패: {output}", Severity.Error);
+            Snackbar.Add($"설치 실패: {output}", ToastSeverity.Error);
             StateHasChanged();
         }
     }
@@ -490,12 +476,12 @@
         if (success)
         {
             p.Enabled = enabled;
-            Snackbar.Add($"'{p.Name}' {(enabled ? "활성화" : "비활성화")}", Severity.Info);
+            Snackbar.Add($"'{p.Name}' {(enabled ? "활성화" : "비활성화")}", ToastSeverity.Info);
             StateHasChanged();
         }
         else
         {
-            Snackbar.Add($"실패: {output}", Severity.Error);
+            Snackbar.Add($"실패: {output}", ToastSeverity.Error);
         }
     }
 
@@ -508,12 +494,12 @@
         _updatingPlugin = null;
         if (success)
         {
-            Snackbar.Add($"'{p.Name}' 업데이트 완료 (재시작 후 적용)", Severity.Success);
+            Snackbar.Add($"'{p.Name}' 업데이트 완료 (재시작 후 적용)", ToastSeverity.Success);
             await LoadAllAsync();
         }
         else
         {
-            Snackbar.Add($"업데이트 실패: {output}", Severity.Error);
+            Snackbar.Add($"업데이트 실패: {output}", ToastSeverity.Error);
             StateHasChanged();
         }
     }
@@ -529,12 +515,12 @@
         var (success, output) = await PluginService.UninstallMarketplacePluginAsync(name);
         if (success)
         {
-            Snackbar.Add($"'{name.Split('@')[0]}' 제거 완료", Severity.Success);
+            Snackbar.Add($"'{name.Split('@')[0]}' 제거 완료", ToastSeverity.Success);
             await LoadAllAsync();
         }
         else
         {
-            Snackbar.Add($"제거 실패: {output}", Severity.Error);
+            Snackbar.Add($"제거 실패: {output}", ToastSeverity.Error);
         }
     }
 
@@ -542,7 +528,7 @@
     {
         await PluginService.SetPluginEnabledAsync(p.Id, enabled);
         p.IsEnabled = enabled;
-        Snackbar.Add($"'{p.Name}' {(enabled ? "활성화" : "비활성화")}", Severity.Info);
+        Snackbar.Add($"'{p.Name}' {(enabled ? "활성화" : "비활성화")}", ToastSeverity.Info);
         StateHasChanged();
     }
 
@@ -550,6 +536,6 @@
     {
         await PluginService.EnsurePluginsDirectoryAsync();
         try { Process.Start(new ProcessStartInfo { FileName = PluginService.PluginsDirectory, UseShellExecute = true }); }
-        catch { Snackbar.Add("디렉토리를 열 수 없습니다", Severity.Warning); }
+        catch { Snackbar.Add("디렉토리를 열 수 없습니다", ToastSeverity.Warning); }
     }
 }

@@ -3,8 +3,7 @@
     @if (_questions.Count == 0 && !Tool.IsComplete)
     {
         <div class="askuser-loading">
-            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 14px; height: 14px;" Color="Color.Warning"/>
+            <Spinner Size="14" Tone="Tone.Warning"/>
             <span style="opacity: 0.5; font-size: var(--text-xs);">질문 수신 중…</span>
         </div>
     }
@@ -24,11 +23,8 @@
                     {
                         <div class="askuser-option readonly">
                             <span class="askuser-option-label">
-                                <MudIcon Icon="@(q.MultiSelect
-                                                   ? Icons.Material.Filled.CheckBoxOutlineBlank
-                                                   : Icons.Material.Outlined.RadioButtonUnchecked)"
-                                         Size="Size.Small"
-                                         Style="width: 12px; height: 12px; opacity: 0.35;"/>
+                                <Icon Svg="@(q.MultiSelect ? Lucide.Square : Lucide.Circle)"
+                                      Size="12" Style="opacity: 0.35;"/>
                                 @opt.Label
                             </span>
                             @if (!string.IsNullOrEmpty(opt.Description))

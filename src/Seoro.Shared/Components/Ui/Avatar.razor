@@ -1,0 +1,24 @@
+@using Seoro.Shared.UiKit
+
+<span class="ui-avatar @ToneClass @Class" style="width:@(Size)px;height:@(Size)px;font-size:@(Size * 42 / 100)px;@Style">
+    @if (!string.IsNullOrEmpty(Image))
+    {
+        <img src="@Image" alt="@Alt" />
+    }
+    else
+    {
+        @ChildContent
+    }
+</span>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Image { get; set; }
+    [Parameter] public string? Alt { get; set; }
+    [Parameter] public int Size { get; set; } = 28;
+    [Parameter] public Tone Tone { get; set; } = Tone.Default;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private string? ToneClass => Tone == Tone.Default ? null : $"ui-avatar--{Tone.ToString().ToLowerInvariant()}";
+}

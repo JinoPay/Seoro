@@ -22,7 +22,7 @@
     var status = MergeStatusService.GetCurrent(session.Id);
     <div class="merge-toolbar" @onclick="HandleToolbarClick" title="클릭하여 Merge 탭 열기">
         <span class="merge-status-icon @MergeStatusUi.StatusCssClass(status.Kind)">
-            <MudIcon Icon="@MergeStatusUi.StatusIcon(status.Kind, status.AheadCount ?? 0)" Style="width: 14px; height: 14px;"/>
+            <Icon Svg="@MergeStatusUi.StatusIcon(status.Kind, status.AheadCount ?? 0)" Size="14"/>
         </span>
 
         @if (session.Git.IsLocalDir)
@@ -41,14 +41,13 @@
             {
                 var pr = session.Git.TrackedPr;
                 <span class="pr-badge @PrBadgeCssClass(pr)" style="flex-shrink: 0;">
-                    <MudIcon Icon="@PrStatusIcon(pr)" Style="width: 11px; height: 11px;"/>
+                    <Icon Svg="@PrStatusIcon(pr)" Size="11"/>
                     <span>#@pr.Number</span>
                 </span>
             }
         }
 
-        <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
-                 Style="width: 14px; height: 14px; opacity: 0.3; flex-shrink: 0; margin-left: auto;"/>
+        <Icon Svg="@Lucide.ChevronRight" Size="14" Style="opacity: 0.3; flex-shrink: 0; margin-left: auto;"/>
     </div>
 }
 
@@ -81,7 +80,7 @@
         if ((status.AheadCount ?? 0) > 0)
             parts.Add($"↑{status.AheadCount}");
         if (status.UncommittedChangeCount > 0)
-            parts.Add($"{status.UncommittedChangeCount}변경");
+            parts.Add($"변경 {status.UncommittedChangeCount}개");
         var prefix = parts.Count > 0 ? string.Join(" · ", parts) + " — " : "";
         return $"{prefix}로컬 디렉토리";
     }
@@ -105,11 +104,11 @@
 
     private static string PrStatusIcon(TrackedPullRequest pr) => pr switch
     {
-        { IsDraft: true } => Icons.Material.Outlined.EditNote,
-        { IsMerged: true } => Icons.Material.Filled.CheckCircle,
-        { IsMergeable: true } => Icons.Material.Filled.CheckCircle,
-        { IsMergeable: false } => Icons.Material.Filled.Error,
-        _ => Icons.Material.Outlined.HourglassEmpty
+        { IsDraft: true } => Lucide.SquarePen,
+        { IsMerged: true } => Lucide.CircleCheck,
+        { IsMergeable: true } => Lucide.CircleCheck,
+        { IsMergeable: false } => Lucide.CircleAlert,
+        _ => Lucide.Hourglass
     };
 
     private static string PrBadgeCssClass(TrackedPullRequest pr) => pr switch

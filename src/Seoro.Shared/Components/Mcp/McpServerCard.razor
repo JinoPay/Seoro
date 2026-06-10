@@ -1,8 +1,7 @@
 <div class="mcp-server-card @(IsSelected ? "selected" : "")"
      @onclick="OnClick" @onclick:stopPropagation="false">
     <div class="mcp-server-card-icon @(Server.Transport == "sse" ? "icon-sse" : "icon-stdio")">
-        <MudIcon Icon="@(Server.Transport == "sse" ? Icons.Material.Filled.Language : Icons.Material.Filled.Terminal)"
-                 Size="Size.Small"/>
+        <Icon Svg="@(Server.Transport == "sse" ? Lucide.Globe : Lucide.Terminal)" Size="14"/>
     </div>
     <div class="mcp-server-card-body">
         <div class="mcp-server-card-name typo-subtitle2">@Server.Name</div>
@@ -25,32 +24,32 @@
         @switch (Server.Status.ConnectionStatus)
         {
             case McpConnectionStatus.Checking:
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width:14px;height:14px;"/>
+                <Spinner Size="14"/>
                 break;
             case McpConnectionStatus.Reachable:
-                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" Style="width:14px;height:14px;"/>
+                <Icon Svg="@Lucide.CircleCheck" Tone="Tone.Success" Size="14"/>
                 break;
             case McpConnectionStatus.Unreachable:
-                <MudTooltip Text="@Server.Status.Error">
-                    <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" Size="Size.Small" Style="width:14px;height:14px;"/>
-                </MudTooltip>
+                <Tooltip Text="@Server.Status.Error">
+                    <Icon Svg="@Lucide.CircleX" Tone="Tone.Error" Size="14"/>
+                </Tooltip>
                 break;
             case McpConnectionStatus.Error:
-                <MudTooltip Text="@Server.Status.Error">
-                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Style="width:14px;height:14px;"/>
-                </MudTooltip>
+                <Tooltip Text="@Server.Status.Error">
+                    <Icon Svg="@Lucide.TriangleAlert" Tone="Tone.Warning" Size="14"/>
+                </Tooltip>
                 break;
         }
     </div>
     <div class="mcp-server-card-actions" @onclick:stopPropagation="true">
-        <MudTooltip Text="연결 테스트">
-            <MudIconButton Icon="@Icons.Material.Filled.NetworkCheck" Size="Size.Small"
-                           OnClick="@(() => OnTest.InvokeAsync(Server))"/>
-        </MudTooltip>
-        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
-                       OnClick="@(() => OnEdit.InvokeAsync(Server))"/>
-        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                       OnClick="@(() => OnDelete.InvokeAsync(Server))"/>
+        <Tooltip Text="연결 테스트">
+            <IconButton Icon="@Lucide.Activity"
+                        OnClick="@(() => OnTest.InvokeAsync(Server))"/>
+        </Tooltip>
+        <IconButton Icon="@Lucide.Pencil" Tone="Tone.Primary"
+                    OnClick="@(() => OnEdit.InvokeAsync(Server))"/>
+        <IconButton Icon="@Lucide.Trash2" Tone="Tone.Error"
+                    OnClick="@(() => OnDelete.InvokeAsync(Server))"/>
     </div>
 </div>
 
@@ -71,20 +70,20 @@
         align-items: center;
         gap: 10px;
         padding: 10px 12px;
-        border: 1px solid var(--mud-palette-lines-default);
+        border: 1px solid var(--border-default);
         border-radius: 8px;
         cursor: pointer;
         transition: border-color 0.15s, background 0.15s;
     }
 
     .mcp-server-card:hover {
-        border-color: var(--mud-palette-primary);
-        background: var(--mud-palette-primary-hover);
+        border-color: var(--accent);
+        background: var(--accent-subtle);
     }
 
     .mcp-server-card.selected {
-        border-color: var(--mud-palette-primary);
-        background: var(--mud-palette-primary-hover);
+        border-color: var(--accent);
+        background: var(--accent-subtle);
     }
 
     .mcp-server-card-icon {
@@ -98,13 +97,13 @@
     }
 
     .icon-stdio {
-        background: color-mix(in srgb, var(--mud-palette-success) 12%, transparent);
-        color: var(--mud-palette-success);
+        background: color-mix(in srgb, var(--color-success) 12%, transparent);
+        color: var(--color-success);
     }
 
     .icon-sse {
-        background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
-        color: var(--mud-palette-primary);
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        color: var(--accent);
     }
 
     .mcp-server-card-body {

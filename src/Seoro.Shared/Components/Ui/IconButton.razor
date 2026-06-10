@@ -1,0 +1,31 @@
+@using Seoro.Shared.UiKit
+
+<button type="button"
+        class="ui-iconbtn ui-iconbtn--@SizeClass @ToneClass @(Active ? "ui-iconbtn--active" : null) @Class"
+        style="@Style"
+        disabled="@Disabled"
+        title="@Title"
+        aria-label="@(AriaLabel ?? Title)"
+        @onclick="OnClick"
+        @onclick:stopPropagation="StopPropagation">
+    <Icon Svg="@Icon" Size="@IconSize" StrokeWidth="@StrokeWidth" />
+</button>
+
+@code {
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public Tone Tone { get; set; } = Tone.Default;
+    [Parameter] public UiSize Size { get; set; } = UiSize.Sm;
+    [Parameter] public double StrokeWidth { get; set; } = 2;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Active { get; set; }
+    [Parameter] public bool StopPropagation { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? AriaLabel { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private string SizeClass => Size.ToString().ToLowerInvariant();
+    private string? ToneClass => Tone == Tone.Default ? null : $"ui-iconbtn--{Tone.ToString().ToLowerInvariant()}";
+    private int IconSize => Size switch { UiSize.Xs => 14, UiSize.Md => 18, _ => 16 };
+}

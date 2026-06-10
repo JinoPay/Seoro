@@ -1,5 +1,5 @@
 @inject IChatState ChatState
-@inject IDialogService DialogService
+@inject IModalService ModalService
 @implements IDisposable
 
 <div class="main-tab-bar">
@@ -9,7 +9,7 @@
              @onclick="@(() => ChatState.Tabs.SetActiveTab(tab.Id))"
              @oncontextmenu="@(() => OpenContextMenu(tab))"
              @oncontextmenu:preventDefault="true">
-            <MudIcon Icon="@GetTabIcon(tab)" Size="Size.Small" Style="width: 14px; height: 14px;"/>
+            <Icon Svg="@GetTabIcon(tab)" Size="14"/>
             <span class="main-tab-title">@(tab.DisambiguatedTitle ?? tab.Title)</span>
             @if (tab.IsDirty)
             {
@@ -19,44 +19,45 @@
             {
                 <button class="main-tab-close" @onclick="@(() => HandleCloseAsync(tab))"
                         @onclick:stopPropagation="true">
-                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" Style="width: 12px; height: 12px;"/>
+                    <Icon Svg="@Lucide.X" Size="12"/>
                 </button>
             }
+            <span @onclick:stopPropagation="true" @oncontextmenu:stopPropagation="true">
+                <Popover Open="@(_contextTab == tab)"
+                         OpenChanged="@(v => { if (!v) _contextTab = null; })"
+                         Placement="PopoverPlacement.BottomStart" Fixed="true"
+                         PopoverClass="ui-menu ui-menu--dense">
+                    <ChildContent>
+                        <MenuItem OnClick="@HandleCloseTab"
+                                  Icon="@Lucide.X"
+                                  Disabled="@(_contextTab?.Type == MainTabType.Chat)">
+                            @Strings.Layout_MainTabBar_CloseTab
+                        </MenuItem>
+                        <MenuItem OnClick="@HandleCloseOtherTabs"
+                                  Icon="@Lucide.Layers2"
+                                  Disabled="@(ChatState.Tabs.OpenTabs.Count(t => t.Type != MainTabType.Chat) <= 1)">
+                            @Strings.Layout_MainTabBar_CloseOtherTabs
+                        </MenuItem>
+                        <MenuItem OnClick="@HandleCloseTabsToRight"
+                                  Icon="@Lucide.ArrowRightToLine"
+                                  Disabled="@IsNoTabsToRight()">
+                            @Strings.Layout_MainTabBar_CloseTabsToRight
+                        </MenuItem>
+                        <Divider/>
+                        <MenuItem OnClick="@HandleCloseAllTabs"
+                                  Icon="@Lucide.ListX"
+                                  Disabled="@(ChatState.Tabs.OpenTabs.All(t => t.Type == MainTabType.Chat))">
+                            @Strings.Layout_MainTabBar_CloseAllTabs
+                        </MenuItem>
+                    </ChildContent>
+                </Popover>
+            </span>
         </div>
     }
 </div>
 
-<MudMenu @ref="_contextMenu"
-         ActivationEvent="@MouseEvent.RightClick"
-         PositionAtCursor="true"
-         Dense="true"
-         Style="position: absolute; visibility: hidden; width: 0; height: 0;">
-    <MudMenuItem OnClick="@HandleCloseTab"
-                 Icon="@Icons.Material.Filled.Close"
-                 Disabled="@(_contextTab?.Type == MainTabType.Chat)">
-        @Strings.Layout_MainTabBar_CloseTab
-    </MudMenuItem>
-    <MudMenuItem OnClick="@HandleCloseOtherTabs"
-                 Icon="@Icons.Material.Filled.FilterNone"
-                 Disabled="@(ChatState.Tabs.OpenTabs.Count(t => t.Type != MainTabType.Chat) <= 1)">
-        @Strings.Layout_MainTabBar_CloseOtherTabs
-    </MudMenuItem>
-    <MudMenuItem OnClick="@HandleCloseTabsToRight"
-                 Icon="@Icons.Material.Filled.LastPage"
-                 Disabled="@IsNoTabsToRight()">
-        @Strings.Layout_MainTabBar_CloseTabsToRight
-    </MudMenuItem>
-    <MudDivider/>
-    <MudMenuItem OnClick="@HandleCloseAllTabs"
-                 Icon="@Icons.Material.Filled.ClearAll"
-                 Disabled="@(ChatState.Tabs.OpenTabs.All(t => t.Type == MainTabType.Chat))">
-        @Strings.Layout_MainTabBar_CloseAllTabs
-    </MudMenuItem>
-</MudMenu>
-
 @code {
 
-    private MudMenu? _contextMenu;
     private MainTab? _contextTab;
 
     protected override void OnInitialized()
@@ -69,11 +70,9 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private async Task OpenContextMenu(MainTab tab)
+    private void OpenContextMenu(MainTab tab)
     {
         _contextTab = tab;
-        if (_contextMenu != null)
-            await _contextMenu.OpenMenuAsync(EventArgs.Empty);
     }
 
     private async Task HandleCloseAsync(MainTab tab)
@@ -84,32 +83,39 @@
 
     private async Task HandleCloseTab()
     {
-        if (_contextTab == null) return;
-        if (_contextTab.IsDirty && !await ConfirmCloseDirtyAsync(1)) return;
-        ChatState.Tabs.CloseTab(_contextTab.Id);
+        var tab = _contextTab;
+        _contextTab = null;
+        if (tab == null) return;
+        if (tab.IsDirty && !await ConfirmCloseDirtyAsync(1)) return;
+        ChatState.Tabs.CloseTab(tab.Id);
     }
 
     private async Task HandleCloseOtherTabs()
     {
-        if (_contextTab == null) return;
+        var tab = _contextTab;
+        _contextTab = null;
+        if (tab == null) return;
         var dirtyCount = ChatState.Tabs.OpenTabs.Count(t =>
-            t.Type != MainTabType.Chat && t.Id != _contextTab.Id && t.IsDirty);
+            t.Type != MainTabType.Chat && t.Id != tab.Id && t.IsDirty);
         if (dirtyCount > 0 && !await ConfirmCloseDirtyAsync(dirtyCount)) return;
-        ChatState.Tabs.CloseOtherTabs(_contextTab.Id);
+        ChatState.Tabs.CloseOtherTabs(tab.Id);
     }
 
     private async Task HandleCloseTabsToRight()
     {
-        if (_contextTab == null) return;
-        var idx = ChatState.Tabs.OpenTabs.IndexOf(_contextTab);
+        var tab = _contextTab;
+        _contextTab = null;
+        if (tab == null) return;
+        var idx = ChatState.Tabs.OpenTabs.IndexOf(tab);
         if (idx < 0) return;
         var dirtyCount = ChatState.Tabs.OpenTabs.Skip(idx + 1).Count(t => t.IsDirty);
         if (dirtyCount > 0 && !await ConfirmCloseDirtyAsync(dirtyCount)) return;
-        ChatState.Tabs.CloseTabsToTheRight(_contextTab.Id);
+        ChatState.Tabs.CloseTabsToTheRight(tab.Id);
     }
 
     private async Task HandleCloseAllTabs()
     {
+        _contextTab = null;
         var dirtyCount = ChatState.Tabs.OpenTabs.Count(t => t.Type != MainTabType.Chat && t.IsDirty);
         if (dirtyCount > 0 && !await ConfirmCloseDirtyAsync(dirtyCount)) return;
         ChatState.Tabs.CloseAllFileTabs();
@@ -120,7 +126,7 @@
         var msg = dirtyCount == 1
             ? "저장되지 않은 변경 사항이 있습니다. 그래도 닫을까요?"
             : $"저장되지 않은 변경이 {dirtyCount}개 있습니다. 그래도 닫을까요?";
-        var result = await DialogService.ShowMessageBoxAsync(
+        var result = await ModalService.ShowMessageBoxAsync(
             "변경 사항 버리기",
             msg,
             yesText: "그대로 닫기", cancelText: "취소");
@@ -138,10 +144,10 @@
     {
         return tab.Type switch
         {
-            MainTabType.Chat => Icons.Material.Filled.Chat,
-            MainTabType.FileContent => Icons.Material.Filled.InsertDriveFile,
-            MainTabType.FileDiff => Icons.Material.Filled.Description,
-            _ => Icons.Material.Filled.Tab
+            MainTabType.Chat => Lucide.MessageCircle,
+            MainTabType.FileContent => Lucide.File,
+            MainTabType.FileDiff => Lucide.FileText,
+            _ => Lucide.AppWindow
         };
     }
 

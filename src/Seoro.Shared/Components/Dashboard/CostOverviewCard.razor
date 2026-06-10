@@ -1,6 +1,6 @@
 <div class="cost-card">
     <div class="cost-card-title">
-        <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small"/>
+        <Icon Svg="@Lucide.DollarSign" Size="14"/>
         @Strings.Dashboard_Cost_Title
     </div>
     @if (Cost is not null)
@@ -35,7 +35,7 @@
             </div>
             <div class="cost-card-row-header">
                 <span class="cost-card-label">
-                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Style="font-size: 0.7rem;"/>
+                    <Icon Svg="@Lucide.TrendingUp" Size="11"/>
                     @Strings.Dashboard_Cost_Projection
                 </span>
                 <span class="cost-card-projection">$@Cost.MonthlyProjection.ToString("F2")@Strings.Dashboard_Cost_PerMonth</span>
@@ -62,7 +62,7 @@
 
 <style>
     .cost-card {
-        border: 1px solid var(--mud-palette-lines-default);
+        border: 1px solid var(--border-default);
         border-radius: 12px;
         padding: 16px;
     }
@@ -70,7 +70,7 @@
     .cost-card-title {
         font-size: 0.85rem;
         font-weight: 500;
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
         margin-bottom: 12px;
         display: flex;
         align-items: center;
@@ -92,7 +92,7 @@
     }
 
     .cost-card-label {
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
         display: flex;
         align-items: center;
         gap: 4px;
@@ -103,35 +103,35 @@
     }
 
     .cost-card-amount.exceeded {
-        color: var(--mud-palette-error);
+        color: var(--color-error);
     }
 
     .cost-card-projection {
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
         font-size: 0.7rem;
     }
 
     .cost-card-bar {
         height: 6px;
-        background: var(--mud-palette-action-default-hover);
+        background: var(--bg-hover);
         border-radius: 99px;
         overflow: hidden;
     }
 
     .cost-card-bar-fill {
         height: 100%;
-        background: var(--mud-palette-primary);
+        background: var(--accent);
         border-radius: 99px;
     }
 
     .cost-card-bar-fill.exceeded {
-        background: var(--mud-palette-error);
+        background: var(--color-error);
     }
 
     .cost-card-link {
         width: 100%;
         font-size: 0.7rem;
-        color: var(--mud-palette-primary);
+        color: var(--accent);
         background: none;
         border: none;
         cursor: pointer;
@@ -140,6 +140,6 @@
     }
 
     .cost-card-link:hover {
-        color: var(--mud-palette-primary-darken);
+        color: var(--accent-hover);
     }
 </style>

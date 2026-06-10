@@ -1,0 +1,60 @@
+@using Seoro.Shared.UiKit
+@using Seoro.Shared.Services.Ui
+@inject IToastService ToastService
+@implements IDisposable
+
+<div class="ui-toast-container">
+    @foreach (var toast in ToastService.Toasts)
+    {
+        <div class="ui-toast ui-toast--@toast.Severity.ToString().ToLowerInvariant()" @key="toast.Id" role="status">
+            @if (SeverityIcon(toast.Severity) is { } icon)
+            {
+                <Icon Svg="@icon" Size="15" Class="ui-toast__icon" />
+            }
+            <div class="ui-toast__message">@toast.Message</div>
+            @if (!string.IsNullOrEmpty(toast.Options.Action))
+            {
+                <button type="button" class="ui-toast__action" @onclick="() => HandleActionAsync(toast)">
+                    @toast.Options.Action
+                </button>
+            }
+            <button type="button" class="ui-toast__close" aria-label="close" @onclick="() => ToastService.Remove(toast)">
+                <Icon Svg="@Lucide.X" Size="13" />
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ToastService.OnToastsUpdated += HandleToastsUpdated;
+    }
+
+    public void Dispose()
+    {
+        ToastService.OnToastsUpdated -= HandleToastsUpdated;
+    }
+
+    private void HandleToastsUpdated()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private static string? SeverityIcon(ToastSeverity severity) => severity switch
+    {
+        ToastSeverity.Info => Lucide.Info,
+        ToastSeverity.Success => Lucide.CircleCheck,
+        ToastSeverity.Warning => Lucide.TriangleAlert,
+        ToastSeverity.Error => Lucide.CircleX,
+        _ => null,
+    };
+
+    private async Task HandleActionAsync(ToastInstance toast)
+    {
+        var handler = toast.Options.OnClick;
+        ToastService.Remove(toast);
+        if (handler is not null)
+            await handler(toast);
+    }
+}

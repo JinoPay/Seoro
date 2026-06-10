@@ -1,0 +1,88 @@
+@using Seoro.Shared.UiKit
+@typeparam T
+
+<div class="ui-field ui-select @(Disabled ? "ui-field--disabled" : null) @Class" style="@Style">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="ui-field__label">@Label</label>
+    }
+    <Popover @bind-Open="_open" Placement="PopoverPlacement.BottomStart" Fixed="@Fixed"
+             Class="ui-select__anchor" PopoverClass="ui-select__pop">
+        <AnchorContent>
+            <button type="button" class="ui-field__control ui-select__trigger" disabled="@Disabled" @onclick="Toggle">
+                <span class="ui-select__value @(HasValue ? null : "ui-select__value--empty")">@DisplayText</span>
+                <Icon Svg="@Lucide.ChevronsUpDown" Size="12" Class="ui-select__chevron" />
+            </button>
+        </AnchorContent>
+        <ChildContent>
+            <div class="ui-select__list" role="listbox">
+                <CascadingValue Value="this" IsFixed="true">
+                    @ChildContent
+                </CascadingValue>
+            </div>
+        </ChildContent>
+    </Popover>
+    @if (!string.IsNullOrEmpty(HelperText))
+    {
+        <div class="ui-field__helper">@HelperText</div>
+    }
+</div>
+
+@code {
+    [Parameter] public T? Value { get; set; }
+    [Parameter] public EventCallback<T?> ValueChanged { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? HelperText { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Fixed { get; set; }
+
+    /// <summary>선택값 표시 텍스트 변환. 미지정 시 등록된 SelectItem의 Text → ToString 순.</summary>
+    [Parameter] public Func<T?, string?>? ToStringFunc { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private bool _open;
+    private readonly Dictionary<string, string> _itemTexts = [];
+
+    private bool HasValue => Value is not null && !string.IsNullOrEmpty(DisplayValue);
+
+    private string DisplayText => HasValue ? DisplayValue! : (Placeholder ?? "");
+
+    private string? DisplayValue
+    {
+        get
+        {
+            if (ToStringFunc is not null)
+                return ToStringFunc(Value);
+            if (Value is null)
+                return null;
+            var key = Value.ToString() ?? "";
+            return _itemTexts.TryGetValue(key, out var text) ? text : key;
+        }
+    }
+
+    internal bool IsSelected(T? itemValue) => EqualityComparer<T?>.Default.Equals(Value, itemValue);
+
+    internal void RegisterItemText(T? itemValue, string? text)
+    {
+        if (itemValue is null || string.IsNullOrEmpty(text)) return;
+        _itemTexts[itemValue.ToString() ?? ""] = text;
+    }
+
+    internal async Task SelectAsync(T? itemValue)
+    {
+        Value = itemValue;
+        _open = false;
+        await ValueChanged.InvokeAsync(itemValue);
+        StateHasChanged();
+    }
+
+    private void Toggle()
+    {
+        if (Disabled) return;
+        _open = !_open;
+    }
+}

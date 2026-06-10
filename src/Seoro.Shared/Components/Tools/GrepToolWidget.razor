@@ -1,8 +1,7 @@
 @using System.Text.Json
 <div class="tool-widget tool-widget-grep">
     <div class="tool-widget-header">
-        <MudIcon Icon="@Icons.Material.Filled.FindInPage" Size="Size.Small"
-                 Style="width: 14px; height: 14px; opacity: 0.6;"/>
+        <Icon Svg="@Lucide.FileSearch" Size="14" Style="opacity: 0.6;"/>
         <span class="tool-widget-pattern">/@_pattern/</span>
         @if (!string.IsNullOrEmpty(_path))
         {

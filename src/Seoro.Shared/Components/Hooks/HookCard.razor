@@ -1,15 +1,15 @@
-<MudPaper Class="@($"hook-card {(_expanded ? "expanded" : "")}")" Outlined="true">
+<div class="@($"ui-card hook-card {(_expanded ? "expanded" : "")}")">
     <div class="hook-card-header" @onclick="Toggle">
         <div class="d-flex align-center gap-2" style="flex: 1; min-width: 0;">
-            <MudIcon Icon="@GetTypeIcon()" Size="Size.Small" Color="@GetTypeColor()"/>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@GetTypeColor()">
+            <Icon Svg="@GetTypeIcon()" Size="14" Tone="@GetTypeTone()"/>
+            <Chip ButtonStyle="ButtonStyle.Filled" Tone="@GetTypeTone()">
                 @Hook.Type
-            </MudChip>
+            </Chip>
             @if (!string.IsNullOrEmpty(Matcher))
             {
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                <Chip ButtonStyle="ButtonStyle.Outlined">
                     @Matcher
-                </MudChip>
+                </Chip>
             }
             <span class="typo-caption text-secondary"
                   style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -17,10 +17,9 @@
             </span>
         </div>
         <div class="d-flex align-center gap-1">
-            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                           OnClick="@(async () => await OnDelete.InvokeAsync())"/>
-            <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                     Size="Size.Small"/>
+            <IconButton Icon="@Lucide.Trash2" Tone="Tone.Error"
+                        OnClick="@(async () => await OnDelete.InvokeAsync())"/>
+            <Icon Svg="@(_expanded ? Lucide.ChevronUp : Lucide.ChevronDown)" Size="14"/>
         </div>
     </div>
 
@@ -30,7 +29,7 @@
             <HookHandlerForm Hook="Hook" HookChanged="@(async h => await OnChanged.InvokeAsync(h))"/>
         </div>
     }
-</MudPaper>
+</div>
 
 @code {
     [Parameter][EditorRequired] public ClaudeHookHandler Hook { get; set; } = null!;
@@ -49,23 +48,23 @@
     {
         return Hook.Type switch
         {
-            ClaudeHookHandlerType.Command => Icons.Material.Filled.Terminal,
-            ClaudeHookHandlerType.Http => Icons.Material.Filled.Http,
-            ClaudeHookHandlerType.Prompt => Icons.Material.Filled.Psychology,
-            ClaudeHookHandlerType.Agent => Icons.Material.Filled.SmartToy,
-            _ => Icons.Material.Filled.Code
+            ClaudeHookHandlerType.Command => Lucide.Terminal,
+            ClaudeHookHandlerType.Http => Lucide.Globe,
+            ClaudeHookHandlerType.Prompt => Lucide.Brain,
+            ClaudeHookHandlerType.Agent => Lucide.Bot,
+            _ => Lucide.Code
         };
     }
 
-    private Color GetTypeColor()
+    private Tone GetTypeTone()
     {
         return Hook.Type switch
         {
-            ClaudeHookHandlerType.Command => Color.Success,
-            ClaudeHookHandlerType.Http => Color.Info,
-            ClaudeHookHandlerType.Prompt => Color.Warning,
-            ClaudeHookHandlerType.Agent => Color.Secondary,
-            _ => Color.Default
+            ClaudeHookHandlerType.Command => Tone.Success,
+            ClaudeHookHandlerType.Http => Tone.Info,
+            ClaudeHookHandlerType.Prompt => Tone.Warning,
+            ClaudeHookHandlerType.Agent => Tone.Secondary,
+            _ => Tone.Default
         };
     }
 
@@ -93,7 +92,7 @@
     }
 
     .hook-card:hover, .hook-card.expanded {
-        border-color: var(--mud-palette-primary) !important;
+        border-color: var(--accent) !important;
     }
 
     .hook-card-header {
@@ -106,6 +105,6 @@
 
     .hook-card-body {
         padding: 0 14px 14px;
-        border-top: 1px solid var(--mud-palette-lines-default);
+        border-top: 1px solid var(--border-default);
     }
 </style>

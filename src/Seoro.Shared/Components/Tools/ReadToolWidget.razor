@@ -1,8 +1,7 @@
 @using System.Text.Json
 <div class="tool-widget tool-widget-read">
     <div class="tool-widget-header">
-        <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"
-                 Style="width: 14px; height: 14px; opacity: 0.6;"/>
+        <Icon Svg="@Lucide.FileText" Size="14" Style="opacity: 0.6;"/>
         <span class="tool-widget-filepath">@_filePath</span>
         @if (_lineCount > 0)
         {

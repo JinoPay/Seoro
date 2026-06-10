@@ -6,8 +6,6 @@ using Seoro.Desktop.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MudBlazor;
-using MudBlazor.Services;
 using Photino.Blazor;
 using Serilog;
 using Serilog.Events;
@@ -16,6 +14,7 @@ using Seoro.Shared.Resources;
 using Seoro.Shared.Services.Cli;
 using Seoro.Shared.Services.Claude;
 using Seoro.Shared.Services.Infrastructure;
+using Seoro.Shared.Services.Ui;
 using NotificationService = Seoro.Desktop.Services.NotificationService;
 
 namespace Seoro.Desktop;
@@ -161,23 +160,10 @@ public static class Program
             lb.AddSerilog(Log.Logger);
         });
 
-        // MudBlazor
-        appBuilder.Services.AddMudServices(config =>
-        {
-            config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
-            config.SnackbarConfiguration.VisibleStateDuration = 3000;
-            config.SnackbarConfiguration.ShowTransitionDuration = 200;
-            config.SnackbarConfiguration.HideTransitionDuration = 200;
-            config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
-            config.SnackbarConfiguration.MaxDisplayedSnackbars = 3;
-            config.SnackbarConfiguration.PreventDuplicates = true;
-        });
-
-        // Replace MudBlazor's ISnackbar with a deferred version
-        var snackbarDescriptor = appBuilder.Services.FirstOrDefault(d => d.ServiceType == typeof(ISnackbar));
-        if (snackbarDescriptor != null)
-            appBuilder.Services.Remove(snackbarDescriptor);
-        appBuilder.Services.AddScoped<ISnackbar, DeferredSnackbarService>();
+        // Seoro UI Kit (토스트/모달)
+        appBuilder.Services.AddSingleton<IToastService, ToastService>();
+        appBuilder.Services.AddSingleton<ModalService>();
+        appBuilder.Services.AddSingleton<IModalService>(sp => sp.GetRequiredService<ModalService>());
 
         // Options pattern for AppSettings (IOptionsMonitor<AppSettings>)
         appBuilder.Services.AddSingleton<AppSettingsChangeNotifier>();

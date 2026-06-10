@@ -2,31 +2,28 @@
     <div class="tool-group-header" @onclick="Toggle">
         @if (IsActive)
         {
-            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 14px; height: 14px;" Color="Color.Warning"/>
+            <Spinner Size="14" Tone="Tone.Warning"/>
         }
         else if (HasError)
         {
-            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
-                     Style="width: 16px; height: 16px;"/>
+            <Icon Svg="@Lucide.CircleAlert" Size="16" Tone="Tone.Error"/>
         }
         else
         {
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
-                     Style="width: 16px; height: 16px;"/>
+            <Icon Svg="@Lucide.CircleCheck" Size="16" Tone="Tone.Success"/>
         }
 
         <div class="tool-group-icons">
             @foreach (var icon in GetUniqueIcons())
             {
-                <MudIcon Icon="@icon" Size="Size.Small" Style="width: 14px; height: 14px; opacity: 0.5;"/>
+                <Icon Svg="@icon" Size="14" Style="opacity: 0.5;"/>
             }
         </div>
 
         <span class="tool-group-summary">@Group.Summary</span>
 
-        <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                 Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px; margin-left: auto;"/>
+        <Icon Svg="@(_expanded ? Lucide.ChevronUp : Lucide.ChevronDown)"
+              Size="16" Style="opacity: 0.4; margin-left: auto;"/>
     </div>
 
     @if (_expanded)
@@ -73,7 +70,7 @@
     {
         return Group.Parts
             .Where(p => p.ToolCall != null)
-            .Select(p => ToolDisplayHelper.GetToolIcon(p.ToolCall!.Name))
+            .Select(p => ToolDisplayHelper.GetToolLucideIcon(p.ToolCall!.Name))
             .Distinct()
             .ToList();
     }

@@ -1,13 +1,13 @@
 @inject INotificationHistoryService History
 @inject IChatState ChatState
 @inject ISessionService SessionService
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 @implements IDisposable
 
 <div class="overlay-page">
     <div class="overlay-page-header">
         <button class="overlay-back-btn" @onclick="Close">
-            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"/>
+            <Icon Svg="@Lucide.ArrowLeft" Size="14"/>
             앱으로 돌아가기
         </button>
     </div>
@@ -18,11 +18,10 @@
                 <div style="display: flex; align-items: center; gap: 4px;">
                     @if (History.UnreadCount > 0)
                     {
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
-                                   Style="font-size: var(--text-xs); text-transform: none; min-width: auto; padding: 2px 8px;"
-                                   OnClick="@History.MarkAllAsRead">
+                        <Button ButtonStyle="ButtonStyle.Text" Tone="Tone.Primary"
+                                OnClick="@History.MarkAllAsRead">
                             모두 읽음
-                        </MudButton>
+                        </Button>
                     }
                 </div>
             </div>
@@ -30,7 +29,7 @@
             @if (_entries.Count == 0)
             {
                 <div class="notification-history-empty">
-                    <MudIcon Icon="@Icons.Material.Filled.NotificationsNone" Size="Size.Large" Style="opacity: 0.15;"/>
+                    <Icon Svg="@Lucide.Bell" Size="24" Style="opacity: 0.15;"/>
                     <p class="typo-body2" style="opacity: 0.4;">알림이 없습니다</p>
                 </div>
             }
@@ -46,10 +45,10 @@
                             <div class="notification-entry @(entry.IsRead ? "" : "unread")"
                                  @key="entry.Id"
                                  @onclick="@(() => HandleClick(entry))">
-                                <MudIcon Icon="@GetTypeIcon(entry.Type)"
-                                         Size="Size.Small"
-                                         Color="@GetTypeColor(entry.Type)"
-                                         Style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;"/>
+                                <Icon Svg="@GetTypeIcon(entry.Type)"
+                                      Size="16"
+                                      Tone="@GetTypeColor(entry.Type)"
+                                      Style="margin-top: 2px; flex-shrink: 0;"/>
 
                                 <div class="notification-entry-content">
                                     <span class="notification-message">@entry.Body</span>
@@ -108,7 +107,7 @@
             }
             else
             {
-                Snackbar.Add("삭제된 세션입니다.", Severity.Normal);
+                Snackbar.Add("삭제된 세션입니다.", ToastSeverity.Normal);
             }
         }
     }
@@ -126,23 +125,23 @@
     {
         return type switch
         {
-            NotificationType.Success => Icons.Material.Filled.CheckCircle,
-            NotificationType.Error => Icons.Material.Filled.Error,
-            NotificationType.Question => Icons.Material.Filled.QuestionAnswer,
-            NotificationType.PlanReview => Icons.Material.Filled.RateReview,
-            _ => Icons.Material.Filled.Info
+            NotificationType.Success => Lucide.CircleCheck,
+            NotificationType.Error => Lucide.CircleAlert,
+            NotificationType.Question => Lucide.MessagesSquare,
+            NotificationType.PlanReview => Lucide.MessageSquareText,
+            _ => Lucide.Info
         };
     }
 
-    private static Color GetTypeColor(NotificationType type)
+    private static Tone GetTypeColor(NotificationType type)
     {
         return type switch
         {
-            NotificationType.Success => Color.Success,
-            NotificationType.Error => Color.Error,
-            NotificationType.Question => Color.Warning,
-            NotificationType.PlanReview => Color.Info,
-            _ => Color.Default
+            NotificationType.Success => Tone.Success,
+            NotificationType.Error => Tone.Error,
+            NotificationType.Question => Tone.Warning,
+            NotificationType.PlanReview => Tone.Info,
+            _ => Tone.Default
         };
     }
 

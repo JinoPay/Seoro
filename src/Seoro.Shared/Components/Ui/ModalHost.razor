@@ -1,0 +1,138 @@
+@using Seoro.Shared.UiKit
+@using Seoro.Shared.Services.Ui
+@inject IJSRuntime JS
+@implements IDisposable
+
+@foreach (var modal in _service.Modals)
+{
+    <div class="ui-modal-backdrop" @key="modal.Id" @onclick="() => HandleBackdropClick(modal)">
+        <div class="ui-modal"
+             role="dialog" aria-modal="true"
+             style="@(modal.Options.MaxWidth is { } w ? $"max-width:{w}" : null)"
+             tabindex="-1"
+             @onclick:stopPropagation="true"
+             @onkeydown="e => HandleKeyDown(e, modal)">
+            @if (!string.IsNullOrEmpty(modal.Title) || modal.Options.ShowCloseButton)
+            {
+                <div class="ui-modal__header">
+                    <div class="ui-modal__title">@modal.Title</div>
+                    @if (modal.Options.ShowCloseButton)
+                    {
+                        <IconButton Icon="@Lucide.X" Size="UiSize.Xs" Title="닫기"
+                                    OnClick="() => CloseModal(modal, ModalResult.Cancel())" />
+                    }
+                </div>
+            }
+            <div class="ui-modal__body">
+                @if (modal.MessageBox is { } box)
+                {
+                    <div class="ui-modal__message">@box.Message</div>
+                }
+                else if (modal.ComponentType is not null)
+                {
+                    <CascadingValue Value="@CreateInstanceHandle(modal)" TValue="IModalInstance" IsFixed="true">
+                        @RenderComponent(modal)
+                    </CascadingValue>
+                }
+            </div>
+            @if (modal.MessageBox is { } buttons)
+            {
+                <div class="ui-modal__footer">
+                    @if (!string.IsNullOrEmpty(buttons.CancelText))
+                    {
+                        <Button ButtonStyle="ButtonStyle.Text" OnClick="() => CloseModal(modal, ModalResult.Cancel())">
+                            @buttons.CancelText
+                        </Button>
+                    }
+                    @if (!string.IsNullOrEmpty(buttons.NoText))
+                    {
+                        <Button ButtonStyle="ButtonStyle.Subtle" OnClick="() => CloseModal(modal, ModalResult.Ok((bool?)false))">
+                            @buttons.NoText
+                        </Button>
+                    }
+                    <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
+                            OnClick="() => CloseModal(modal, ModalResult.Ok((bool?)true))">
+                        @buttons.YesText
+                    </Button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Inject] private IModalService ModalService { get; set; } = null!;
+
+    private ModalService _service = null!;
+    private int _renderedCount;
+
+    protected override void OnInitialized()
+    {
+        _service = (ModalService)ModalService;
+        _service.OnModalsChanged += HandleModalsChanged;
+    }
+
+    public void Dispose()
+    {
+        _service.OnModalsChanged -= HandleModalsChanged;
+    }
+
+    private void HandleModalsChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var count = _service.Modals.Count;
+        if (count > _renderedCount)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("seoroUi.focusLastModal");
+            }
+            catch
+            {
+                // JS 미로드 시 포커스 생략
+            }
+        }
+        _renderedCount = count;
+    }
+
+    private void CloseModal(ModalItem modal, ModalResult result)
+        => _service.Close(modal, result);
+
+    private void HandleBackdropClick(ModalItem modal)
+    {
+        if (modal.Options.CloseOnBackdropClick)
+            CloseModal(modal, ModalResult.Cancel());
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e, ModalItem modal)
+    {
+        if (e.Key == "Escape" && modal.Options.CloseOnEscape)
+            CloseModal(modal, ModalResult.Cancel());
+    }
+
+    private IModalInstance CreateInstanceHandle(ModalItem modal)
+        => new ModalInstanceHandle(_service, modal);
+
+    private RenderFragment RenderComponent(ModalItem modal) => builder =>
+    {
+        builder.OpenComponent(0, modal.ComponentType!);
+        if (modal.Parameters is not null)
+        {
+            var seq = 1;
+            foreach (var (name, value) in modal.Parameters)
+                builder.AddComponentParameter(seq++, name, value);
+        }
+        builder.CloseComponent();
+    };
+
+    private sealed class ModalInstanceHandle(ModalService service, ModalItem modal) : IModalInstance
+    {
+        public void Close(ModalResult result) => service.Close(modal, result);
+        public void Close() => service.Close(modal, ModalResult.Ok());
+        public void Cancel() => service.Close(modal, ModalResult.Cancel());
+    }
+}

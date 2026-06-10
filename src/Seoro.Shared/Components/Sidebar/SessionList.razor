@@ -49,9 +49,8 @@
                              @ondrop:preventDefault="true"
                              @ondragend="OnProjectDragEnd"
                              @onclick="@(() => ToggleProject(row.ProjectName!))">
-                            <MudIcon
-                                Icon="@(isExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
-                                Size="Size.Small" Class="project-chevron"/>
+                            <Icon Svg="@(isExpanded ? Lucide.ChevronDown : Lucide.ChevronRight)"
+                                  Size="14" Class="project-chevron"/>
                             <span class="project-letter">@row.ProjectName![0]</span>
                             <span class="project-name">@row.ProjectName</span>
                             @if (!isExpanded && row.SessionCount > 0)
@@ -76,23 +75,25 @@
                                                     CodexAvailable="_codexAvailable"
                                                     Style="width: 20px; height: 20px; opacity: 0.5;"/>
                                 }
-                                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                         Dense="true"
-                                         AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
-                                         Style="width: 20px; height: 20px; opacity: 0.5;"
-                                         ActivationEvent="@MouseEvent.LeftClick">
-                                    <MudMenuItem
-                                        OnClick="@(() => ChatState.OpenSettings("ws-general", row.WorkspacesInGroup!.First().Id))"
-                                        Icon="@Icons.Material.Filled.Settings">
-                                        @Strings.Sidebar_WorkspaceSettings
-                                    </MudMenuItem>
-                                    <MudDivider/>
-                                    <MudMenuItem OnClick="@(() => DeleteWorkspace(row.WorkspacesInGroup!.First()))"
-                                                 Icon="@Icons.Material.Filled.Delete"
-                                                 IconColor="Color.Error">
-                                        @Strings.Sidebar_DeleteWorkspace
-                                    </MudMenuItem>
-                                </MudMenu>
+                                <Menu Dense="true" Fixed="true" Placement="PopoverPlacement.BottomEnd">
+                                    <ActivatorContent>
+                                        <IconButton Icon="@Lucide.EllipsisVertical"
+                                                    Style="width: 20px; height: 20px; opacity: 0.5;"/>
+                                    </ActivatorContent>
+                                    <ChildContent>
+                                        <MenuItem
+                                            OnClick="@(() => ChatState.OpenSettings("ws-general", row.WorkspacesInGroup!.First().Id))"
+                                            Icon="@Lucide.Settings">
+                                            @Strings.Sidebar_WorkspaceSettings
+                                        </MenuItem>
+                                        <Divider/>
+                                        <MenuItem OnClick="@(() => DeleteWorkspace(row.WorkspacesInGroup!.First()))"
+                                                  Icon="@Lucide.Trash2"
+                                                  Tone="Tone.Error">
+                                            @Strings.Sidebar_DeleteWorkspace
+                                        </MenuItem>
+                                    </ChildContent>
+                                </Menu>
                             </div>
                         </div>
                         break;
@@ -102,8 +103,7 @@
                             <span>@row.Workspace!.Name</span>
                             @if (row.Workspace.Status == WorkspaceStatus.Error)
                             {
-                                <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
-                                         Style="width: 12px; height: 12px;"/>
+                                <Icon Svg="@Lucide.CircleAlert" Size="12" Tone="Tone.Error"/>
                             }
                             @if (row.Workspace.Status == WorkspaceStatus.Ready && !_isCreatingSession)
                             {
@@ -148,16 +148,16 @@
     else
     {
         <div class="welcome-container" style="padding: var(--space-6);">
-            <MudIcon Icon="@Icons.Material.Filled.Workspaces" Size="Size.Large" Style="opacity: 0.2;"/>
+            <Icon Svg="@Lucide.Boxes" Size="24" Style="opacity: 0.2;"/>
             <p class="typo-body2 text-secondary" style="opacity: 0.4;">
                 @Strings.Sidebar_WelcomeMessage
             </p>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="@(() => _createDialogOpen = true)"
-                       Style="text-transform: none; border-radius: var(--radius-full);">
+            <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
+                    StartIcon="@Lucide.Plus"
+                    OnClick="@(() => _createDialogOpen = true)"
+                    Style="border-radius: var(--radius-full);">
                 @Strings.Sidebar_NewWorkspace
-            </MudButton>
+            </Button>
         </div>
     }
 </div>

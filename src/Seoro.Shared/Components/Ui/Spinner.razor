@@ -1,0 +1,16 @@
+@using Seoro.Shared.UiKit
+
+<span class="ui-spinner @ToneClass @Class"
+      style="width:@(Size)px;height:@(Size)px;border-width:@(BorderWidth)px;@Style"
+      role="progressbar"
+      aria-label="loading"></span>
+
+@code {
+    [Parameter] public int Size { get; set; } = 16;
+    [Parameter] public Tone Tone { get; set; } = Tone.Primary;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private int BorderWidth => Math.Max(2, Size / 10);
+    private string? ToneClass => Tone == Tone.Default ? null : $"ui-tone-{Tone.ToString().ToLowerInvariant()}";
+}

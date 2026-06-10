@@ -103,7 +103,7 @@
     justify-content: center;
 }
 
-.message-avatar .mud-avatar {
+.message-avatar .ui-avatar {
     width: 22px;
     height: 22px;
     font-size: 12px;
@@ -257,14 +257,21 @@
     outline: none;
 }
 
-.input-area-float .input-textarea-full .mud-input-slot {
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
+.input-area-float .chat-input-textarea {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    padding: 0;
 }
 
-.input-area-float .input-textarea-full .mud-input-control {
-    margin: 0;
+.input-area-float .chat-input-textarea::placeholder {
+    color: var(--text-muted);
 }
 
 /* ===== Slash Command Autocomplete Popup ===== */
@@ -517,18 +524,17 @@
     flex-shrink: 0;
 }
 
-.model-selector-chevron.mud-icon-root {
-    font-size: 14px;
+.model-selector-chevron {
     opacity: 0.55;
     transition: transform var(--transition), opacity var(--transition);
 }
 
-.model-selector-pill:hover .model-selector-chevron.mud-icon-root,
-.model-selector-pill.is-open .model-selector-chevron.mud-icon-root {
+.model-selector-pill:hover .model-selector-chevron,
+.model-selector-pill.is-open .model-selector-chevron {
     opacity: 0.9;
 }
 
-.model-selector-pill.is-open .model-selector-chevron.mud-icon-root {
+.model-selector-pill.is-open .model-selector-chevron {
     transform: rotate(180deg);
 }
 
@@ -554,11 +560,18 @@
     min-width: 320px;
 }
 
-.model-list.mud-list {
+.model-list {
     padding: var(--space-1);
 }
 
-.model-list .mud-list-item {
+.model-list .model-item {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
     font-size: var(--text-sm);
     color: var(--text-secondary);
     border-radius: var(--radius-sm);
@@ -566,8 +579,8 @@
     padding: 6px 10px;
 }
 
-.model-list .mud-list-item:hover {
-    background: var(--accent-dim) !important;
+.model-list .model-item:hover {
+    background: var(--accent-dim);
     color: var(--text-primary);
 }
 
@@ -1005,7 +1018,7 @@
     height: 14px;
     padding: 0 3px;
     border-radius: 7px;
-    background: var(--mud-palette-warning);
+    background: var(--color-warning);
     color: #fff;
     font-size: 9px;
     font-weight: 700;
@@ -1019,6 +1032,50 @@
     max-height: 320px;
     overflow-y: auto;
     padding: var(--space-2) 0;
+}
+
+/* 브랜치 선택 팝오버 아이템 — 구 MudBlazor 리스트 아이템 스타일 대체 */
+.branch-list {
+    padding: var(--space-1);
+    overflow-y: auto;
+    max-height: 240px;
+}
+
+.branch-list .branch-item {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    min-height: 32px;
+    padding: 0 var(--space-2);
+}
+
+.branch-list .branch-item:hover {
+    background: var(--accent-dim);
+    color: var(--text-primary);
+}
+
+.branch-list .branch-item.branch-item-active {
+    background: var(--accent-dim);
+    color: var(--accent);
+}
+
+/* 채팅 전송/큐 버튼 — Mud filled 원형 아이콘 버튼 대체 */
+.ui-iconbtn.chat-send-btn {
+    background: var(--accent);
+    color: var(--text-inverse);
+    border-radius: 50%;
+}
+
+.ui-iconbtn.chat-send-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+    color: var(--text-inverse);
 }
 
 .add-dir-popover {
@@ -1080,18 +1137,18 @@
 }
 
 .tool-picker-scope-global {
-    background: var(--mud-palette-primary-lighten);
-    color: var(--mud-palette-primary-darken);
+    background: var(--accent-dim);
+    color: var(--accent);
 }
 
 .tool-picker-scope-project {
-    background: var(--mud-palette-success-lighten);
-    color: var(--mud-palette-success-darken);
+    background: var(--color-success-bg);
+    color: var(--color-success);
 }
 
 .tool-picker-scope-local {
-    background: var(--mud-palette-warning-lighten);
-    color: var(--mud-palette-warning-darken);
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
 }
 
 .tool-picker-manage {

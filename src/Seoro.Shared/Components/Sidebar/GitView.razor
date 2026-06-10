@@ -3,8 +3,8 @@
 @inject IGitService GitService
 @inject IMergeStatusService MergeStatusService
 @inject IWorkspaceService WorkspaceService
-@inject ISnackbar Snackbar
-@inject IDialogService DialogService
+@inject IToastService Snackbar
+@inject IModalService ModalService
 @inject ILogger<GitView> Logger
 @using System.Timers
 @using Microsoft.Extensions.Logging
@@ -28,7 +28,7 @@
     @if (session == null || session.Status == SessionStatus.Pending || string.IsNullOrEmpty(session.Git.WorktreePath))
     {
         <div class="git-view-empty">
-            <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 28px; height: 28px; opacity: 0.3;"/>
+            <Icon Svg="@Lucide.GitMerge" Size="28" Style="opacity: 0.3;"/>
             <span>@Strings.Git_NoSession</span>
         </div>
     }
@@ -41,33 +41,33 @@
         @* ── 헤더 (이미지처럼 단순: "X Changes" + Stage All + ⋯) ── *@
         <div class="git-view-header">
             <span class="git-view-title">
-                @(totalCount > 0 ? $"{totalCount} {Strings.Git_Changes}" : Strings.Git_Changes)
+                @(totalCount > 0 ? Strings.Git_ChangesCount(totalCount) : Strings.Git_Changes)
             </span>
             <div class="git-view-header-actions">
                 @if (canStage)
                 {
-                    <MudTooltip Text="@Strings.Git_StageAll" Placement="Placement.Bottom">
-                        <MudIconButton Icon="@Icons.Material.Filled.AddCircleOutline"
-                                       Size="Size.Small"
-                                       Disabled="@blocked"
-                                       OnClick="StageAllAsync"
-                                       Class="git-header-icon-btn"/>
-                    </MudTooltip>
+                    <Tooltip Text="@Strings.Git_StageAll" Placement="UiPlacement.Bottom">
+                        <IconButton Icon="@Lucide.CirclePlus"
+                                    Disabled="@blocked"
+                                    OnClick="StageAllAsync"
+                                    Class="git-header-icon-btn"/>
+                    </Tooltip>
                 }
-                <MudMenu Icon="@Icons.Material.Filled.MoreHoriz"
-                         Size="Size.Small" Dense="true"
-                         Class="git-header-icon-btn"
-                         AnchorOrigin="Origin.BottomRight"
-                         TransformOrigin="Origin.TopRight">
-                    <MudMenuItem Icon="@Icons.Material.Filled.AccountTree" OnClick="OpenGitGraph">
-                        @Strings.Git_OpenGraph
-                    </MudMenuItem>
-                    <MudMenuItem Icon="@Icons.Material.Filled.Refresh"
-                                 Disabled="@_loading"
-                                 OnClick="@(() => LoadAsync())">
-                        @Strings.Git_Refresh
-                    </MudMenuItem>
-                </MudMenu>
+                <Menu Dense="true" Fixed="true" Placement="PopoverPlacement.BottomEnd">
+                    <ActivatorContent>
+                        <IconButton Icon="@Lucide.Ellipsis" Class="git-header-icon-btn"/>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MenuItem Icon="@Lucide.GitFork" OnClick="OpenGitGraph">
+                            @Strings.Git_OpenGraph
+                        </MenuItem>
+                        <MenuItem Icon="@Lucide.RefreshCw"
+                                  Disabled="@_loading"
+                                  OnClick="@(() => LoadAsync())">
+                            @Strings.Git_Refresh
+                        </MenuItem>
+                    </ChildContent>
+                </Menu>
             </div>
         </div>
 
@@ -81,11 +81,11 @@
         <div class="git-view-files">
             @if (_loading && totalCount == 0)
             {
-                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2"/>
+                <ProgressBar Indeterminate="true" Class="my-2"/>
             }
             else if (_error != null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" Class="my-2">@_error</MudAlert>
+                <Alert Tone="Tone.Error" Dense="true" Class="my-2">@_error</Alert>
             }
             else if (totalCount == 0)
             {
@@ -122,26 +122,27 @@
                 <button class="git-btn-primary @(CanCommit(blocked) ? "" : "disabled")"
                         @onclick="CommitAsync"
                         disabled="@(!CanCommit(blocked))">
-                    <MudIcon Icon="@Icons.Material.Filled.Check" Style="width: 13px; height: 13px;"/>
+                    <Icon Svg="@Lucide.Check" Size="13"/>
                     <span>@(hasStaged ? Strings.Git_Commit : Strings.Git_CommitAll)</span>
                 </button>
-                <MudMenu Icon="@Icons.Material.Filled.MoreVert"
-                         Size="Size.Small" Dense="true"
-                         Disabled="@blocked"
-                         Class="git-header-icon-btn"
-                         AnchorOrigin="Origin.TopRight"
-                         TransformOrigin="Origin.BottomRight">
-                    <MudMenuItem Icon="@Icons.Material.Outlined.SmartToy" OnClick="CommitViaAiAsync">
-                        @Strings.Git_AskAi_Commit
-                    </MudMenuItem>
-                </MudMenu>
+                <Menu Dense="true" Fixed="true" Disabled="@blocked"
+                      Placement="PopoverPlacement.TopEnd">
+                    <ActivatorContent>
+                        <IconButton Icon="@Lucide.EllipsisVertical" Disabled="@blocked" Class="git-header-icon-btn"/>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MenuItem Icon="@Lucide.Bot" OnClick="CommitViaAiAsync">
+                            @Strings.Git_AskAi_Commit
+                        </MenuItem>
+                    </ChildContent>
+                </Menu>
             </div>
         </div>
 
         @* ── 하단 바: 좌측 브랜치, 우측 Sync 드롭다운 (VS Code 스타일) ── *@
         <div class="git-bottom-bar">
             <div class="git-bottom-branch" title="@(session.Git.BranchName ?? "")">
-                <MudIcon Icon="@Icons.Material.Filled.CallSplit" Style="width: 12px; height: 12px; opacity: 0.6; flex-shrink: 0;"/>
+                <Icon Svg="@Lucide.GitBranch" Size="12" Style="opacity: 0.6; flex-shrink: 0;"/>
                 <span class="git-bottom-branch-name">@(session.Git.BranchName ?? "—")</span>
                 @if (_aheadBehind is { Ahead: > 0 } or { Behind: > 0 })
                 {
@@ -151,33 +152,36 @@
                     </span>
                 }
             </div>
-            <MudMenu Label="@Strings.Git_Sync"
-                     StartIcon="@Icons.Material.Filled.Sync"
-                     EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
-                     Variant="Variant.Outlined"
-                     Size="Size.Small"
-                     Dense="true"
-                     Disabled="@blocked"
-                     Class="@("git-bottom-sync-mud " + (_aheadBehind is { Ahead: > 0 } ? "highlight" : ""))"
-                     AnchorOrigin="Origin.TopRight"
-                     TransformOrigin="Origin.BottomRight">
-                <MudMenuItem Icon="@Icons.Material.Filled.CloudDownload" OnClick="FetchAsync">
-                    @Strings.Git_Fetch
-                </MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.Download" OnClick="PullAsync">
-                    @Strings.Git_Pull
-                </MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.Download" OnClick="PullRebaseAsync">
-                    @Strings.Git_PullRebase
-                </MudMenuItem>
-                <MudDivider/>
-                <MudMenuItem Icon="@Icons.Material.Filled.CloudUpload" OnClick="PushAsync">
-                    @Strings.Git_Push
-                </MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.Warning" OnClick="ForcePushAsync">
-                    @Strings.Git_ForcePush
-                </MudMenuItem>
-            </MudMenu>
+            <Menu Dense="true" Fixed="true" Disabled="@blocked"
+                  Placement="PopoverPlacement.TopEnd">
+                <ActivatorContent>
+                    <Button ButtonStyle="ButtonStyle.Outlined"
+                            StartIcon="@Lucide.RefreshCw"
+                            EndIcon="@Lucide.ChevronDown"
+                            Disabled="@blocked"
+                            Class="@("git-bottom-sync-mud " + (_aheadBehind is { Ahead: > 0 } ? "highlight" : ""))">
+                        @Strings.Git_Sync
+                    </Button>
+                </ActivatorContent>
+                <ChildContent>
+                    <MenuItem Icon="@Lucide.CloudDownload" OnClick="FetchAsync">
+                        @Strings.Git_Fetch
+                    </MenuItem>
+                    <MenuItem Icon="@Lucide.Download" OnClick="PullAsync">
+                        @Strings.Git_Pull
+                    </MenuItem>
+                    <MenuItem Icon="@Lucide.Download" OnClick="PullRebaseAsync">
+                        @Strings.Git_PullRebase
+                    </MenuItem>
+                    <Divider/>
+                    <MenuItem Icon="@Lucide.CloudUpload" OnClick="PushAsync">
+                        @Strings.Git_Push
+                    </MenuItem>
+                    <MenuItem Icon="@Lucide.TriangleAlert" OnClick="ForcePushAsync">
+                        @Strings.Git_ForcePush
+                    </MenuItem>
+                </ChildContent>
+            </Menu>
         </div>
     }
 </div>
@@ -235,12 +239,12 @@
         builder.OpenElement(3, "div");
         builder.AddAttribute(4, "class", "git-group-header");
         builder.AddAttribute(5, "onclick", EventCallback.Factory.Create(this, () => ToggleGroup(key)));
-        builder.OpenComponent<MudIcon>(6);
-        builder.AddAttribute(7, "Icon", collapsed
-            ? Icons.Material.Filled.ChevronRight
-            : Icons.Material.Filled.ExpandMore);
-        builder.AddAttribute(8, "Size", Size.Small);
-        builder.AddAttribute(9, "Style", "width: 14px; height: 14px; opacity: 0.6;");
+        builder.OpenComponent<Icon>(6);
+        builder.AddAttribute(7, "Svg", collapsed
+            ? Lucide.ChevronRight
+            : Lucide.ChevronDown);
+        builder.AddAttribute(8, "Size", 14);
+        builder.AddAttribute(9, "Style", "opacity: 0.6;");
         builder.CloseComponent();
         builder.OpenElement(10, "span");
         builder.AddAttribute(11, "class", "git-group-label");
@@ -269,10 +273,10 @@
                 builder.AddAttribute(34, "class", "git-file-main");
                 builder.AddAttribute(35, "onclick", EventCallback.Factory.Create(this, () => OpenFileDiff(file)));
 
-                builder.OpenComponent<MudIcon>(36);
-                builder.AddAttribute(37, "Icon", GetFileIcon(file.ChangeType));
-                builder.AddAttribute(38, "Size", Size.Small);
-                builder.AddAttribute(39, "Style", $"width: 14px; height: 14px; flex-shrink: 0; {GetFileIconStyle(file.ChangeType)}");
+                builder.OpenComponent<Icon>(36);
+                builder.AddAttribute(37, "Svg", GetFileIcon(file.ChangeType));
+                builder.AddAttribute(38, "Size", 14);
+                builder.AddAttribute(39, "Style", $"flex-shrink: 0; {GetFileIconStyle(file.ChangeType)}");
                 builder.CloseComponent();
 
                 builder.OpenElement(40, "span");
@@ -282,15 +286,17 @@
 
                 builder.OpenElement(43, "span");
                 builder.AddAttribute(44, "class", "git-file-dir");
-                builder.AddContent(45, GetDirName(path));
+                // CSS 의 RTL 말줄임 트릭에서 '.github' 같은 약방향 문자가 끝으로 밀리지 않도록 LRM 으로 감싼다
+                var dir = GetDirName(path);
+                builder.AddContent(45, dir.Length > 0 ? "\u200E" + dir + "\u200E" : "");
                 builder.CloseElement();
 
                 if (conflict)
                 {
-                    builder.OpenComponent<MudIcon>(46);
-                    builder.AddAttribute(47, "Icon", Icons.Material.Filled.Warning);
-                    builder.AddAttribute(48, "Size", Size.Small);
-                    builder.AddAttribute(49, "Style", "width: 11px; height: 11px; color: var(--color-error); flex-shrink: 0;");
+                    builder.OpenComponent<Icon>(46);
+                    builder.AddAttribute(47, "Svg", Lucide.TriangleAlert);
+                    builder.AddAttribute(48, "Size", 11);
+                    builder.AddAttribute(49, "Style", "color: var(--color-error); flex-shrink: 0;");
                     builder.CloseComponent();
                 }
 
@@ -302,15 +308,15 @@
 
                 if (isStaged)
                 {
-                    AddIconBtn(builder, 52, Icons.Material.Filled.Remove, Strings.Git_UnstageFile, blocked, () => UnstageFileAsync(path));
+                    AddIconBtn(builder, 52, Lucide.Minus, Strings.Git_UnstageFile, blocked, () => UnstageFileAsync(path));
                 }
                 else
                 {
                     if (file.ChangeType != FileChangeType.Untracked || file.Staging != FileStagingState.Both)
                     {
-                        AddIconBtn(builder, 53, Icons.Material.Filled.Undo, Strings.Git_DiscardFile, blocked, () => DiscardFileAsync(path));
+                        AddIconBtn(builder, 53, Lucide.Undo2, Strings.Git_DiscardFile, blocked, () => DiscardFileAsync(path));
                     }
-                    AddIconBtn(builder, 54, Icons.Material.Filled.Add, Strings.Git_StageFile, blocked, () => StageFileAsync(path));
+                    AddIconBtn(builder, 54, Lucide.Plus, Strings.Git_StageFile, blocked, () => StageFileAsync(path));
                 }
 
                 builder.CloseElement();
@@ -363,10 +369,9 @@
             onClick();
         });
         b.AddEventStopPropagationAttribute(seq + 5, "onclick", true);
-        b.OpenComponent<MudIcon>(seq + 6);
-        b.AddAttribute(seq + 7, "Icon", icon);
-        b.AddAttribute(seq + 8, "Size", Size.Small);
-        b.AddAttribute(seq + 9, "Style", "width: 13px; height: 13px;");
+        b.OpenComponent<Icon>(seq + 6);
+        b.AddAttribute(seq + 7, "Svg", icon);
+        b.AddAttribute(seq + 8, "Size", 13);
         b.CloseComponent();
         b.CloseElement();
     }
@@ -536,7 +541,7 @@
         {
             var res = await GitService.StageAllAsync(session.Git.WorktreePath);
             if (!res.Success)
-                Snackbar.Add(Strings.Snackbar_StageError(res.Error), Severity.Error);
+                Snackbar.Add(Strings.Snackbar_StageError(res.Error), ToastSeverity.Error);
             await LoadAsync();
         }
         finally { _busy = false; }
@@ -551,7 +556,7 @@
         {
             var res = await GitService.StageFileAsync(session.Git.WorktreePath, path);
             if (!res.Success)
-                Snackbar.Add(Strings.Snackbar_StageError(res.Error), Severity.Error);
+                Snackbar.Add(Strings.Snackbar_StageError(res.Error), ToastSeverity.Error);
             await LoadAsync();
         }
         finally { _busy = false; }
@@ -566,7 +571,7 @@
         {
             var res = await GitService.UnstageFileAsync(session.Git.WorktreePath, path);
             if (!res.Success)
-                Snackbar.Add(Strings.Snackbar_UnstageError(res.Error), Severity.Error);
+                Snackbar.Add(Strings.Snackbar_UnstageError(res.Error), ToastSeverity.Error);
             await LoadAsync();
         }
         finally { _busy = false; }
@@ -577,7 +582,7 @@
         var session = ChatState.CurrentSession;
         if (session == null) return;
 
-        var confirm = await DialogService.ShowMessageBoxAsync(
+        var confirm = await ModalService.ShowMessageBoxAsync(
             Strings.Git_DiscardConfirmTitle,
             Strings.Git_DiscardConfirmBody(path),
             yesText: Strings.Git_DiscardFile,
@@ -589,7 +594,7 @@
         {
             var res = await GitService.DiscardFileAsync(session.Git.WorktreePath, path);
             if (!res.Success)
-                Snackbar.Add(Strings.Snackbar_DiscardError(res.Error), Severity.Error);
+                Snackbar.Add(Strings.Snackbar_DiscardError(res.Error), ToastSeverity.Error);
             await LoadAsync();
         }
         finally { _busy = false; }
@@ -608,7 +613,7 @@
                 var stage = await GitService.StageAllAsync(session.Git.WorktreePath);
                 if (!stage.Success)
                 {
-                    Snackbar.Add(Strings.Snackbar_StageError(stage.Error), Severity.Error);
+                    Snackbar.Add(Strings.Snackbar_StageError(stage.Error), ToastSeverity.Error);
                     return;
                 }
             }
@@ -617,12 +622,12 @@
             if (res.Success)
             {
                 _commitMessage = "";
-                Snackbar.Add(Strings.Snackbar_CommitSuccess, Severity.Success);
+                Snackbar.Add(Strings.Snackbar_CommitSuccess, ToastSeverity.Success);
                 await LoadAsync();
             }
             else
             {
-                Snackbar.Add(Strings.Snackbar_CommitError(res.Error), Severity.Error);
+                Snackbar.Add(Strings.Snackbar_CommitError(res.Error), ToastSeverity.Error);
             }
         }
         finally { _busy = false; }
@@ -639,7 +644,7 @@
 
         var msg = new ChatInputMessage { Text = prompt };
         EventBus.Publish(new MergeRequestedEvent(msg));
-        Snackbar.Add(Strings.Git_AskAi_Commit, Severity.Info);
+        Snackbar.Add(Strings.Git_AskAi_Commit, ToastSeverity.Info);
     }
 
     private async Task FetchAsync()
@@ -651,9 +656,9 @@
         {
             var res = await GitService.FetchAsync(session.Git.WorktreePath);
             if (res.Success)
-                Snackbar.Add(Strings.Snackbar_FetchSuccess, Severity.Success);
+                Snackbar.Add(Strings.Snackbar_FetchSuccess, ToastSeverity.Success);
             else
-                Snackbar.Add(Strings.Snackbar_FetchError(res.Error), Severity.Error);
+                Snackbar.Add(Strings.Snackbar_FetchError(res.Error), ToastSeverity.Error);
             await LoadAsync();
         }
         finally { _busy = false; }
@@ -672,9 +677,9 @@
         {
             var res = await GitService.PullAsync(session.Git.WorktreePath, rebase: rebase);
             if (res.Success)
-                Snackbar.Add(Strings.Snackbar_PullSuccess, Severity.Success);
+                Snackbar.Add(Strings.Snackbar_PullSuccess, ToastSeverity.Success);
             else
-                Snackbar.Add(Strings.Snackbar_PullError(res.Error), Severity.Error);
+                Snackbar.Add(Strings.Snackbar_PullError(res.Error), ToastSeverity.Error);
             await LoadAsync();
         }
         finally { _busy = false; }
@@ -684,7 +689,7 @@
 
     private async Task ForcePushAsync()
     {
-        var confirm = await DialogService.ShowMessageBoxAsync(
+        var confirm = await ModalService.ShowMessageBoxAsync(
             Strings.Git_ForcePushConfirmTitle,
             Strings.Git_ForcePushConfirmBody,
             yesText: Strings.Git_ForcePush,
@@ -712,9 +717,9 @@
             }
 
             if (res.Success)
-                Snackbar.Add(Strings.Snackbar_PushSuccess(session.Git.BranchName ?? ""), Severity.Success);
+                Snackbar.Add(Strings.Snackbar_PushSuccess(session.Git.BranchName ?? ""), ToastSeverity.Success);
             else
-                Snackbar.Add(Strings.Snackbar_PushError(res.Error), Severity.Error);
+                Snackbar.Add(Strings.Snackbar_PushError(res.Error), ToastSeverity.Error);
             await LoadAsync();
         }
         finally { _busy = false; }
@@ -729,23 +734,27 @@
 
     private static string GetFileName(string path)
     {
-        var idx = path.LastIndexOfAny(['/', '\\']);
-        return idx >= 0 ? path[(idx + 1)..] : path;
+        // untracked 디렉토리는 "path/" 형태로 끝나므로 trailing slash 를 정리하고 폴더 표시를 남긴다
+        var trimmed = path.TrimEnd('/', '\\');
+        var idx = trimmed.LastIndexOfAny(['/', '\\']);
+        var name = idx >= 0 ? trimmed[(idx + 1)..] : trimmed;
+        return trimmed.Length < path.Length ? name + "/" : name;
     }
 
     private static string GetDirName(string path)
     {
-        var idx = path.LastIndexOfAny(['/', '\\']);
-        return idx >= 0 ? path[..idx] : "";
+        var trimmed = path.TrimEnd('/', '\\');
+        var idx = trimmed.LastIndexOfAny(['/', '\\']);
+        return idx >= 0 ? trimmed[..idx] : "";
     }
 
     private static string GetFileIcon(FileChangeType type) => type switch
     {
-        FileChangeType.Added => Icons.Material.Filled.NoteAdd,
-        FileChangeType.Deleted => Icons.Material.Filled.Delete,
-        FileChangeType.Renamed => Icons.Material.Filled.DriveFileRenameOutline,
-        FileChangeType.Untracked => Icons.Material.Filled.AddCircleOutline,
-        _ => Icons.Material.Filled.EditNote
+        FileChangeType.Added => Lucide.FilePlus,
+        FileChangeType.Deleted => Lucide.Trash2,
+        FileChangeType.Renamed => Lucide.FilePen,
+        FileChangeType.Untracked => Lucide.CirclePlus,
+        _ => Lucide.SquarePen
     };
 
     private static string GetFileIconStyle(FileChangeType type) => type switch
@@ -753,7 +762,7 @@
         FileChangeType.Added => "color: var(--color-success);",
         FileChangeType.Deleted => "color: var(--color-error);",
         FileChangeType.Renamed => "color: var(--color-warning);",
-        FileChangeType.Untracked => "color: var(--mud-palette-text-secondary);",
+        FileChangeType.Untracked => "color: var(--text-secondary);",
         _ => "color: var(--color-info);"
     };
 

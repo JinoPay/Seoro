@@ -2,21 +2,22 @@
 @using Seoro.Shared.Resources
 @inject IReleaseNotesService ReleaseNotesService
 
-<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
-    <TitleContent>
+<Modal IsOpen="IsOpen" IsOpenChanged="OnVisibleChanged" MaxWidth="560px"
+       ShowCloseButton="false" CloseOnBackdropClick="true">
+    <HeaderContent>
         <div class="stack-row items-center gap-2">
-            <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small"/>
+            <Icon Svg="@Lucide.BadgeAlert" Size="14"/>
             <span class="typo-h6">@Strings.WhatsNew_Title</span>
-            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+            <Chip Tone="Tone.Primary" ButtonStyle="ButtonStyle.Outlined">
                 v@(_currentVersion)
-            </MudChip>
+            </Chip>
         </div>
-    </TitleContent>
-    <DialogContent>
+    </HeaderContent>
+    <ChildContent>
         <div class="whatsnew-dialog">
             @if (_loading)
             {
-                <MudProgressLinear Indeterminate="true" Color="Color.Primary"/>
+                <ProgressBar Indeterminate="true"/>
             }
             else if (_filteredReleases.Count > 0)
             {
@@ -52,14 +53,13 @@
                 <p class="typo-body2 text-secondary">@Strings.WhatsNew_Empty</p>
             }
         </div>
-    </DialogContent>
-    <DialogActions>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close"
-                   Style="text-transform: none;">
+    </ChildContent>
+    <Footer>
+        <Button Tone="Tone.Primary" ButtonStyle="ButtonStyle.Filled" OnClick="Close">
             @Strings.Common_Confirm
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+        </Button>
+    </Footer>
+</Modal>
 
 @code {
     [Parameter] public bool IsOpen { get; set; }
@@ -69,14 +69,6 @@
     private IReadOnlyList<ReleaseNote> _filteredReleases = [];
     private bool _loading;
     private string _currentVersion = "";
-
-    private readonly DialogOptions _dialogOptions = new()
-    {
-        MaxWidth = MaxWidth.Small,
-        FullWidth = true,
-        CloseOnEscapeKey = true,
-        BackdropClick = true
-    };
 
     protected override void OnInitialized()
     {

@@ -1,0 +1,20 @@
+@using Seoro.Shared.UiKit
+
+<div class="ui-progress @ToneClass @(Indeterminate ? "ui-progress--indeterminate" : null) @Class"
+     style="@Style"
+     role="progressbar"
+     aria-valuemin="0" aria-valuemax="100"
+     aria-valuenow="@(Indeterminate ? null : (int)Value)">
+    <div class="ui-progress__bar" style="@BarStyle"></div>
+</div>
+
+@code {
+    [Parameter] public double Value { get; set; }
+    [Parameter] public bool Indeterminate { get; set; }
+    [Parameter] public Tone Tone { get; set; } = Tone.Primary;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private string? BarStyle => Indeterminate ? null : $"width:{Math.Clamp(Value, 0, 100).ToString(System.Globalization.CultureInfo.InvariantCulture)}%";
+    private string? ToneClass => Tone == Tone.Default ? null : $"ui-tone-{Tone.ToString().ToLowerInvariant()}";
+}

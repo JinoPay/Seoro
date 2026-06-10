@@ -241,6 +241,41 @@ public class GitServiceTests
         Assert.Equal("", result);
     }
 
+    // --- GetStatusPorcelainAsync ---
+
+    [Fact]
+    public async Task GetStatusPorcelainAsync_RequestsUntrimmedStdout_PreservesLeadingSpace()
+    {
+        // 첫 줄이 " M path"(unstaged)일 때 선행 공백이 살아 있어야 XY 위치 파싱이 깨지지 않는다
+        _processRunner.NextResult = new ProcessResult(true, " M src/a.txt\n?? b.txt\n", "", 0);
+
+        var lines = await _sut.GetStatusPorcelainAsync("/repo");
+
+        Assert.Equal([" M src/a.txt", "?? b.txt"], lines);
+        var statusCall = _processRunner.Invocations.Single(i => i.Arguments.Contains("--porcelain"));
+        Assert.False(statusCall.TrimStdout);
+    }
+
+    // --- GetWorkingTreeStatusAsync ---
+
+    [Fact]
+    public async Task GetWorkingTreeStatusAsync_UnstagedFirstLine_ParsedAsUnstagedWithIntactPath()
+    {
+        _processRunner.ResultQueue.Enqueue(new ProcessResult(true, "", "", 0)); // staged numstat
+        _processRunner.ResultQueue.Enqueue(new ProcessResult(true, "1\t0\tsrc/a.txt\n", "", 0)); // unstaged numstat
+        _processRunner.ResultQueue.Enqueue(new ProcessResult(true, " M src/a.txt\n", "", 0)); // porcelain
+
+        var summary = await _sut.GetWorkingTreeStatusAsync("/repo");
+
+        var file = Assert.Single(summary.Files);
+        Assert.Equal("src/a.txt", file.FilePath);
+        Assert.Equal(FileStagingState.Unstaged, file.Staging);
+
+        // GitView 는 untracked 디렉토리 대신 파일 단위 목록을 받는다
+        var statusCall = _processRunner.Invocations.Single(i => i.Arguments.Contains("--porcelain"));
+        Assert.Contains("--untracked-files=all", statusCall.Arguments);
+    }
+
     // --- Shared stub ---
 
     private class StubProcessRunner : IProcessRunner

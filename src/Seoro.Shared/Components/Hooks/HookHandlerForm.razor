@@ -1,88 +1,89 @@
 <div class="stack gap-3 pt-3">
-    <MudSelect T="ClaudeHookHandlerType" Value="Hook.Type" ValueChanged="OnTypeChanged"
-               Label="핸들러 타입" Variant="Variant.Outlined" Margin="Margin.Dense">
-        <MudSelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Command">
+    <Select T="ClaudeHookHandlerType" Value="Hook.Type" ValueChanged="OnTypeChanged"
+            Label="핸들러 타입" Fixed="true">
+        <SelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Command"
+                    Text="Command — 셸 명령어 실행">
             <div class="d-flex align-center gap-2">
-                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"/>
+                <Icon Svg="@Lucide.Terminal" Size="14"/>
                 Command — 셸 명령어 실행
             </div>
-        </MudSelectItem>
-        <MudSelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Http">
+        </SelectItem>
+        <SelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Http"
+                    Text="HTTP — 웹훅 POST 요청">
             <div class="d-flex align-center gap-2">
-                <MudIcon Icon="@Icons.Material.Filled.Http" Size="Size.Small"/>
+                <Icon Svg="@Lucide.Globe" Size="14"/>
                 HTTP — 웹훅 POST 요청
             </div>
-        </MudSelectItem>
-        <MudSelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Prompt">
+        </SelectItem>
+        <SelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Prompt"
+                    Text="Prompt — AI 검증/필터">
             <div class="d-flex align-center gap-2">
-                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"/>
+                <Icon Svg="@Lucide.Brain" Size="14"/>
                 Prompt — AI 검증/필터
             </div>
-        </MudSelectItem>
-        <MudSelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Agent">
+        </SelectItem>
+        <SelectItem T="ClaudeHookHandlerType" Value="ClaudeHookHandlerType.Agent"
+                    Text="Agent — 서브에이전트 트리거">
             <div class="d-flex align-center gap-2">
-                <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small"/>
+                <Icon Svg="@Lucide.Bot" Size="14"/>
                 Agent — 서브에이전트 트리거
             </div>
-        </MudSelectItem>
-    </MudSelect>
+        </SelectItem>
+    </Select>
 
     @switch (Hook.Type)
     {
         case ClaudeHookHandlerType.Command:
-            <MudTextField T="string" @bind-Value="Hook.Command" Label="명령어"
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Placeholder="echo 'hello'" Lines="2"
-                          TextChanged="@(_ => NotifyChanged())"/>
+            <TextField Value="@Hook.Command" Label="명령어"
+                       Placeholder="echo 'hello'" Lines="2"
+                       ValueChanged="@(async v => { Hook.Command = v; await NotifyChanged(); })"/>
             break;
 
         case ClaudeHookHandlerType.Http:
-            <MudTextField T="string" @bind-Value="Hook.Url" Label="URL"
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Placeholder="https://example.com/webhook"
-                          TextChanged="@(_ => NotifyChanged())"/>
+            <TextField Value="@Hook.Url" Label="URL"
+                       Placeholder="https://example.com/webhook"
+                       ValueChanged="@(async v => { Hook.Url = v; await NotifyChanged(); })"/>
             <div class="typo-caption text-secondary">헤더 (key: value, 줄당 하나):</div>
-            <MudTextField T="string" Value="@SerializeHeaders()" ValueChanged="@(v => ParseHeaders(v))"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2"
-                          Placeholder="Authorization: Bearer xxx&#10;Content-Type: application/json"/>
+            <TextField Value="@SerializeHeaders()" ValueChanged="@(v => ParseHeaders(v))"
+                       Lines="2"
+                       Placeholder="Authorization: Bearer xxx&#10;Content-Type: application/json"/>
             break;
 
         case ClaudeHookHandlerType.Prompt:
-            <MudTextField T="string" @bind-Value="Hook.Prompt" Label="프롬프트"
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Placeholder="Check if this action is safe and appropriate" Lines="3"
-                          TextChanged="@(_ => NotifyChanged())"/>
-            <MudTextField T="string" @bind-Value="Hook.Model" Label="모델 (선택)"
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Placeholder="claude-haiku-4-5-20251001"
-                          TextChanged="@(_ => NotifyChanged())"/>
+            <TextField Value="@Hook.Prompt" Label="프롬프트"
+                       Placeholder="Check if this action is safe and appropriate" Lines="3"
+                       ValueChanged="@(async v => { Hook.Prompt = v; await NotifyChanged(); })"/>
+            <TextField Value="@Hook.Model" Label="모델 (선택)"
+                       Placeholder="claude-haiku-4-5-20251001"
+                       ValueChanged="@(async v => { Hook.Model = v; await NotifyChanged(); })"/>
             break;
 
         case ClaudeHookHandlerType.Agent:
-            <MudTextField T="string" @bind-Value="Hook.Prompt" Label="에이전트 프롬프트"
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Placeholder="Analyze and summarize the results" Lines="3"
-                          TextChanged="@(_ => NotifyChanged())"/>
-            <MudTextField T="string" @bind-Value="Hook.Model" Label="모델"
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Placeholder="claude-sonnet-4-20250514"
-                          TextChanged="@(_ => NotifyChanged())"/>
+            <TextField Value="@Hook.Prompt" Label="에이전트 프롬프트"
+                       Placeholder="Analyze and summarize the results" Lines="3"
+                       ValueChanged="@(async v => { Hook.Prompt = v; await NotifyChanged(); })"/>
+            <TextField Value="@Hook.Model" Label="모델"
+                       Placeholder="claude-sonnet-4-20250514"
+                       ValueChanged="@(async v => { Hook.Model = v; await NotifyChanged(); })"/>
             break;
     }
 
     @* Common fields *@
     <div class="d-flex gap-2">
-        <MudNumericField T="int?" @bind-Value="Hook.Timeout" Label="타임아웃 (초)"
-                         Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="300"
-                         Style="flex: 1;"/>
-        <MudTextField T="string" @bind-Value="Hook.StatusMessage" Label="상태 메시지"
-                      Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Placeholder="Running hook..." Style="flex: 1;"
-                      TextChanged="@(_ => NotifyChanged())"/>
+        <div class="ui-field" style="flex: 1;">
+            <label class="ui-field__label">타임아웃 (초)</label>
+            <div class="ui-field__control">
+                <input class="ui-field__input" type="number" min="1" max="300"
+                       value="@Hook.Timeout"
+                       @onchange="@(e => Hook.Timeout = int.TryParse(e.Value?.ToString(), out var t) ? Math.Clamp(t, 1, 300) : null)"/>
+            </div>
+        </div>
+        <TextField Value="@Hook.StatusMessage" Label="상태 메시지"
+                   Placeholder="Running hook..." Style="flex: 1;"
+                   ValueChanged="@(async v => { Hook.StatusMessage = v; await NotifyChanged(); })"/>
     </div>
 
-    <MudSwitch T="bool?" @bind-Value="Hook.Async" Label="비동기 실행" Color="Color.Primary"
-               UncheckedColor="Color.Default"/>
+    <Switch Value="@(Hook.Async ?? false)" ValueChanged="@(v => Hook.Async = v)" Label="비동기 실행"/>
 </div>
 
 @code {

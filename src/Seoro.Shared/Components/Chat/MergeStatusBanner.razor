@@ -6,8 +6,8 @@
 @inject ISessionService SessionService
 @inject ISessionListFacade SessionListFacade
 @inject ISettingsService SettingsService
-@inject IDialogService DialogService
-@inject ISnackbar Snackbar
+@inject IModalService ModalService
+@inject IToastService Snackbar
 @inject IPullRequestService PullRequestService
 @inject IWorkspaceService WorkspaceService
 @inject ILogger<MergeStatusBanner> Logger
@@ -54,97 +54,92 @@
     <div class="merge-status-banner @StatusCssClass(status.Kind)">
         <div class="msb-row">
             <div class="msb-branch-wrap">
-                <button class="msb-branch-btn @(blocked ? "disabled" : "")"
-                        @onclick="ToggleBranchMenu" disabled="@blocked">
-                    <MudIcon Icon="@Icons.Material.Filled.CallMerge" Style="width: 12px; height: 12px; opacity: 0.6; flex-shrink: 0;"/>
-                    <span class="msb-branch-current">@(session.Git.BranchName ?? "—")</span>
-                    <span class="msb-branch-arrow">→</span>
-                    <span class="msb-branch-target @(noTarget ? "placeholder" : "")">
-                        @(_targetBranch ?? "타겟 선택")
-                    </span>
-                    <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Style="width: 12px; height: 12px; opacity: 0.4; flex-shrink: 0;"/>
-                </button>
-
-                <MudPopover Open="@_branchMenuOpen" AnchorOrigin="Origin.BottomLeft"
-                            TransformOrigin="Origin.TopLeft" Class="branch-popover">
-                    <div class="branch-search-container">
-                        <MudTextField T="string" @bind-Value="_branchSearchText"
-                                      Placeholder="@Strings.Common_Search"
-                                      Variant="Variant.Text" Immediate="true"
-                                      Adornment="Adornment.Start"
-                                      AdornmentIcon="@Icons.Material.Filled.Search"
-                                      Style="font-size: var(--text-sm);"/>
-                    </div>
-                    <MudList T="string" Dense="true" Class="branch-list">
-                        @foreach (var group in FilteredBranchGroups)
-                        {
-                            <div class="branch-group-header">@group.Name</div>
-                            @foreach (var branch in group.Branches)
+                <Popover Open="_branchMenuOpen" OpenChanged="HandleBranchMenuOpenChanged"
+                         Placement="PopoverPlacement.BottomStart" Fixed="true" PopoverClass="branch-popover">
+                    <AnchorContent>
+                        <button class="msb-branch-btn @(blocked ? "disabled" : "")"
+                                @onclick="ToggleBranchMenu" disabled="@blocked">
+                            <Icon Svg="@Lucide.GitMerge" Size="12" Style="opacity: 0.6; flex-shrink: 0;"/>
+                            <span class="msb-branch-current">@(session.Git.BranchName ?? "—")</span>
+                            <span class="msb-branch-arrow">→</span>
+                            <span class="msb-branch-target @(noTarget ? "placeholder" : "")">
+                                @(_targetBranch ?? "타겟 선택")
+                            </span>
+                            <Icon Svg="@Lucide.ChevronsUpDown" Size="12" Style="opacity: 0.4; flex-shrink: 0;"/>
+                        </button>
+                    </AnchorContent>
+                    <ChildContent>
+                        <div class="branch-search-container">
+                            <TextField @bind-Value="_branchSearchText"
+                                       Placeholder="@Strings.Common_Search"
+                                       Immediate="true"
+                                       AdornmentIcon="@Lucide.Search"
+                                       Style="font-size: var(--text-sm);"/>
+                        </div>
+                        <div class="branch-list">
+                            @foreach (var group in FilteredBranchGroups)
                             {
-                                <MudListItem T="string" OnClick="@(() => SelectTargetBranch(branch))"
-                                             Class="@(branch == _targetBranch ? "branch-item-active" : "")">
-                                    <div class="branch-item-content">
-                                        <MudIcon Icon="@Icons.Material.Filled.AccountTree"
-                                                 Style="font-size: 14px; opacity: 0.5;"/>
-                                        <span class="branch-item-name">@branch</span>
-                                        @if (branch == _targetBranch)
-                                        {
-                                            <MudIcon Icon="@Icons.Material.Filled.Check"
-                                                     Style="font-size: 14px; color: var(--accent);"/>
-                                        }
-                                    </div>
-                                </MudListItem>
+                                <div class="branch-group-header">@group.Name</div>
+                                @foreach (var branch in group.Branches)
+                                {
+                                    <button type="button"
+                                            class="branch-item @(branch == _targetBranch ? "branch-item-active" : "")"
+                                            @onclick="@(() => SelectTargetBranch(branch))">
+                                        <div class="branch-item-content">
+                                            <Icon Svg="@Lucide.GitFork" Size="14" Style="opacity: 0.5;"/>
+                                            <span class="branch-item-name">@branch</span>
+                                            @if (branch == _targetBranch)
+                                            {
+                                                <Icon Svg="@Lucide.Check" Size="14" Style="color: var(--accent);"/>
+                                            }
+                                        </div>
+                                    </button>
+                                }
                             }
-                        }
-                        @if (!FilteredBranchGroups.Any())
-                        {
-                            <div class="branch-no-results">일치하는 브랜치 없음</div>
-                        }
-                    </MudList>
-                </MudPopover>
-
-                @if (_branchMenuOpen)
-                {
-                    <MudOverlay Visible="true" OnClick="CloseBranchMenu" DarkBackground="false" ZIndex="1"/>
-                }
+                            @if (!FilteredBranchGroups.Any())
+                            {
+                                <div class="branch-no-results">일치하는 브랜치 없음</div>
+                            }
+                        </div>
+                    </ChildContent>
+                </Popover>
             </div>
 
-            <MudTooltip Text="@BuildStatusTooltip(status)" Placement="Placement.Bottom">
+            <Tooltip Text="@BuildStatusTooltip(status)" Placement="UiPlacement.Bottom">
                 <span class="msb-status-chip @StatusCssClass(status.Kind)">
-                    <MudIcon Icon="@StatusIcon(status.Kind, status.AheadCount ?? 0)"
-                             Style="width: 11px; height: 11px;"/>
+                    <Icon Svg="@StatusIcon(status.Kind, status.AheadCount ?? 0)" Size="11"/>
                     <span>@BuildStatusLabel(status)</span>
                 </span>
-            </MudTooltip>
+            </Tooltip>
 
-            <MudTooltip Text="@Strings.Git_Refresh" Placement="Placement.Bottom">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                               Size="Size.Small" Disabled="@blocked"
-                               OnClick="HandleManualRefresh"
-                               Style="width: 22px; height: 22px; opacity: 0.6;"/>
-            </MudTooltip>
+            <Tooltip Text="@Strings.Git_Refresh" Placement="UiPlacement.Bottom">
+                <IconButton Icon="@Lucide.RefreshCw"
+                            Size="UiSize.Xs" Disabled="@blocked"
+                            OnClick="HandleManualRefresh"
+                            Style="opacity: 0.6;"/>
+            </Tooltip>
         </div>
 
         @if (session.Git.TrackedPr is { } pr && action != WorktreeAction.CreatePr)
         {
             <div class="msb-pr-row">
                 <span class="pr-badge @PrBadgeCssClass(pr)">
-                    <MudIcon Icon="@PrStatusIcon(pr)" Style="width: 10px; height: 10px;"/>
+                    <Icon Svg="@PrStatusIcon(pr)" Size="10"/>
                     <span>#@pr.Number</span>
                 </span>
                 <span class="msb-pr-title" title="@pr.Title">@pr.Title</span>
-                <MudTooltip Text="PR 새로고침" Placement="Placement.Top">
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                   Size="Size.Small" Disabled="@(blocked || _prLoading)"
-                                   OnClick="HandleRefreshPr"
-                                   Style="width: 20px; height: 20px; opacity: 0.5;"/>
-                </MudTooltip>
-                <MudTooltip Text="GitHub에서 열기" Placement="Placement.Top">
-                    <MudIconButton Icon="@Icons.Material.Outlined.OpenInNew"
-                                   Size="Size.Small" Disabled="@blocked"
-                                   OnClick="OpenSavedPr"
-                                   Style="width: 20px; height: 20px; opacity: 0.5;"/>
-                </MudTooltip>
+                <Tooltip Text="PR 새로고침" Placement="UiPlacement.Top">
+                    <IconButton Icon="@Lucide.RefreshCw"
+                                Size="UiSize.Xs" Disabled="@(blocked || _prLoading)"
+                                OnClick="HandleRefreshPr"
+                                Style="width: 20px; height: 20px; opacity: 0.5;"/>
+                </Tooltip>
+                <Tooltip Text="GitHub에서 열기" Placement="UiPlacement.Top">
+                    <IconButton Icon="@Lucide.ExternalLink"
+                                Size="UiSize.Xs" Disabled="@blocked"
+                                OnClick="OpenSavedPr"
+                                Style="width: 20px; height: 20px; opacity: 0.5;"/>
+                </Tooltip>
             </div>
         }
 
@@ -155,7 +150,7 @@
                 {
                     <button class="msb-action-btn msb-action-conflict @(blocked ? "disabled" : "")"
                             @onclick="HandleResolveConflict" disabled="@blocked">
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Style="width: 13px; height: 13px;"/>
+                        <Icon Svg="@Lucide.TriangleAlert" Size="13"/>
                         <span>AI 충돌 해결</span>
                     </button>
                 }
@@ -163,7 +158,7 @@
                 {
                     <button class="msb-action-btn msb-action-conflict @(blocked ? "disabled" : "")"
                             @onclick="HandleResolveExpectedConflict" disabled="@blocked">
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Style="width: 13px; height: 13px;"/>
+                        <Icon Svg="@Lucide.TriangleAlert" Size="13"/>
                         <span>충돌 해결 (rebase)</span>
                     </button>
                 }
@@ -188,12 +183,11 @@
                             disabled="@(!session.Git.TrackedPr!.CanMerge || blocked || _prMerging)">
                         @if (_prMerging)
                         {
-                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                 Style="width: 13px; height: 13px;"/>
+                            <Spinner Size="13"/>
                         }
                         else
                         {
-                            <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
+                            <Icon Svg="@Lucide.GitMerge" Size="13"/>
                         }
                         <span>@MergeMethodLabel(_selectedMergeStrategy) 머지</span>
                     </button>
@@ -203,19 +197,18 @@
                     <button class="msb-action-btn @((blocked || noTarget) ? "disabled" : "")"
                             @onclick="HandleCreatePrViaAi"
                             disabled="@(blocked || noTarget)">
-                        <MudIcon Icon="@Icons.Material.Outlined.CallMerge" Style="width: 13px; height: 13px;"/>
+                        <Icon Svg="@Lucide.GitMerge" Size="13"/>
                         <span>PR 생성 요청</span>
                     </button>
                     <button class="msb-action-secondary @((blocked || _prLoading) ? "disabled" : "")"
                             @onclick="HandleCheckPr" disabled="@(blocked || _prLoading)">
                         @if (_prLoading)
                         {
-                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                 Style="width: 11px; height: 11px;"/>
+                            <Spinner Size="11"/>
                         }
                         else
                         {
-                            <MudIcon Icon="@Icons.Material.Outlined.Search" Style="width: 11px; height: 11px;"/>
+                            <Icon Svg="@Lucide.Search" Size="11"/>
                         }
                         <span>PR 확인</span>
                     </button>
@@ -224,7 +217,7 @@
                 {
                     <button class="msb-action-btn msb-action-danger @(blocked ? "disabled" : "")"
                             @onclick="HandleDeleteSession" disabled="@blocked">
-                        <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Style="width: 13px; height: 13px;"/>
+                        <Icon Svg="@Lucide.Trash" Size="13"/>
                         <span>세션 삭제</span>
                     </button>
                 }
@@ -404,10 +397,10 @@
         if (!_branchMenuOpen) _branchSearchText = "";
     }
 
-    private void CloseBranchMenu()
+    private void HandleBranchMenuOpenChanged(bool open)
     {
-        _branchMenuOpen = false;
-        _branchSearchText = "";
+        _branchMenuOpen = open;
+        if (!open) _branchSearchText = "";
     }
 
     private async Task SelectTargetBranch(string branch)
@@ -468,17 +461,17 @@
             if (pr != null)
             {
                 await SessionService.SaveSessionAsync(session);
-                Snackbar.Add($"PR #{pr.Number} 발견: {pr.Title}", Severity.Success);
+                Snackbar.Add($"PR #{pr.Number} 발견: {pr.Title}", ToastSeverity.Success);
             }
             else
             {
-                Snackbar.Add("이 브랜치에 연결된 PR이 없습니다.", Severity.Info);
+                Snackbar.Add("이 브랜치에 연결된 PR이 없습니다.", ToastSeverity.Info);
             }
         }
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "PR 확인 실패");
-            Snackbar.Add($"PR 확인 실패: {ex.Message}", Severity.Error);
+            Snackbar.Add($"PR 확인 실패: {ex.Message}", ToastSeverity.Error);
         }
         finally { _prLoading = false; StateHasChanged(); }
     }
@@ -502,7 +495,7 @@
     {
         var session = ChatState.CurrentSession;
         if (session?.Git.TrackedPr is not { CanMerge: true }) return;
-        var ok = await DialogService.ShowMessageBoxAsync(
+        var ok = await ModalService.ShowMessageBoxAsync(
             "PR 머지",
             $"PR #{session.Git.TrackedPr.Number}을 '{MergeMethodLabel(_selectedMergeStrategy)}' 방식으로 머지합니다. 계속할까요?",
             yesText: "계속", cancelText: "취소");
@@ -516,17 +509,17 @@
             if (result.Success)
             {
                 await SessionService.SaveSessionAsync(session);
-                Snackbar.Add($"PR #{session.Git.TrackedPr.Number} 머지 완료!", Severity.Success);
+                Snackbar.Add($"PR #{session.Git.TrackedPr.Number} 머지 완료!", ToastSeverity.Success);
             }
             else
             {
-                Snackbar.Add($"PR 머지 실패: {result.ErrorMessage}", Severity.Error);
+                Snackbar.Add($"PR 머지 실패: {result.ErrorMessage}", ToastSeverity.Error);
                 await HandleRefreshPr();
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"PR 머지 중 오류: {ex.Message}", Severity.Error);
+            Snackbar.Add($"PR 머지 중 오류: {ex.Message}", ToastSeverity.Error);
             Logger.LogError(ex, "HandleMergePr 예외");
         }
         finally { _prMerging = false; StateHasChanged(); }
@@ -540,7 +533,7 @@
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "세션 삭제 실패");
-            Snackbar.Add($"세션 삭제 실패: {ex.Message}", Severity.Warning);
+            Snackbar.Add($"세션 삭제 실패: {ex.Message}", ToastSeverity.Warning);
         }
     }
 
@@ -557,7 +550,7 @@
 
         var msg = BuildPromptMessage("첨부된 프롬프트를 읽고 머지 충돌을 해결해주세요.", prompt, "merge-resolve-conflict.txt");
         EventBus.Publish(new MergeRequestedEvent(msg));
-        Snackbar.Add("AI에게 충돌 해결을 요청했습니다.", Severity.Info);
+        Snackbar.Add("AI에게 충돌 해결을 요청했습니다.", ToastSeverity.Info);
     }
 
     private void HandleResolveExpectedConflict()
@@ -572,7 +565,7 @@
 
         var msg = BuildPromptMessage("첨부된 프롬프트를 읽고 타겟 브랜치에 rebase해주세요.", prompt, "merge-rebase-on-target.txt");
         EventBus.Publish(new MergeRequestedEvent(msg));
-        Snackbar.Add("AI에게 충돌 해결(rebase)을 요청했습니다.", Severity.Info);
+        Snackbar.Add("AI에게 충돌 해결(rebase)을 요청했습니다.", ToastSeverity.Info);
     }
 
     private void HandleCreatePrViaAi()
@@ -592,7 +585,7 @@
         var msg = BuildPromptMessage("첨부된 프롬프트를 읽고 PR을 생성해주세요.", prompt, "merge-create-pr.txt");
         msg.ModelOverride = "haiku";
         EventBus.Publish(new MergeRequestedEvent(msg));
-        Snackbar.Add("AI에게 PR 생성을 요청했습니다.", Severity.Info);
+        Snackbar.Add("AI에게 PR 생성을 요청했습니다.", ToastSeverity.Info);
     }
 
     private static ChatInputMessage BuildPromptMessage(string chatText, string promptContent, string fileName)
@@ -614,17 +607,8 @@
     }
 
     // ── 헬퍼: 상태 아이콘/라벨/배지 ──
-    private static string StatusIcon(MergeStatusKind kind, int aheadCount = 0) => kind switch
-    {
-        MergeStatusKind.Clean when aheadCount == 0 => Icons.Material.Outlined.CheckCircle,
-        MergeStatusKind.Clean => Icons.Material.Filled.CheckCircle,
-        MergeStatusKind.BehindTarget => Icons.Material.Filled.Warning,
-        MergeStatusKind.ConflictExpected => Icons.Material.Filled.Error,
-        MergeStatusKind.UncommittedDirty => Icons.Material.Outlined.EditNote,
-        MergeStatusKind.InConflict => Icons.Material.Filled.Warning,
-        MergeStatusKind.NetworkError => Icons.Material.Filled.WifiOff,
-        _ => Icons.Material.Outlined.HourglassEmpty
-    };
+    private static string StatusIcon(MergeStatusKind kind, int aheadCount = 0)
+        => MergeStatusUi.StatusIcon(kind, aheadCount);
 
     private static string StatusCssClass(MergeStatusKind kind) => kind switch
     {
@@ -665,11 +649,11 @@
 
     private static string PrStatusIcon(TrackedPullRequest pr) => pr switch
     {
-        { IsDraft: true } => Icons.Material.Outlined.EditNote,
-        { IsMerged: true } => Icons.Material.Filled.CheckCircle,
-        { IsMergeable: true } => Icons.Material.Filled.CheckCircle,
-        { IsMergeable: false } => Icons.Material.Filled.Error,
-        _ => Icons.Material.Outlined.HourglassEmpty
+        { IsDraft: true } => Lucide.SquarePen,
+        { IsMerged: true } => Lucide.CircleCheck,
+        { IsMergeable: true } => Lucide.CircleCheck,
+        { IsMergeable: false } => Lucide.CircleAlert,
+        _ => Lucide.Hourglass
     };
 
     private static string PrBadgeCssClass(TrackedPullRequest pr) => pr switch

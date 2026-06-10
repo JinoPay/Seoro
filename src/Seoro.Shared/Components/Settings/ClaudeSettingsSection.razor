@@ -1,6 +1,6 @@
 @inject IClaudeSettingsService ClaudeSettingsService
 @inject IChatState ChatState
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 
 <div class="settings-content-area">
     <ClaudeSettingScopeHeader Scope="_scope" ScopeChanged="OnScopeChanged"
@@ -11,7 +11,7 @@
         @if (_loading)
         {
             <div style="display: flex; justify-content: center; padding: 40px;">
-                <MudProgressCircular Indeterminate="true"/>
+                <Spinner Size="20"/>
             </div>
         }
         else
@@ -31,15 +31,14 @@
                 @* ── Group 1: 모델 및 동작 ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"/>
+                        <Icon Svg="@Lucide.Brain" Size="14"/>
                         @Strings.Settings_Claude_ModelBehaviorTitle
                     </div>
 
                     <div class="stack gap-3">
-                        <MudTextField T="string" @bind-Value="_settings.Model" Label="@Strings.Settings_Claude_ModelLabel"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense"
-                                      Placeholder="claude-sonnet-4-20250514"
-                                      HelperText="@Strings.Settings_Claude_ModelHint"/>
+                        <TextField @bind-Value="_settings.Model" Label="@Strings.Settings_Claude_ModelLabel"
+                                   Placeholder="claude-sonnet-4-20250514"
+                                   HelperText="@Strings.Settings_Claude_ModelHint"/>
 
                         <div>
                             <div class="settings-field-label">@Strings.Settings_Claude_EffortLabel</div>
@@ -84,7 +83,8 @@
                                 <span class="typo-body2">@Strings.Settings_Claude_AlwaysThinkingLabel</span>
                                 <div class="typo-caption text-secondary">@Strings.Settings_Claude_AlwaysThinkingHint</div>
                             </div>
-                            <MudSwitch T="bool?" @bind-Value="_settings.AlwaysThinkingEnabled" Color="Color.Primary"/>
+                            <Switch Value="@(_settings.AlwaysThinkingEnabled ?? false)"
+                                    ValueChanged="@(v => _settings.AlwaysThinkingEnabled = v)"/>
                         </div>
 
                         <div class="settings-toggle-row">
@@ -92,7 +92,8 @@
                                 <span class="typo-body2">@Strings.Settings_Claude_AutoMemoryLabel</span>
                                 <div class="typo-caption text-secondary">@Strings.Settings_Claude_AutoMemoryHint</div>
                             </div>
-                            <MudSwitch T="bool?" @bind-Value="_settings.AutoMemoryEnabled" Color="Color.Primary"/>
+                            <Switch Value="@(_settings.AutoMemoryEnabled ?? false)"
+                                    ValueChanged="@(v => _settings.AutoMemoryEnabled = v)"/>
                         </div>
                     </div>
                 </div>
@@ -100,7 +101,7 @@
                 @* ── Group 2: 권한 규칙 ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small"/>
+                        <Icon Svg="@Lucide.Shield" Size="14"/>
                         @Strings.Settings_Claude_PermissionsTitle
                     </div>
                     <PermissionsEditor @bind-Permissions="_settings.Permissions"/>
@@ -109,7 +110,7 @@
                 @* ── Group 3: 환경변수 ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"/>
+                        <Icon Svg="@Lucide.Terminal" Size="14"/>
                         @Strings.Settings_Claude_EnvVarsTitle
                     </div>
                     <div class="typo-caption text-secondary mb-2">
@@ -121,7 +122,7 @@
                 @* ── Group 4: 추가 디렉토리 ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Size="Size.Small"/>
+                        <Icon Svg="@Lucide.FolderPlus" Size="14"/>
                         @Strings.Settings_Claude_AddDirsTitle
                     </div>
                     <div class="typo-caption text-secondary mb-2">
@@ -133,13 +134,12 @@
                 @* ── Group 5: MCP 서버 (링크) ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small"/>
+                        <Icon Svg="@Lucide.Network" Size="14"/>
                         @Strings.Nav_McpServers
                         <div style="flex: 1;"></div>
-                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
-                                   OnClick="NavigateToMcp" Style="text-transform: none;">
+                        <Button ButtonStyle="ButtonStyle.Text" Tone="Tone.Primary" OnClick="NavigateToMcp">
                             @Strings.Settings_Claude_Manage
-                        </MudButton>
+                        </Button>
                     </div>
                     <div class="typo-caption text-secondary">
                         @Strings.Settings_Claude_McpDesc
@@ -149,14 +149,13 @@
                 @* ── Group 6: 훅 (요약) ── *@
                 <div class="settings-group">
                     <div class="settings-group-title">
-                        <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small"/>
+                        <Icon Svg="@Lucide.Zap" Size="14"/>
                         @Strings.Nav_Hooks
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@GetTotalHookCount()</MudChip>
+                        <Chip>@GetTotalHookCount()</Chip>
                         <div style="flex: 1;"></div>
-                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
-                                   OnClick="NavigateToHooks" Style="text-transform: none;">
+                        <Button ButtonStyle="ButtonStyle.Text" Tone="Tone.Primary" OnClick="NavigateToHooks">
                             @Strings.Settings_Claude_Manage
-                        </MudButton>
+                        </Button>
                     </div>
                     @if (_settings.Hooks is { Count: > 0 })
                     {
@@ -166,10 +165,9 @@
                                 var count = configs.Sum(c => c.Hooks.Count);
                                 @if (count > 0)
                                 {
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                             Color="Color.Primary">
+                                    <Chip ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary">
                                         @evt (@count)
-                                    </MudChip>
+                                    </Chip>
                                 }
                             }
                         </div>
@@ -250,11 +248,11 @@
         {
             await ClaudeSettingsService.WriteAsync(_scope, _settings,
                 _scope == ClaudeSettingsScope.Global ? null : _projectPath);
-            Snackbar.Add(Strings.Settings_Claude_Saved, Severity.Success);
+            Snackbar.Add(Strings.Settings_Claude_Saved, ToastSeverity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add(Strings.Settings_Claude_SaveFailed(ex.Message), Severity.Error);
+            Snackbar.Add(Strings.Settings_Claude_SaveFailed(ex.Message), ToastSeverity.Error);
         }
         finally
         {

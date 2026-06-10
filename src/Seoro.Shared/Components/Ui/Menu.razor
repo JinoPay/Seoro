@@ -1,0 +1,52 @@
+@using Seoro.Shared.UiKit
+
+<Popover @bind-Open="_open" Placement="@Placement" Fixed="@Fixed" Class="@Class" Style="@Style"
+         PopoverClass="@($"ui-menu {(Dense ? "ui-menu--dense" : "")} {MenuClass}")">
+    <AnchorContent>
+        <div class="ui-menu__activator" @onclick="ToggleAsync" @onclick:stopPropagation="StopPropagation">
+            @if (ActivatorContent is not null)
+            {
+                @ActivatorContent
+            }
+            else
+            {
+                <IconButton Icon="@(Icon ?? Lucide.EllipsisVertical)" Size="@Size" Title="@Title" Disabled="@Disabled" />
+            }
+        </div>
+    </AnchorContent>
+    <ChildContent>
+        <CascadingValue Value="this" IsFixed="true">
+            @ChildContent
+        </CascadingValue>
+    </ChildContent>
+</Popover>
+
+@code {
+    [Parameter] public RenderFragment? ActivatorContent { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public PopoverPlacement Placement { get; set; } = PopoverPlacement.BottomStart;
+    [Parameter] public bool Fixed { get; set; }
+    [Parameter] public bool Dense { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool StopPropagation { get; set; } = true;
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public UiSize Size { get; set; } = UiSize.Sm;
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public string? MenuClass { get; set; }
+
+    private bool _open;
+
+    public Task CloseAsync()
+    {
+        _open = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleAsync()
+    {
+        if (Disabled) return;
+        _open = !_open;
+    }
+}

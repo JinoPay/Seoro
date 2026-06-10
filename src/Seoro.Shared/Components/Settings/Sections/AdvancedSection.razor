@@ -7,8 +7,7 @@
             <span class="typo-body2">@Strings.Settings_Advanced_DebugModeLabel</span>
             <div class="typo-caption text-secondary">@Strings.Settings_Advanced_DebugModeHint</div>
         </div>
-        <MudSwitch T="bool" @bind-Value="Settings.DebugMode"
-                   Color="Color.Warning" UncheckedColor="Color.Default"/>
+        <Switch @bind-Value="Settings.DebugMode" Tone="Tone.Warning"/>
     </div>
 </div>
 
@@ -21,31 +20,27 @@
     @foreach (var key in Settings.EnvironmentVariables.Keys.ToList())
     {
         <div class="stack-row gap-1 items-center">
-            <MudTextField T="string" Value="@key" ReadOnly="true"
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Style="flex: 0.4;"/>
-            <MudTextField T="string" Value="@Settings.EnvironmentVariables[key]"
-                          ValueChanged="@(v => Settings.EnvironmentVariables[key] = v)"
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Style="flex: 0.6;"
-                          InputType="@(key.Contains("KEY", StringComparison.OrdinalIgnoreCase) ? InputType.Password : InputType.Text)"/>
-            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                           Color="Color.Error"
-                           OnClick="@(() => RemoveEnvVar(key))"/>
+            <TextField Value="@key" ReadOnly="true"
+                       Style="flex: 0.4;"/>
+            <TextField Value="@Settings.EnvironmentVariables[key]"
+                       ValueChanged="@(v => Settings.EnvironmentVariables[key] = v ?? "")"
+                       Style="flex: 0.6;"
+                       Type="@(key.Contains("KEY", StringComparison.OrdinalIgnoreCase) ? "password" : "text")"/>
+            <IconButton Icon="@Lucide.Trash2"
+                        Tone="Tone.Error"
+                        OnClick="@(() => RemoveEnvVar(key))"/>
         </div>
     }
 
     <div class="stack-row gap-1 items-center">
-        <MudTextField @bind-Value="_newEnvKey" Placeholder="@Strings.Settings_Advanced_EnvKeyPlaceholder"
-                      Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Style="flex: 0.4;"/>
-        <MudTextField @bind-Value="_newEnvValue" Placeholder="@Strings.Settings_Advanced_EnvValuePlaceholder"
-                      Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Style="flex: 0.6;"/>
-        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
-                       Color="Color.Primary"
-                       OnClick="AddEnvVar"
-                       Disabled="@(string.IsNullOrWhiteSpace(_newEnvKey))"/>
+        <TextField @bind-Value="_newEnvKey" Placeholder="@Strings.Settings_Advanced_EnvKeyPlaceholder"
+                   Style="flex: 0.4;"/>
+        <TextField @bind-Value="_newEnvValue" Placeholder="@Strings.Settings_Advanced_EnvValuePlaceholder"
+                   Style="flex: 0.6;"/>
+        <IconButton Icon="@Lucide.Plus"
+                    Tone="Tone.Primary"
+                    OnClick="AddEnvVar"
+                    Disabled="@(string.IsNullOrWhiteSpace(_newEnvKey))"/>
     </div>
 
     <small class="typo-caption text-secondary">

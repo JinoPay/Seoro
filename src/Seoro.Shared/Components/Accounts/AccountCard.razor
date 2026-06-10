@@ -1,27 +1,27 @@
 @inject IClaudeAccountService AccountService
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 
 <div class="@($"acct-card{(Account.IsActive ? " acct-card--active" : "")}")">
 
     @* ── Identity ── *@
     <div class="acct-card-top">
-        <MudAvatar Style="@($"background:{AvatarColor()};color:#fff;font-weight:700;font-size:15px;width:38px;height:38px;flex-shrink:0;")">
+        <Avatar Size="38" Style="@($"background:{AvatarColor()};color:#fff;font-weight:700;flex-shrink:0;")">
             @if (!string.IsNullOrEmpty(Account.EmailAddress))
             {
                 @Account.EmailAddress[0].ToString().ToUpper()
             }
             else
             {
-                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small"/>
+                <Icon Svg="@Lucide.User" Size="14"/>
             }
-        </MudAvatar>
+        </Avatar>
 
         <div class="acct-card-identity">
             @if (_editingName)
             {
-                <MudTextField @bind-Value="_editName" Variant="Variant.Outlined" Margin="Margin.Dense"
-                              Style="font-size:13px;margin:0;" AutoFocus="true"
-                              @onkeydown="OnEditKeyDown" @onblur="SaveName"/>
+                <TextField @bind-Value="_editName"
+                           Style="font-size:13px;margin:0;" AutoFocus="true"
+                           OnKeyDown="OnEditKeyDown" OnBlur="SaveName"/>
             }
             else
             {
@@ -33,14 +33,14 @@
         <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:auto;">
             @if (Account.IsActive)
             {
-                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled"
-                         Icon="@Icons.Material.Filled.CheckCircle" Style="height:20px;font-size:11px;">활성</MudChip>
+                <Chip Tone="Tone.Success" ButtonStyle="ButtonStyle.Filled"
+                      Icon="@Lucide.CircleCheck">활성</Chip>
             }
             @if (_backupMissing)
             {
-                <MudTooltip Text="백업 파일이 없습니다. 계정을 다시 등록하세요.">
-                    <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Error"/>
-                </MudTooltip>
+                <Tooltip Text="백업 파일이 없습니다. 계정을 다시 등록하세요.">
+                    <Icon Svg="@Lucide.TriangleAlert" Size="14" Tone="Tone.Error"/>
+                </Tooltip>
             }
         </div>
     </div>
@@ -48,7 +48,7 @@
     @* ── Usage ── *@
     @if (_fetchingUsage)
     {
-        <MudProgressLinear Indeterminate="true" Size="Size.Small" Rounded="true" Style="margin:8px 0 4px;"/>
+        <ProgressBar Indeterminate="true" Style="margin:8px 0 4px;"/>
     }
     else if (HasAnyUsage())
     {
@@ -58,9 +58,8 @@
                 <div class="acct-usage-col">
                     <span class="acct-usage-label">현재 세션</span>
                     <div class="acct-usage-bar-row">
-                        <MudProgressLinear Value="@fh.Utilization" Max="100"
-                                           Color="@UsageColor(fh.Utilization)"
-                                           Rounded="true" Size="Size.Small"/>
+                        <ProgressBar Value="@fh.Utilization"
+                                     Tone="@UsageTone(fh.Utilization)"/>
                         <span class="acct-usage-pct" style="color:@UsageColorCss(fh.Utilization);">@($"{fh.Utilization:F0}%")</span>
                     </div>
                     <span class="acct-usage-reset">@FormatResetTime(fh.ResetsAt)</span>
@@ -71,9 +70,8 @@
                 <div class="acct-usage-col">
                     <span class="acct-usage-label">모든 모델</span>
                     <div class="acct-usage-bar-row">
-                        <MudProgressLinear Value="@all.Utilization" Max="100"
-                                           Color="@UsageColor(all.Utilization)"
-                                           Rounded="true" Size="Size.Small"/>
+                        <ProgressBar Value="@all.Utilization"
+                                     Tone="@UsageTone(all.Utilization)"/>
                         <span class="acct-usage-pct" style="color:@UsageColorCss(all.Utilization);">@($"{all.Utilization:F0}%")</span>
                     </div>
                     <span class="acct-usage-reset">@FormatResetTime(all.ResetsAt)</span>
@@ -84,9 +82,8 @@
                 <div class="acct-usage-col">
                     <span class="acct-usage-label">Sonnet만</span>
                     <div class="acct-usage-bar-row">
-                        <MudProgressLinear Value="@sonnet.Utilization" Max="100"
-                                           Color="@UsageColor(sonnet.Utilization)"
-                                           Rounded="true" Size="Size.Small"/>
+                        <ProgressBar Value="@sonnet.Utilization"
+                                     Tone="@UsageTone(sonnet.Utilization)"/>
                         <span class="acct-usage-pct" style="color:@UsageColorCss(sonnet.Utilization);">@($"{sonnet.Utilization:F0}%")</span>
                     </div>
                     <span class="acct-usage-reset">@FormatResetTime(sonnet.ResetsAt)</span>
@@ -106,39 +103,37 @@
         </div>
 
         <div class="acct-actions">
-            <MudTooltip Text="@(CanSwitch ? "" : "진행 중인 세션이 있어 전환할 수 없습니다.")">
-                <MudButton Variant="@(Account.IsActive ? Variant.Outlined : Variant.Filled)"
-                           Color="Color.Primary" Size="Size.Small"
-                           StartIcon="@(Account.IsActive ? Icons.Material.Filled.Check : Icons.Material.Filled.SwitchAccount)"
-                           OnClick="Switch"
-                           Disabled="@(Account.IsActive || !CanSwitch || _switching)"
-                           Style="text-transform:none;min-width:76px;height:28px;font-size:12px;border-radius:6px;">
+            <Tooltip Text="@(CanSwitch ? "" : "진행 중인 세션이 있어 전환할 수 없습니다.")">
+                <Button ButtonStyle="@(Account.IsActive ? ButtonStyle.Outlined : ButtonStyle.Filled)"
+                        Tone="Tone.Primary"
+                        StartIcon="@(Account.IsActive ? Lucide.Check : Lucide.UsersRound)"
+                        OnClick="Switch"
+                        Disabled="@(Account.IsActive || !CanSwitch || _switching)"
+                        Style="min-width:76px;">
                     @if (_switching)
                     {
-                        <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="margin-right:4px;"/>
+                        <Spinner Size="14" Style="margin-right:4px;"/>
                     }
                     @(Account.IsActive ? "현재 계정" : "전환")
-                </MudButton>
-            </MudTooltip>
+                </Button>
+            </Tooltip>
 
-            <MudTooltip Text="사용량 새로고침">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                               OnClick="FetchUsage" Disabled="_fetchingUsage"
-                               Style="width:28px;height:28px;"/>
-            </MudTooltip>
-            <MudTooltip Text="토큰 갱신">
-                <MudIconButton Icon="@Icons.Material.Filled.Key" Size="Size.Small"
-                               OnClick="RefreshToken" Disabled="_refreshingToken"
-                               Style="width:28px;height:28px;"/>
-            </MudTooltip>
-            <MudTooltip Text="이름 편집">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
-                               OnClick="StartEdit" Style="width:28px;height:28px;"/>
-            </MudTooltip>
-            <MudTooltip Text="계정 삭제">
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                               Color="Color.Error" OnClick="Delete" Style="width:28px;height:28px;"/>
-            </MudTooltip>
+            <Tooltip Text="사용량 새로고침">
+                <IconButton Icon="@Lucide.RefreshCw"
+                            OnClick="FetchUsage" Disabled="_fetchingUsage"/>
+            </Tooltip>
+            <Tooltip Text="토큰 갱신">
+                <IconButton Icon="@Lucide.Key"
+                            OnClick="RefreshToken" Disabled="_refreshingToken"/>
+            </Tooltip>
+            <Tooltip Text="이름 편집">
+                <IconButton Icon="@Lucide.Pencil"
+                            OnClick="StartEdit"/>
+            </Tooltip>
+            <Tooltip Text="계정 삭제">
+                <IconButton Icon="@Lucide.Trash2"
+                            Tone="Tone.Error" OnClick="Delete"/>
+            </Tooltip>
         </div>
     </div>
 
@@ -171,9 +166,9 @@
         {
             var success = await AccountService.SwitchToAsync(Account.Id);
             if (success)
-                Snackbar.Add($"'{Account.ProfileName}' 계정으로 전환했습니다.", Severity.Success);
+                Snackbar.Add($"'{Account.ProfileName}' 계정으로 전환했습니다.", ToastSeverity.Success);
             else
-                Snackbar.Add("계정 전환에 실패했습니다.", Severity.Error);
+                Snackbar.Add("계정 전환에 실패했습니다.", ToastSeverity.Error);
             await OnChanged.InvokeAsync();
         }
         finally { _switching = false; }
@@ -189,13 +184,13 @@
             if (_usage == null)
             {
                 if (!AutoFetch)
-                    Snackbar.Add("사용량 정보를 불러올 수 없습니다.", Severity.Warning);
+                    Snackbar.Add("사용량 정보를 불러올 수 없습니다.", ToastSeverity.Warning);
             }
         }
         catch (Exception ex)
         {
             if (!AutoFetch)
-                Snackbar.Add($"사용량 조회 오류: {ex.Message}", Severity.Error);
+                Snackbar.Add($"사용량 조회 오류: {ex.Message}", ToastSeverity.Error);
         }
         finally { _fetchingUsage = false; }
     }
@@ -209,12 +204,12 @@
             var ok = await AccountService.RefreshTokenAsync(Account.Id);
             if (ok)
             {
-                Snackbar.Add("토큰이 갱신되었습니다.", Severity.Success);
+                Snackbar.Add("토큰이 갱신되었습니다.", ToastSeverity.Success);
                 await FetchUsage();
             }
             else
             {
-                Snackbar.Add("토큰 갱신 실패. refresh_token이 없거나 만료되었습니다.", Severity.Warning);
+                Snackbar.Add("토큰 갱신 실패. refresh_token이 없거나 만료되었습니다.", ToastSeverity.Warning);
             }
         }
         finally { _refreshingToken = false; }
@@ -239,7 +234,7 @@
     private async Task Delete()
     {
         await AccountService.RemoveAccountAsync(Account.Id);
-        Snackbar.Add($"'{Account.ProfileName}' 계정이 삭제되었습니다.", Severity.Info);
+        Snackbar.Add($"'{Account.ProfileName}' 계정이 삭제되었습니다.", ToastSeverity.Info);
         await OnChanged.InvokeAsync();
     }
 
@@ -300,6 +295,6 @@
         return $"({day}) {amPm} {hour12}:{local.Minute:D2}에 재설정";
     }
 
-    private static Color UsageColor(double p) => p >= 90 ? Color.Error : p >= 70 ? Color.Warning : Color.Success;
-    private static string UsageColorCss(double p) => p >= 90 ? "var(--mud-palette-error)" : p >= 70 ? "var(--mud-palette-warning)" : "var(--mud-palette-success)";
+    private static Tone UsageTone(double p) => p >= 90 ? Tone.Error : p >= 70 ? Tone.Warning : Tone.Success;
+    private static string UsageColorCss(double p) => p >= 90 ? "var(--color-error)" : p >= 70 ? "var(--color-warning)" : "var(--color-success)";
 }

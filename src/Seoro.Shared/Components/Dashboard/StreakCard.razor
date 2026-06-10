@@ -3,7 +3,7 @@
     <div class="streak-card-main">
         @if (Current > 0)
         {
-            <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Color="Color.Primary" Size="Size.Large"/>
+            <Icon Svg="@Lucide.Flame" Tone="Tone.Primary" Size="24"/>
         }
         <span class="streak-card-number">@Current</span>
         <span class="streak-card-unit">@Strings.Dashboard_Streak_Unit</span>
@@ -28,7 +28,7 @@
 
 <style>
     .streak-card {
-        border: 1px solid var(--mud-palette-lines-default);
+        border: 1px solid var(--border-default);
         border-radius: 12px;
         padding: 16px;
     }
@@ -36,7 +36,7 @@
     .streak-card-title {
         font-size: 0.85rem;
         font-weight: 500;
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
         margin-bottom: 12px;
     }
 
@@ -49,13 +49,13 @@
     .streak-card-number {
         font-size: 2.5rem;
         font-weight: 700;
-        color: var(--mud-palette-primary);
+        color: var(--accent);
         line-height: 1;
     }
 
     .streak-card-unit {
         font-size: 0.9rem;
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
     }
 
     .streak-card-details {
@@ -67,10 +67,10 @@
 
     .streak-card-detail {
         font-size: 0.7rem;
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
     }
 
     .streak-card-detail-value {
-        color: var(--mud-palette-text-primary);
+        color: var(--text-primary);
     }
 </style>

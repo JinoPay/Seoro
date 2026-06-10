@@ -519,11 +519,11 @@
 /* ===== Create Workspace Dialog ===== */
 
 /* Dialog container — elevated surface with ambient violet glow */
-.create-ws-dialog .mud-dialog {
-    background: var(--bg-base) !important;
-    border: 1px solid var(--border-default) !important;
-    border-radius: var(--radius-lg) !important;
-    box-shadow: var(--shadow-lg), 0 0 80px rgba(167, 139, 250, 0.06) !important;
+.create-ws-dialog.ui-modal {
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg), 0 0 80px rgba(167, 139, 250, 0.06);
     overflow: hidden;
 }
 

@@ -1,7 +1,7 @@
 @inject IClaudeAccountService AccountService
 @inject IChatState ChatState
-@inject IDialogService DialogService
-@inject ISnackbar Snackbar
+@inject IModalService ModalService
+@inject IToastService Snackbar
 @implements IDisposable
 
 <div class="settings-content-area">
@@ -14,57 +14,54 @@
             </div>
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0;">
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.Save"
-                       OnClick="OpenAddDialog"
-                       Style="text-transform: none;">
+            <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
+                    StartIcon="@Lucide.Save"
+                    OnClick="OpenAddDialog">
                 현재 계정 등록
-            </MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.PersonAdd"
-                       OnClick="OpenAddWizard"
-                       Style="text-transform: none;">
+            </Button>
+            <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
+                    StartIcon="@Lucide.UserPlus"
+                    OnClick="OpenAddWizard">
                 새 계정 추가
-            </MudButton>
+            </Button>
         </div>
     </div>
 
     <div class="settings-content-body">
         @if (!AccountService.CanSwitch())
         {
-            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+            <Alert Tone="Tone.Info" Dense="true" Class="mb-3">
                 진행 중인 세션이 있어 계정 전환이 비활성화되어 있습니다. 세션이 끝난 후 전환하세요.
-            </MudAlert>
+            </Alert>
         }
 
         @if (_loading)
         {
             <div class="d-flex justify-center pa-8">
-                <MudProgressCircular Indeterminate="true"/>
+                <Spinner Size="28"/>
             </div>
         }
         else if (_accounts.Count == 0)
         {
             <div class="accounts-empty-state">
-                <MudIcon Icon="@Icons.Material.Filled.ManageAccounts"
-                         Style="font-size: 48px; color: var(--mud-palette-text-disabled);"/>
+                <Icon Svg="@Lucide.UserCog" Size="48"
+                      Style="color: var(--text-muted);"/>
                 <div class="typo-body1 text-secondary mt-2">등록된 계정이 없습니다</div>
                 <div class="typo-caption text-disabled mt-1" style="max-width: 320px;">
                     현재 <code>claude login</code>으로 로그인된 계정을 등록하세요.
                     계정을 여러 개 등록하면 이 화면에서 바로 전환할 수 있습니다.
                 </div>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.PersonAdd"
-                           OnClick="OpenAddDialog" Class="mt-3"
-                           Style="text-transform: none;">
+                <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
+                        StartIcon="@Lucide.UserPlus"
+                        OnClick="OpenAddDialog" Class="mt-3">
                     현재 계정 등록
-                </MudButton>
+                </Button>
             </div>
         }
         else
         {
             <div class="accounts-how-to">
-                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Style="opacity:.5; flex-shrink:0;"/>
+                <Icon Svg="@Lucide.Info" Size="14" Style="opacity:.5; flex-shrink:0;"/>
                 <span class="typo-caption text-secondary">
                     "새 계정 추가"를 누르면 현재 계정을 자동 백업하고 새 계정 로그인을 안내합니다.
                     이미 다른 계정으로 로그인한 상태라면 "현재 계정 등록"을 사용하세요.
@@ -115,17 +112,17 @@
 
     private async Task OpenAddDialog()
     {
-        var dialog = await DialogService.ShowAsync<AddAccountDialog>(
-            "",
-            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true });
+        var dialog = ModalService.Show<AddAccountDialog>(
+            "현재 계정 등록",
+            options: new ModalOptions { MaxWidth = "480px", CloseOnEscape = true });
         await dialog.Result;
     }
 
     private async Task OpenAddWizard()
     {
-        var dialog = await DialogService.ShowAsync<AddAccountWizard>(
-            "",
-            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = false });
+        var dialog = ModalService.Show<AddAccountWizard>(
+            "새 계정 추가",
+            options: new ModalOptions { MaxWidth = "480px", CloseOnEscape = false });
         await dialog.Result;
     }
 

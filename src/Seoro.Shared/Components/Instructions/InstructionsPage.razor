@@ -1,7 +1,7 @@
 @using System.Text.RegularExpressions
 @inject IInstructionsService InstructionsService
 @inject IChatState ChatState
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 
 <div class="settings-content-area">
     <ClaudeSettingScopeHeader Scope="_scope" ScopeChanged="OnScopeChanged"
@@ -9,11 +9,10 @@
                               LocalScopeLabel="루트 CLAUDE.md"
                               Saving="_saving" OnSave="Save">
         <ExtraActions>
-            <MudToggleIconButton @bind-Toggled="_showPreview"
-                                 Icon="@Icons.Material.Filled.Visibility"
-                                 ToggledIcon="@Icons.Material.Filled.Edit"
-                                 Size="Size.Small" Color="Color.Primary"
-                                 title="@(_showPreview ? "에디터로 전환" : "프리뷰로 전환")"/>
+            <IconButton Icon="@(_showPreview ? Lucide.Pencil : Lucide.Eye)"
+                        Active="@_showPreview" Tone="Tone.Primary"
+                        OnClick="@(() => _showPreview = !_showPreview)"
+                        Title="@(_showPreview ? "에디터로 전환" : "프리뷰로 전환")"/>
         </ExtraActions>
     </ClaudeSettingScopeHeader>
 
@@ -24,9 +23,9 @@
             </div>
             @if (!_instruction.Exists)
             {
-                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                <Chip Tone="Tone.Warning" ButtonStyle="ButtonStyle.Outlined">
                     파일 없음 — 저장 시 생성됩니다
-                </MudChip>
+                </Chip>
             }
         </div>
 
@@ -38,10 +37,10 @@
         }
         else
         {
-            <MudTextField T="string" @bind-Value="_instruction.Content"
-                          Variant="Variant.Outlined" Lines="25"
-                          Placeholder="# CLAUDE.md&#10;&#10;이 파일은 Claude Code에 프로젝트 관련 지침을 제공합니다."
-                          Style="font-family: monospace; font-size: 0.8125rem;"/>
+            <TextField @bind-Value="_instruction.Content"
+                       Lines="25"
+                       Placeholder="# CLAUDE.md&#10;&#10;이 파일은 Claude Code에 프로젝트 관련 지침을 제공합니다."
+                       Style="font-family: monospace; font-size: 0.8125rem;"/>
         }
 
         @if (_instruction.ImportRefs.Count > 0)
@@ -51,10 +50,10 @@
                 <div class="d-flex flex-wrap gap-1">
                     @foreach (var importRef in _instruction.ImportRefs)
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info"
-                                 Icon="@Icons.Material.Filled.InsertDriveFile">
+                        <Chip ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Info"
+                              Icon="@Lucide.File">
                             @importRef
-                        </MudChip>
+                        </Chip>
                     }
                 </div>
             </div>
@@ -107,11 +106,11 @@
             await InstructionsService.SaveAsync(_scope, _instruction.Content,
                 _scope == ClaudeSettingsScope.Global ? null : _projectPath);
             _instruction.Exists = true;
-            Snackbar.Add("CLAUDE.md가 저장되었습니다.", Severity.Success);
+            Snackbar.Add("CLAUDE.md가 저장되었습니다.", ToastSeverity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
+            Snackbar.Add($"저장 실패: {ex.Message}", ToastSeverity.Error);
         }
         finally
         {
@@ -138,7 +137,7 @@
         html = Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
         // 인라인 코드
         html = Regex.Replace(html, @"`(.+?)`",
-            "<code style='background: var(--mud-palette-background); padding: 2px 4px; border-radius: 3px;'>$1</code>");
+            "<code style='background: var(--bg-base); padding: 2px 4px; border-radius: 3px;'>$1</code>");
         // 목록 항목
         html = Regex.Replace(html, @"^- (.+)$",
             "<li>$1</li>", RegexOptions.Multiline);
@@ -153,8 +152,8 @@
 
 <style>
     .instructions-preview {
-        background: var(--mud-palette-background);
-        border: 1px solid var(--mud-palette-lines-default);
+        background: var(--bg-base);
+        border: 1px solid var(--border-default);
         border-radius: 8px;
         padding: 20px;
         min-height: 400px;

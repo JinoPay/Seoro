@@ -281,7 +281,7 @@
 }
 
 .project-header.drop-target {
-    border-top: 2px solid var(--mud-palette-primary);
+    border-top: 2px solid var(--accent);
     margin-top: -2px;
 }
 
@@ -534,21 +534,9 @@
     max-width: 2rem;
 }
 
-.tree-session .mud-menu {
-    position: absolute;
-    visibility: hidden;
-    width: 0;
-    height: 0;
-    pointer-events: none;
-}
-
 /* Filter input */
 .tree-filter {
     padding: 0 var(--space-2) var(--space-1);
-}
-
-.tree-filter .mud-input-outlined {
-    font-size: var(--text-xs) !important;
 }
 
 /* Session meta row (branch + diff stats) */
@@ -644,7 +632,7 @@
 
 .tree-session-shortcut.delete.visible {
     opacity: 0.4;
-    color: var(--mud-palette-error);
+    color: var(--color-error);
 }
 
 /* Status badges — dot indicator */
@@ -731,25 +719,6 @@
 .branch-search-container {
     padding: var(--space-2) var(--space-3);
     border-bottom: 1px solid var(--border-subtle);
-}
-
-.branch-list.mud-list {
-    padding: var(--space-1);
-    overflow-y: auto;
-    max-height: 240px;
-}
-
-.branch-list .mud-list-item {
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-    border-radius: var(--radius-sm);
-    min-height: 32px;
-    padding: 0 var(--space-2);
-}
-
-.branch-list .mud-list-item:hover {
-    background: var(--accent-dim) !important;
-    color: var(--text-primary);
 }
 
 .branch-list .branch-item-active {

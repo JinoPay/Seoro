@@ -8,8 +8,7 @@
 {
     <div class="system-message">
         <div class="system-message-content">
-            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small"
-                     Style="width: 14px; height: 14px; opacity: 0.5;"/>
+            <Icon Svg="@Lucide.Info" Size="14" Style="opacity: 0.5;"/>
             <span>@Message.Text</span>
             <span class="message-time">@Message.Timestamp.ToLocalTime().ToString("HH:mm")</span>
         </div>
@@ -22,17 +21,15 @@
         <div class="message-avatar">
             @if (Message.Role == MessageRole.User)
             {
-                <MudAvatar Color="Color.Primary" Variant="Variant.Filled"
-                           Style="width: 22px; height: 22px; font-size: 12px; background: rgba(167, 139, 250, 0.2); color: var(--accent);">
-                    <MudIcon Icon="@Icons.Material.Filled.Person" Style="width: 13px; height: 13px;"/>
-                </MudAvatar>
+                <Avatar Size="22" Style="background: rgba(167, 139, 250, 0.2); color: var(--accent);">
+                    <Icon Svg="@Lucide.User" Size="13"/>
+                </Avatar>
             }
             else
             {
-                <MudAvatar Variant="Variant.Filled"
-                           Style="width: 22px; height: 22px; font-size: 12px; background: var(--color-info-bg); color: var(--color-info);">
-                    <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="width: 13px; height: 13px;"/>
-                </MudAvatar>
+                <Avatar Size="22" Style="background: var(--color-info-bg); color: var(--color-info);">
+                    <Icon Svg="@Lucide.Sparkles" Size="13"/>
+                </Avatar>
             }
         </div>
         <div class="message-content" id="msg-@(Message.Id)">
@@ -55,7 +52,7 @@
                             <div style="cursor: pointer;"
                                  title="@attachment.OriginalFileName"
                                  @onclick="@(() => Lightbox.Open(GetImageSrc(attachment), attachment.OriginalFileName))"
-                                 @oncontextmenu="@(async () => await OpenImageContextMenu(attachment))"
+                                 @oncontextmenu="@(e => OpenImageContextMenu(e, attachment))"
                                  @oncontextmenu:preventDefault="true">
                                 <img src="@GetImageSrc(attachment)"
                                      alt="@attachment.OriginalFileName"
@@ -64,12 +61,12 @@
                         }
                         else
                         {
-                            <MudChip T="string" Icon="@GetAttachmentIcon(attachment)"
-                                     Size="Size.Small" Variant="Variant.Outlined"
-                                     OnClick="@(() => OpenFileInTab(attachment))"
-                                     Style="font-size: 0.75rem; cursor: pointer;">
+                            <Chip Icon="@GetAttachmentIcon(attachment)"
+                                  ButtonStyle="ButtonStyle.Outlined"
+                                  OnClick="@(() => OpenFileInTab(attachment))"
+                                  Style="font-size: 0.75rem; cursor: pointer;">
                                 @attachment.OriginalFileName @($"({FormatFileSize(attachment.SizeBytes)})")
-                            </MudChip>
+                            </Chip>
                         }
                     }
                 </div>
@@ -95,14 +92,11 @@
                                     class="thinking-block @(_thinkingExpanded.Contains(idx) ? "expanded" : "") streaming"
                                     @onclick="@(() => ToggleThinkingBlock(idx))">
                                     <div class="thinking-header">
-                                        <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
-                                                 Style="width: 14px; height: 14px; opacity: 0.6; flex-shrink: 0;"/>
+                                        <Icon Svg="@Lucide.Brain" Size="14" Style="opacity: 0.6; flex-shrink: 0;"/>
                                         <span
                                             style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">@GetThinkingHeaderText(thinkingText, _thinkingExpanded.Contains(idx))</span>
-                                        <MudIcon
-                                            Icon="@(_thinkingExpanded.Contains(idx) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                                            Size="Size.Small"
-                                            Style="opacity: 0.4; width: 14px; height: 14px; margin-left: auto; flex-shrink: 0;"/>
+                                        <Icon Svg="@(_thinkingExpanded.Contains(idx) ? Lucide.ChevronUp : Lucide.ChevronDown)"
+                                              Size="14" Style="opacity: 0.4; margin-left: auto; flex-shrink: 0;"/>
                                     </div>
                                     @if (_thinkingExpanded.Contains(idx))
                                     {
@@ -210,18 +204,23 @@
     </div>
 </div>
 
-<MudMenu @ref="_imageContextMenu"
-         ActivationEvent="@MouseEvent.RightClick"
-         PositionAtCursor="true"
-         Dense="true"
-         Style="position: absolute; visibility: hidden; width: 0; height: 0;">
-    <MudMenuItem OnClick="SaveContextImage" Icon="@Icons.Material.Filled.Download">
-        @Strings.Common_Save
-    </MudMenuItem>
-    <MudMenuItem OnClick="CopyContextImage" Icon="@Icons.Material.Filled.ContentCopy">
-        @Strings.Common_Copy
-    </MudMenuItem>
-</MudMenu>
+@if (_contextMenuOpen)
+{
+    <div class="ui-popover-backdrop"
+         @onclick="CloseImageContextMenu"
+         @oncontextmenu="CloseImageContextMenu" @oncontextmenu:preventDefault="true"></div>
+    <div class="ui-popover ui-popover--fixed ui-menu ui-menu--dense"
+         style="left: @(_contextMenuX)px; top: @(_contextMenuY)px;">
+        <button type="button" class="ui-menu__item" @onclick="SaveContextImage">
+            <Icon Svg="@Lucide.Download" Size="14"/>
+            <span class="ui-menu__item-label">@Strings.Common_Save</span>
+        </button>
+        <button type="button" class="ui-menu__item" @onclick="CopyContextImage">
+            <Icon Svg="@Lucide.Copy" Size="14"/>
+            <span class="ui-menu__item-label">@Strings.Common_Copy</span>
+        </button>
+    </div>
+}
 
 @code {
     [Parameter][EditorRequired] public ChatMessage Message { get; set; } = null!;
@@ -236,7 +235,9 @@
     private readonly HashSet<int> _thinkingExpanded = [];
     private int _lastThinkingGroupCount;
 
-    private MudMenu? _imageContextMenu;
+    private bool _contextMenuOpen;
+    private double _contextMenuX;
+    private double _contextMenuY;
     private string _contextImageSrc = string.Empty;
     private string _contextImageFilename = string.Empty;
 
@@ -322,21 +323,29 @@
         ChatState.Tabs.OpenFileContentTab(filePath, content);
     }
 
-    private async Task OpenImageContextMenu(FileAttachment attachment)
+    private void OpenImageContextMenu(MouseEventArgs e, FileAttachment attachment)
     {
         _contextImageSrc = GetImageSrc(attachment);
         _contextImageFilename = attachment.OriginalFileName;
-        if (_imageContextMenu != null)
-            await _imageContextMenu.OpenMenuAsync(EventArgs.Empty);
+        _contextMenuX = e.ClientX;
+        _contextMenuY = e.ClientY;
+        _contextMenuOpen = true;
+    }
+
+    private void CloseImageContextMenu()
+    {
+        _contextMenuOpen = false;
     }
 
     private async Task SaveContextImage()
     {
+        _contextMenuOpen = false;
         await JS.InvokeVoidAsync("saveImage", _contextImageSrc, _contextImageFilename);
     }
 
     private async Task CopyContextImage()
     {
+        _contextMenuOpen = false;
         await JS.InvokeAsync<bool>("copyImageToClipboard", _contextImageSrc);
     }
 
@@ -364,13 +373,13 @@
         var ext = Path.GetExtension(attachment.OriginalFileName).ToLowerInvariant();
         return ext switch
         {
-            ".md" or ".mdx" => Icons.Material.Filled.Description,
+            ".md" or ".mdx" => Lucide.FileText,
             ".json" or ".yaml" or ".yml" or ".xml" or ".toml" or ".ini" or ".cfg"
-                => Icons.Material.Filled.DataObject,
+                => Lucide.Braces,
             ".cs" or ".js" or ".ts" or ".py" or ".rs" or ".go" or ".java" or ".html"
                 or ".css" or ".sql" or ".sh" or ".bash" or ".ps1"
-                => Icons.Material.Filled.Code,
-            _ => Icons.Material.Filled.InsertDriveFile
+                => Lucide.Code,
+            _ => Lucide.File
         };
     }
 

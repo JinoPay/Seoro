@@ -1,5 +1,9 @@
-<div @key="Session.Id"
-     class="tree-session @(IsActive ? "active" : "") @(IsStreaming ? "streaming" : "") @(Session.Status == SessionStatus.Archived ? "archived" : "")"
+<Popover @key="Session.Id" @bind-Open="_contextMenuOpen"
+         Fixed="true" Placement="PopoverPlacement.BottomEnd"
+         PopoverClass="ui-menu ui-menu--dense"
+         Style="display: block;">
+<AnchorContent>
+<div class="tree-session @(IsActive ? "active" : "") @(IsStreaming ? "streaming" : "") @(Session.Status == SessionStatus.Archived ? "archived" : "")"
      @onclick="@OnClick"
      @oncontextmenu="OpenContextMenu"
      @oncontextmenu:preventDefault="true">
@@ -71,10 +75,10 @@
     </div>
 
     <div class="tree-session-actions">
-        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                       Style="width: 20px; height: 20px; opacity: 0.4;"
-                       OnClick="@OnDelete"
-                       ClickPropagation="false"/>
+        <IconButton Icon="@Lucide.X"
+                    Style="width: 20px; height: 20px; opacity: 0.4;"
+                    OnClick="@OnDelete"
+                    StopPropagation="true"/>
     </div>
 
     @if (DeleteShortcutLabel != null || ShortcutLabel != null)
@@ -92,32 +96,29 @@
         </div>
     }
 </div>
-
-<MudMenu @ref="_contextMenu"
-         ActivationEvent="@MouseEvent.RightClick"
-         PositionAtCursor="true"
-         Dense="true"
-         Style="position: absolute; visibility: hidden; width: 0; height: 0;">
-    <MudMenuItem OnClick="@HandleOpenFolder"
-                 Icon="@Icons.Material.Outlined.FolderOpen">
+</AnchorContent>
+<ChildContent>
+    <MenuItem OnClick="@HandleOpenFolder"
+              Icon="@Lucide.FolderOpen">
         @Strings.Sidebar_OpenFolder
-    </MudMenuItem>
+    </MenuItem>
     @if (AvailableIdes?.Count > 0)
     {
         @foreach (var ide in AvailableIdes)
         {
-            <MudMenuItem OnClick="@(() => OnOpenInIde.InvokeAsync(ide.Command))"
-                         Icon="@Icons.Material.Outlined.Code">
+            <MenuItem OnClick="@(() => HandleOpenInIde(ide.Command))"
+                      Icon="@Lucide.Code">
                 @Strings.Sidebar_OpenInIde(ide.Name)
-            </MudMenuItem>
+            </MenuItem>
         }
     }
-    <MudDivider/>
-    <MudMenuItem OnClick="@(() => OnDelete.InvokeAsync())"
-                 Icon="@Icons.Material.Filled.Close">
+    <Divider/>
+    <MenuItem OnClick="@HandleDelete"
+              Icon="@Lucide.X">
         @Strings.Common_Delete
-    </MudMenuItem>
-</MudMenu>
+    </MenuItem>
+</ChildContent>
+</Popover>
 
 @code {
     [Parameter][EditorRequired] public Session Session { get; set; } = null!;
@@ -143,7 +144,7 @@
     /// <summary>Blazor 변경 감지용 — Session.Git.BranchName의 스칼라 복사본. 렌더링은 Session에서 직접 읽음.</summary>
     [Parameter] public string? SessionBranch { get; set; }
 
-    private MudMenu? _contextMenu;
+    private bool _contextMenuOpen;
     private string? _prevTitle;
     private bool _titleChanged;
 
@@ -154,15 +155,27 @@
         _prevTitle = Session.Title;
     }
 
-    private async Task OpenContextMenu()
+    private void OpenContextMenu()
     {
-        if (_contextMenu != null)
-            await _contextMenu.OpenMenuAsync(EventArgs.Empty);
+        _contextMenuOpen = true;
     }
 
     private async Task HandleOpenFolder()
     {
+        _contextMenuOpen = false;
         await OnOpenFolder.InvokeAsync();
+    }
+
+    private async Task HandleOpenInIde(string command)
+    {
+        _contextMenuOpen = false;
+        await OnOpenInIde.InvokeAsync(command);
+    }
+
+    private async Task HandleDelete()
+    {
+        _contextMenuOpen = false;
+        await OnDelete.InvokeAsync();
     }
 
     private static string GetStatusLabel(SessionStatus status)

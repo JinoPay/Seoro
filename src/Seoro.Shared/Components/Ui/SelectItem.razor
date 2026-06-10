@@ -1,0 +1,48 @@
+@using Seoro.Shared.UiKit
+@typeparam T
+
+<button type="button"
+        class="ui-select__item @(IsSelected ? "ui-select__item--selected" : null) @Class"
+        role="option"
+        aria-selected="@(IsSelected ? "true" : "false")"
+        disabled="@Disabled"
+        @onclick="HandleClickAsync"
+        @onclick:stopPropagation="true">
+    <span class="ui-select__item-content">
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+        else
+        {
+            @(Text ?? Value?.ToString())
+        }
+    </span>
+    @if (IsSelected)
+    {
+        <Icon Svg="@Lucide.Check" Size="13" Class="ui-select__item-check" />
+    }
+</button>
+
+@code {
+    [CascadingParameter] private Select<T>? Parent { get; set; }
+
+    [Parameter] public T? Value { get; set; }
+
+    /// <summary>트리거에 표시할 텍스트. 미지정 시 Value.ToString().</summary>
+    [Parameter] public string? Text { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Class { get; set; }
+
+    private bool IsSelected => Parent?.IsSelected(Value) ?? false;
+
+    protected override void OnInitialized()
+    {
+        Parent?.RegisterItemText(Value, Text);
+    }
+
+    private Task HandleClickAsync()
+        => Parent is not null ? Parent.SelectAsync(Value) : Task.CompletedTask;
+}

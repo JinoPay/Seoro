@@ -3,7 +3,7 @@
 @inject IWorktreeSyncService SyncService
 @inject IWorkspaceService WorkspaceService
 @inject IChatEventBus EventBus
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 @using System.Runtime.InteropServices
 @implements IDisposable
 
@@ -15,39 +15,36 @@
 
         @if (!string.IsNullOrEmpty(ChatState.CurrentSession.Git.BranchName))
         {
-            <MudTooltip Text="@Strings.Layout_MainToolbar_Branch(ChatState.CurrentSession.Git.BranchName)" Placement="Placement.Bottom">
+            <Tooltip Text="@Strings.Layout_MainToolbar_Branch(ChatState.CurrentSession.Git.BranchName)" Placement="UiPlacement.Bottom">
                 <span class="toolbar-branch-badge">
-                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
-                             Style="width: 12px; height: 12px; opacity: 0.6;"/>
+                    <Icon Svg="@Lucide.GitFork" Size="12" Style="opacity: 0.6;"/>
                     @ChatState.CurrentSession.Git.BranchName
                 </span>
-            </MudTooltip>
+            </Tooltip>
         }
 
         @if (ChatState.CurrentSession.PermissionMode == "plan")
         {
-            <MudTooltip Text="@Strings.Layout_MainToolbar_PlanModeTooltip" Placement="Placement.Bottom">
+            <Tooltip Text="@Strings.Layout_MainToolbar_PlanModeTooltip" Placement="UiPlacement.Bottom">
                 <span class="toolbar-indicator plan">
-                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"
-                             Style="width: 14px; height: 14px;"/>
+                    <Icon Svg="@Lucide.FileText" Size="14"/>
                 </span>
-            </MudTooltip>
+            </Tooltip>
         }
 
         @if (ChatState.CurrentSession.EffortLevel is not (null or "" or "auto"))
         {
-            <MudTooltip Text="@Strings.Layout_MainToolbar_EffortLevelTooltip(FormatEffortLevel(ChatState.CurrentSession.EffortLevel))"
-                        Placement="Placement.Bottom">
+            <Tooltip Text="@Strings.Layout_MainToolbar_EffortLevelTooltip(FormatEffortLevel(ChatState.CurrentSession.EffortLevel))"
+                     Placement="UiPlacement.Bottom">
                 <span class="toolbar-indicator effort">
-                    <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
-                             Style="width: 14px; height: 14px;"/>
+                    <Icon Svg="@Lucide.Brain" Size="14"/>
                 </span>
-            </MudTooltip>
+            </Tooltip>
         }
 
         @if (ChatState.CurrentSession.Git.AdditionalDirs is { Count: > 0 } addDirs)
         {
-            <MudTooltip Placement="Placement.Bottom">
+            <Tooltip Placement="UiPlacement.Bottom">
                 <TooltipContent>
                     <div style="text-align: left;">
                         <div style="font-weight: 600; margin-bottom: 4px;">추가 작업 디렉터리</div>
@@ -59,12 +56,11 @@
                 </TooltipContent>
                 <ChildContent>
                     <span class="toolbar-indicator" style="gap: 3px;">
-                        <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Size="Size.Small"
-                                 Style="width: 14px; height: 14px;"/>
+                        <Icon Svg="@Lucide.FolderPlus" Size="14"/>
                         <span style="font-size: 0.7rem;">@addDirs.Count</span>
                     </span>
                 </ChildContent>
-            </MudTooltip>
+            </Tooltip>
         }
     }
     else
@@ -79,46 +75,42 @@
         <div class="toolbar-actions">
             @if (ShowSyncButton)
             {
-                <MudTooltip Text="@SyncTooltip" Placement="Placement.Bottom">
-                    <MudIconButton Icon="@(IsSynced ? Icons.Material.Filled.SyncDisabled : Icons.Material.Filled.Sync)"
-                                   Color="@(IsSynced ? Color.Success : Color.Default)"
-                                   Size="Size.Small"
-                                   OnClick="ToggleSync"
-                                   Disabled="_syncBusy || IsSyncBlockedByOther"
-                                   Class="@(IsSynced ? "sync-active" : "")"
-                                   Style="width: 28px; height: 28px;"/>
-                </MudTooltip>
+                <Tooltip Text="@SyncTooltip" Placement="UiPlacement.Bottom">
+                    <IconButton Icon="@(IsSynced ? Lucide.RefreshCwOff : Lucide.RefreshCw)"
+                                Tone="@(IsSynced ? Tone.Success : Tone.Default)"
+                                OnClick="ToggleSync"
+                                Disabled="_syncBusy || IsSyncBlockedByOther"
+                                Class="@(IsSynced ? "sync-active" : "")"/>
+                </Tooltip>
             }
 
-            <MudTooltip Text="@Strings.Layout_MainToolbar_OpenFolder" Placement="Placement.Bottom">
-                <MudIconButton Icon="@Icons.Material.Outlined.FolderOpen" Size="Size.Small"
-                               OnClick="OpenFolder"
-                               Style="width: 28px; height: 28px; opacity: 0.5;"/>
-            </MudTooltip>
+            <Tooltip Text="@Strings.Layout_MainToolbar_OpenFolder" Placement="UiPlacement.Bottom">
+                <IconButton Icon="@Lucide.FolderOpen"
+                            OnClick="OpenFolder"
+                            Style="opacity: 0.5;"/>
+            </Tooltip>
 
             @if (_availableIdes.Count == 1)
             {
-                <MudTooltip Text="@Strings.Layout_MainToolbar_OpenInIde(_availableIdes[0].Name)" Placement="Placement.Bottom">
-                    <MudIconButton Icon="@Icons.Material.Outlined.Code" Size="Size.Small"
-                                   OnClick="@(() => OpenInIde(_availableIdes[0].Command))"
-                                   Style="width: 28px; height: 28px; opacity: 0.5;"/>
-                </MudTooltip>
+                <Tooltip Text="@Strings.Layout_MainToolbar_OpenInIde(_availableIdes[0].Name)" Placement="UiPlacement.Bottom">
+                    <IconButton Icon="@Lucide.Code"
+                                OnClick="@(() => OpenInIde(_availableIdes[0].Command))"
+                                Style="opacity: 0.5;"/>
+                </Tooltip>
             }
             else if (_availableIdes.Count > 1)
             {
-                <MudMenu Icon="@Icons.Material.Outlined.Code" Size="Size.Small"
-                         Dense="true"
-                         AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
-                         Style="width: 28px; height: 28px; opacity: 0.5;"
-                         ActivationEvent="@MouseEvent.LeftClick">
+                <Menu Icon="@Lucide.Code" Dense="true"
+                      Placement="PopoverPlacement.BottomEnd"
+                      Style="opacity: 0.5;">
                     @foreach (var ide in _availableIdes)
                     {
-                        <MudMenuItem OnClick="@(() => OpenInIde(ide.Command))"
-                                     Icon="@Icons.Material.Outlined.Code">
+                        <MenuItem OnClick="@(() => OpenInIde(ide.Command))"
+                                  Icon="@Lucide.Code">
                             @ide.Name
-                        </MudMenuItem>
+                        </MenuItem>
                     }
-                </MudMenu>
+                </Menu>
             }
         </div>
     }
@@ -215,19 +207,19 @@
             if (IsSynced)
             {
                 await SyncService.StopSyncAsync();
-                Snackbar.Add(Strings.Layout_MainToolbar_SyncDisabled_Snackbar, Severity.Info);
+                Snackbar.Add(Strings.Layout_MainToolbar_SyncDisabled_Snackbar, ToastSeverity.Info);
             }
             else
             {
                 var workspace = ChatState.CurrentWorkspace;
                 if (workspace == null) return;
                 var success = await SyncService.StartSyncAsync(session, workspace);
-                Snackbar.Add(success ? Strings.Layout_MainToolbar_SyncSuccess : Strings.Layout_MainToolbar_SyncFailed, success ? Severity.Success : Severity.Error);
+                Snackbar.Add(success ? Strings.Layout_MainToolbar_SyncSuccess : Strings.Layout_MainToolbar_SyncFailed, success ? ToastSeverity.Success : ToastSeverity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add(Strings.Layout_MainToolbar_SyncError(ex.Message), Severity.Error);
+            Snackbar.Add(Strings.Layout_MainToolbar_SyncError(ex.Message), ToastSeverity.Error);
         }
         finally
         {

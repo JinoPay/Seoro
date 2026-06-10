@@ -1,6 +1,6 @@
 @inject IGitService GitService
 @inject IChatState ChatState
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 @inject ILogger<GitGraphView> Logger
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @using Microsoft.Extensions.Logging
@@ -16,28 +16,26 @@
     @if (string.IsNullOrEmpty(_repoPath))
     {
         <div class="git-graph-empty">
-            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Large" Style="opacity:0.3;"/>
+            <Icon Svg="@Lucide.GitFork" Size="24" Style="opacity:0.3;"/>
             <span>@Strings.GitGraph_NoRepo</span>
         </div>
     }
     else
     {
         <div class="git-graph-header">
-            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small"
-                     Style="width:16px; height:16px; opacity:0.7;"/>
+            <Icon Svg="@Lucide.GitFork" Size="16" Style="opacity:0.7;"/>
             <span class="git-graph-title">@Strings.GitGraph_Title</span>
             @if (_commits.Count > 0)
             {
                 <span class="git-graph-meta">@Strings.GitGraph_CommitCount(_commits.Count)</span>
             }
             <div style="flex:1"></div>
-            <MudTooltip Text="@Strings.Git_Refresh" Placement="Placement.Bottom">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                               Size="Size.Small"
-                               Disabled="@_loading"
-                               OnClick="LoadAsync"
-                               Style="width: 22px; height: 22px; opacity: 0.7;"/>
-            </MudTooltip>
+            <Tooltip Text="@Strings.Git_Refresh" Placement="UiPlacement.Bottom">
+                <IconButton Icon="@Lucide.RefreshCw"
+                            Disabled="@_loading"
+                            OnClick="LoadAsync"
+                            Style="opacity: 0.7;"/>
+            </Tooltip>
         </div>
 
         <div class="git-graph-body">
@@ -53,7 +51,7 @@
                     @if (_loading && _commits.Count == 0)
                     {
                         <div class="git-graph-loading">
-                            <MudProgressLinear Indeterminate="true" Color="Color.Primary"/>
+                            <ProgressBar Indeterminate="true"/>
                             <span>@Strings.GitGraph_Loading</span>
                         </div>
                     }
@@ -95,7 +93,7 @@
                 @if (_selectedSha == null)
                 {
                     <div class="git-graph-empty">
-                        <MudIcon Icon="@Icons.Material.Outlined.Description" Size="Size.Large" Style="opacity:0.3;"/>
+                        <Icon Svg="@Lucide.FileText" Size="24" Style="opacity:0.3;"/>
                         <span>@Strings.GitGraph_SelectCommit</span>
                     </div>
                 }
@@ -110,7 +108,7 @@
                     </div>
                     @if (_filesLoading)
                     {
-                        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2"/>
+                        <ProgressBar Indeterminate="true" Class="my-2"/>
                     }
                     else if (_selectedFiles.Count == 0)
                     {
@@ -192,7 +190,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Git Graph 커밋 히스토리 로드 실패");
-            Snackbar.Add(ex.Message, Severity.Error);
+            Snackbar.Add(ex.Message, ToastSeverity.Error);
         }
         finally
         {
@@ -216,7 +214,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "커밋 파일 목록 로드 실패");
-            Snackbar.Add(ex.Message, Severity.Error);
+            Snackbar.Add(ex.Message, ToastSeverity.Error);
         }
         finally
         {
@@ -233,7 +231,7 @@
             var diff = await GitService.GetCommitFileDiffAsync(_repoPath, _selectedSha, path);
             if (diff == null)
             {
-                Snackbar.Add(Strings.GitGraph_DiffLoadFailed, Severity.Warning);
+                Snackbar.Add(Strings.GitGraph_DiffLoadFailed, ToastSeverity.Warning);
                 return;
             }
             diff.ChangeType = MapStatus(status);
@@ -242,7 +240,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "커밋 diff 로드 실패");
-            Snackbar.Add(ex.Message, Severity.Error);
+            Snackbar.Add(ex.Message, ToastSeverity.Error);
         }
     }
 

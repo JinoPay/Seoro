@@ -1,18 +1,17 @@
 @inject IWorkspaceService WorkspaceService
 
-<MudSelect T="string" Value="SelectedPath" ValueChanged="OnValueChanged" Label="@Label" Variant="Variant.Outlined"
-           Margin="Margin.Dense" Dense="true" Clearable="true" Placeholder="프로젝트 선택..."
-           AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+<Select T="string" Value="SelectedPath" ValueChanged="OnValueChanged" Label="@Label"
+        Fixed="true" Placeholder="프로젝트 선택...">
     @foreach (var ws in _workspaces)
     {
-        <MudSelectItem T="string" Value="@GetProjectPath(ws)">
+        <SelectItem T="string" Value="@GetProjectPath(ws)" Text="@GetProjectName(ws)">
             <div class="d-flex align-center gap-2">
-                <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small"/>
+                <Icon Svg="@Lucide.Folder" Size="14"/>
                 <span>@GetProjectName(ws)</span>
             </div>
-        </MudSelectItem>
+        </SelectItem>
     }
-</MudSelect>
+</Select>
 
 @code {
     [Parameter] public string? SelectedPath { get; set; }

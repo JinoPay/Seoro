@@ -3,7 +3,11 @@
 
 @if (CurrentSession != null)
 {
-    <MudTooltip Text="@BuildTooltip()" Placement="Placement.Top">
+    <Tooltip Placement="UiPlacement.Top">
+        <TooltipContent>
+            <div style="white-space: pre-line; text-align: left;">@BuildTooltip()</div>
+        </TooltipContent>
+        <ChildContent>
         <svg class="token-usage-ring" width="22" height="22" viewBox="0 0 22 22">
             <circle cx="11" cy="11" r="9" fill="none"
                     stroke="var(--border-default)" stroke-width="3"/>
@@ -17,7 +21,8 @@
                         transform="rotate(-90 11 11)"/>
             }
         </svg>
-    </MudTooltip>
+        </ChildContent>
+    </Tooltip>
 }
 
 @code {

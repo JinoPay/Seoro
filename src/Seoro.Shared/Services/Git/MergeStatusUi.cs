@@ -1,4 +1,4 @@
-using MudBlazor;
+using Seoro.Shared.UiKit;
 
 namespace Seoro.Shared.Services.Git;
 
@@ -10,14 +10,13 @@ public static class MergeStatusUi
 {
     public static string StatusIcon(MergeStatusKind kind, int aheadCount = 0) => kind switch
     {
-        MergeStatusKind.Clean when aheadCount == 0 => Icons.Material.Outlined.CheckCircle,
-        MergeStatusKind.Clean => Icons.Material.Filled.CheckCircle,
-        MergeStatusKind.BehindTarget => Icons.Material.Filled.Warning,
-        MergeStatusKind.ConflictExpected => Icons.Material.Filled.Error,
-        MergeStatusKind.UncommittedDirty => Icons.Material.Outlined.EditNote,
-        MergeStatusKind.InConflict => Icons.Material.Filled.Warning,
-        MergeStatusKind.NetworkError => Icons.Material.Filled.WifiOff,
-        _ => Icons.Material.Outlined.HourglassEmpty
+        MergeStatusKind.Clean => Lucide.CircleCheck,
+        MergeStatusKind.BehindTarget => Lucide.TriangleAlert,
+        MergeStatusKind.ConflictExpected => Lucide.CircleAlert,
+        MergeStatusKind.UncommittedDirty => Lucide.SquarePen,
+        MergeStatusKind.InConflict => Lucide.TriangleAlert,
+        MergeStatusKind.NetworkError => Lucide.WifiOff,
+        _ => Lucide.Hourglass
     };
 
     public static string StatusCssClass(MergeStatusKind kind) => kind switch

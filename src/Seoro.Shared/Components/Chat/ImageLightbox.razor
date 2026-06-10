@@ -6,7 +6,7 @@
 {
     <div class="image-lightbox-overlay" @onclick="Close" @onkeydown="HandleKeyDown" tabindex="0">
         <button class="image-lightbox-close" @onclick="Close" @onclick:stopPropagation="true">
-            <MudIcon Icon="@Icons.Material.Filled.Close" Style="color: inherit; width: 20px; height: 20px;"/>
+            <Icon Svg="@Lucide.X" Size="20" Style="color: inherit;"/>
         </button>
 
         <img src="@Lightbox.ImageSrc" alt="@Lightbox.AltText"
@@ -20,25 +20,33 @@
         {
             <div class="image-lightbox-caption">@Lightbox.AltText</div>
         }
+
+        @if (_contextMenuOpen)
+        {
+            <div class="ui-popover-backdrop" style="z-index: 10000;"
+                 @onclick="CloseContextMenu" @onclick:stopPropagation="true"
+                 @oncontextmenu="CloseContextMenu" @oncontextmenu:preventDefault="true"></div>
+            <div class="ui-popover ui-popover--fixed ui-menu ui-menu--dense"
+                 style="left: @(_menuX)px; top: @(_menuY)px; z-index: 10001;"
+                 @onclick:stopPropagation="true">
+                <button type="button" class="ui-menu__item" @onclick="SaveImage">
+                    <Icon Svg="@Lucide.Download" Size="14"/>
+                    <span class="ui-menu__item-label">@Strings.Common_Save</span>
+                </button>
+                <button type="button" class="ui-menu__item" @onclick="CopyImage">
+                    <Icon Svg="@Lucide.Copy" Size="14"/>
+                    <span class="ui-menu__item-label">@Strings.Common_Copy</span>
+                </button>
+            </div>
+        }
     </div>
 }
 
-<MudMenu @ref="_contextMenu"
-         ActivationEvent="@MouseEvent.RightClick"
-         PositionAtCursor="true"
-         Dense="true"
-         Style="position: absolute; visibility: hidden; width: 0; height: 0;">
-    <MudMenuItem OnClick="SaveImage" Icon="@Icons.Material.Filled.Download">
-        @Strings.Common_Save
-    </MudMenuItem>
-    <MudMenuItem OnClick="CopyImage" Icon="@Icons.Material.Filled.ContentCopy">
-        @Strings.Common_Copy
-    </MudMenuItem>
-</MudMenu>
-
 @code {
 
-    private MudMenu? _contextMenu;
+    private bool _contextMenuOpen;
+    private double _menuX;
+    private double _menuY;
 
     protected override void OnInitialized()
     {
@@ -52,29 +60,45 @@
 
     private void Close()
     {
+        _contextMenuOpen = false;
         Lightbox.Close();
     }
 
     private void HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Escape")
+        {
+            if (_contextMenuOpen)
+            {
+                _contextMenuOpen = false;
+                return;
+            }
             Lightbox.Close();
+        }
     }
 
-    private async Task OpenContextMenu()
+    private void OpenContextMenu(MouseEventArgs e)
     {
-        if (_contextMenu != null)
-            await _contextMenu.OpenMenuAsync(EventArgs.Empty);
+        _menuX = e.ClientX;
+        _menuY = e.ClientY;
+        _contextMenuOpen = true;
+    }
+
+    private void CloseContextMenu()
+    {
+        _contextMenuOpen = false;
     }
 
     private async Task SaveImage()
     {
+        _contextMenuOpen = false;
         var filename = string.IsNullOrEmpty(Lightbox.AltText) ? "image" : Lightbox.AltText;
         await JS.InvokeVoidAsync("saveImage", Lightbox.ImageSrc, filename);
     }
 
     private async Task CopyImage()
     {
+        _contextMenuOpen = false;
         await JS.InvokeAsync<bool>("copyImageToClipboard", Lightbox.ImageSrc);
     }
 

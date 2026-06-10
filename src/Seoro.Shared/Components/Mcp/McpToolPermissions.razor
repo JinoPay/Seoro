@@ -1,43 +1,41 @@
 @implements IDisposable
 @inject IClaudeSettingsService ClaudeSettingsService
 @inject IMcpService McpService
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 
 <div class="mcp-permissions">
     <div class="mcp-permissions-header">
-        <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small"/>
+        <Icon Svg="@Lucide.Shield" Size="14"/>
         <span class="typo-subtitle2">도구 권한</span>
-        <MudTooltip Text="Claude가 이 서버의 도구를 사용할 시기를 제어합니다">
-            <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small" Style="opacity:0.5;"/>
-        </MudTooltip>
+        <Tooltip Text="Claude가 이 서버의 도구를 사용할 시기를 제어합니다">
+            <Icon Svg="@Lucide.CircleHelp" Size="14" Style="opacity:0.5;"/>
+        </Tooltip>
         @if (Server != null)
         {
-            <MudTooltip Text="서버에 연결하여 도구 목록을 가져오고 전부 허용으로 설정합니다">
-                <MudButton StartIcon="@(_discovering ? null : Icons.Material.Filled.Sync)"
-                           Size="Size.Small" Variant="Variant.Text"
-                           OnClick="DiscoverAndAllowTools"
-                           Disabled="@_discovering"
-                           Class="ml-auto">
+            <Tooltip Text="서버에 연결하여 도구 목록을 가져오고 전부 허용으로 설정합니다" Class="ml-auto">
+                <Button StartIcon="@(_discovering ? null : Lucide.RefreshCw)"
+                        ButtonStyle="ButtonStyle.Text"
+                        OnClick="DiscoverAndAllowTools"
+                        Disabled="@_discovering">
                     @if (_discovering)
                     {
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                             Style="width:14px;height:14px;margin-right:4px;"/>
+                        <Spinner Size="14" Style="margin-right:4px;"/>
                     }
                     도구 조회
-                </MudButton>
-            </MudTooltip>
+                </Button>
+            </Tooltip>
         }
     </div>
 
     @if (_discoverError != null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true" Class="mt-1" ShowCloseIcon="true"
-                  CloseIconClicked="@(() => _discoverError = null)">@_discoverError</MudAlert>
+        <Alert Tone="Tone.Error" Dense="true" Class="mt-1"
+               OnClose="@(() => _discoverError = null)">@_discoverError</Alert>
     }
 
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="my-2"/>
+        <ProgressBar Indeterminate="true" Class="my-2"/>
     }
     else
     {
@@ -49,29 +47,25 @@
                     <div class="mcp-tool-row">
                         <span class="typo-caption mcp-tool-name">@perm.ToolName</span>
                         <div class="mcp-tool-actions">
-                            <MudTooltip Text="허용">
-                                <MudIconButton Icon="@Icons.Material.Filled.CheckCircle"
-                                               Size="Size.Small"
-                                               Color="@(perm.Level == McpPermissionLevel.Allow ? Color.Success : Color.Default)"
-                                               OnClick="@(() => SetPermission(perm, McpPermissionLevel.Allow))"/>
-                            </MudTooltip>
-                            <MudTooltip Text="확인 후 허용">
-                                <MudIconButton Icon="@Icons.Material.Filled.HelpOutline"
-                                               Size="Size.Small"
-                                               Color="@(perm.Level == McpPermissionLevel.Ask ? Color.Warning : Color.Default)"
-                                               OnClick="@(() => SetPermission(perm, McpPermissionLevel.Ask))"/>
-                            </MudTooltip>
-                            <MudTooltip Text="금지">
-                                <MudIconButton Icon="@Icons.Material.Filled.Block"
-                                               Size="Size.Small"
-                                               Color="@(perm.Level == McpPermissionLevel.Deny ? Color.Error : Color.Default)"
-                                               OnClick="@(() => SetPermission(perm, McpPermissionLevel.Deny))"/>
-                            </MudTooltip>
-                            <MudTooltip Text="제거">
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                               Size="Size.Small"
-                                               OnClick="@(() => RemovePermission(perm))"/>
-                            </MudTooltip>
+                            <Tooltip Text="허용">
+                                <IconButton Icon="@Lucide.CircleCheck"
+                                            Tone="@(perm.Level == McpPermissionLevel.Allow ? Tone.Success : Tone.Default)"
+                                            OnClick="@(() => SetPermission(perm, McpPermissionLevel.Allow))"/>
+                            </Tooltip>
+                            <Tooltip Text="확인 후 허용">
+                                <IconButton Icon="@Lucide.CircleHelp"
+                                            Tone="@(perm.Level == McpPermissionLevel.Ask ? Tone.Warning : Tone.Default)"
+                                            OnClick="@(() => SetPermission(perm, McpPermissionLevel.Ask))"/>
+                            </Tooltip>
+                            <Tooltip Text="금지">
+                                <IconButton Icon="@Lucide.Ban"
+                                            Tone="@(perm.Level == McpPermissionLevel.Deny ? Tone.Error : Tone.Default)"
+                                            OnClick="@(() => SetPermission(perm, McpPermissionLevel.Deny))"/>
+                            </Tooltip>
+                            <Tooltip Text="제거">
+                                <IconButton Icon="@Lucide.Trash2"
+                                            OnClick="@(() => RemovePermission(perm))"/>
+                            </Tooltip>
                         </div>
                     </div>
                 }
@@ -87,27 +81,25 @@
             @if (_addingNew)
             {
                 <div class="d-flex gap-1 align-center">
-                    <MudTextField @bind-Value="_newToolName" Placeholder="도구 이름 (예: get_screenshot)"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense"
-                                  Style="flex: 1;" Immediate="true"/>
-                    <MudSelect T="McpPermissionLevel" @bind-Value="_newLevel" Variant="Variant.Outlined"
-                               Margin="Margin.Dense" Style="width: 100px;">
-                        <MudSelectItem T="McpPermissionLevel" Value="McpPermissionLevel.Allow">허용</MudSelectItem>
-                        <MudSelectItem T="McpPermissionLevel" Value="McpPermissionLevel.Ask">확인</MudSelectItem>
-                        <MudSelectItem T="McpPermissionLevel" Value="McpPermissionLevel.Deny">금지</MudSelectItem>
-                    </MudSelect>
-                    <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary"
-                                   OnClick="AddPermission" Disabled="@string.IsNullOrWhiteSpace(_newToolName)"/>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                                   OnClick="@(() => { _addingNew = false; _newToolName = ""; })"/>
+                    <TextField @bind-Value="_newToolName" Placeholder="도구 이름 (예: get_screenshot)"
+                               Style="flex: 1;" Immediate="true"/>
+                    <Select T="McpPermissionLevel" @bind-Value="_newLevel" Fixed="true" Style="width: 100px;">
+                        <SelectItem T="McpPermissionLevel" Value="McpPermissionLevel.Allow" Text="허용">허용</SelectItem>
+                        <SelectItem T="McpPermissionLevel" Value="McpPermissionLevel.Ask" Text="확인">확인</SelectItem>
+                        <SelectItem T="McpPermissionLevel" Value="McpPermissionLevel.Deny" Text="금지">금지</SelectItem>
+                    </Select>
+                    <IconButton Icon="@Lucide.Check" Tone="Tone.Primary"
+                                OnClick="AddPermission" Disabled="@string.IsNullOrWhiteSpace(_newToolName)"/>
+                    <IconButton Icon="@Lucide.X"
+                                OnClick="@(() => { _addingNew = false; _newToolName = ""; })"/>
                 </div>
             }
             else
             {
-                <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Variant="Variant.Text"
-                           OnClick="@(() => _addingNew = true)">
+                <Button StartIcon="@Lucide.Plus" ButtonStyle="ButtonStyle.Text"
+                        OnClick="@(() => _addingNew = true)">
                     도구 권한 추가
-                </MudButton>
+                </Button>
             }
         </div>
     }
@@ -185,7 +177,7 @@
         await ClaudeSettingsService.WriteAsync(settingsScope, settings, ProjectPath);
         _newToolName = "";
         _addingNew = false;
-        Snackbar.Add("도구 권한이 추가되었습니다.", Severity.Success);
+        Snackbar.Add("도구 권한이 추가되었습니다.", ToastSeverity.Success);
         await LoadPermissionsAsync();
     }
 
@@ -232,11 +224,11 @@
             if (newCount > 0)
             {
                 await ClaudeSettingsService.WriteAsync(settingsScope, settings, ProjectPath);
-                Snackbar.Add($"도구 {newCount}개를 허용으로 설정했습니다.", Severity.Success);
+                Snackbar.Add($"도구 {newCount}개를 허용으로 설정했습니다.", ToastSeverity.Success);
             }
             else
             {
-                Snackbar.Add($"도구 {result.Tools.Count}개 조회 완료 (이미 모두 권한 설정됨)", Severity.Info);
+                Snackbar.Add($"도구 {result.Tools.Count}개 조회 완료 (이미 모두 권한 설정됨)", ToastSeverity.Info);
             }
 
             await LoadPermissionsAsync();
@@ -258,7 +250,7 @@
 <style>
     .mcp-permissions {
         padding-top: 12px;
-        border-top: 1px solid var(--mud-palette-lines-default);
+        border-top: 1px solid var(--border-default);
         margin-top: 12px;
     }
 
@@ -278,7 +270,7 @@
     }
 
     .mcp-tool-row:hover {
-        background: var(--mud-palette-action-default-hover);
+        background: var(--bg-hover);
     }
 
     .mcp-tool-name {

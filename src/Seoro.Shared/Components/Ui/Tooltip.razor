@@ -1,0 +1,33 @@
+@using Seoro.Shared.UiKit
+
+@if (string.IsNullOrEmpty(Text) && TooltipContent is null)
+{
+    @ChildContent
+}
+else
+{
+    <span class="ui-tooltip-host @Class" style="@Style">
+        @ChildContent
+        <span class="ui-tooltip ui-tooltip--@PlacementClass" role="tooltip">
+            @if (TooltipContent is not null)
+            {
+                @TooltipContent
+            }
+            else
+            {
+                @Text
+            }
+        </span>
+    </span>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public RenderFragment? TooltipContent { get; set; }
+    [Parameter] public UiPlacement Placement { get; set; } = UiPlacement.Top;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private string PlacementClass => Placement.ToString().ToLowerInvariant();
+}

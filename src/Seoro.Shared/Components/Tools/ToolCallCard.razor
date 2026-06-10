@@ -4,29 +4,25 @@
         {
             @if (!Tool.IsComplete)
             {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                     Style="width: 14px; height: 14px;" Color="Color.Warning"/>
+                <Spinner Size="14" Tone="Tone.Warning"/>
             }
             else if (Tool.IsError)
             {
-                <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
-                         Style="width: 16px; height: 16px;"/>
+                <Icon Svg="@Lucide.CircleAlert" Size="16" Tone="Tone.Error"/>
             }
             else
             {
-                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
-                         Style="width: 16px; height: 16px;"/>
+                <Icon Svg="@Lucide.CircleCheck" Size="16" Tone="Tone.Success"/>
             }
         }
-        <MudIcon Icon="@ToolDisplayHelper.GetToolIcon(Tool.Name)" Size="Size.Small"
-                 Style="width: 16px; height: 16px; opacity: 0.6;"/>
+        <Icon Svg="@ToolDisplayHelper.GetToolLucideIcon(Tool.Name)" Size="16" Style="opacity: 0.6;"/>
         <span class="tool-card-name">@_headerLabel</span>
         @if (Tool.IsComplete && _compactResult is string hint)
         {
             <span class="tool-card-hint">@hint</span>
         }
-        <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                 Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px;"/>
+        <Icon Svg="@(_expanded ? Lucide.ChevronUp : Lucide.ChevronDown)"
+              Size="16" Style="opacity: 0.4;"/>
     </div>
 
     @if (_expanded)

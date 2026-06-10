@@ -7,32 +7,32 @@
     <div class="tree-header">
         <span class="tree-header-label">Explorer</span>
         <div class="tree-header-actions">
-            <MudIconButton Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small"
-                           Style="width: 22px; height: 22px; opacity: 0.5;"
-                           OnClick="ExpandAll" Disabled="_loading || _tree.Count == 0"
-                           title="모두 펼치기"/>
-            <MudIconButton Icon="@Icons.Material.Filled.UnfoldLess" Size="Size.Small"
-                           Style="width: 22px; height: 22px; opacity: 0.5;"
-                           OnClick="CollapseAll" Disabled="_loading || _tree.Count == 0"
-                           title="모두 접기"/>
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                           Style="width: 22px; height: 22px; opacity: 0.5;"
-                           OnClick="LoadFilesAsync" Disabled="_loading"/>
+            <IconButton Icon="@Lucide.ChevronsUpDown"
+                        Style="width: 22px; height: 22px; opacity: 0.5;"
+                        OnClick="ExpandAll" Disabled="_loading || _tree.Count == 0"
+                        Title="모두 펼치기"/>
+            <IconButton Icon="@Lucide.ChevronsDownUp"
+                        Style="width: 22px; height: 22px; opacity: 0.5;"
+                        OnClick="CollapseAll" Disabled="_loading || _tree.Count == 0"
+                        Title="모두 접기"/>
+            <IconButton Icon="@Lucide.RefreshCw"
+                        Style="width: 22px; height: 22px; opacity: 0.5;"
+                        OnClick="LoadFilesAsync" Disabled="_loading"/>
         </div>
     </div>
 
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-2"/>
+        <ProgressBar Indeterminate="true" Class="my-2"/>
     }
     else if (_error != null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true" Class="my-2">@_error</MudAlert>
+        <Alert Tone="Tone.Error" Dense="true" Class="my-2">@_error</Alert>
     }
     else if (_tree.Count == 0)
     {
         <div class="sidebar-explorer-empty">
-            <MudIcon Icon="@Icons.Material.Filled.FolderOff" Size="Size.Large" Style="opacity: 0.15;"/>
+            <Icon Svg="@Lucide.FolderX" Size="24" Style="opacity: 0.15;"/>
             <span>@Strings.Sidebar_Explorer_NoFilesFound</span>
         </div>
     }

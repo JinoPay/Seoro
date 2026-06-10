@@ -21,7 +21,7 @@
                         }
                         else
                         {
-                            <MudTooltip Placement="Placement.Top" Arrow="true" RootClass="heatmap-cell-wrapper">
+                            <Tooltip Class="heatmap-cell-wrapper">
                                 <ChildContent>
                                     <div class="heatmap-cell @GetColorClass(day.Count)"></div>
                                 </ChildContent>
@@ -31,7 +31,7 @@
                                         <div>@Strings.Dashboard_Heatmap_Tooltip(day.Count, day.Sessions, day.Tools)</div>
                                     </div>
                                 </TooltipContent>
-                            </MudTooltip>
+                            </Tooltip>
                         }
                     }
                 </div>
@@ -151,7 +151,7 @@
 
 <style>
     .heatmap-card {
-        border: 1px solid var(--mud-palette-lines-default);
+        border: 1px solid var(--border-default);
         border-radius: 12px;
         padding: 16px;
         margin-bottom: 16px;
@@ -160,7 +160,7 @@
     .heatmap-title {
         font-size: 0.85rem;
         font-weight: 500;
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
         margin-bottom: 12px;
     }
 
@@ -181,7 +181,7 @@
     .heatmap-day-label {
         height: 14px;
         font-size: 0.6rem;
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
         line-height: 14px;
     }
 
@@ -199,8 +199,13 @@
         flex: 1;
     }
 
-    .heatmap-cell-wrapper {
-        display: contents;
+    .ui-tooltip-host.heatmap-cell-wrapper {
+        display: block;
+        height: 14px;
+    }
+
+    .heatmap-cell-wrapper .heatmap-cell {
+        width: 100%;
     }
 
     .heatmap-cell {
@@ -210,13 +215,13 @@
     }
 
     .heatmap-cell.empty {
-        background: var(--mud-palette-action-default-hover);
+        background: var(--bg-hover);
         cursor: default;
         opacity: 0.4;
     }
 
     .heatmap-cell.level-0 {
-        background: var(--mud-palette-action-default-hover);
+        background: var(--bg-hover);
     }
 
     .heatmap-cell.level-1 {
@@ -245,7 +250,7 @@
         gap: 8px;
         margin-top: 12px;
         font-size: 0.7rem;
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
     }
 
     .heatmap-legend-blocks {
@@ -260,7 +265,7 @@
     }
 
     .heatmap-legend-block.level-0 {
-        background: var(--mud-palette-action-default-hover);
+        background: var(--bg-hover);
     }
 
     .heatmap-legend-block.level-1 {

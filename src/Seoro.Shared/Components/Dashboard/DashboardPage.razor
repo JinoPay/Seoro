@@ -9,20 +9,20 @@
         <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
             @if (_refreshing)
             {
-                <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="width: 20px; height: 20px;"/>
+                <Spinner Size="20"/>
             }
-            <MudTooltip Text="@Strings.Dashboard_RefreshTooltip">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                               Disabled="_refreshing || _loading"
-                               OnClick="OnRefreshClick"/>
-            </MudTooltip>
+            <Tooltip Text="@Strings.Dashboard_RefreshTooltip">
+                <IconButton Icon="@Lucide.RefreshCw"
+                            Disabled="_refreshing || _loading"
+                            OnClick="OnRefreshClick"/>
+            </Tooltip>
         </div>
     </div>
     <div class="settings-content-body">
         @if (_loading)
         {
             <div style="display: flex; justify-content: center; padding: 40px;">
-                <MudProgressCircular Indeterminate="true"/>
+                <Spinner Size="28"/>
             </div>
         }
         else
@@ -45,9 +45,8 @@
                         }
                     </div>
                 </div>
-                <MudProgressLinear Value="@(_stats.Level.Progress * 100)" Color="Color.Primary"
-                                   Rounded="true" Size="Size.Medium"
-                                   Style="height: 8px;"/>
+                <ProgressBar Value="@(_stats.Level.Progress * 100)"
+                             Style="height: 8px;"/>
                 <div class="d-flex gap-4 mt-2" style="font-size: 0.7rem; opacity: 0.8;">
                     <span>@Strings.Dashboard_Stat_Projects(_stats.TotalProjects)</span>
                     <span>@Strings.Dashboard_Stat_Achievements(_stats.Achievements.Count(a => a.Unlocked), _stats.Achievements.Count)</span>
@@ -72,9 +71,13 @@
                     <div class="dashboard-config-title">@Strings.Dashboard_ConfigCompleteness</div>
                     <div class="d-flex align-center gap-4">
                         <div style="position: relative; flex-shrink: 0;">
-                            <MudProgressCircular Value="@(_stats.ConfigCompleteness * 100)"
-                                                 Color="Color.Primary" Size="Size.Large"
-                                                 StrokeWidth="6"/>
+                            <svg width="56" height="56" viewBox="0 0 56 56" style="transform: rotate(-90deg);" role="progressbar">
+                                <circle cx="28" cy="28" r="25" fill="none" stroke="var(--bg-active)" stroke-width="6"/>
+                                <circle cx="28" cy="28" r="25" fill="none" stroke="var(--accent)" stroke-width="6"
+                                        stroke-linecap="round"
+                                        stroke-dasharray="@ConfigCircumference"
+                                        stroke-dashoffset="@ConfigDashOffset"/>
+                            </svg>
                             <span
                                 class="dashboard-config-pct">@((_stats.ConfigCompleteness * 100).ToString("F0"))%</span>
                         </div>
@@ -82,9 +85,7 @@
                             @foreach (var item in _stats.ConfigItems)
                             {
                                 <div class="dashboard-config-item @(item.IsConfigured ? "configured" : "")">
-                                    <MudIcon
-                                        Icon="@(item.IsConfigured ? Icons.Material.Filled.CheckCircle : Icons.Material.Outlined.RadioButtonUnchecked)"
-                                        Size="Size.Small"/>
+                                    <Icon Svg="@(item.IsConfigured ? Lucide.CircleCheck : Lucide.Circle)" Size="14"/>
                                     <span>@item.Name</span>
                                 </div>
                             }
@@ -110,6 +111,13 @@
 
 @code {
     private DashboardStats _stats = new();
+
+    private string ConfigCircumference =>
+        (2 * Math.PI * 25).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+
+    private string ConfigDashOffset =>
+        ((1 - Math.Clamp(_stats.ConfigCompleteness, 0, 1)) * 2 * Math.PI * 25)
+            .ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
     private bool _loading = true;
     private bool _refreshing;
 
@@ -143,7 +151,7 @@
 
 <style>
     .dashboard-level-banner {
-        background: linear-gradient(135deg, var(--mud-palette-primary-darken) 0%, var(--mud-palette-primary) 100%);
+        background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent) 100%);
         border-radius: 12px;
         padding: 20px;
         color: white;
@@ -163,7 +171,7 @@
     }
 
     .dashboard-config-card {
-        border: 1px solid var(--mud-palette-lines-default);
+        border: 1px solid var(--border-default);
         border-radius: 12px;
         padding: 16px;
     }
@@ -171,7 +179,7 @@
     .dashboard-config-title {
         font-size: 0.85rem;
         font-weight: 500;
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
         margin-bottom: 12px;
     }
 
@@ -197,14 +205,14 @@
         align-items: center;
         gap: 4px;
         font-size: 0.7rem;
-        color: var(--mud-palette-text-disabled);
+        color: var(--text-muted);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
     .dashboard-config-item.configured {
-        color: var(--mud-palette-text-primary);
+        color: var(--text-primary);
     }
 
     .dashboard-bottom-row {

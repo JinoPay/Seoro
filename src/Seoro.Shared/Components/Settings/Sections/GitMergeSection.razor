@@ -21,8 +21,7 @@
 
     @* ── 머지 성공 시 자동 아카이브 ── *@
     <div class="stack-row items-center gap-2" style="padding: 2px 0;">
-        <MudSwitch T="bool" @bind-Value="Settings.AutoArchiveOnMergeSuccess" Color="Color.Primary"
-                   Style="margin: 0;"/>
+        <Switch @bind-Value="Settings.AutoArchiveOnMergeSuccess" Style="margin: 0;"/>
         <div>
             <div class="settings-field-label" style="margin-bottom: 0;">@Strings.Settings_GitMerge_AutoArchiveLabel</div>
             <div class="settings-field-hint" style="margin-top: 2px;">@Strings.Settings_GitMerge_AutoArchiveHint</div>
@@ -41,17 +40,16 @@
             <div class="settings-field-hint" style="margin: 0;">변수: <code>{branch}</code> <code>{target}</code> <code>{uncommittedNote}</code></div>
             @if (!string.IsNullOrEmpty(Settings.MergePromptCreatePr))
             {
-                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
-                           OnClick="@(() => Settings.MergePromptCreatePr = null)"
-                           Style="text-transform: none; padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
+                <Button ButtonStyle="ButtonStyle.Text"
+                        OnClick="@(() => Settings.MergePromptCreatePr = null)"
+                        Style="padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
                     @Strings.Settings_GitMerge_ResetToDefault
-                </MudButton>
+                </Button>
             }
         </div>
-        <MudTextField T="string" @bind-Value="Settings.MergePromptCreatePr"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="6"
-                      Placeholder="@SeoroConstants.DefaultMergePromptCreatePr"
-                      Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
+        <TextField @bind-Value="Settings.MergePromptCreatePr" Lines="6"
+                   Placeholder="@SeoroConstants.DefaultMergePromptCreatePr"
+                   Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
     </div>
 
     @* ── 커밋·푸시 프롬프트 ── *@
@@ -61,17 +59,16 @@
             <div class="settings-field-hint" style="margin: 0;">변수: <code>{branch}</code></div>
             @if (!string.IsNullOrEmpty(Settings.MergePromptPush))
             {
-                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
-                           OnClick="@(() => Settings.MergePromptPush = null)"
-                           Style="text-transform: none; padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
+                <Button ButtonStyle="ButtonStyle.Text"
+                        OnClick="@(() => Settings.MergePromptPush = null)"
+                        Style="padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
                     @Strings.Settings_GitMerge_ResetToDefault
-                </MudButton>
+                </Button>
             }
         </div>
-        <MudTextField T="string" @bind-Value="Settings.MergePromptPush"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="6"
-                      Placeholder="@SeoroConstants.DefaultMergePromptPush"
-                      Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
+        <TextField @bind-Value="Settings.MergePromptPush" Lines="6"
+                   Placeholder="@SeoroConstants.DefaultMergePromptPush"
+                   Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
     </div>
 
     @* ── 충돌 해결 프롬프트 ── *@
@@ -81,17 +78,16 @@
             <div class="settings-field-hint" style="margin: 0;">변수: <code>{conflictFiles}</code></div>
             @if (!string.IsNullOrEmpty(Settings.MergePromptResolveConflict))
             {
-                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
-                           OnClick="@(() => Settings.MergePromptResolveConflict = null)"
-                           Style="text-transform: none; padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
+                <Button ButtonStyle="ButtonStyle.Text"
+                        OnClick="@(() => Settings.MergePromptResolveConflict = null)"
+                        Style="padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
                     @Strings.Settings_GitMerge_ResetToDefault
-                </MudButton>
+                </Button>
             }
         </div>
-        <MudTextField T="string" @bind-Value="Settings.MergePromptResolveConflict"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="6"
-                      Placeholder="@SeoroConstants.DefaultMergePromptResolveConflict"
-                      Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
+        <TextField @bind-Value="Settings.MergePromptResolveConflict" Lines="6"
+                   Placeholder="@SeoroConstants.DefaultMergePromptResolveConflict"
+                   Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
     </div>
 
     @* ── 충돌 예상 시 리베이스 프롬프트 ── *@
@@ -101,17 +97,16 @@
             <div class="settings-field-hint" style="margin: 0;">변수: <code>{branch}</code> <code>{target}</code></div>
             @if (!string.IsNullOrEmpty(Settings.MergePromptRebaseOnTarget))
             {
-                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
-                           OnClick="@(() => Settings.MergePromptRebaseOnTarget = null)"
-                           Style="text-transform: none; padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
+                <Button ButtonStyle="ButtonStyle.Text"
+                        OnClick="@(() => Settings.MergePromptRebaseOnTarget = null)"
+                        Style="padding: 0 6px; min-width: 0; font-size: var(--text-xs);">
                     @Strings.Settings_GitMerge_ResetToDefault
-                </MudButton>
+                </Button>
             }
         </div>
-        <MudTextField T="string" @bind-Value="Settings.MergePromptRebaseOnTarget"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Lines="6"
-                      Placeholder="@SeoroConstants.DefaultMergePromptRebaseOnTarget"
-                      Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
+        <TextField @bind-Value="Settings.MergePromptRebaseOnTarget" Lines="6"
+                   Placeholder="@SeoroConstants.DefaultMergePromptRebaseOnTarget"
+                   Style="font-size: var(--text-sm); font-family: var(--font-mono);"/>
     </div>
 
 </div>

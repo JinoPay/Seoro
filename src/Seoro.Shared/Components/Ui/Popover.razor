@@ -1,0 +1,69 @@
+@using Seoro.Shared.UiKit
+@inject IJSRuntime JS
+
+<div class="ui-popover-anchor @Class" style="@Style" @ref="_anchorRef">
+    @AnchorContent
+    @if (Open)
+    {
+        <div class="ui-popover-backdrop" @onclick="CloseAsync" @oncontextmenu="CloseAsync" @oncontextmenu:preventDefault="true"></div>
+        <div class="ui-popover ui-popover--@PlacementClass @(Fixed ? "ui-popover--fixed" : null) @PopoverClass"
+             @ref="_panelRef"
+             tabindex="-1"
+             @onkeydown="HandleKeyDown">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public RenderFragment? AnchorContent { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public PopoverPlacement Placement { get; set; } = PopoverPlacement.BottomStart;
+
+    /// <summary>
+    /// overflow 컨테이너 내부 앵커용 — JS로 position:fixed 좌표를 계산해 클리핑을 피한다.
+    /// </summary>
+    [Parameter] public bool Fixed { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public string? PopoverClass { get; set; }
+
+    private ElementReference _anchorRef;
+    private ElementReference _panelRef;
+    private bool _positioned;
+
+    private string PlacementClass => Placement.ToString().ToLowerInvariant();
+
+    public Task CloseAsync()
+    {
+        if (!Open) return Task.CompletedTask;
+        Open = false;
+        return OpenChanged.InvokeAsync(false);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Open && Fixed && !_positioned)
+        {
+            _positioned = true;
+            try
+            {
+                await JS.InvokeVoidAsync("seoroUi.positionPopover", _anchorRef, _panelRef, Placement.ToString());
+            }
+            catch
+            {
+                // JS 미로드 등 — absolute 포지셔닝으로 동작
+            }
+        }
+        else if (!Open)
+        {
+            _positioned = false;
+        }
+    }
+
+    private Task HandleKeyDown(KeyboardEventArgs e)
+        => e.Key == "Escape" ? CloseAsync() : Task.CompletedTask;
+}

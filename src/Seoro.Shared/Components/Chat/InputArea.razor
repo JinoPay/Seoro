@@ -3,7 +3,7 @@
 @inject IJSRuntime JSRuntime
 @inject IChatState ChatState
 @inject ISessionService SessionService
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 @inject IMessageQueueService MessageQueue
 @implements IAsyncDisposable
 
@@ -25,12 +25,12 @@
         @if (_pendingSkill != null)
         {
             <div class="attachment-chips">
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                         Icon="@Icons.Material.Filled.Terminal"
-                         OnClose="@RemovePendingSkill"
-                         Style="font-size: 0.75rem;">
+                <Chip ButtonStyle="ButtonStyle.Outlined"
+                      Icon="@Lucide.Terminal"
+                      OnClose="@RemovePendingSkill"
+                      Style="font-size: 0.75rem;">
                     /@_pendingSkill.Name
-                </MudChip>
+                </Chip>
             </div>
         }
 
@@ -40,16 +40,14 @@
 
         <AttachmentChips Attachments="_pendingAttachments" OnRemove="RemoveAttachment"/>
 
-        <MudTextField T="string" Value="@_inputText" ValueChanged="@HandleInputValueChanged"
-                      Placeholder="@GetPlaceholder()"
-                      Variant="Variant.Text"
-                      Lines="2"
-                      Sizing="InputSizing.Auto"
-                      MaxLines="8"
-                      Immediate="true"
-                      Disabled="Disabled"
-                      Class="input-textarea-full"
-                      Style="font-size: var(--text-base);"/>
+        <div class="input-textarea-full">
+            <textarea class="chat-input-textarea"
+                      rows="2"
+                      placeholder="@GetPlaceholder()"
+                      disabled="@Disabled"
+                      value="@_inputText"
+                      @oninput="HandleChatInput"></textarea>
+        </div>
 
         <InputToolbar PermissionMode="@_currentPermissionMode"
                       OnPermissionModeChanged="HandlePermissionModeChangedLocal"
@@ -313,6 +311,19 @@
         return false;
     }
 
+    private async Task HandleChatInput(ChangeEventArgs e)
+    {
+        HandleInputValueChanged(e.Value?.ToString() ?? string.Empty);
+        try
+        {
+            // 입력 내용에 따라 textarea 높이 자동 조절 (Mud InputSizing.Auto 대체)
+            await JSRuntime.InvokeVoidAsync("seoroUi.autoGrowChatInput", "input-area");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
     private void HandleInputValueChanged(string value)
     {
         if (_suppressInputUpdates) return;
@@ -374,7 +385,7 @@
     public void OnLargeTextPasted(string fileName, string contentType, string base64Data)
     {
         AddPendingAttachmentFromBase64(fileName, contentType, base64Data);
-        Snackbar.Add(Strings.Chat_PastedAsFile, Severity.Info);
+        Snackbar.Add(Strings.Chat_PastedAsFile, ToastSeverity.Info);
     }
 
     [JSInvokable]
@@ -726,7 +737,7 @@
         {
             // 입력란이 차있으면 다시 큐 끝에 추가
             MessageQueue.Enqueue(_trackedSessionId, msg.Input);
-            Snackbar.Add(Strings.Chat_Queue_EditBlocked, Severity.Warning);
+            Snackbar.Add(Strings.Chat_Queue_EditBlocked, ToastSeverity.Warning);
             return;
         }
 

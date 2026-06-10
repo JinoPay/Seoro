@@ -5,8 +5,7 @@
 @inject IJSRuntime JS
 <div class="tool-widget tool-widget-agent">
     <div class="tool-widget-header">
-        <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small"
-                 Style="width: 14px; height: 14px; opacity: 0.6;"/>
+        <Icon Svg="@Lucide.Bot" Size="14" Style="opacity: 0.6;"/>
         @if (!string.IsNullOrEmpty(_subagentType))
         {
             <span class="agent-type-badge">@_subagentType</span>
@@ -50,8 +49,8 @@
             <div class="agent-prompt-label" @onclick="@(() => _promptExpanded = !_promptExpanded)"
                  @onclick:stopPropagation="true">
                 <span>프롬프트</span>
-                <MudIcon Icon="@(_promptExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                         Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;"/>
+                <Icon Svg="@(_promptExpanded ? Lucide.ChevronUp : Lucide.ChevronDown)"
+                      Size="14" Style="opacity: 0.4;"/>
             </div>
             @if (_promptExpanded)
             {
@@ -80,8 +79,7 @@
     else if (!Tool.IsComplete)
     {
         <div class="agent-running-indicator">
-            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                 Style="width: 14px; height: 14px;" Color="Color.Warning"/>
+            <Spinner Size="14" Tone="Tone.Warning"/>
             <span>에이전트 실행 중...</span>
         </div>
     }

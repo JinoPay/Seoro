@@ -2,7 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Seoro.Shared.Resources;
-using MudBlazor;
+using Seoro.Shared.UiKit;
 
 namespace Seoro.Shared.Services.Infrastructure;
 
@@ -125,42 +125,42 @@ public static class ToolDisplayHelper
     }
 
     /// <summary>
-    ///     Returns a Material Design icon string for the given tool name.
+    ///     Returns a Lucide SVG icon string for the given tool name (Seoro UI Kit).
     /// </summary>
-    public static string GetToolIcon(string? name)
+    public static string GetToolLucideIcon(string? name)
     {
         var normalized = NormalizeToolName(name ?? "");
         return normalized switch
         {
-            "Bash" => Icons.Material.Filled.Terminal,
-            "Read" => Icons.Material.Filled.Description,
-            "Write" => Icons.Material.Filled.Edit,
-            "Edit" => Icons.Material.Filled.EditNote,
-            "Glob" => Icons.Material.Filled.Search,
-            "Grep" => Icons.Material.Filled.FindInPage,
-            "Agent" => Icons.Material.Filled.SmartToy,
-            "WebFetch" => Icons.Material.Filled.Language,
-            "WebSearch" => Icons.Material.Filled.TravelExplore,
-            "NotebookEdit" => Icons.Material.Filled.DataObject,
-            "TodoWrite" => Icons.Material.Filled.Checklist,
-            "AskUserQuestion" => Icons.Material.Filled.QuestionAnswer,
-            "Skill" => Icons.Material.Filled.AutoAwesome,
-            "ToolSearch" => Icons.Material.Filled.ManageSearch,
-            "TaskCreate" or "TaskUpdate" or "TaskList" or "TaskGet" => Icons.Material.Filled.Checklist,
-            "TaskOutput" => Icons.Material.Filled.Output,
-            "TaskStop" => Icons.Material.Filled.StopCircle,
-            "Workflow" => Icons.Material.Filled.AccountTree,
-            "EnterWorktree" => Icons.Material.Filled.CallSplit,
-            "ExitWorktree" => Icons.Material.Filled.CallMerge,
-            "SendMessage" => Icons.Material.Filled.Send,
-            "Monitor" => Icons.Material.Filled.Visibility,
-            "EnterPlanMode" or "ExitPlanMode" => Icons.Material.Filled.Map,
-            "ScheduleWakeup" or "CronCreate" or "CronList" or "CronDelete" => Icons.Material.Filled.Schedule,
-            "PushNotification" => Icons.Material.Filled.NotificationsActive,
-            "ListMcpResources" or "ReadMcpResource" => Icons.Material.Filled.Hub,
+            "Bash" => Lucide.Terminal,
+            "Read" => Lucide.FileText,
+            "Write" => Lucide.Pencil,
+            "Edit" => Lucide.SquarePen,
+            "Glob" => Lucide.Search,
+            "Grep" => Lucide.FileSearch,
+            "Agent" => Lucide.Bot,
+            "WebFetch" => Lucide.Globe,
+            "WebSearch" => Lucide.Telescope,
+            "NotebookEdit" => Lucide.Braces,
+            "TodoWrite" => Lucide.ListChecks,
+            "AskUserQuestion" => Lucide.MessagesSquare,
+            "Skill" => Lucide.Sparkles,
+            "ToolSearch" => Lucide.TextSearch,
+            "TaskCreate" or "TaskUpdate" or "TaskList" or "TaskGet" => Lucide.ListChecks,
+            "TaskOutput" => Lucide.ArrowRightFromLine,
+            "TaskStop" => Lucide.CircleStop,
+            "Workflow" => Lucide.GitFork,
+            "EnterWorktree" => Lucide.GitBranch,
+            "ExitWorktree" => Lucide.GitMerge,
+            "SendMessage" => Lucide.Send,
+            "Monitor" => Lucide.Eye,
+            "EnterPlanMode" or "ExitPlanMode" => Lucide.Map,
+            "ScheduleWakeup" or "CronCreate" or "CronList" or "CronDelete" => Lucide.Clock,
+            "PushNotification" => Lucide.BellRing,
+            "ListMcpResources" or "ReadMcpResource" => Lucide.Network,
             _ when (name ?? "").StartsWith("mcp__", StringComparison.OrdinalIgnoreCase)
-                => Icons.Material.Filled.Hub,
-            _ => Icons.Material.Filled.Extension
+                => Lucide.Network,
+            _ => Lucide.Puzzle
         };
     }
 

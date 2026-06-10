@@ -455,6 +455,7 @@
   <data name="Sidebar_Changes_GroupUntracked" xml:space="preserve"><value>Untracked</value></data>
   <data name="Sidebar_Changes_GroupOther" xml:space="preserve"><value>Other</value></data>
   <data name="Git_Changes" xml:space="preserve"><value>Changes</value></data>
+  <data name="Git_ChangesCount" xml:space="preserve"><value>{0} Changes</value></data>
   <data name="Git_NoChanges" xml:space="preserve"><value>No changes</value></data>
   <data name="Git_StageAll" xml:space="preserve"><value>Stage All</value></data>
   <data name="Git_StageFile" xml:space="preserve"><value>Stage</value></data>

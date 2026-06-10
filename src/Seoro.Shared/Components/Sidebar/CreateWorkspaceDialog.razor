@@ -1,27 +1,28 @@
 @inject IWorkspaceService WorkspaceService
 @inject IGitService GitService
 @inject IFolderPickerService FolderPickerService
-@inject ISnackbar Snackbar
+@inject IToastService Snackbar
 
-<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions" Class="create-ws-dialog">
-    <TitleContent>
+<Modal IsOpen="IsOpen" IsOpenChanged="OnVisibleChanged" Class="create-ws-dialog"
+       MaxWidth="600px" ShowCloseButton="false" CloseOnBackdropClick="true">
+    <HeaderContent>
         <div class="create-ws-header">
             <div class="create-ws-icon-badge">
-                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size: 18px;"/>
+                <Icon Svg="@Lucide.Plus" Size="18"/>
             </div>
             <div class="stack gap-1">
                 <span class="create-ws-title">@Strings.Sidebar_CreateWorkspace_Title</span>
                 <span class="create-ws-subtitle">@Strings.Sidebar_CreateWorkspace_Subtitle</span>
             </div>
         </div>
-    </TitleContent>
-    <DialogContent>
+    </HeaderContent>
+    <ChildContent>
         <div class="create-ws-body">
             @if (_isCreating)
             {
                 <div class="create-ws-progress-overlay">
                     <div class="create-ws-progress-spinner">
-                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Medium"/>
+                        <Spinner Size="20"/>
                     </div>
                     <p class="typo-body2 text-secondary">@_progressMessage</p>
                 </div>
@@ -30,12 +31,12 @@
             <div class="create-ws-segmented">
                 <button type="button" class="create-ws-segment @(_activeTab == 0 ? "active" : "")"
                         @onclick="@(() => _activeTab = 0)">
-                    <MudIcon Icon="@Icons.Material.Filled.Cloud" Style="font-size: 16px;"/>
+                    <Icon Svg="@Lucide.Cloud" Size="16"/>
                     @Strings.Sidebar_CreateWorkspace_CloneFromUrl
                 </button>
                 <button type="button" class="create-ws-segment @(_activeTab == 1 ? "active" : "")"
                         @onclick="@(() => _activeTab = 1)">
-                    <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size: 16px;"/>
+                    <Icon Svg="@Lucide.Folder" Size="16"/>
                     @Strings.Sidebar_CreateWorkspace_LocalRepository
                 </button>
             </div>
@@ -46,40 +47,37 @@
                     <div class="stack gap-3">
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_RepoUrlLabel</label>
-                            <MudTextField @bind-Value="_repoUrl" Variant="Variant.Outlined"
-                                          Margin="Margin.Dense" Placeholder="https://github.com/org/repo"
-                                          Immediate="true" TextChanged="OnUrlChanged"
-                                          Adornment="Adornment.Start"
-                                          AdornmentIcon="@Icons.Material.Filled.Link"/>
+                            <TextField Value="@_repoUrl"
+                                       ValueChanged="@(v => OnUrlChanged(v ?? ""))"
+                                       Placeholder="https://github.com/org/repo"
+                                       Immediate="true"
+                                       AdornmentIcon="@Lucide.Link"/>
                         </div>
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_ClonePathLabel</label>
                             <div class="create-ws-path-input">
-                                <MudTextField @bind-Value="_clonePath" Variant="Variant.Outlined"
-                                              Margin="Margin.Dense" Placeholder="/경로/저장소"
-                                              Style="flex: 1;"/>
+                                <TextField @bind-Value="_clonePath" Placeholder="/경로/저장소"
+                                           Style="flex: 1;"/>
                                 <button type="button" class="create-ws-browse-btn"
                                         @onclick="BrowseCloneFolder" title="@Strings.Sidebar_CreateWorkspace_Browse">
-                                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Style="font-size: 18px;"/>
+                                    <Icon Svg="@Lucide.FolderOpen" Size="18"/>
                                 </button>
                             </div>
                         </div>
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_WorkspaceNameLabel</label>
-                            <MudTextField @bind-Value="_editName" Variant="Variant.Outlined"
-                                          Margin="Margin.Dense"/>
+                            <TextField @bind-Value="_editName"/>
                         </div>
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_DefaultModelLabel</label>
-                            <MudSelect T="string" @bind-Value="_editModel"
-                                       Variant="Variant.Outlined" Margin="Margin.Dense"
-                                       HelperText="@Strings.Sidebar_CreateWorkspace_DefaultModelHelper">
-                                <MudSelectItem T="string" Value="@("")">@Strings.Sidebar_CreateWorkspace_UseAppDefault</MudSelectItem>
+                            <Select T="string" @bind-Value="_editModel" Fixed="true"
+                                    HelperText="@Strings.Sidebar_CreateWorkspace_DefaultModelHelper">
+                                <SelectItem T="string" Value="@("")" Text="@Strings.Sidebar_CreateWorkspace_UseAppDefault"/>
                                 @foreach (var model in ModelDefinitions.All.Where(m => m.Provider != "codex"))
                                 {
-                                    <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                                    <SelectItem T="string" Value="@model.Id" Text="@model.DisplayName"/>
                                 }
-                            </MudSelect>
+                            </Select>
                         </div>
                     </div>
                 }
@@ -89,21 +87,19 @@
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_RepoPathLabel</label>
                             <div class="create-ws-path-input">
-                                <MudTextField @bind-Value="_localPath" Variant="Variant.Outlined"
-                                              Margin="Margin.Dense" Placeholder="/경로/저장소"
-                                              Style="flex: 1;"/>
+                                <TextField @bind-Value="_localPath" Placeholder="/경로/저장소"
+                                           Style="flex: 1;"/>
                                 <button type="button" class="create-ws-browse-btn"
                                         @onclick="BrowseLocalFolder" title="@Strings.Sidebar_CreateWorkspace_Browse">
-                                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Style="font-size: 18px;"/>
+                                    <Icon Svg="@Lucide.FolderOpen" Size="18"/>
                                 </button>
                             </div>
                         </div>
                         @if (_localPathValidation != null)
                         {
                             <div class="create-ws-validation @(_isLocalPathGitRepo ? "success" : "warning")">
-                                <MudIcon
-                                    Icon="@(_isLocalPathGitRepo ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)"
-                                    Style="font-size: 16px;"/>
+                                <Icon Svg="@(_isLocalPathGitRepo ? Lucide.CircleCheck : Lucide.TriangleAlert)"
+                                      Size="16"/>
                                 <span>@_localPathValidation</span>
                                 @if (!_isLocalPathGitRepo)
                                 {
@@ -112,8 +108,7 @@
                                             disabled="@_isInitializingGit">
                                         @if (_isInitializingGit)
                                         {
-                                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                                 Style="width: 14px; height: 14px;"/>
+                                            <Spinner Size="14"/>
                                         }
                                         @Strings.Sidebar_CreateWorkspace_InitGit
                                     </button>
@@ -122,20 +117,18 @@
                         }
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_WorkspaceNameLabel</label>
-                            <MudTextField @bind-Value="_editName" Variant="Variant.Outlined"
-                                          Margin="Margin.Dense"/>
+                            <TextField @bind-Value="_editName"/>
                         </div>
                         <div class="create-ws-field-group">
                             <label class="create-ws-label">@Strings.Sidebar_CreateWorkspace_DefaultModelLabel</label>
-                            <MudSelect T="string" @bind-Value="_editModel"
-                                       Variant="Variant.Outlined" Margin="Margin.Dense"
-                                       HelperText="@Strings.Sidebar_CreateWorkspace_DefaultModelHelper">
-                                <MudSelectItem T="string" Value="@("")">@Strings.Sidebar_CreateWorkspace_UseAppDefault</MudSelectItem>
+                            <Select T="string" @bind-Value="_editModel" Fixed="true"
+                                    HelperText="@Strings.Sidebar_CreateWorkspace_DefaultModelHelper">
+                                <SelectItem T="string" Value="@("")" Text="@Strings.Sidebar_CreateWorkspace_UseAppDefault"/>
                                 @foreach (var model in ModelDefinitions.All.Where(m => m.Provider != "codex"))
                                 {
-                                    <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
+                                    <SelectItem T="string" Value="@model.Id" Text="@model.DisplayName"/>
                                 }
-                            </MudSelect>
+                            </Select>
                         </div>
                     </div>
                 }
@@ -144,13 +137,13 @@
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
                 <div class="create-ws-error">
-                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Style="font-size: 16px;"/>
+                    <Icon Svg="@Lucide.CircleAlert" Size="16"/>
                     <span>@_errorMessage</span>
                 </div>
             }
         </div>
-    </DialogContent>
-    <DialogActions>
+    </ChildContent>
+    <Footer>
         <div class="create-ws-actions">
             <button type="button" class="create-ws-btn-cancel" @onclick="Close" disabled="@_isCreating">
                 @Strings.Common_Cancel
@@ -158,8 +151,7 @@
             <button type="button" class="create-ws-btn-create" @onclick="Create" disabled="@(!CanCreate)">
                 @if (_isCreating)
                 {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                         Style="width: 16px; height: 16px;"/>
+                    <Spinner Size="16"/>
                 }
                 @Strings.Sidebar_CreateWorkspace_Create
                 @if (!_isCreating)
@@ -168,8 +160,8 @@
                 }
             </button>
         </div>
-    </DialogActions>
-</MudDialog>
+    </Footer>
+</Modal>
 
 @code {
     [Parameter] public bool IsOpen { get; set; }
@@ -190,12 +182,6 @@
     private bool _isLocalPathGitRepo;
     private bool _isInitializingGit;
     private bool _nameAutoFilled;
-
-    private readonly DialogOptions _dialogOptions = new()
-    {
-        MaxWidth = MaxWidth.Small,
-        FullWidth = true
-    };
 
     private bool CanCreate => !_isCreating && _activeTab switch
     {

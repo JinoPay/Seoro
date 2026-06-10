@@ -4,15 +4,16 @@
             @Strings.Dashboard_Achievement_Title <span class="achievement-count">(@UnlockedCount/@Achievements.Count)</span>
         </span>
         <div class="achievement-filter-row">
-            <MudChipSet T="string" SelectedValue="_selectedCategory" SelectedValueChanged="v => _selectedCategory = v"
-                        SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
-                        Variant="Variant.Text" Color="Color.Primary">
-                <MudChip T="string" Value="@("all")" Style="font-size:0.7rem;">@Strings.Dashboard_Achievement_All</MudChip>
+            <div class="d-flex flex-wrap gap-1">
+                <Chip Selected="@(_selectedCategory == "all")" Style="font-size:0.7rem;"
+                      OnClick="@(() => _selectedCategory = "all")">@Strings.Dashboard_Achievement_All</Chip>
                 @foreach (var cat in _categories)
                 {
-                    <MudChip T="string" Value="@cat.Key" Style="font-size:0.7rem;">@cat.Value</MudChip>
+                    var key = cat.Key;
+                    <Chip Selected="@(_selectedCategory == key)" Style="font-size:0.7rem;"
+                          OnClick="@(() => _selectedCategory = key)">@cat.Value</Chip>
                 }
-            </MudChipSet>
+            </div>
         </div>
     </div>
 
@@ -32,7 +33,7 @@
                 title="@a.Description">
                 <div
                     class="achievement-icon-box @(a.Unlocked ? $"unlocked rarity-bg-{a.Rarity.ToString().ToLower()}" : "")">
-                    <MudIcon Icon="@GetIcon(a.Icon)" Size="Size.Small"/>
+                    <Icon Svg="@GetIcon(a.Icon)" Size="14"/>
                 </div>
                 <div class="achievement-text">
                     <div class="achievement-name-row">
@@ -78,104 +79,104 @@
         return icon switch
         {
             // 설정
-            "tune" => Icons.Material.Filled.Tune,
-            "bolt" => Icons.Material.Filled.Bolt,
-            "hub" => Icons.Material.Filled.Hub,
-            "device_hub" => Icons.Material.Filled.DeviceHub,
-            "cloud" => Icons.Material.Filled.Cloud,
-            "security" => Icons.Material.Filled.Security,
-            "terminal" => Icons.Material.Filled.Terminal,
-            "verified" => Icons.Material.Filled.Verified,
-            "psychology" => Icons.Material.Filled.Psychology,
-            "memory" => Icons.Material.Filled.Memory,
-            "rule" => Icons.Material.Filled.Rule,
-            "precision_manufacturing" => Icons.Material.Filled.PrecisionManufacturing,
-            "webhook" => Icons.Material.Filled.Webhook,
-            "dns" => Icons.Material.Filled.Dns,
+            "tune" => Lucide.SlidersHorizontal,
+            "bolt" => Lucide.Zap,
+            "hub" => Lucide.Network,
+            "device_hub" => Lucide.Network,
+            "cloud" => Lucide.Cloud,
+            "security" => Lucide.Shield,
+            "terminal" => Lucide.Terminal,
+            "verified" => Lucide.BadgeCheck,
+            "psychology" => Lucide.Brain,
+            "memory" => Lucide.Cpu,
+            "rule" => Lucide.ListTodo,
+            "precision_manufacturing" => Lucide.Cog,
+            "webhook" => Lucide.Webhook,
+            "dns" => Lucide.Server,
             // 사용
-            "waving_hand" => Icons.Material.Filled.WavingHand,
-            "chat" => Icons.Material.Filled.Chat,
-            "mark_chat_read" => Icons.Material.Filled.MarkChatRead,
-            "forum" => Icons.Material.Filled.Forum,
-            "question_answer" => Icons.Material.Filled.QuestionAnswer,
-            "whatshot" => Icons.Material.Filled.Whatshot,
-            "sms" => Icons.Material.Filled.Sms,
-            "rocket_launch" => Icons.Material.Filled.RocketLaunch,
-            "play_circle" => Icons.Material.Filled.PlayCircle,
-            "collections" => Icons.Material.Filled.Collections,
-            "layers" => Icons.Material.Filled.Layers,
-            "video_library" => Icons.Material.Filled.VideoLibrary,
-            "workspace_premium" => Icons.Material.Filled.WorkspacePremium,
-            "all_inclusive" => Icons.Material.Filled.AllInclusive,
-            "construction" => Icons.Material.Filled.Construction,
-            "handyman" => Icons.Material.Filled.Handyman,
-            "hardware" => Icons.Material.Filled.Hardware,
-            "build" => Icons.Material.Filled.Build,
-            "engineering" => Icons.Material.Filled.Engineering,
-            "factory" => Icons.Material.Filled.Factory,
+            "waving_hand" => Lucide.Hand,
+            "chat" => Lucide.MessageCircle,
+            "mark_chat_read" => Lucide.CheckCheck,
+            "forum" => Lucide.MessagesSquare,
+            "question_answer" => Lucide.MessagesSquare,
+            "whatshot" => Lucide.Flame,
+            "sms" => Lucide.MessageSquareText,
+            "rocket_launch" => Lucide.Rocket,
+            "play_circle" => Lucide.CirclePlay,
+            "collections" => Lucide.Images,
+            "layers" => Lucide.Layers,
+            "video_library" => Lucide.Film,
+            "workspace_premium" => Lucide.Award,
+            "all_inclusive" => Lucide.Infinity,
+            "construction" => Lucide.Construction,
+            "handyman" => Lucide.Hammer,
+            "hardware" => Lucide.Hammer,
+            "build" => Lucide.Wrench,
+            "engineering" => Lucide.HardHat,
+            "factory" => Lucide.Factory,
             // 연쇄
-            "local_fire_department" => Icons.Material.Filled.LocalFireDepartment,
-            "military_tech" => Icons.Material.Filled.MilitaryTech,
-            "shield" => Icons.Material.Filled.Shield,
-            "emoji_events" => Icons.Material.Filled.EmojiEvents,
-            "diamond" => Icons.Material.Filled.Diamond,
-            "crown" => Icons.Material.Filled.WorkspacePremium,
-            "auto_awesome" => Icons.Material.Filled.AutoAwesome,
-            "fitness_center" => Icons.Material.Filled.FitnessCenter,
+            "local_fire_department" => Lucide.Flame,
+            "military_tech" => Lucide.Medal,
+            "shield" => Lucide.Shield,
+            "emoji_events" => Lucide.Trophy,
+            "diamond" => Lucide.Gem,
+            "crown" => Lucide.Award,
+            "auto_awesome" => Lucide.Sparkles,
+            "fitness_center" => Lucide.Dumbbell,
             // 숙달도
-            "thumb_up" => Icons.Material.Filled.ThumbUp,
-            "favorite" => Icons.Material.Filled.Favorite,
-            "star" => Icons.Material.Filled.Star,
-            "cake" => Icons.Material.Filled.Cake,
-            "settings" => Icons.Material.Filled.Settings,
-            "smart_toy" => Icons.Material.Filled.SmartToy,
+            "thumb_up" => Lucide.ThumbsUp,
+            "favorite" => Lucide.Heart,
+            "star" => Lucide.Star,
+            "cake" => Lucide.Cake,
+            "settings" => Lucide.Settings,
+            "smart_toy" => Lucide.Bot,
             // 탐험가
-            "folder_open" => Icons.Material.Filled.FolderOpen,
-            "explore" => Icons.Material.Filled.Explore,
-            "account_tree" => Icons.Material.Filled.AccountTree,
-            "source" => Icons.Material.Filled.Source,
-            "public" => Icons.Material.Filled.Public,
-            "inventory" => Icons.Material.Filled.Inventory,
-            "travel_explore" => Icons.Material.Filled.TravelExplore,
-            "language" => Icons.Material.Filled.Language,
+            "folder_open" => Lucide.FolderOpen,
+            "explore" => Lucide.Compass,
+            "account_tree" => Lucide.GitFork,
+            "source" => Lucide.FolderCode,
+            "public" => Lucide.Globe,
+            "inventory" => Lucide.Package,
+            "travel_explore" => Lucide.Telescope,
+            "language" => Lucide.Globe,
             // 효율성
-            "trending_up" => Icons.Material.Filled.TrendingUp,
-            "speed" => Icons.Material.Filled.Speed,
-            "flash_on" => Icons.Material.Filled.FlashOn,
-            "electric_bolt" => Icons.Material.Filled.ElectricBolt,
-            "savings" => Icons.Material.Filled.Savings,
-            "account_balance_wallet" => Icons.Material.Filled.AccountBalanceWallet,
-            "paid" => Icons.Material.Filled.Paid,
-            "monetization_on" => Icons.Material.Filled.MonetizationOn,
+            "trending_up" => Lucide.TrendingUp,
+            "speed" => Lucide.Gauge,
+            "flash_on" => Lucide.Zap,
+            "electric_bolt" => Lucide.Zap,
+            "savings" => Lucide.PiggyBank,
+            "account_balance_wallet" => Lucide.Wallet,
+            "paid" => Lucide.CircleDollarSign,
+            "monetization_on" => Lucide.CircleDollarSign,
             // 시간
-            "directions_run" => Icons.Material.Filled.DirectionsRun,
-            "sprint" => Icons.Material.Filled.DirectionsRun,
-            "dark_mode" => Icons.Material.Filled.DarkMode,
-            "wb_sunny" => Icons.Material.Filled.WbSunny,
-            "timer" => Icons.Material.Filled.Timer,
-            "hourglass_top" => Icons.Material.Filled.HourglassTop,
-            "nightlight" => Icons.Material.Filled.Nightlight,
-            "bedtime" => Icons.Material.Filled.Bedtime,
-            "wb_twilight" => Icons.Material.Filled.WbTwilight,
-            "mode_night" => Icons.Material.Filled.ModeNight,
-            "light_mode" => Icons.Material.Filled.LightMode,
+            "directions_run" => Lucide.Footprints,
+            "sprint" => Lucide.Footprints,
+            "dark_mode" => Lucide.Moon,
+            "wb_sunny" => Lucide.Sun,
+            "timer" => Lucide.Timer,
+            "hourglass_top" => Lucide.Hourglass,
+            "nightlight" => Lucide.Moon,
+            "bedtime" => Lucide.Moon,
+            "wb_twilight" => Lucide.Sunset,
+            "mode_night" => Lucide.Moon,
+            "light_mode" => Lucide.Sun,
             // 경제
-            "token" => Icons.Material.Filled.Token,
-            "generating_tokens" => Icons.Material.Filled.GeneratingTokens,
-            "data_usage" => Icons.Material.Filled.DataUsage,
-            "attach_money" => Icons.Material.Filled.AttachMoney,
-            "payments" => Icons.Material.Filled.Payments,
-            "account_balance" => Icons.Material.Filled.AccountBalance,
-            "currency_exchange" => Icons.Material.Filled.CurrencyExchange,
-            "diversity_3" => Icons.Material.Filled.Diversity3,
+            "token" => Lucide.Coins,
+            "generating_tokens" => Lucide.Coins,
+            "data_usage" => Lucide.ChartPie,
+            "attach_money" => Lucide.DollarSign,
+            "payments" => Lucide.CreditCard,
+            "account_balance" => Lucide.Landmark,
+            "currency_exchange" => Lucide.CircleDollarSign,
+            "diversity_3" => Lucide.Users,
             // 패턴
-            "weekend" => Icons.Material.Filled.Weekend,
-            "event_available" => Icons.Material.Filled.EventAvailable,
-            "schedule" => Icons.Material.Filled.Schedule,
-            "lunch_dining" => Icons.Material.Filled.LunchDining,
-            "access_time" => Icons.Material.Filled.AccessTime,
-            "contrast" => Icons.Material.Filled.Contrast,
-            _ => Icons.Material.Filled.EmojiEvents
+            "weekend" => Lucide.Sofa,
+            "event_available" => Lucide.CalendarCheck,
+            "schedule" => Lucide.Clock,
+            "lunch_dining" => Lucide.Sandwich,
+            "access_time" => Lucide.Clock,
+            "contrast" => Lucide.Contrast,
+            _ => Lucide.Trophy
         };
     }
 
@@ -183,7 +184,7 @@
 
 <style>
     .achievement-card {
-        border: 1px solid var(--mud-palette-lines-default);
+        border: 1px solid var(--border-default);
         border-radius: 12px;
         padding: 16px;
     }
@@ -195,11 +196,11 @@
     .achievement-title {
         font-size: 0.85rem;
         font-weight: 500;
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
     }
 
     .achievement-count {
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
     }
 
     .achievement-filter-row {
@@ -221,8 +222,8 @@
     }
 
     .rarity-badge.rarity-common {
-        background: var(--mud-palette-action-default-hover);
-        color: var(--mud-palette-text-secondary);
+        background: var(--bg-hover);
+        color: var(--text-secondary);
     }
 
     .rarity-badge.rarity-rare {
@@ -254,7 +255,7 @@
         gap: 10px;
         padding: 10px;
         border-radius: 10px;
-        border: 1px solid var(--mud-palette-lines-default);
+        border: 1px solid var(--border-default);
         transition: transform 0.1s, box-shadow 0.15s;
     }
 
@@ -264,7 +265,7 @@
     }
 
     .achievement-item.unlocked {
-        background: rgba(var(--mud-palette-primary-rgb, 98, 0, 234), 0.06);
+        background: var(--accent-subtle);
     }
 
     .achievement-item.unlocked.rarity-border-rare {
@@ -283,7 +284,7 @@
     }
 
     .achievement-item.locked {
-        background: var(--mud-palette-action-default-hover);
+        background: var(--bg-hover);
         opacity: 0.4;
     }
 
@@ -295,13 +296,13 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        background: var(--mud-palette-action-default-hover);
-        color: var(--mud-palette-text-secondary);
+        background: var(--bg-hover);
+        color: var(--text-secondary);
     }
 
     .achievement-icon-box.unlocked {
-        background: rgba(var(--mud-palette-primary-rgb, 98, 0, 234), 0.15);
-        color: var(--mud-palette-primary);
+        background: var(--accent-dim);
+        color: var(--accent);
     }
 
     .achievement-icon-box.rarity-bg-rare {
@@ -358,7 +359,7 @@
 
     .achievement-desc {
         font-size: 0.6rem;
-        color: var(--mud-palette-text-secondary);
+        color: var(--text-secondary);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;

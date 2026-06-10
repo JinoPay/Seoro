@@ -3,8 +3,8 @@
 @inject IJSRuntime JS
 @inject IChatState ChatState
 @inject CominomiMigrationService MigrationService
-@inject IDialogService DialogService
-@inject ISnackbar Snackbar
+@inject IModalService ModalService
+@inject IToastService Snackbar
 
 <div class="settings-section-title">@Strings.Settings_General_Title</div>
 <div class="settings-section-desc">@Strings.Settings_General_Desc</div>
@@ -26,40 +26,37 @@
 
     <div class="stack gap-1">
         <div class="stack-row items-center gap-2">
-            <MudSlider T="double"
-                       Value="@(Settings.UiScale == 0 ? _autoDefault : Settings.UiScale)"
-                       ValueChanged="@(v =>
-                                     {
-                                         Settings.UiScale = v;
-                                         _ = ApplyUiScalePreview(v);
-                                     })"
-                       Min="0.8" Max="1.5" Step="0.05"
-                       Color="Color.Primary"
-                       Style="flex: 1;"/>
+            <Slider T="double"
+                    Value="@(Settings.UiScale == 0 ? _autoDefault : Settings.UiScale)"
+                    ValueChanged="@(v =>
+                                  {
+                                      Settings.UiScale = v;
+                                      _ = ApplyUiScalePreview(v);
+                                  })"
+                    Min="0.8" Max="1.5" Step="0.05"
+                    Style="flex: 1;"/>
             <span class="typo-body2" style="min-width: 48px; text-align: right;">
                 @((Settings.UiScale == 0 ? _autoDefault : Settings.UiScale).ToString("P0"))
             </span>
         </div>
 
         <div class="stack-row gap-1 items-center">
-            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
-                       OnClick="@(() =>
-                                {
-                                    Settings.UiScale = 0;
-                                    _ = ApplyUiScalePreview(_autoDefault);
-                                })"
-                       Style="text-transform: none;">
+            <Button ButtonStyle="ButtonStyle.Text"
+                    OnClick="@(() =>
+                             {
+                                 Settings.UiScale = 0;
+                                 _ = ApplyUiScalePreview(_autoDefault);
+                             })">
                 @Strings.Settings_General_UiScaleAuto
-            </MudButton>
-            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
-                       OnClick="@(() =>
-                                {
-                                    Settings.UiScale = 1.0;
-                                    _ = ApplyUiScalePreview(1.0);
-                                })"
-                       Style="text-transform: none;">
+            </Button>
+            <Button ButtonStyle="ButtonStyle.Text"
+                    OnClick="@(() =>
+                             {
+                                 Settings.UiScale = 1.0;
+                                 _ = ApplyUiScalePreview(1.0);
+                             })">
                 100%
-            </MudButton>
+            </Button>
         </div>
 
         <small class="typo-caption text-secondary">
@@ -70,14 +67,13 @@
     <div class="settings-group-title mt">@Strings.Settings_General_GitWorkflowTitle</div>
 
     <div class="stack-row items-center gap-1">
-        <MudTextField @bind-Value="Settings.DefaultCloneDirectory"
-                      Label="@Strings.Settings_General_CloneDirLabel"
-                      Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Placeholder="@Strings.Settings_General_CloneDirPlaceholder"
-                      HelperText="@Strings.Settings_General_CloneDirHint"
-                      Style="flex: 1;"/>
-        <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
-                       OnClick="BrowseCloneDirectory" title="@Strings.Settings_General_BrowseDir"/>
+        <TextField @bind-Value="Settings.DefaultCloneDirectory"
+                   Label="@Strings.Settings_General_CloneDirLabel"
+                   Placeholder="@Strings.Settings_General_CloneDirPlaceholder"
+                   HelperText="@Strings.Settings_General_CloneDirHint"
+                   Style="flex: 1;"/>
+        <IconButton Icon="@Lucide.FolderOpen" Tone="Tone.Primary"
+                    OnClick="BrowseCloneDirectory" Title="@Strings.Settings_General_BrowseDir"/>
     </div>
 
     <div>
@@ -96,18 +92,16 @@
     <div class="settings-group-title mt">@Strings.Settings_General_HelpTitle</div>
 
     <div class="stack-row gap-2" style="flex-wrap: wrap;">
-        <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
-                   OnClick="@(() => ChatState.RequestShowOnboarding())"
-                   StartIcon="@Icons.Material.Filled.School"
-                   Style="text-transform: none;">
+        <Button ButtonStyle="ButtonStyle.Outlined"
+                OnClick="@(() => ChatState.RequestShowOnboarding())"
+                StartIcon="@Lucide.GraduationCap">
             @Strings.Settings_General_ShowTutorial
-        </MudButton>
-        <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
-                   OnClick="@(() => ChatState.RequestShowWhatsNew())"
-                   StartIcon="@Icons.Material.Filled.NewReleases"
-                   Style="text-transform: none;">
+        </Button>
+        <Button ButtonStyle="ButtonStyle.Outlined"
+                OnClick="@(() => ChatState.RequestShowWhatsNew())"
+                StartIcon="@Lucide.BadgeAlert">
             @Strings.Settings_General_ShowWhatsNew
-        </MudButton>
+        </Button>
     </div>
 
     @if (_cominomiSummary is { Exists: true, TotalFiles: > 0 })
@@ -127,21 +121,21 @@
                     _cominomiSummary.SettingsFileCount)
             </div>
 
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                       OnClick="ImportCominomiData"
-                       StartIcon="@Icons.Material.Filled.FileDownload"
-                       Disabled="_importing"
-                       Style="text-transform: none; align-self: flex-start;">
+            <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
+                    OnClick="ImportCominomiData"
+                    StartIcon="@(_importing ? null : Lucide.FileDown)"
+                    Disabled="_importing"
+                    Style="align-self: flex-start;">
                 @if (_importing)
                 {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" Style="width:16px;height:16px;"/>
+                    <Spinner Size="14" Class="mr-2"/>
                     <span>@Strings.Settings_General_MigrationImporting</span>
                 }
                 else
                 {
                     <span>@Strings.Settings_General_MigrationImport</span>
                 }
-            </MudButton>
+            </Button>
         </div>
     }
 </div>
@@ -188,12 +182,12 @@
 
     private async Task ImportCominomiData()
     {
-        var result = await DialogService.ShowMessageBoxAsync(
+        var result = await ModalService.ShowMessageBoxAsync(
             Strings.Settings_General_ImportDialogTitle,
             Strings.Settings_General_ImportDialogMsg(_cominomiSummary!.TotalFiles),
             Strings.Settings_General_ImportOverwrite,
-            cancelText: Strings.Common_Cancel,
-            noText: Strings.Settings_General_ImportKeep);
+            noText: Strings.Settings_General_ImportKeep,
+            cancelText: Strings.Common_Cancel);
 
         if (result is null) return; // cancelled
 
@@ -209,7 +203,7 @@
 
             if (migrationResult.Copied > 0)
             {
-                await DialogService.ShowMessageBoxAsync(
+                await ModalService.ShowMessageBoxAsync(
                     Strings.Settings_General_ImportDoneTitle,
                     Strings.Settings_General_ImportDoneMsg(migrationResult.Copied),
                     Strings.Common_Confirm);
@@ -227,12 +221,12 @@
             if (!deleted)
                 msg += Strings.Settings_General_ImportFolderDeleteFailed;
 
-            Snackbar.Add(msg, migrationResult.Failed > 0 || !deleted ? Severity.Warning : Severity.Info);
+            Snackbar.Add(msg, migrationResult.Failed > 0 || !deleted ? ToastSeverity.Warning : ToastSeverity.Info);
             _cominomiSummary = MigrationService.GetDataSummary();
         }
         catch (Exception ex)
         {
-            Snackbar.Add(Strings.Settings_General_ImportFailed(ex.Message), Severity.Error);
+            Snackbar.Add(Strings.Settings_General_ImportFailed(ex.Message), ToastSeverity.Error);
         }
         finally
         {
