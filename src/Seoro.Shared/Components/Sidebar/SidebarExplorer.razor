@@ -1,6 +1,9 @@
 @inject IChatState ChatState
 @inject IGitService GitService
 @inject IWorktreeChangeWatcherService WorktreeWatcher
+@inject ISessionService SessionService
+@inject ILogger<SidebarExplorer> Logger
+@using Microsoft.Extensions.Logging
 @implements IDisposable
 
 <div class="sidebar-explorer">
@@ -10,11 +13,11 @@
             <IconButton Icon="@Lucide.ChevronsUpDown"
                         Style="width: 22px; height: 22px; opacity: 0.5;"
                         OnClick="ExpandAll" Disabled="_loading || _tree.Count == 0"
-                        Title="모두 펼치기"/>
+                        Title="@Strings.Sidebar_Explorer_ExpandAll"/>
             <IconButton Icon="@Lucide.ChevronsDownUp"
                         Style="width: 22px; height: 22px; opacity: 0.5;"
                         OnClick="CollapseAll" Disabled="_loading || _tree.Count == 0"
-                        Title="모두 접기"/>
+                        Title="@Strings.Sidebar_Explorer_CollapseAll"/>
             <IconButton Icon="@Lucide.RefreshCw"
                         Style="width: 22px; height: 22px; opacity: 0.5;"
                         OnClick="LoadFilesAsync" Disabled="_loading"/>
@@ -41,7 +44,8 @@
         <div class="sidebar-explorer-tree">
             <FileTreeNode Nodes="_tree"
                           ExpandedDirs="_expandedDirs"
-                          Diff="_diff"
+                          DiffByPath="_diffByPath"
+                          DirsWithDiff="_dirsWithDiff"
                           OnToggleDir="ToggleDir"
                           OnOpenFile="OpenFile"/>
         </div>
@@ -49,21 +53,25 @@
 </div>
 
 @code {
+    private const int ExpandedSaveDebounceMs = 1000;
+
     private List<FileNode> _tree = new();
     private bool _loading;
     private string? _error;
     private DiffSummary? _diff;
+    private Dictionary<string, FileChangeType>? _diffByPath;
+    private HashSet<string>? _dirsWithDiff;
     private string? _lastSessionId;
-
-    // 세션별 확장된 디렉터리 상태
-    private readonly Dictionary<string, HashSet<string>> _sessionExpandedDirs = new();
+    private HashSet<string> _knownFiles = new();
     private HashSet<string> _expandedDirs = new();
     private bool _stale;
+    private CancellationTokenSource? _expandedSaveCts;
 
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += HandleStateChanged;
         WorktreeWatcher.FilesChanged += HandleWorktreeFilesChanged;
+        RestoreExpandedDirs();
         await LoadFilesAsync();
     }
 
@@ -72,30 +80,16 @@
         var sessionId = ChatState.CurrentSession?.Id;
         if (sessionId != _lastSessionId)
         {
-            // 현재 세션의 확장된 상태 저장
-            if (_lastSessionId != null)
-                _sessionExpandedDirs[_lastSessionId] = _expandedDirs;
-
             _lastSessionId = sessionId;
-
-            // 이 세션의 확장된 상태 복원 또는 초기화
-            if (sessionId != null && _sessionExpandedDirs.TryGetValue(sessionId, out var saved))
-            {
-                _expandedDirs = saved;
-            }
-            else
-            {
-                _expandedDirs = new HashSet<string>();
-            }
-
+            RestoreExpandedDirs();
             await LoadFilesAsync();
-
-            // 이 세션의 초기 (축소된) 상태 저장
-            if (sessionId != null)
-            {
-                _sessionExpandedDirs.TryAdd(sessionId, _expandedDirs);
-            }
         }
+    }
+
+    private void RestoreExpandedDirs()
+    {
+        var saved = ChatState.CurrentSession?.ExplorerExpandedDirs;
+        _expandedDirs = saved != null ? new HashSet<string>(saved) : new HashSet<string>();
     }
 
     private void HandleWorktreeFilesChanged(string workingDir)
@@ -112,23 +106,64 @@
         _ = InvokeAsync(RefreshAfterChangeAsync);
     }
 
-    /// <summary>파일 변경 후 새로고침 — 새로 변경된 파일의 부모 디렉터리를 자동 확장.</summary>
+    /// <summary>
+    ///     파일 변경 후 새로고침 — 전체 재스캔 대신 증분 갱신.
+    ///     이벤트는 트리거일 뿐이고 진실은 ls-files 재조회 결과다 (FSW 유실/untracked 정책 모두 회피).
+    /// </summary>
     private async Task RefreshAfterChangeAsync()
     {
-        var prevDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? new HashSet<string>();
-        await LoadFilesAsync(true);
-        var newDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? new HashSet<string>();
+        var session = ChatState.CurrentSession;
+        if (session == null || string.IsNullOrEmpty(session.Git.WorktreePath)) return;
 
-        var newlyChanged = newDiffFiles.Except(prevDiffFiles).ToList();
-        if (newlyChanged.Count > 0)
+        try
         {
-            foreach (var filePath in newlyChanged)
-                ExpandParentDirs(filePath);
+            var prevDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? [];
+
+            var files = await GitService.ListTrackedFilesAsync(session.Git.WorktreePath);
+            var (added, removed) = FileTreeBuilder.ComputeDiff(_knownFiles, files);
+            var changeCount = added.Count + removed.Count;
+
+            if (changeCount > 0 && changeCount <= SeoroConstants.ExplorerIncrementalUpdateMaxChanges)
+            {
+                // 기존 노드 객체를 유지한 채 변경분만 수술 — 렌더 diff 최소화, 스피너 없음
+                foreach (var path in removed)
+                    FileTreeBuilder.RemovePath(_tree, path);
+                foreach (var path in added)
+                    FileTreeBuilder.AddPath(_tree, path);
+                _knownFiles = files.ToHashSet();
+            }
+            else if (changeCount > SeoroConstants.ExplorerIncrementalUpdateMaxChanges)
+            {
+                // 대량 변경(브랜치 전환, 의존성 설치 등) — 전체 재구축으로 폴백
+                Logger.LogDebug("익스플로러 증분 임계값 초과({Count}건) — 전체 재구축", changeCount);
+                _tree = FileTreeBuilder.Build(files);
+                _knownFiles = files.ToHashSet();
+            }
+            // changeCount == 0: 내용만 변경됨 — 트리 구조는 그대로, diff 배지만 갱신
+
+            await LoadDiffStatusAsync(session);
+
+            // 새로 변경된 파일의 디렉터리 자동 확장
+            var newDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? [];
+            var newlyChanged = newDiffFiles.Except(prevDiffFiles).ToList();
+            if (newlyChanged.Count > 0)
+            {
+                foreach (var filePath in newlyChanged)
+                    ExpandParentDirs(filePath);
+                QueueExpandedSave();
+            }
+
+            _error = null;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
             StateHasChanged();
         }
     }
 
-    private async Task LoadFilesAsync(bool preserveExpanded = false)
+    private async Task LoadFilesAsync()
     {
         var session = ChatState.CurrentSession;
         if (session == null || string.IsNullOrEmpty(session.Git.WorktreePath)) return;
@@ -139,19 +174,21 @@
 
         try
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             var files = await GitService.ListTrackedFilesAsync(session.Git.WorktreePath);
+            var listMs = sw.ElapsedMilliseconds;
 
-            try
-            {
-                var diffBase = session.Git.GetDiffBase();
-                _diff = await GitService.GetDiffSummaryAsync(session.Git.WorktreePath, diffBase);
-            }
-            catch
-            {
-                _diff = null;
-            }
+            sw.Restart();
+            await LoadDiffStatusAsync(session);
+            var diffMs = sw.ElapsedMilliseconds;
 
-            _tree = BuildTree(files);
+            sw.Restart();
+            _tree = FileTreeBuilder.Build(files);
+            _knownFiles = files.ToHashSet();
+            var buildMs = sw.ElapsedMilliseconds;
+
+            Logger.LogDebug("익스플로러 로드: ls-files {ListMs}ms ({Count}개 파일) / diff {DiffMs}ms / 트리 {BuildMs}ms",
+                listMs, files.Count, diffMs, buildMs);
 
             // 자동 확장 없음: 트리는 기본적으로 축소된 상태로 시작합니다
 
@@ -173,10 +210,47 @@
         }
     }
 
-    // 버튼 클릭용 매개변수 없는 오버로드
-    private Task LoadFilesAsync()
+    private async Task LoadDiffStatusAsync(Session session)
     {
-        return LoadFilesAsync(false);
+        try
+        {
+            var diffBase = session.Git.GetDiffBase();
+            _diff = await GitService.GetDiffStatusAsync(session.Git.WorktreePath, diffBase);
+        }
+        catch
+        {
+            _diff = null;
+        }
+
+        RebuildDiffLookups();
+    }
+
+    /// <summary>렌더 경로의 노드당 LINQ 스캔을 O(1) 조회로 바꾸기 위한 사전 계산.</summary>
+    private void RebuildDiffLookups()
+    {
+        if (_diff == null)
+        {
+            _diffByPath = null;
+            _dirsWithDiff = null;
+            return;
+        }
+
+        var byPath = new Dictionary<string, FileChangeType>(StringComparer.Ordinal);
+        var dirs = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var file in _diff.Files)
+        {
+            byPath[file.FilePath] = file.ChangeType;
+            var parts = file.FilePath.Split('/');
+            var currentPath = "";
+            for (var i = 0; i < parts.Length - 1; i++)
+            {
+                currentPath = i == 0 ? parts[i] : $"{currentPath}/{parts[i]}";
+                dirs.Add(currentPath);
+            }
+        }
+
+        _diffByPath = byPath;
+        _dirsWithDiff = dirs;
     }
 
     private async Task OpenFile(string filePath)
@@ -199,6 +273,7 @@
     {
         if (!_expandedDirs.Remove(path))
             _expandedDirs.Add(path);
+        QueueExpandedSave();
     }
 
     private void ExpandParentDirs(string filePath)
@@ -215,11 +290,13 @@
     private void ExpandAll()
     {
         ExpandAllDirs(_tree);
+        QueueExpandedSave();
     }
 
     private void CollapseAll()
     {
         _expandedDirs.Clear();
+        QueueExpandedSave();
     }
 
     private void ExpandAllDirs(List<FileNode> nodes)
@@ -234,56 +311,37 @@
         }
     }
 
-    private static List<FileNode> BuildTree(List<string> files)
+    /// <summary>펼침 상태를 세션에 반영하고 디바운스 후 저장 (InputArea 의 초안 저장 패턴).</summary>
+    private void QueueExpandedSave()
     {
-        var root = new List<FileNode>();
-        var dirMap = new Dictionary<string, FileNode>();
+        var session = ChatState.CurrentSession;
+        if (session == null) return;
 
-        foreach (var file in files)
-        {
-            var parts = file.Split('/');
-            var currentList = root;
-            var currentPath = "";
+        // 거대 repo 의 ExpandAll 직후 등 — 세션 JSON 비대화 방지를 위해 저장 생략
+        if (_expandedDirs.Count > SeoroConstants.ExplorerExpandedDirsSaveLimit) return;
 
-            for (var i = 0; i < parts.Length; i++)
-            {
-                currentPath = i == 0 ? parts[i] : $"{currentPath}/{parts[i]}";
-                var isLast = i == parts.Length - 1;
+        // 세션 객체에는 즉시 반영 — 디바운스 저장이 취소돼도 다음 저장 시 함께 영속화됨
+        session.ExplorerExpandedDirs = new HashSet<string>(_expandedDirs);
 
-                if (isLast)
-                {
-                    currentList.Add(new FileNode { Name = parts[i], FullPath = file, IsDirectory = false });
-                }
-                else
-                {
-                    if (!dirMap.TryGetValue(currentPath, out var dirNode))
-                    {
-                        dirNode = new FileNode { Name = parts[i], FullPath = currentPath, IsDirectory = true };
-                        dirMap[currentPath] = dirNode;
-                        currentList.Add(dirNode);
-                    }
-
-                    currentList = dirNode.Children;
-                }
-            }
-        }
-
-        SortNodes(root);
-        return root;
+        _expandedSaveCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _expandedSaveCts = cts;
+        _ = PersistExpandedLaterAsync(session, cts.Token);
     }
 
-    private static void SortNodes(List<FileNode> nodes)
+    private async Task PersistExpandedLaterAsync(Session session, CancellationToken ct)
     {
-        nodes.Sort((a, b) =>
+        try
         {
-            if (a.IsDirectory != b.IsDirectory)
-                return a.IsDirectory ? -1 : 1;
-            return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
-        });
-
-        foreach (var node in nodes.Where(node => node is { IsDirectory: true, Children.Count: > 0 }))
+            await Task.Delay(ExpandedSaveDebounceMs, ct);
+            await SessionService.SaveSessionAsync(session);
+        }
+        catch (OperationCanceledException)
         {
-            SortNodes(node.Children);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "익스플로러 펼침 상태 저장 실패");
         }
     }
 
@@ -294,26 +352,20 @@
             var sessionId = ChatState.CurrentSession?.Id;
             if (sessionId != _lastSessionId)
             {
-                // 현재 세션의 확장된 상태 저장
-                if (_lastSessionId != null)
-                    _sessionExpandedDirs[_lastSessionId] = _expandedDirs;
-
                 _lastSessionId = sessionId;
                 _stale = false;
 
                 if (sessionId != null)
                 {
-                    // 이 세션의 확장된 상태 복원 또는 초기화
-                    _expandedDirs = _sessionExpandedDirs.TryGetValue(sessionId, out var saved) ? saved : new HashSet<string>();
-
+                    RestoreExpandedDirs();
                     await LoadFilesAsync();
-
-                    _sessionExpandedDirs.TryAdd(sessionId, _expandedDirs);
                 }
                 else
                 {
                     _tree = new List<FileNode>();
+                    _knownFiles = new HashSet<string>();
                     _diff = null;
+                    RebuildDiffLookups();
                     _error = null;
                     _expandedDirs = new HashSet<string>();
                     StateHasChanged();
@@ -338,10 +390,6 @@
     {
         ChatState.OnChange -= HandleStateChanged;
         WorktreeWatcher.FilesChanged -= HandleWorktreeFilesChanged;
-
-        // 폐기 전에 현재 세션 상태 저장
-        if (_lastSessionId != null)
-            _sessionExpandedDirs[_lastSessionId] = _expandedDirs;
     }
 
 }

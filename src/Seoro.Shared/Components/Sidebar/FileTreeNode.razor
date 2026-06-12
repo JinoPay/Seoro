@@ -4,7 +4,7 @@
     if (node.IsDirectory)
     {
         var expanded = ExpandedDirs.Contains(node.FullPath);
-        var hasDiff = Diff != null && Diff.Files.Any(f => f.FilePath.StartsWith(node.FullPath + "/"));
+        var hasDiff = DirsWithDiff != null && DirsWithDiff.Contains(node.FullPath);
         <div class="sidebar-file-item dir@(hasDiff ? " has-diff" : "")"
              style="padding-left: @(indent + 8)px;"
              @onclick="() => OnToggleDir.InvokeAsync(node.FullPath)">
@@ -19,20 +19,21 @@
             <FileTreeNode Nodes="node.Children"
                           Depth="Depth + 1"
                           ExpandedDirs="ExpandedDirs"
-                          Diff="Diff"
+                          DiffByPath="DiffByPath"
+                          DirsWithDiff="DirsWithDiff"
                           OnToggleDir="OnToggleDir"
                           OnOpenFile="OnOpenFile"/>
         }
     }
     else
     {
-        var fileDiff = Diff?.Files.FirstOrDefault(f => f.FilePath == node.FullPath);
-        <div class="sidebar-file-item file@(fileDiff != null ? " modified" : "")"
+        FileChangeType? changeType = DiffByPath != null && DiffByPath.TryGetValue(node.FullPath, out var ct) ? ct : null;
+        <div class="sidebar-file-item file@(changeType != null ? " modified" : "")"
              style="padding-left: @(indent + 8)px;"
              @onclick="() => OnOpenFile.InvokeAsync(node.FullPath)">
-            <Icon Svg="@GetFileIcon(fileDiff)"
+            <Icon Svg="@GetFileIcon(changeType)"
                   Size="14"
-                  Style="@GetFileIconColor(fileDiff)"/>
+                  Style="@GetFileIconColor(changeType)"/>
             <span class="sidebar-file-name">@node.Name</span>
         </div>
     }
@@ -45,16 +46,20 @@
 
     [Parameter][EditorRequired] public HashSet<string> ExpandedDirs { get; set; } = new();
 
-    [Parameter] public DiffSummary? Diff { get; set; }
+    /// <summary>파일 경로 → 변경 타입. O(1) 조회를 위해 부모가 사전 계산해서 내려준다.</summary>
+    [Parameter] public IReadOnlyDictionary<string, FileChangeType>? DiffByPath { get; set; }
+
+    /// <summary>diff 파일의 조상 디렉터리 경로 집합 — 디렉터리 배지용.</summary>
+    [Parameter] public IReadOnlySet<string>? DirsWithDiff { get; set; }
 
     [Parameter][EditorRequired] public EventCallback<string> OnToggleDir { get; set; }
 
     [Parameter][EditorRequired] public EventCallback<string> OnOpenFile { get; set; }
 
-    private static string GetFileIcon(FileDiff? diff)
+    private static string GetFileIcon(FileChangeType? changeType)
     {
-        if (diff == null) return Lucide.File;
-        return diff.ChangeType switch
+        if (changeType == null) return Lucide.File;
+        return changeType switch
         {
             FileChangeType.Added => Lucide.FilePlus,
             FileChangeType.Deleted => Lucide.Trash2,
@@ -64,10 +69,10 @@
         };
     }
 
-    private static string GetFileIconColor(FileDiff? diff)
+    private static string GetFileIconColor(FileChangeType? changeType)
     {
-        if (diff == null) return "opacity: 0.4;";
-        return diff.ChangeType switch
+        if (changeType == null) return "opacity: 0.4;";
+        return changeType switch
         {
             FileChangeType.Added => "color: var(--color-success);",
             FileChangeType.Deleted => "color: var(--color-error);",

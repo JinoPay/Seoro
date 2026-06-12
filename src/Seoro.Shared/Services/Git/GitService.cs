@@ -231,6 +231,48 @@ public class GitService(
         return summary;
     }
 
+    public Task<DiffSummary> GetDiffStatusAsync(string workingDir, string baseBranch,
+        CancellationToken ct = default)
+    {
+        // 반환된 DiffSummary 는 캐시로 공유됨 — 호출자는 변경하지 말 것
+        return GetCachedStatusAsync(
+            StatusCacheKey(workingDir, $"diffstatus:{baseBranch}"), ct,
+            () => GetDiffStatusCoreAsync(workingDir, baseBranch, CancellationToken.None));
+    }
+
+    /// <summary>
+    ///     <see cref="GetDiffSummaryAsync"/> 의 경량판 — diff 본문 스트리밍/파일 내용 읽기 없이
+    ///     FilePath/ChangeType 만 채운다. 익스플로러처럼 변경 여부 배지만 필요한 호출자용.
+    /// </summary>
+    private async Task<DiffSummary> GetDiffStatusCoreAsync(string workingDir, string baseBranch,
+        CancellationToken ct)
+    {
+        var summary = new DiffSummary();
+
+        // baseBranch 가 유효한 ref 가 아닌 경우(아직 커밋 없음), 빈 트리로 폴백 — GetDiffSummaryAsync 와 동일
+        var verifyResult = await RunGitAsync(workingDir, ct, "rev-parse", "--verify", "--quiet", baseBranch);
+        if (!verifyResult.Success)
+        {
+            baseBranch = "4b825dc642cb6eb9a060e54bf899d69f82e20891";
+            var emptyTreeCheck = await RunGitAsync(workingDir, ct, "cat-file", "-e", baseBranch);
+            if (!emptyTreeCheck.Success)
+            {
+                foreach (var path in await GetUntrackedFilesAsync(workingDir, ct))
+                    summary.Files.Add(new FileDiff { FilePath = path, ChangeType = FileChangeType.Untracked });
+                return summary;
+            }
+        }
+
+        var nameStatusTask = GetNameStatusAsync(workingDir, baseBranch, ct);
+        var untrackedTask = GetUntrackedFilesAsync(workingDir, ct);
+
+        ParseNameStatusIntoFileMap(await nameStatusTask, summary);
+        foreach (var path in await untrackedTask)
+            summary.Files.Add(new FileDiff { FilePath = path, ChangeType = FileChangeType.Untracked });
+
+        return summary;
+    }
+
     public async Task<GitResult> AddWorktreeAsync(string repoDir, string worktreePath, string branchName,
         string baseBranch, CancellationToken ct = default)
     {

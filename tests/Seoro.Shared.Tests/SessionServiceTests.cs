@@ -116,7 +116,8 @@ public class SessionServiceTests : IDisposable
                     ContentType = "image/png",
                     Data = [1, 2, 3]
                 }
-            ]
+            ],
+            ExplorerExpandedDirs = ["src", "src/components"]
         };
         session.SetInitialStatus(SessionStatus.Ready);
         session.Messages.Add(new ChatMessage
@@ -142,6 +143,7 @@ public class SessionServiceTests : IDisposable
         Assert.Single(loaded.DraftAttachments);
         Assert.Equal("image.png", loaded.DraftAttachments[0].FileName);
         Assert.Equal([1, 2, 3], loaded.DraftAttachments[0].Data);
+        Assert.Equal(["src", "src/components"], loaded.ExplorerExpandedDirs.Order().ToList());
     }
 
     [Fact]
@@ -293,6 +295,8 @@ public class SessionServiceTests : IDisposable
         public Task<(int Additions, int Deletions)> GetDiffStatAsync(string workingDir, string baseBranch, CancellationToken ct = default)
             => Task.FromResult((0, 0));
         public Task<DiffSummary> GetDiffSummaryAsync(string workingDir, string baseBranch, CancellationToken ct = default)
+            => Task.FromResult(new DiffSummary());
+        public Task<DiffSummary> GetDiffStatusAsync(string workingDir, string baseBranch, CancellationToken ct = default)
             => Task.FromResult(new DiffSummary());
         public Task<string[]> ReadFileLinesAsync(string workingDir, string relativePath, int startLine, int endLine, CancellationToken ct = default)
             => Task.FromResult(Array.Empty<string>());

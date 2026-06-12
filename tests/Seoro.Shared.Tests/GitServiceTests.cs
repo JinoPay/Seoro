@@ -357,6 +357,39 @@ public class GitServiceTests
         Assert.Equal(3, gated.Invocations.Count);
     }
 
+    // --- GetDiffStatusAsync ---
+
+    [Fact]
+    public async Task GetDiffStatusAsync_ParsesNameStatusAndUntracked_WithoutDiffBody()
+    {
+        _processRunner.ResultQueue.Enqueue(new ProcessResult(true, "abc123\n", "", 0)); // rev-parse --verify
+        _processRunner.ResultQueue.Enqueue(new ProcessResult(true, "M\tsrc/a.cs\nA\tsrc/b.cs\n", "", 0)); // name-status
+        _processRunner.ResultQueue.Enqueue(new ProcessResult(true, "new.txt\n", "", 0)); // ls-files --others
+
+        var summary = await _sut.GetDiffStatusAsync("/repo", "main");
+
+        Assert.Equal(3, summary.Files.Count);
+        Assert.Equal(FileChangeType.Modified, summary.Files.Single(f => f.FilePath == "src/a.cs").ChangeType);
+        Assert.Equal(FileChangeType.Added, summary.Files.Single(f => f.FilePath == "src/b.cs").ChangeType);
+        Assert.Equal(FileChangeType.Untracked, summary.Files.Single(f => f.FilePath == "new.txt").ChangeType);
+        // diff 본문 스트리밍 없음 — RunStreamingAsync 는 NotImplementedException 이므로 도달하면 실패했을 것
+        Assert.Equal(3, _processRunner.Invocations.Count);
+    }
+
+    [Fact]
+    public async Task GetDiffStatusAsync_DifferentBaseBranch_NotSharedInCache()
+    {
+        _processRunner.NextResult = new ProcessResult(true, "", "", 0);
+
+        await _sut.GetDiffStatusAsync("/repo", "main");
+        var countAfterFirst = _processRunner.Invocations.Count;
+
+        // 같은 워크트리, 다른 baseBranch — 캐시 키가 분리되어 다시 spawn 되어야 한다
+        await _sut.GetDiffStatusAsync("/repo", "develop");
+
+        Assert.Equal(countAfterFirst * 2, _processRunner.Invocations.Count);
+    }
+
     // --- HasUnresolvedConflictsAsync ---
 
     [Fact]

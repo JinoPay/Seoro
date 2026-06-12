@@ -99,6 +99,9 @@ public class SessionJsonConverter : JsonConverter<Session>
         if (root.TryGetProperty("disabledMcpServers", out var dms) && dms.ValueKind == JsonValueKind.Array)
             session.DisabledMcpServers = JsonSerializer.Deserialize<HashSet<string>>(dms.GetRawText(), options) ?? [];
 
+        if (root.TryGetProperty("explorerExpandedDirs", out var eed) && eed.ValueKind == JsonValueKind.Array)
+            session.ExplorerExpandedDirs = JsonSerializer.Deserialize<HashSet<string>>(eed.GetRawText(), options) ?? [];
+
         if (root.TryGetProperty("status", out var stEl) && stEl.ValueKind == JsonValueKind.String)
         {
             var statusStr = stEl.GetString();
@@ -204,6 +207,12 @@ public class SessionJsonConverter : JsonConverter<Session>
         {
             writer.WritePropertyName("disabledMcpServers");
             JsonSerializer.Serialize(writer, value.DisabledMcpServers, options);
+        }
+
+        if (value.ExplorerExpandedDirs.Count > 0)
+        {
+            writer.WritePropertyName("explorerExpandedDirs");
+            JsonSerializer.Serialize(writer, value.ExplorerExpandedDirs, options);
         }
         writer.WriteString("createdAt", value.CreatedAt);
         writer.WriteString("updatedAt", value.UpdatedAt);
