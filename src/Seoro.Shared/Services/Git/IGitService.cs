@@ -72,6 +72,12 @@ public interface IGitService
     /// </summary>
     Task InvalidateBranchCacheAsync(string repoDir);
 
+    /// <summary>
+    ///     working tree status 캐시(3초 TTL)를 수동으로 무효화한다.
+    ///     <see cref="WorktreeChangeWatcherService"/>가 파일 변경 감지 시 호출.
+    /// </summary>
+    Task InvalidateStatusCacheAsync(string workingDir);
+
     Task<bool> IsGitRepoAsync(string path);
     Task<DiffSummary> GetDiffSummaryAsync(string workingDir, string baseBranch, CancellationToken ct = default);
 

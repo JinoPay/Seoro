@@ -2,11 +2,11 @@
 @inject IChatEventBus EventBus
 @inject IGitService GitService
 @inject IMergeStatusService MergeStatusService
+@inject IWorktreeChangeWatcherService WorktreeWatcher
 @inject IWorkspaceService WorkspaceService
 @inject IToastService Snackbar
 @inject IModalService ModalService
 @inject ILogger<GitView> Logger
-@using System.Timers
 @using Microsoft.Extensions.Logging
 @using Seoro.Shared.Components.Chat
 @implements IDisposable
@@ -200,17 +200,16 @@
     private List<FileDiff> _untrackedFiles = [];
     private readonly HashSet<string> _collapsedGroups = [];
 
-    private FileSystemWatcher? _watcher;
-    private Timer? _debounceTimer;
+    private bool _stale;
     private HashSet<string> _conflictPredictedFiles = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += HandleStateChanged;
         MergeStatusService.StatusChanged += HandleMergeStatusChanged;
+        WorktreeWatcher.FilesChanged += HandleWorktreeFilesChanged;
         RefreshConflictPredictions();
         await LoadAsync();
-        StartWatching();
     }
 
     protected override async Task OnParametersSetAsync()
@@ -225,7 +224,6 @@
             _loading = true;
             StateHasChanged();
             await LoadAsync();
-            StartWatching();
         }
     }
 
@@ -478,51 +476,18 @@
         });
     }
 
-    private void StartWatching()
+    private void HandleWorktreeFilesChanged(string workingDir)
     {
-        StopWatching();
-        var path = ChatState.CurrentSession?.Git.WorktreePath;
-        if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) return;
+        if (ChatState.CurrentSession?.Git.WorktreePath != workingDir) return;
 
-        _watcher = new FileSystemWatcher(path)
+        // 패널이 숨겨져 있으면 새로고침을 미루고 표시될 때 한 번만 로드
+        if (ChatState.RightPanel != RightPanelMode.Git)
         {
-            IncludeSubdirectories = true,
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
-            EnableRaisingEvents = true
-        };
-
-        _debounceTimer = new Timer(1500) { AutoReset = false };
-        _debounceTimer.Elapsed += async (_, _) =>
-        {
-            try { await InvokeAsync(LoadAsync); }
-            catch { /* disposed */ }
-        };
-
-        void OnChange(object sender, FileSystemEventArgs e)
-        {
-            if (e.FullPath.Contains(Path.DirectorySeparatorChar + ".git" + Path.DirectorySeparatorChar) ||
-                e.FullPath.EndsWith(Path.DirectorySeparatorChar + ".git"))
-                return;
-            _debounceTimer.Stop();
-            _debounceTimer.Start();
+            _stale = true;
+            return;
         }
 
-        _watcher.Changed += OnChange;
-        _watcher.Created += OnChange;
-        _watcher.Deleted += OnChange;
-        _watcher.Renamed += OnChange;
-    }
-
-    private void StopWatching()
-    {
-        if (_watcher != null)
-        {
-            _watcher.EnableRaisingEvents = false;
-            _watcher.Dispose();
-            _watcher = null;
-        }
-        _debounceTimer?.Dispose();
-        _debounceTimer = null;
+        _ = InvokeAsync(LoadAsync);
     }
 
     // ─── 액션 ───
@@ -778,19 +743,26 @@
                 _aheadBehind = null;
                 _commitMessage = "";
                 _error = null;
+                _stale = false;
 
                 if (sid != null)
                 {
                     _loading = true;
                     StateHasChanged();
                     await LoadAsync();
-                    StartWatching();
                 }
                 else
                 {
-                    StopWatching();
                     StateHasChanged();
                 }
+                return;
+            }
+
+            // 숨겨진 동안 미뤄둔 새로고침을 패널이 표시될 때 수행
+            if (_stale && ChatState.RightPanel == RightPanelMode.Git)
+            {
+                _stale = false;
+                await LoadAsync();
                 return;
             }
 
@@ -802,6 +774,6 @@
     {
         ChatState.OnChange -= HandleStateChanged;
         MergeStatusService.StatusChanged -= HandleMergeStatusChanged;
-        StopWatching();
+        WorktreeWatcher.FilesChanged -= HandleWorktreeFilesChanged;
     }
 }
