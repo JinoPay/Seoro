@@ -49,6 +49,13 @@ public class AppSettings
     public string CodexReasoningEffort { get; set; } = "medium"; // minimal | low | medium | high | xhigh
     public bool CodexWebSearch { get; set; }
     public bool CodexEphemeral { get; set; }
+
+    // 양방향 프로토콜 (기능 플래그, 기본 off — 검증 후 활성화)
+    /// <summary>Claude를 영속 프로세스 + stream-json 양방향 control protocol로 실행.</summary>
+    public bool UseBidirectionalProtocol { get; set; }
+
+    /// <summary>Codex를 영속 app-server(JSON-RPC) 양방향으로 실행. off면 기존 exec 단발.</summary>
+    public bool CodexUseAppServer { get; set; }
     public string? DefaultCloneDirectory { get; set; }
     public string? FallbackModel { get; set; }
     public string? GhPath { get; set; }

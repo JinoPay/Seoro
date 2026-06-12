@@ -34,10 +34,14 @@ public static class ClaudeArgumentBuilder
         bool debugMode = false,
         List<string>? additionalDirs = null,
         List<string>? allowedTools = null,
-        List<string>? disallowedTools = null)
+        List<string>? disallowedTools = null,
+        bool persistent = false)
     {
         var sb = new StringBuilder(baseArgs);
         sb.Append("--print --output-format stream-json ");
+        // 영속(양방향) 모드: stdin으로 stream-json user 메시지를 흘려보낸다.
+        if (persistent)
+            sb.Append("--input-format stream-json ");
         if (caps.SupportsVerbose)
             sb.Append("--verbose ");
         if (debugMode)

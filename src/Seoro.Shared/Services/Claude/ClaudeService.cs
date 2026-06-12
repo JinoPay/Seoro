@@ -5,12 +5,16 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Seoro.Shared.Services.Claude.Bidirectional;
+using Seoro.Shared.Services.Cli.Approval;
 namespace Seoro.Shared.Services.Claude;
 
 public class ClaudeService(
     IOptionsMonitor<AppSettings> appSettings,
     IShellService shellService,
     IProcessRunner processRunner,
+    ClaudeSessionManager sessionManager,
+    IToolApprovalHandler defaultApprovalHandler,
     ILogger<ClaudeService> logger)
     : IClaudeService, ICliProvider
 {
@@ -145,6 +149,10 @@ public class ClaudeService(
         var key = sessionId ?? DefaultAgentKey;
         logger.LogInformation("세션 {AgentKey}의 Claude 프로세스 취소 중", key);
         if (_agents.TryRemove(key, out var agent)) agent.Cancel();
+
+        // 양방향 세션은 Kill 대신 interrupt control_request로 중단(프로세스 유지)
+        var session = sessionManager.TryGet(key);
+        if (session != null) _ = session.InterruptAsync();
     }
 
     // ──────────────────────────────────────────────
@@ -171,6 +179,31 @@ public class ClaudeService(
         CliSendOptions options,
         [EnumeratorCancellation] CancellationToken ct)
     {
+        var settings = appSettings.CurrentValue;
+
+        // 양방향(영속 프로세스 + control protocol) 경로 — 기능 플래그 + CLI 지원 게이팅
+        if (settings.UseBidirectionalProtocol)
+        {
+            var (fileName, baseArgs) = await _cliResolver.ResolveAsync(settings.ClaudePath);
+            var caps = await DetectCapabilitiesAsync(fileName, baseArgs);
+            if (caps.SupportsBidirectional)
+            {
+                var handler = options.ApprovalHandler ?? defaultApprovalHandler;
+                var produced = 0;
+                await foreach (var evt in SendViaSessionAsync(options, fileName, baseArgs, caps, settings, handler, ct))
+                {
+                    produced++;
+                    yield return evt;
+                }
+
+                if (produced > 0) yield break;
+
+                // 폴백: 양방향 경로가 이벤트를 못 만들면 세션 폐기 후 단방향으로 재실행
+                logger.LogWarning("양방향 경로가 이벤트를 생성하지 못함 — 단방향으로 폴백");
+                await sessionManager.RemoveAsync(options.SessionId ?? DefaultAgentKey);
+            }
+        }
+
         await foreach (var evt in SendMessageAsync(
                            options.Message,
                            options.WorkingDir,
@@ -191,6 +224,26 @@ public class ClaudeService(
             yield return evt;
     }
 
+    private async IAsyncEnumerable<StreamEvent> SendViaSessionAsync(
+        CliSendOptions options, string fileName, string baseArgs, CliCapabilities caps,
+        AppSettings settings, IToolApprovalHandler handler,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        var agentKey = options.SessionId ?? DefaultAgentKey;
+        var arguments = ClaudeArgumentBuilder.Build(baseArgs, options.Model, options.PermissionMode, caps,
+            options.ConversationId, options.SystemPrompt, options.EffortLevel, options.ContinueMode,
+            options.ForkSession, options.MaxTurns, options.MaxBudgetUsd, settings.FallbackModel,
+            settings.McpConfigPath, settings.DebugMode, options.AdditionalDirs, options.AllowedTools,
+            options.DisallowedTools, persistent: true);
+        var loginPath = await shellService.GetLoginShellPathAsync();
+        var envVars = settings.EnvironmentVariables.Count > 0 ? settings.EnvironmentVariables : null;
+        var spec = new ClaudeSessionStartupSpec(fileName, arguments, options.WorkingDir, envVars, loginPath);
+
+        var session = sessionManager.GetOrCreate(agentKey, spec, handler);
+        await foreach (var evt in session.SendTurnAsync(options.Message, ct))
+            yield return evt;
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
@@ -204,10 +257,14 @@ public class ClaudeService(
                 agent.Dispose();
             }
 
+        // 영속 양방향 세션 정리
+        try { sessionManager.RemoveAllAsync().AsTask().GetAwaiter().GetResult(); }
+        catch (Exception ex) { logger.LogDebug(ex, "양방향 세션 정리 중 오류"); }
+
         _capLock.Dispose();
     }
 
-    private static Process StartProcess(string fileName, string arguments, string workingDir,
+    internal static Process StartProcess(string fileName, string arguments, string workingDir,
         Dictionary<string, string>? envVars = null, string? loginShellPath = null)
     {
         // cmd.exe /c는 인자 문자열의 첫 번째와 마지막 따옴표를 제거하므로,
@@ -424,10 +481,15 @@ public class ClaudeService(
             caps.Version = version?.Trim() ?? "";
 
             var help = await _cliResolver.RunSimpleCommandAsync(fileName, $"{baseArgs}--help");
-            if (help != null) caps.SupportsVerbose = help.Contains("--verbose", StringComparison.OrdinalIgnoreCase);
+            if (help != null)
+            {
+                caps.SupportsVerbose = help.Contains("--verbose", StringComparison.OrdinalIgnoreCase);
+                caps.SupportsBidirectional = help.Contains("--input-format", StringComparison.OrdinalIgnoreCase);
+            }
 
-            logger.LogInformation("Claude CLI 감지됨: version={Version}, verbose={SupportsVerbose}",
-                caps.Version, caps.SupportsVerbose);
+            logger.LogInformation(
+                "Claude CLI 감지됨: version={Version}, verbose={SupportsVerbose}, bidirectional={SupportsBidirectional}",
+                caps.Version, caps.SupportsVerbose, caps.SupportsBidirectional);
             _capabilities = caps;
             return caps;
         }

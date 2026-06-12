@@ -5,17 +5,22 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Seoro.Shared.Services.Codex.AppServer;
+using Seoro.Shared.Services.Cli.Approval;
 
 namespace Seoro.Shared.Services.Codex;
 
 /// <summary>
 ///     Codex CLI (openai/codex)를 ICliProvider로 구현한다.
 ///     Codex의 JSONL 이벤트(ThreadEvent 형식)를 Claude 형식의 StreamEvent로 변환하여 반환한다.
+///     CodexUseAppServer 플래그가 켜지면 영속 app-server(JSON-RPC) 양방향 경로를 쓰고,
+///     실패 시 기존 exec 단발 경로로 폴백한다.
 /// </summary>
 public class CodexService(
     IOptionsMonitor<AppSettings> appSettings,
     IShellService shellService,
     IProcessRunner processRunner,
+    IToolApprovalHandler defaultApprovalHandler,
     ILogger<CodexService> logger)
     : ICliProvider
 {
@@ -24,6 +29,7 @@ public class CodexService(
 
     private readonly CodexCliResolver _cliResolver = new(shellService, processRunner, logger);
     private readonly ConcurrentDictionary<string, AgentProcess> _agents = new();
+    private readonly ConcurrentDictionary<string, CodexAppServerClient> _appServerClients = new();
     private bool _disposed;
     private string? _detectedVersion;
 
@@ -62,6 +68,23 @@ public class CodexService(
         logger.LogInformation("세션 {AgentKey}에 대해 Codex 프로세스 시작, 모델: {Model}", agentKey, options.Model);
 
         var settings = appSettings.CurrentValue;
+
+        // 양방향(영속 app-server) 경로 — 기능 플래그
+        if (settings.CodexUseAppServer)
+        {
+            var produced = 0;
+            await foreach (var evt in SendViaAppServerAsync(options, ct))
+            {
+                produced++;
+                yield return evt;
+            }
+
+            if (produced > 0) yield break;
+
+            logger.LogWarning("Codex app-server 경로가 이벤트를 생성하지 못함 — exec로 폴백");
+            if (_appServerClients.TryRemove(agentKey, out var dead)) await dead.DisposeAsync();
+        }
+
         var (fileName, baseArgs) = await _cliResolver.ResolveAsync(settings.CodexPath);
         var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
@@ -171,6 +194,9 @@ public class CodexService(
         var key = sessionId ?? DefaultAgentKey;
         logger.LogInformation("세션 {AgentKey}의 Codex 프로세스 취소 중", key);
         if (_agents.TryRemove(key, out var agent)) agent.Cancel();
+
+        // 양방향 app-server 세션은 turn/interrupt로 중단(프로세스 유지)
+        if (_appServerClients.TryGetValue(key, out var client)) _ = client.InterruptAsync();
     }
 
     public void Dispose()
@@ -184,6 +210,54 @@ public class CodexService(
                 agent.Cancel();
                 agent.Dispose();
             }
+
+        foreach (var key in _appServerClients.Keys.ToList())
+            if (_appServerClients.TryRemove(key, out var client))
+                try { client.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+                catch (Exception ex) { logger.LogDebug(ex, "Codex app-server 클라이언트 정리 오류"); }
+    }
+
+    // ──────────────────────────────────────────────
+    //  양방향 app-server 경로
+    // ──────────────────────────────────────────────
+
+    private async IAsyncEnumerable<StreamEvent> SendViaAppServerAsync(
+        CliSendOptions options, [EnumeratorCancellation] CancellationToken ct)
+    {
+        var agentKey = options.SessionId ?? DefaultAgentKey;
+        var client = await GetOrCreateAppServerClientAsync(agentKey, options);
+        var req = new CodexTurnRequest
+        {
+            Message = BuildStdinContent(options.Message, options.SystemPrompt),
+            WorkingDir = options.WorkingDir,
+            Model = options.Model,
+            ConversationId = options.ConversationId
+        };
+        await foreach (var evt in client.StartTurnAsync(req, ct))
+            yield return evt;
+    }
+
+    private async Task<CodexAppServerClient> GetOrCreateAppServerClientAsync(string key, CliSendOptions options)
+    {
+        if (_appServerClients.TryGetValue(key, out var existing) && !existing.HasExited)
+            return existing;
+        if (existing != null)
+        {
+            await existing.DisposeAsync();
+            _appServerClients.TryRemove(key, out _);
+        }
+
+        var settings = appSettings.CurrentValue;
+        var (fileName, baseArgs) = await _cliResolver.ResolveAsync(settings.CodexPath);
+        var arguments = CodexAppServerArgumentBuilder.Build(baseArgs);
+        var envVars = settings.EnvironmentVariables.Count > 0 ? settings.EnvironmentVariables : null;
+        var loginPath = await shellService.GetLoginShellPathAsync();
+        var process = StartProcess(fileName, arguments, options.WorkingDir, envVars, loginPath);
+        var client = new CodexAppServerClient(process, key, defaultApprovalHandler, logger);
+        client.Start();
+        _appServerClients[key] = client;
+        logger.LogInformation("세션 {AgentKey} 영속 Codex app-server 시작", key);
+        return client;
     }
 
     /// <summary>

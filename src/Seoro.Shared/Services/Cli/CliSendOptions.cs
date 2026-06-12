@@ -1,3 +1,5 @@
+using Seoro.Shared.Services.Cli.Approval;
+
 namespace Seoro.Shared.Services.Cli;
 
 /// <summary>
@@ -50,4 +52,10 @@ public record CliSendOptions
 
     /// <summary>차단할 도구 목록. Claude 전용 (Codex에서는 무시).</summary>
     public List<string>? DisallowedTools { get; init; }
+
+    /// <summary>
+    ///     도구/명령 실행 승인 콜백. 양방향 프로토콜에서만 사용된다.
+    ///     null이면 프로바이더가 정책(permission-mode / approval_policy)에 위임한다.
+    /// </summary>
+    public IToolApprovalHandler? ApprovalHandler { get; init; }
 }

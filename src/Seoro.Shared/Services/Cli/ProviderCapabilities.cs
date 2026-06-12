@@ -32,4 +32,10 @@ public record ProviderCapabilities
 
     /// <summary>MCP 서버 지원 여부.</summary>
     public bool SupportsMcp { get; init; }
+
+    /// <summary>
+    ///     양방향 프로토콜에서 도구별 실시간 승인 콜백 지원 여부.
+    ///     UI가 승인 다이얼로그를 띄울지 판단하는 데 사용한다.
+    /// </summary>
+    public bool SupportsToolApproval { get; init; }
 }

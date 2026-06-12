@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
 using Seoro.Shared.Models;
 using Seoro.Shared.Services;
+using Seoro.Shared.Services.Claude.Bidirectional;
+using Seoro.Shared.Services.Cli.Approval;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -19,6 +21,8 @@ public class ClaudeServiceTests : IDisposable
             _optionsMonitor,
             _shellService,
             _processRunner,
+            new ClaudeSessionManager(NullLogger<ClaudeSessionManager>.Instance),
+            new AutoAllowToolApprovalHandler(),
             NullLogger<ClaudeService>.Instance);
     }
 

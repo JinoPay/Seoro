@@ -228,6 +228,11 @@
   <data name="Settings_Advanced_Desc" xml:space="preserve"><value>Manage advanced Claude CLI settings and environment variables.</value></data>
   <data name="Settings_Advanced_DebugModeLabel" xml:space="preserve"><value>Debug Mode</value></data>
   <data name="Settings_Advanced_DebugModeHint" xml:space="preserve"><value>When enabled, passes the --debug flag to the Claude CLI.</value></data>
+  <data name="Settings_Experimental_Title" xml:space="preserve"><value>Experimental</value></data>
+  <data name="Settings_Experimental_BidirectionalLabel" xml:space="preserve"><value>Claude bidirectional protocol</value></data>
+  <data name="Settings_Experimental_BidirectionalHint" xml:space="preserve"><value>Persistent process enabling multi-turn and instant interrupt. Works only when the Claude CLI supports stream-json input; falls back to the existing method on failure.</value></data>
+  <data name="Settings_Experimental_CodexAppServerLabel" xml:space="preserve"><value>Codex app-server</value></data>
+  <data name="Settings_Experimental_CodexAppServerHint" xml:space="preserve"><value>Run Codex as a persistent app-server (JSON-RPC). Experimental; falls back to the existing exec method on failure.</value></data>
   <data name="Settings_Advanced_EnvVarsTitle" xml:space="preserve"><value>Process Environment Variables</value></data>
   <data name="Settings_Advanced_EnvVarsHint" xml:space="preserve"><value>Environment variables injected into the process when Seoro runs the Claude CLI.</value></data>
   <data name="Settings_Advanced_EnvKeyPlaceholder" xml:space="preserve"><value>Key</value></data>

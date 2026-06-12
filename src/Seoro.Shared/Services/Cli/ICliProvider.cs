@@ -18,6 +18,8 @@ public interface ICliProvider : IDisposable
     /// <summary>
     ///     메시지를 전송하고 스트림 이벤트를 비동기로 반환한다.
     ///     각 구현체는 자신의 CLI 출력을 <see cref="StreamEvent" />로 변환하여 반환한다.
+    ///     양방향 모드 구현체는 세션별 영속 채널을 내부적으로(sessionId 기준) 관리하며,
+    ///     한 번의 호출은 한 턴(<c>result</c> / <c>turn.completed</c>까지)에 해당한다.
     /// </summary>
     IAsyncEnumerable<StreamEvent> SendMessageAsync(
         CliSendOptions options,
@@ -29,6 +31,9 @@ public interface ICliProvider : IDisposable
     /// <summary>탐지된 CLI 버전 문자열을 반환한다. 미탐지 시 null.</summary>
     Task<string?> GetDetectedVersionAsync();
 
-    /// <summary>지정된 세션(또는 전체)의 스트리밍을 취소한다.</summary>
+    /// <summary>
+    ///     지정된 세션(또는 전체)의 스트리밍을 취소한다.
+    ///     양방향 모드에서는 진행 중인 턴의 interrupt를 의미하며, 프로세스는 유지될 수 있다.
+    /// </summary>
     void Cancel(string? sessionId = null);
 }
