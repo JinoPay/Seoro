@@ -49,6 +49,9 @@
     <script src="lib/codemirror/codemirror-interop.js"></script>
     <script src="lib/xterm/xterm.js"></script>
     <script src="lib/xterm/addon-fit.js"></script>
+    <script src="lib/xterm/addon-search.js"></script>
+    <script src="lib/xterm/addon-web-links.js"></script>
+    <script src="lib/xterm/addon-webgl.js"></script>
     <script>
         // Disable browser context menu (Save As, Reload, etc.)
         document.addEventListener('contextmenu', function(e) {
@@ -757,7 +760,23 @@
 
             var fitAddon = new FitAddon.FitAddon();
             term.loadAddon(fitAddon);
+
+            var searchAddon = new SearchAddon.SearchAddon();
+            term.loadAddon(searchAddon);
+
+            // URL 클릭 → 기본 브라우저 (기존 OPEN_URL 브리지 재사용)
+            term.loadAddon(new WebLinksAddon.WebLinksAddon(function(event, uri) {
+                window.external.sendMessage('OPEN_URL:' + uri);
+            }));
+
             term.open(container);
+
+            // WebGL 렌더러 — 실패 시 기본 DOM 렌더러로 자동 fallback (open() 이후 로드 필수)
+            try {
+                var webglAddon = new WebglAddon.WebglAddon();
+                webglAddon.onContextLoss(function() { webglAddon.dispose(); });
+                term.loadAddon(webglAddon);
+            } catch (_) { /* WebGL 미지원 환경 */ }
 
             // Delay fit slightly to ensure container has layout
             requestAnimationFrame(function() { fitAddon.fit(); });
@@ -778,6 +797,10 @@
                     });
                     return false;
                 }
+                if (mod && (ev.key === 'f' || ev.key === 'F')) {
+                    dotNetRef.invokeMethodAsync('OnSearchShortcut');
+                    return false;
+                }
                 return true;
             });
 
@@ -790,7 +813,24 @@
                 dotNetRef.invokeMethodAsync('OnTerminalResize', size.cols, size.rows);
             });
 
-            window._terminals[elementId] = { term: term, fitAddon: fitAddon, dotNetRef: dotNetRef };
+            window._terminals[elementId] = { term: term, fitAddon: fitAddon, searchAddon: searchAddon, dotNetRef: dotNetRef };
+        };
+
+        window.terminalSearch = function(elementId, query, forward, incremental) {
+            var t = window._terminals[elementId];
+            if (!t || !query) return false;
+            var opts = {
+                incremental: !!incremental,
+                decorations: { matchOverviewRuler: '#a78bfa', activeMatchColorOverviewRuler: '#f59e0b' }
+            };
+            return forward
+                ? t.searchAddon.findNext(query, opts)
+                : t.searchAddon.findPrevious(query, opts);
+        };
+
+        window.terminalSearchClear = function(elementId) {
+            var t = window._terminals[elementId];
+            if (t) t.searchAddon.clearDecorations();
         };
 
         window.terminalWrite = function(elementId, data) {

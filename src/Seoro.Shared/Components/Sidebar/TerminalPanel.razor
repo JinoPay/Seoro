@@ -8,9 +8,11 @@
     <div class="terminal-panel-toolbar">
         <span class="terminal-panel-label">Terminal</span>
         <div style="flex:1"></div>
+        <IconButton Icon="@Lucide.Search" Class="terminal-btn" Title="@Strings.Terminal_Search_Placeholder"
+                    OnClick="ToggleSearch"/>
         <Menu Dense="true" Fixed="true" Placement="PopoverPlacement.BottomEnd">
             <ActivatorContent>
-                <IconButton Icon="@Lucide.Plus" Class="terminal-btn" Title="새 터미널"/>
+                <IconButton Icon="@Lucide.Plus" Class="terminal-btn" Title="@Strings.Terminal_NewTerminal"/>
             </ActivatorContent>
             <ChildContent>
                 @foreach (var shell in _availableShells)
@@ -25,17 +27,47 @@
         @if (_isRunning)
         {
             <IconButton Icon="@Lucide.RefreshCw"
-                        OnClick="RestartTerminal" Title="Restart" Class="terminal-btn"/>
+                        OnClick="RestartTerminal" Title="@Strings.Terminal_Restart" Class="terminal-btn"/>
             <IconButton Icon="@Lucide.X"
-                        OnClick="StopTerminal" Title="Kill" Class="terminal-btn"/>
+                        OnClick="StopTerminal" Title="@Strings.Terminal_Kill" Class="terminal-btn"/>
         }
         else
         {
             <IconButton Icon="@Lucide.Play"
-                        OnClick="StartTerminal" Title="Start" Class="terminal-btn"/>
+                        OnClick="StartTerminal" Title="@Strings.Terminal_Start" Class="terminal-btn"/>
         }
     </div>
-    <div id="@_elementId" class="terminal-container"></div>
+    @if (_searchOpen)
+    {
+        <div class="terminal-search-bar">
+            <input @ref="_searchInput"
+                   class="terminal-search-input"
+                   placeholder="@Strings.Terminal_Search_Placeholder"
+                   value="@_searchQuery"
+                   @oninput="OnSearchInput"
+                   @onkeydown="OnSearchKeyDown"/>
+            <IconButton Icon="@Lucide.ChevronUp" Class="terminal-btn" Title="@Strings.Terminal_Search_Previous"
+                        OnClick="@(() => SearchAsync(false))"/>
+            <IconButton Icon="@Lucide.ChevronDown" Class="terminal-btn" Title="@Strings.Terminal_Search_Next"
+                        OnClick="@(() => SearchAsync(true))"/>
+            <IconButton Icon="@Lucide.X" Class="terminal-btn" Title="@Strings.Terminal_Search_Close"
+                        OnClick="CloseSearch"/>
+        </div>
+    }
+    <div class="terminal-body">
+        <div id="@_elementId" class="terminal-container"></div>
+        @if (!_isRunning && _currentSessionKey != null && _initialized)
+        {
+            <div class="terminal-dead-banner">
+                <span class="terminal-dead-message">@Strings.Terminal_Exited</span>
+                @if (_errorMessage != null)
+                {
+                    <span class="terminal-dead-detail">@_errorMessage</span>
+                }
+                <Button StartIcon="@Lucide.RefreshCw" OnClick="RestartTerminal">@Strings.Terminal_Restart</Button>
+            </div>
+        }
+    </div>
 </div>
 
 @code {
@@ -44,12 +76,19 @@
     private string? _currentSessionKey;
     private bool _isRunning;
     private bool _initialized;
+    private bool _disposed;
+    private string? _errorMessage;
+    private bool _searchOpen;
+    private string _searchQuery = "";
+    private ElementReference _searchInput;
+    private bool _focusSearchAfterRender;
     private List<ShellInfo> _availableShells = [];
 
     protected override void OnInitialized()
     {
         TerminalService.OnOutput += HandleOutput;
         TerminalService.OnExited += HandleExited;
+        TerminalService.OnError += HandleError;
         ChatState.OnChange += HandleStateChanged;
     }
 
@@ -63,6 +102,18 @@
             _availableShells = await ShellSvc.GetAvailableShellsAsync();
             await TryStartForCurrentSession();
             StateHasChanged();
+        }
+
+        if (_focusSearchAfterRender)
+        {
+            _focusSearchAfterRender = false;
+            try
+            {
+                await _searchInput.FocusAsync();
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -78,6 +129,14 @@
     {
         if (_currentSessionKey != null)
             TerminalService.Resize(_currentSessionKey, cols, rows);
+    }
+
+    [JSInvokable]
+    public void OnSearchShortcut()
+    {
+        _searchOpen = true;
+        _focusSearchAfterRender = true;
+        StateHasChanged();
     }
 
     private async Task<(int? Cols, int? Rows)> GetTerminalSizeAsync()
@@ -116,9 +175,10 @@
 
     private void HandleOutput(string sessionKey, string data)
     {
-        if (sessionKey != _currentSessionKey) return;
+        if (_disposed || sessionKey != _currentSessionKey) return;
         _ = InvokeAsync(async () =>
         {
+            if (_disposed) return;
             try
             {
                 await JS.InvokeVoidAsync("terminalWrite", _elementId, data);
@@ -132,18 +192,32 @@
 
     private void HandleExited(string sessionKey, int exitCode)
     {
-        if (sessionKey != _currentSessionKey) return;
+        if (_disposed || sessionKey != _currentSessionKey) return;
         _ = InvokeAsync(() =>
         {
+            if (_disposed) return;
             _isRunning = false;
+            StateHasChanged();
+        });
+    }
+
+    private void HandleError(string sessionKey, string message)
+    {
+        if (_disposed || sessionKey != _currentSessionKey) return;
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed) return;
+            _errorMessage = message;
             StateHasChanged();
         });
     }
 
     private void HandleStateChanged()
     {
+        if (_disposed) return;
         _ = InvokeAsync(async () =>
         {
+            if (_disposed) return;
             await TryStartForCurrentSession();
             StateHasChanged();
         });
@@ -155,14 +229,24 @@
         if (session == null || session.Status == SessionStatus.Pending) return;
 
         var key = session.Id;
-        if (key == _currentSessionKey && TerminalService.IsRunning(key))
+        if (key == _currentSessionKey)
         {
-            _isRunning = true;
+            _isRunning = TerminalService.IsRunning(key);
             return;
         }
 
-        // 세션이 변경됨 — 터미널 전환
+        // 세션이 변경됨 — 항상 화면을 지우고 해당 세션의 스크롤백을 replay
         _currentSessionKey = key;
+        _errorMessage = null;
+        await ClearTerminalDisplay();
+
+        var buffered = TerminalService.GetBufferedOutput(key);
+        if (_disposed || key != _currentSessionKey) return;
+
+        if (!string.IsNullOrEmpty(buffered))
+            await WriteToDisplay(buffered);
+
+        TerminalService.NotifyAttached(key);
 
         if (TerminalService.IsRunning(key))
         {
@@ -170,93 +254,47 @@
             return;
         }
 
-        // 새 세션을 위해 xterm 디스플레이 지우기
-        if (_initialized)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("terminalClear", _elementId);
-            }
-            catch
-            {
-            }
-        }
-
-        var workDir = ResolveWorkDir(session);
-        var terminalSize = await GetTerminalSizeAsync();
-
-        try
-        {
-            await TerminalService.StartAsync(key, workDir, cols: terminalSize.Cols, rows: terminalSize.Rows);
-            _isRunning = TerminalService.IsRunning(key);
-        }
-        catch (Exception ex)
+        // 스크롤백이 있는 죽은/정리된 세션은 자동 재시작하지 않고 배너로 안내
+        if (!string.IsNullOrEmpty(buffered))
         {
             _isRunning = false;
-            await WriteTerminalError(ex.Message);
+            return;
         }
+
+        await StartCoreAsync(key, null, clearDisplay: false);
     }
 
     private async Task StartTerminal()
     {
         if (_currentSessionKey == null) return;
-
-        if (_initialized)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("terminalClear", _elementId);
-            }
-            catch
-            {
-            }
-        }
-
-        var workDir = ResolveWorkDir(ChatState.CurrentSession);
-        var terminalSize = await GetTerminalSizeAsync();
-
-        try
-        {
-            await TerminalService.StartAsync(_currentSessionKey, workDir, cols: terminalSize.Cols,
-                rows: terminalSize.Rows);
-            _isRunning = TerminalService.IsRunning(_currentSessionKey);
-        }
-        catch (Exception ex)
-        {
-            _isRunning = false;
-            await WriteTerminalError(ex.Message);
-        }
+        await StartCoreAsync(_currentSessionKey, null, clearDisplay: true);
     }
 
     private async Task StartWithShell(ShellInfo shell)
     {
         if (_currentSessionKey == null) return;
-
         await TerminalService.StopAsync(_currentSessionKey);
+        await StartCoreAsync(_currentSessionKey, shell, clearDisplay: true);
+    }
 
-        if (_initialized)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("terminalClear", _elementId);
-            }
-            catch
-            {
-            }
-        }
+    private async Task StartCoreAsync(string key, ShellInfo? shell, bool clearDisplay)
+    {
+        if (clearDisplay)
+            await ClearTerminalDisplay();
 
+        _errorMessage = null;
         var workDir = ResolveWorkDir(ChatState.CurrentSession);
         var terminalSize = await GetTerminalSizeAsync();
 
         try
         {
-            await TerminalService.StartAsync(_currentSessionKey, workDir, shell, terminalSize.Cols, terminalSize.Rows);
-            _isRunning = TerminalService.IsRunning(_currentSessionKey);
+            await TerminalService.StartAsync(key, workDir, shell, terminalSize.Cols, terminalSize.Rows);
+            _isRunning = TerminalService.IsRunning(key);
         }
         catch (Exception ex)
         {
             _isRunning = false;
-            await WriteTerminalError(ex.Message);
+            _errorMessage = ex.Message;
         }
     }
 
@@ -274,10 +312,96 @@
         _isRunning = false;
     }
 
+    private void ToggleSearch()
+    {
+        if (_searchOpen)
+        {
+            _ = CloseSearch();
+        }
+        else
+        {
+            _searchOpen = true;
+            _focusSearchAfterRender = true;
+        }
+    }
+
+    private async Task CloseSearch()
+    {
+        _searchOpen = false;
+        _searchQuery = "";
+        if (_initialized)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("terminalSearchClear", _elementId);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchQuery = e.Value?.ToString() ?? "";
+        _ = SearchAsync(true, incremental: true);
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter":
+                await SearchAsync(!e.ShiftKey);
+                break;
+            case "Escape":
+                await CloseSearch();
+                break;
+        }
+    }
+
+    private async Task SearchAsync(bool forward, bool incremental = false)
+    {
+        if (!_initialized || string.IsNullOrEmpty(_searchQuery)) return;
+        try
+        {
+            await JS.InvokeAsync<bool>("terminalSearch", _elementId, _searchQuery, forward, incremental);
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task ClearTerminalDisplay()
+    {
+        if (!_initialized) return;
+        try
+        {
+            await JS.InvokeVoidAsync("terminalClear", _elementId);
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task WriteToDisplay(string data)
+    {
+        if (!_initialized) return;
+        try
+        {
+            await JS.InvokeVoidAsync("terminalWrite", _elementId, data);
+        }
+        catch
+        {
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         TerminalService.OnOutput -= HandleOutput;
         TerminalService.OnExited -= HandleExited;
+        TerminalService.OnError -= HandleError;
         ChatState.OnChange -= HandleStateChanged;
 
         if (_initialized)
@@ -301,18 +425,6 @@
             && Directory.Exists(session.Git.WorktreePath))
             return session.Git.WorktreePath;
         return Environment.CurrentDirectory;
-    }
-
-    private async Task WriteTerminalError(string message)
-    {
-        if (!_initialized) return;
-        try
-        {
-            await JS.InvokeVoidAsync("terminalWrite", _elementId, $"\x1b[31mTerminal failed: {message}\x1b[0m\r\n");
-        }
-        catch
-        {
-        }
     }
 
 }
