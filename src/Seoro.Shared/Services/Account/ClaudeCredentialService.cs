@@ -130,11 +130,33 @@ public class ClaudeCredentialService(IProcessRunner processRunner, ILogger<Claud
     private async Task WriteKeychainAsync(string credentialsJson)
     {
         var user = Environment.UserName;
-        var result = await processRunner.RunAsync(new ProcessRunOptions
+
+        // 보안: 토큰을 명령행 인자(-w <값>)로 넘기면 `ps`로 다른 프로세스에서 노출된다.
+        // 대신 `-w`를 값 없이 주고 stdin으로 전달한다. 이때 security는 비밀번호를
+        // 두 번(입력 + 재입력) 읽으므로 값을 개행으로 구분해 두 번 보낸다.
+        // 단, 값 자체에 개행이 있으면 이 방식은 항목을 손상시키므로 기존 인자 방식으로 폴백한다.
+        var canUseStdin = !credentialsJson.Contains('\n') && !credentialsJson.Contains('\r');
+
+        ProcessRunOptions options;
+        if (canUseStdin)
+            options = new ProcessRunOptions
+            {
+                FileName = "security",
+                Arguments = ["add-generic-password", "-U", "-s", "Claude Code-credentials", "-a", user, "-w"],
+                StandardInput = $"{credentialsJson}\n{credentialsJson}\n"
+            };
+        else
         {
-            FileName = "security",
-            Arguments = ["add-generic-password", "-U", "-s", "Claude Code-credentials", "-a", user, "-w", credentialsJson]
-        });
+            logger.LogWarning("자격증명에 개행이 포함되어 stdin 전달 불가 — 인자 방식으로 폴백");
+            options = new ProcessRunOptions
+            {
+                FileName = "security",
+                Arguments =
+                    ["add-generic-password", "-U", "-s", "Claude Code-credentials", "-a", user, "-w", credentialsJson]
+            };
+        }
+
+        var result = await processRunner.RunAsync(options);
 
         if (!result.Success)
         {

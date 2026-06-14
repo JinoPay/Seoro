@@ -121,6 +121,40 @@ public class PluginExecutionEngineTests
         Assert.Contains("-c", _processRunner.LastOptions!.Arguments);
     }
 
+    [Theory]
+    [InlineData("../../../../etc/evil.sh")]
+    [InlineData("../../outside.js")]
+    [InlineData("subdir/../../../escape.py")]
+    public async Task ExecuteAsync_EntryPointEscapesPluginDir_Rejected(string maliciousEntryPoint)
+    {
+        var engine = CreateEngine();
+        var plugin = MakePlugin("traversal", PluginStatus.Valid, entryPoint: maliciousEntryPoint);
+        await engine.LoadPluginAsync(plugin);
+
+        var result = await engine.ExecuteAsync("traversal");
+
+        Assert.False(result.Success);
+        Assert.Contains("디렉터리를 벗어났습니다", result.Error);
+        // 가드에서 차단되었으므로 프로세스는 실행되지 않아야 한다.
+        Assert.Null(_processRunner.LastOptions);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_EntryPointInsidePluginDir_Allowed()
+    {
+        _processRunner.NextResult = new ProcessResult(true, "ok", "", 0);
+
+        var engine = CreateEngine();
+        // 하위 디렉터리 진입점은 플러그인 디렉터리 내부이므로 허용되어야 한다.
+        var plugin = MakePlugin("nested-ok", PluginStatus.Valid, entryPoint: "bin/main.js");
+        await engine.LoadPluginAsync(plugin);
+
+        var result = await engine.ExecuteAsync("nested-ok");
+
+        Assert.True(result.Success);
+        Assert.NotNull(_processRunner.LastOptions);
+    }
+
     [Fact]
     public async Task ExecuteAsync_PassesEnvironmentVariables()
     {

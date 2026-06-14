@@ -72,7 +72,8 @@ public class Session
     /// <summary>Codex 세션별 승인 정책 오버라이드. null이면 글로벌 설정 사용.</summary>
     public string? CodexApprovalPolicy { get; set; }
 
-    [JsonIgnore] public string? ErrorMessage => Error?.Message;
+    // 사용자에게는 분류된 친화 메시지를 보여준다(원본 stderr 는 Error.Message/Details 에 보존).
+    [JsonIgnore] public string? ErrorMessage => Error?.UserMessage;
 
     /// <summary>
     ///     대기 중인 AskUserQuestion 도구 호출의 원본 JSON 입력.

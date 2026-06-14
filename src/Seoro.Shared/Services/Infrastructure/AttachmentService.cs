@@ -108,7 +108,7 @@ public class AttachmentService(ILogger<AttachmentService> logger) : IAttachmentS
 
         try
         {
-            await File.WriteAllBytesAsync(destPath, data);
+            await AtomicFileWriter.WriteAsync(destPath, data);
         }
         catch (Exception ex)
         {

@@ -43,11 +43,12 @@ public class WorktreeSyncService : IWorktreeSyncService
         // Stop watching FIRST to prevent new timer callbacks from firing
         StopWatching();
 
-        // Stop sync synchronously on dispose (app closing)
+        // Stop sync synchronously on dispose (app closing).
+        // Task.Run 으로 호출자 SynchronizationContext 와 분리 — UI 컨텍스트에서의 데드락 방지.
         if (_state != null)
             try
             {
-                RestoreAndCleanupAsync().GetAwaiter().GetResult();
+                Task.Run(() => RestoreAndCleanupAsync()).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
@@ -226,7 +227,7 @@ public class WorktreeSyncService : IWorktreeSyncService
     {
         var stateFile = Path.Combine(state.BackupDir, StateFileName);
         var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(stateFile, json);
+        await Infrastructure.AtomicFileWriter.WriteAsync(stateFile, json);
     }
 
     private static async Task<bool> FilesAreEqualAsync(string pathA, string pathB)
