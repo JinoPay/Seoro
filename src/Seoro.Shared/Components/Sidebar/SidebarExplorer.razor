@@ -1,6 +1,6 @@
 @inject IChatState ChatState
 @inject IGitService GitService
-@inject IWorktreeChangeWatcherService WorktreeWatcher
+@using System.Timers
 @implements IDisposable
 
 <div class="sidebar-explorer">
@@ -58,13 +58,17 @@
     // 세션별 확장된 디렉터리 상태
     private readonly Dictionary<string, HashSet<string>> _sessionExpandedDirs = new();
     private HashSet<string> _expandedDirs = new();
-    private bool _stale;
+
+    // 스로틀된 변경 감지를 위한 FileSystemWatcher
+    private FileSystemWatcher? _watcher;
+    private Timer? _debounceTimer;
+    private readonly Lock _debounceLock = new();
 
     protected override async Task OnInitializedAsync()
     {
         ChatState.OnChange += HandleStateChanged;
-        WorktreeWatcher.FilesChanged += HandleWorktreeFilesChanged;
         await LoadFilesAsync();
+        StartWatching();
     }
 
     protected override async Task OnParametersSetAsync()
@@ -89,6 +93,7 @@
             }
 
             await LoadFilesAsync();
+            StartWatching();
 
             // 이 세션의 초기 (축소된) 상태 저장
             if (sessionId != null)
@@ -98,33 +103,80 @@
         }
     }
 
-    private void HandleWorktreeFilesChanged(string workingDir)
+    private void StartWatching()
     {
-        if (ChatState.CurrentSession?.Git.WorktreePath != workingDir) return;
+        StopWatching();
 
-        // 패널이 숨겨져 있으면 새로고침을 미루고 표시될 때 한 번만 로드
-        if (ChatState.RightPanel != RightPanelMode.Explorer)
-        {
-            _stale = true;
+        var path = ChatState.CurrentSession?.Git.WorktreePath;
+        if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
             return;
+
+        _watcher = new FileSystemWatcher(path)
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+            EnableRaisingEvents = true
+        };
+
+        _debounceTimer = new Timer(2000) { AutoReset = false };
+        _debounceTimer.Elapsed += async (_, _) =>
+        {
+            try
+            {
+                await InvokeAsync(async () =>
+                {
+                    var prevDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? new HashSet<string>();
+                    await LoadFilesAsync(true);
+                    var newDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? new HashSet<string>();
+
+                    // 새로 변경된 파일의 디렉터리 자동 확장
+                    var newlyChanged = newDiffFiles.Except(prevDiffFiles).ToList();
+                    if (newlyChanged.Count > 0)
+                    {
+                        foreach (var filePath in newlyChanged)
+                            ExpandParentDirs(filePath);
+                        StateHasChanged();
+                    }
+                });
+            }
+            catch
+            {
+                /* 컴포넌트가 폐기되었을 수 있음 */
+            }
+        };
+
+        void OnChange(object sender, FileSystemEventArgs e)
+        {
+            if (e.FullPath.Contains(Path.DirectorySeparatorChar + ".git" + Path.DirectorySeparatorChar) ||
+                e.FullPath.EndsWith(Path.DirectorySeparatorChar + ".git"))
+                return;
+
+            lock (_debounceLock)
+            {
+                _debounceTimer?.Stop();
+                _debounceTimer?.Start();
+            }
         }
 
-        _ = InvokeAsync(RefreshAfterChangeAsync);
+        _watcher.Changed += OnChange;
+        _watcher.Created += OnChange;
+        _watcher.Deleted += OnChange;
+        _watcher.Renamed += OnChange;
     }
 
-    /// <summary>파일 변경 후 새로고침 — 새로 변경된 파일의 부모 디렉터리를 자동 확장.</summary>
-    private async Task RefreshAfterChangeAsync()
+    private void StopWatching()
     {
-        var prevDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? new HashSet<string>();
-        await LoadFilesAsync(true);
-        var newDiffFiles = _diff?.Files.Select(f => f.FilePath).ToHashSet() ?? new HashSet<string>();
-
-        var newlyChanged = newDiffFiles.Except(prevDiffFiles).ToList();
-        if (newlyChanged.Count > 0)
+        if (_watcher != null)
         {
-            foreach (var filePath in newlyChanged)
-                ExpandParentDirs(filePath);
-            StateHasChanged();
+            _watcher.EnableRaisingEvents = false;
+            _watcher.Dispose();
+            _watcher = null;
+        }
+
+        lock (_debounceLock)
+        {
+            _debounceTimer?.Dispose();
+            _debounceTimer = null;
         }
     }
 
@@ -299,7 +351,6 @@
                     _sessionExpandedDirs[_lastSessionId] = _expandedDirs;
 
                 _lastSessionId = sessionId;
-                _stale = false;
 
                 if (sessionId != null)
                 {
@@ -307,6 +358,7 @@
                     _expandedDirs = _sessionExpandedDirs.TryGetValue(sessionId, out var saved) ? saved : new HashSet<string>();
 
                     await LoadFilesAsync();
+                    StartWatching();
 
                     _sessionExpandedDirs.TryAdd(sessionId, _expandedDirs);
                 }
@@ -316,17 +368,10 @@
                     _diff = null;
                     _error = null;
                     _expandedDirs = new HashSet<string>();
+                    StopWatching();
                     StateHasChanged();
                 }
 
-                return;
-            }
-
-            // 숨겨진 동안 미뤄둔 새로고침을 패널이 표시될 때 수행
-            if (_stale && ChatState.RightPanel == RightPanelMode.Explorer)
-            {
-                _stale = false;
-                await RefreshAfterChangeAsync();
                 return;
             }
 
@@ -337,7 +382,7 @@
     public void Dispose()
     {
         ChatState.OnChange -= HandleStateChanged;
-        WorktreeWatcher.FilesChanged -= HandleWorktreeFilesChanged;
+        StopWatching();
 
         // 폐기 전에 현재 세션 상태 저장
         if (_lastSessionId != null)

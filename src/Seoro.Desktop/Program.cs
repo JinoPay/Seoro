@@ -45,7 +45,6 @@ public static class Program
             services.GetService<IClaudeService>()?.Dispose();
             services.GetService<IGitBranchWatcherService>()?.Dispose();
             services.GetService<IConflictWatcherService>()?.Dispose();
-            services.GetService<IWorktreeChangeWatcherService>()?.Dispose();
             services.GetService<IMergeStatusService>()?.Dispose();
             (services.GetService<ChatState>() as IDisposable)?.Dispose();
             (services.GetService<SessionListDataService>() as IDisposable)?.Dispose();
@@ -187,15 +186,9 @@ public static class Program
         appBuilder.Services.AddSingleton<IGitService, GitService>();
         appBuilder.Services.AddSingleton<IGitBranchWatcherService, GitBranchWatcherService>();
         appBuilder.Services.AddSingleton<IConflictWatcherService, ConflictWatcherService>();
-        appBuilder.Services.AddSingleton<IWorktreeChangeWatcherService, WorktreeChangeWatcherService>();
         appBuilder.Services.AddSingleton<IMergeStatusService, MergeStatusService>();
         appBuilder.Services.AddSingleton<IPullRequestService, PullRequestService>();
         appBuilder.Services.AddSingleton<IWorktreeSyncService, WorktreeSyncService>();
-        // 양방향 프로토콜: 영속 세션 매니저 + 기본 승인 핸들러(Phase 1: 자동 허용)
-        appBuilder.Services.AddSingleton<Seoro.Shared.Services.Claude.Bidirectional.ClaudeSessionManager>();
-        appBuilder.Services
-            .AddSingleton<Seoro.Shared.Services.Cli.Approval.IToolApprovalHandler,
-                Seoro.Shared.Services.Cli.Approval.AutoAllowToolApprovalHandler>();
         appBuilder.Services.AddSingleton<ClaudeService>();
         appBuilder.Services.AddSingleton<IClaudeService>(sp => sp.GetRequiredService<ClaudeService>());
         appBuilder.Services.AddSingleton<Seoro.Shared.Services.Codex.CodexService>();

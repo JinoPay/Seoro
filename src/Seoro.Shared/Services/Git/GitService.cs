@@ -24,14 +24,6 @@ public class GitService(
     private static readonly TimeSpan DefaultBranchCacheTtl = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan GitPathCacheTtl = TimeSpan.FromMinutes(10);
 
-    // 캐시: working tree status — 짧은 TTL + git 액션 시 명시적 무효화.
-    // FSW가 못 보는 외부 변경(터미널에서 git add 등)의 stale 시간을 3초로 바운드한다.
-    // libgit2 전환은 검토 후 보류 — 병목은 실행 시간이 아니라 호출 횟수라 캐시/coalescing으로 충분.
-    private static readonly TimeSpan StatusCacheTtl = TimeSpan.FromSeconds(3);
-
-    private readonly ConcurrentDictionary<string, (DiffSummary Summary, DateTime LoadedAt)> _statusCache = new();
-    private readonly ConcurrentDictionary<string, Lazy<Task<DiffSummary>>> _statusInFlight = new();
-
     private readonly ConcurrentDictionary<string, (List<BranchGroup> Groups, DateTime LoadedAt)> _branchGroupCache =
         new();
 
@@ -262,10 +254,7 @@ public class GitService(
 
         var args = new List<string> { "checkout", "--" };
         args.AddRange(paths);
-        var result = await RunGitAsync(workingDir, ct, args.ToArray());
-        if (result.Success)
-            InvalidateStatusCaches(workingDir);
-        return result;
+        return await RunGitAsync(workingDir, ct, args.ToArray());
     }
 
     public async Task<GitResult> CloneAsync(string url, string targetDir, IProgress<string>? progress = null,
@@ -356,12 +345,8 @@ public class GitService(
     {
         var result = await RunGitAsync(workingDir, ct, "commit", "-m", message);
         if (result.Success)
-        {
-            InvalidateStatusCaches(workingDir);
             logger.LogInformation("{WorkingDir}에 커밋됨: {Message}", workingDir,
                 message.Length > 80 ? message[..80] + "..." : message);
-        }
-
         return result;
     }
 
@@ -449,11 +434,7 @@ public class GitService(
     {
         var result = await RunGitAsync(workingDir, ct, "add", "-A");
         if (result.Success)
-        {
-            InvalidateStatusCaches(workingDir);
             logger.LogDebug("{WorkingDir}의 모든 변경사항이 준비됨", workingDir);
-        }
-
         return result;
     }
 
@@ -463,11 +444,7 @@ public class GitService(
             return new GitResult(false, "", "relativePath is empty");
         var result = await RunGitAsync(workingDir, ct, "add", "--", relativePath);
         if (result.Success)
-        {
-            InvalidateStatusCaches(workingDir);
             logger.LogDebug("staged: {Path}", relativePath);
-        }
-
         return result;
     }
 
@@ -480,18 +457,13 @@ public class GitService(
         var restore = await RunGitAsync(workingDir, ct, "restore", "--staged", "--", relativePath);
         if (restore.Success)
         {
-            InvalidateStatusCaches(workingDir);
             logger.LogDebug("unstaged: {Path}", relativePath);
             return restore;
         }
 
         var reset = await RunGitAsync(workingDir, ct, "reset", "HEAD", "--", relativePath);
         if (reset.Success)
-        {
-            InvalidateStatusCaches(workingDir);
             logger.LogDebug("unstaged via reset HEAD: {Path}", relativePath);
-        }
-
         return reset;
     }
 
@@ -504,12 +476,7 @@ public class GitService(
         // 추적 여부 판정 — ls-files 가 결과를 돌려주면 추적 중
         var lsFiles = await RunGitAsync(workingDir, ct, "ls-files", "--error-unmatch", "--", relativePath);
         if (lsFiles.Success)
-        {
-            var checkout = await CheckoutFilesAsync(workingDir, new[] { relativePath }, ct);
-            if (checkout.Success)
-                InvalidateStatusCaches(workingDir);
-            return checkout;
-        }
+            return await CheckoutFilesAsync(workingDir, new[] { relativePath }, ct);
 
         // untracked — 파일 시스템에서 직접 삭제 (워크트리 경계 검증)
         try
@@ -525,7 +492,6 @@ public class GitService(
                 logger.LogDebug("untracked file deleted: {Path}", relativePath);
             }
 
-            InvalidateStatusCaches(workingDir);
             return new GitResult(true, "", "");
         }
         catch (Exception ex)
@@ -571,7 +537,6 @@ public class GitService(
         if (result.Success)
         {
             InvalidateBranchCaches(workingDir);
-            InvalidateStatusCaches(workingDir);
             logger.LogInformation("pull 완료 {WorkingDir} (rebase={Rebase})", workingDir, rebase);
         }
         else
@@ -582,60 +547,7 @@ public class GitService(
         return result;
     }
 
-    public Task<DiffSummary> GetWorkingTreeStatusAsync(string workingDir, CancellationToken ct = default)
-    {
-        // 반환된 DiffSummary 는 캐시로 공유됨 — 호출자는 변경하지 말 것
-        return GetCachedStatusAsync(
-            StatusCacheKey(workingDir, "worktree"), ct,
-            () => GetWorkingTreeStatusCoreAsync(workingDir, CancellationToken.None));
-    }
-
-    private static string StatusCacheKey(string workingDir, string discriminator)
-    {
-        return $"{Path.GetFullPath(workingDir)}\n{discriminator}";
-    }
-
-    /// <summary>
-    ///     status 계열 호출의 TTL 캐시 + 단일 비행(coalescing).
-    ///     내부 계산은 CancellationToken.None 으로 실행 — 한 호출자의 취소가
-    ///     같은 결과를 기다리는 다른 호출자를 죽이지 않도록 한다. 대기 자체는 호출자 ct 로 취소 가능.
-    /// </summary>
-    private async Task<DiffSummary> GetCachedStatusAsync(string cacheKey, CancellationToken ct,
-        Func<Task<DiffSummary>> compute)
-    {
-        if (_statusCache.TryGetValue(cacheKey, out var cached) &&
-            DateTime.UtcNow - cached.LoadedAt < StatusCacheTtl)
-            return cached.Summary;
-
-        var lazy = _statusInFlight.GetOrAdd(cacheKey, k => new Lazy<Task<DiffSummary>>(async () =>
-        {
-            try
-            {
-                var summary = await compute();
-                _statusCache[cacheKey] = (summary, DateTime.UtcNow);
-                return summary;
-            }
-            finally
-            {
-                _statusInFlight.TryRemove(cacheKey, out _);
-            }
-        }));
-        return await lazy.Value.WaitAsync(ct);
-    }
-
-    /// <summary>working tree status 캐시 무효화 — stage/commit 등 상태를 바꾸는 액션 성공 후 호출.</summary>
-    private void InvalidateStatusCaches(string workingDir)
-    {
-        var prefix = Path.GetFullPath(workingDir) + "\n";
-        foreach (var key in _statusCache.Keys)
-            if (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                _statusCache.TryRemove(key, out _);
-        foreach (var key in _statusInFlight.Keys)
-            if (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                _statusInFlight.TryRemove(key, out _);
-    }
-
-    private async Task<DiffSummary> GetWorkingTreeStatusCoreAsync(string workingDir, CancellationToken ct)
+    public async Task<DiffSummary> GetWorkingTreeStatusAsync(string workingDir, CancellationToken ct = default)
     {
         var summary = new DiffSummary();
 
@@ -1017,7 +929,6 @@ public class GitService(
         var fullPath = ResolveSafePath(workingDir, relativePath);
         ct.ThrowIfCancellationRequested();
         await AtomicFileWriter.WriteAsync(fullPath, content);
-        InvalidateStatusCaches(workingDir);
     }
 
     public Task<DateTime?> GetFileMtimeUtcAsync(string workingDir, string relativePath)
@@ -1257,22 +1168,16 @@ public class GitService(
             return false;
 
         // 1) .git/MERGE_HEAD 존재 확인. 워크트리의 경우 .git 은 파일(gitdir: ...) 이라
-        //    파일 기반 ResolveGitDir 로 해석한다 (프로세스 spawn 없음 — 충돌 감시 핫패스).
-        var gitDir = GitBranchWatcherService.ResolveGitDir(workingDir);
-        if (gitDir == null)
-        {
-            // 폴백: 비표준 레이아웃은 rev-parse 로 확인
-            var gitDirResult = await RunGitAsync(workingDir, ct, "rev-parse", "--git-dir");
-            if (!gitDirResult.Success)
-                return false;
+        //    rev-parse --git-dir 로 실제 경로를 물어본다.
+        var gitDirResult = await RunGitAsync(workingDir, ct, "rev-parse", "--git-dir");
+        if (!gitDirResult.Success)
+            return false;
 
-            var relativeGitDir = gitDirResult.Output.Trim();
-            gitDir = Path.IsPathRooted(relativeGitDir)
-                ? relativeGitDir
-                : Path.GetFullPath(Path.Combine(workingDir, relativeGitDir));
-        }
+        var relativeGitDir = gitDirResult.Output.Trim();
+        var gitDir = Path.IsPathRooted(relativeGitDir)
+            ? relativeGitDir
+            : Path.GetFullPath(Path.Combine(workingDir, relativeGitDir));
 
-        // MERGE_HEAD 가 없으면 머지 중이 아님 — 가장 흔한 경로, spawn 0회로 종료
         if (!File.Exists(Path.Combine(gitDir, "MERGE_HEAD")))
             return false;
 
@@ -1558,7 +1463,6 @@ public class GitService(
 
             // 메인 레포의 브랜치 캐시를 무효화해 UI 가 즉시 새 ref 를 반영하도록 한다.
             InvalidateBranchCaches(mainRepoDir);
-            InvalidateStatusCaches(mainRepoDir);
 
             logger.LogInformation("스쿼시 머지 완료: {Source} → {Target}", sourceBranchName, targetBranchName);
             return SquashMergeResult.Succeeded(commitResult.Output);
@@ -1596,12 +1500,6 @@ public class GitService(
     {
         InvalidateBranchCaches(repoDir);
         logger.LogDebug("브랜치 캐시 수동 무효화: {Repo}", repoDir);
-        return Task.CompletedTask;
-    }
-
-    public Task InvalidateStatusCacheAsync(string workingDir)
-    {
-        InvalidateStatusCaches(workingDir);
         return Task.CompletedTask;
     }
 
