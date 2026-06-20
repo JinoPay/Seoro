@@ -251,13 +251,6 @@
         catch { /* JS interop이 처리 중에 실패할 수 있습니다 */ }
     }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        foreach (var attachment in Message.Attachments)
-            if (attachment.IsImage)
-                await EnsureImageLoadedAsync(attachment);
-    }
-
     protected override void OnParametersSet()
     {
         if (!Message.IsStreaming) return;
@@ -303,7 +296,7 @@
         "application/x-yaml", "text/yaml", "text/x-log"
     };
 
-    private async Task OpenFileInTab(FileAttachment attachment)
+    private void OpenFileInTab(FileAttachment attachment)
     {
         if (attachment.IsImage)
         {
@@ -326,7 +319,7 @@
         var filePath = Path.Combine(worktreePath, ".seoro-attachments", attachment.StoredFileName);
         if (!File.Exists(filePath)) return;
 
-        var content = await File.ReadAllTextAsync(filePath);
+        var content = File.ReadAllText(filePath);
         ChatState.Tabs.OpenFileContentTab(filePath, content);
     }
 
@@ -357,23 +350,22 @@
     }
 
     private string GetImageSrc(FileAttachment attachment)
-        => _imageCache.GetValueOrDefault(attachment.Id, string.Empty);
-
-    private async Task EnsureImageLoadedAsync(FileAttachment attachment)
     {
-        if (_imageCache.ContainsKey(attachment.Id))
-            return;
+        if (_imageCache.TryGetValue(attachment.Id, out var cached))
+            return cached;
 
         var worktreePath = ChatState.CurrentSession?.Git.WorktreePath;
         if (string.IsNullOrEmpty(worktreePath))
-            return;
+            return string.Empty;
 
         var filePath = Path.Combine(worktreePath, ".seoro-attachments", attachment.StoredFileName);
         if (!File.Exists(filePath))
-            return;
+            return string.Empty;
 
-        var bytes = await File.ReadAllBytesAsync(filePath);
-        _imageCache[attachment.Id] = $"data:{attachment.ContentType};base64,{Convert.ToBase64String(bytes)}";
+        var bytes = File.ReadAllBytes(filePath);
+        var dataUrl = $"data:{attachment.ContentType};base64,{Convert.ToBase64String(bytes)}";
+        _imageCache[attachment.Id] = dataUrl;
+        return dataUrl;
     }
 
     private static string GetAttachmentIcon(FileAttachment attachment)

@@ -12,8 +12,8 @@ public static class AtomicFileWriter
     /// </summary>
     public static async Task AppendAsync(string targetPath, string content)
     {
-        var existing = File.Exists(targetPath) ? await File.ReadAllTextAsync(targetPath).ConfigureAwait(false) : "";
-        await WriteAsync(targetPath, existing + content).ConfigureAwait(false);
+        var existing = File.Exists(targetPath) ? await File.ReadAllTextAsync(targetPath) : "";
+        await WriteAsync(targetPath, existing + content);
     }
 
     public static async Task WriteAsync(string targetPath, string content)
@@ -22,11 +22,10 @@ public static class AtomicFileWriter
         if (dir != null)
             Directory.CreateDirectory(dir);
 
-        // 동일 대상에 대한 동시 쓰기가 임시 파일을 공유하지 않도록 고유한 이름 사용
-        var tmpPath = $"{targetPath}.{Guid.NewGuid():N}.tmp";
+        var tmpPath = targetPath + ".tmp";
         try
         {
-            await File.WriteAllTextAsync(tmpPath, content).ConfigureAwait(false);
+            await File.WriteAllTextAsync(tmpPath, content);
             File.Move(tmpPath, targetPath, true);
         }
         finally

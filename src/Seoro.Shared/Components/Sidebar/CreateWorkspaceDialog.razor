@@ -388,7 +388,7 @@
         }
     }
 
-    private async Task OnUrlChanged(string url)
+    private async void OnUrlChanged(string url)
     {
         _repoUrl = url;
         if (!string.IsNullOrWhiteSpace(url) && (string.IsNullOrEmpty(_editName) || _nameAutoFilled))

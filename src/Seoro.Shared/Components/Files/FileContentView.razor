@@ -93,7 +93,7 @@
         {
             var text = await JS.InvokeAsync<string>("getEditorContent", _elementId);
             var html = Markdown.ToHtml(text, MarkdownHelper.TrustedPipeline);
-            _previewHtml = await ResolveLocalAssetsAsync(html, EffectiveWorkingDir, FilePath);
+            _previewHtml = ResolveLocalAssets(html, EffectiveWorkingDir, FilePath);
             _previewMode = true;
             _previewNeedsHighlight = true;
             StateHasChanged();
@@ -114,7 +114,7 @@
     private static readonly Regex ImgSrcRegex = new("""<img\s+[^>]*?src=(?:"([^"]+)"|'([^']+)')""",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    private static async Task<string> ResolveLocalAssetsAsync(string html, string workingDir, string mdRelPath)
+    private static string ResolveLocalAssets(string html, string workingDir, string mdRelPath)
     {
         if (string.IsNullOrEmpty(html) || string.IsNullOrEmpty(workingDir)) return html;
         string root;
@@ -123,13 +123,15 @@
         var rootSep = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
         var mdDir = Path.GetDirectoryName(mdRelPath) ?? "";
 
-        string? ResolveFullPath(string raw)
+        return ImgSrcRegex.Replace(html, m =>
         {
+            var raw = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value;
+            if (string.IsNullOrEmpty(raw)) return m.Value;
             if (raw.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
                 raw.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                 raw.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
                 raw.StartsWith("//"))
-                return null;
+                return m.Value;
 
             string src;
             try { src = Uri.UnescapeDataString(raw.Split('?', '#')[0]); }
@@ -142,41 +144,23 @@
                     ? Path.GetFullPath(Path.Combine(root, src.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)))
                     : Path.GetFullPath(Path.Combine(root, mdDir, src.Replace('/', Path.DirectorySeparatorChar)));
             }
-            catch { return null; }
+            catch { return m.Value; }
 
             if (!fullPath.StartsWith(rootSep, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(fullPath, root, StringComparison.OrdinalIgnoreCase))
-                return null;
-            return fullPath;
-        }
-
-        // 1차: 로컬 이미지 파일을 비동기로 읽어 src → data URI 매핑 구성
-        var dataUris = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (Match m in ImgSrcRegex.Matches(html))
-        {
-            var raw = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value;
-            if (string.IsNullOrEmpty(raw) || dataUris.ContainsKey(raw)) continue;
-
-            var fullPath = ResolveFullPath(raw);
-            if (fullPath == null || !File.Exists(fullPath)) continue;
-            if (new FileInfo(fullPath).Length > MaxInlineAssetBytes) continue;
+                return m.Value;
+            if (!File.Exists(fullPath)) return m.Value;
+            var info = new FileInfo(fullPath);
+            if (info.Length > MaxInlineAssetBytes) return m.Value;
 
             try
             {
-                var bytes = await File.ReadAllBytesAsync(fullPath);
+                var bytes = File.ReadAllBytes(fullPath);
                 var mime = GuessImageMime(Path.GetExtension(fullPath).ToLowerInvariant());
-                dataUris[raw] = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+                var dataUri = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+                return m.Value.Replace(raw, dataUri);
             }
-            catch { /* 읽기 실패 시 원본 src 유지 */ }
-        }
-
-        if (dataUris.Count == 0) return html;
-
-        // 2차: 캐시된 data URI로 치환
-        return ImgSrcRegex.Replace(html, m =>
-        {
-            var raw = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value;
-            return dataUris.TryGetValue(raw, out var uri) ? m.Value.Replace(raw, uri) : m.Value;
+            catch { return m.Value; }
         });
     }
 
