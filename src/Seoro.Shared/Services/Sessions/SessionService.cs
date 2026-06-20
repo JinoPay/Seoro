@@ -15,7 +15,6 @@ public partial class SessionService(
     IHooksEngine hooksEngine,
     IActiveSessionRegistry activeSessionRegistry,
     IWorktreeSyncService worktreeSyncService,
-    ITerminalService terminalService,
     ILogger<SessionService> logger)
     : ISessionService
 {
@@ -78,16 +77,6 @@ public partial class SessionService(
         // 로컬 디렉토리 세션의 워크트리/브랜치 정리 건너뛰기 (디렉토리는 사용자의 실제 저장소)
         if (!session.Git.IsLocalDir)
         {
-            // 워크트리 제거 전 PTY 정리 — 셸의 CWD 잠금으로 제거가 실패하지 않도록
-            try
-            {
-                await terminalService.StopAsync(sessionId);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "세션 {SessionId}의 터미널 정리 실패", sessionId);
-            }
-
             // 워크트리 제거
             if (!string.IsNullOrEmpty(session.Git.WorktreePath))
                 try
@@ -129,18 +118,6 @@ public partial class SessionService(
     {
         // Mark as deleted first to prevent concurrent fire-and-forget saves from re-creating files
         _deletedIds[sessionId] = 0;
-
-        // 워크트리 삭제 전에 PTY를 먼저 정리 — 셸이 워크트리를 CWD로 잡고 있으면
-        // Windows에서 디렉터리 잠금으로 워크트리 제거가 실패한다
-        try
-        {
-            await terminalService.StopAsync(sessionId, saveScrollback: false);
-            await terminalService.DeleteScrollbackAsync(sessionId);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "세션 {SessionId}의 터미널 정리 실패", sessionId);
-        }
 
         // Clean up worktree/branch before deleting
         var session = await LoadSessionAsync(sessionId);

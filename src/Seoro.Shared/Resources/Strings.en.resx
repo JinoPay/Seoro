@@ -197,17 +197,6 @@
   <data name="Settings_Terminal_ShellAuto" xml:space="preserve"><value>Auto-detect ({0})</value></data>
   <data name="Settings_Terminal_ShellHint" xml:space="preserve"><value>Shell to use in the terminal panel. Auto-detect uses the system default shell.</value></data>
 
-  <!-- Terminal Panel -->
-  <data name="Terminal_Exited" xml:space="preserve"><value>Terminal exited</value></data>
-  <data name="Terminal_Restart" xml:space="preserve"><value>Restart</value></data>
-  <data name="Terminal_NewTerminal" xml:space="preserve"><value>New terminal</value></data>
-  <data name="Terminal_Kill" xml:space="preserve"><value>Kill</value></data>
-  <data name="Terminal_Start" xml:space="preserve"><value>Start</value></data>
-  <data name="Terminal_Search_Placeholder" xml:space="preserve"><value>Search...</value></data>
-  <data name="Terminal_Search_Previous" xml:space="preserve"><value>Previous match</value></data>
-  <data name="Terminal_Search_Next" xml:space="preserve"><value>Next match</value></data>
-  <data name="Terminal_Search_Close" xml:space="preserve"><value>Close search</value></data>
-
   <!-- Settings Sections: Git/Merge -->
   <data name="Settings_GitMerge_Title" xml:space="preserve"><value>Git / Merge</value></data>
   <data name="Settings_GitMerge_Desc" xml:space="preserve"><value>Configure MergePanel behavior and AI delegation prompts.</value></data>

@@ -32,7 +32,6 @@ public class SessionServiceTests : IDisposable
             _hooksEngine,
             new ActiveSessionRegistry(),
             new FakeWorktreeSyncService(),
-            new FakeTerminalService(),
             NullLogger<SessionService>.Instance);
 
         // Override internal _sessionsDir via reflection
@@ -416,23 +415,6 @@ public class SessionServiceTests : IDisposable
         public bool IsSessionSynced(string sessionId) => false;
         public Task RecoverFromCrashAsync() => Task.CompletedTask;
         public void Dispose() { }
-    }
-
-    private class FakeTerminalService : ITerminalService
-    {
-        public event Action<string, int>? OnExited;
-        public event Action<string, string>? OnOutput;
-        public event Action<string, string>? OnError;
-        public bool IsRunning(string sessionKey) => false;
-        public Task StartAsync(string sessionKey, string workingDirectory, ShellInfo? shell = null, int? cols = null, int? rows = null)
-            => Task.CompletedTask;
-        public Task StopAsync(string sessionKey, bool saveScrollback = true) => Task.CompletedTask;
-        public Task WriteAsync(string sessionKey, string data) => Task.CompletedTask;
-        public void Resize(string sessionKey, int cols, int rows) { }
-        public string GetBufferedOutput(string sessionKey) => "";
-        public void NotifyAttached(string sessionKey) { }
-        public Task DeleteScrollbackAsync(string sessionKey) => Task.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private class FakeHooksEngine : IHooksEngine

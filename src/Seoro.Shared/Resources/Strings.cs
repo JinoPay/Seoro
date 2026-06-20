@@ -219,17 +219,6 @@ public static class Strings
     public static string Settings_Terminal_ShellAuto(string detected) => Get(nameof(Settings_Terminal_ShellAuto), detected);
     public static string Settings_Terminal_ShellHint => Get(nameof(Settings_Terminal_ShellHint));
 
-    // ── Terminal Panel ──
-    public static string Terminal_Exited => Get(nameof(Terminal_Exited));
-    public static string Terminal_Restart => Get(nameof(Terminal_Restart));
-    public static string Terminal_NewTerminal => Get(nameof(Terminal_NewTerminal));
-    public static string Terminal_Kill => Get(nameof(Terminal_Kill));
-    public static string Terminal_Start => Get(nameof(Terminal_Start));
-    public static string Terminal_Search_Placeholder => Get(nameof(Terminal_Search_Placeholder));
-    public static string Terminal_Search_Previous => Get(nameof(Terminal_Search_Previous));
-    public static string Terminal_Search_Next => Get(nameof(Terminal_Search_Next));
-    public static string Terminal_Search_Close => Get(nameof(Terminal_Search_Close));
-
     // ── Settings: Git/Merge Section ──
     public static string Settings_GitMerge_Title => Get(nameof(Settings_GitMerge_Title));
     public static string Settings_GitMerge_Desc => Get(nameof(Settings_GitMerge_Desc));

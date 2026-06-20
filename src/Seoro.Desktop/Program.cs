@@ -236,7 +236,6 @@ public static class Program
         appBuilder.Services.AddSingleton<IStreamEventHandler, ErrorHandler>();
         appBuilder.Services.AddSingleton<IStreamEventProcessor, StreamEventProcessor>();
         appBuilder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
-        appBuilder.Services.AddSingleton<IPtySpawner, PtyNetSpawner>();
         appBuilder.Services.AddSingleton<ITerminalService, TerminalService>();
         appBuilder.Services.AddSingleton<ISystemPromptBuilder, SystemPromptBuilder>();
         appBuilder.Services.AddSingleton<ISessionInitializer, SessionInitializer>();

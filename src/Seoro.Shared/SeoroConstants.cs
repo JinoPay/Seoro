@@ -7,9 +7,6 @@ public static class SeoroConstants
 {
     // 세션 제한
     public const int MaxActiveSessionsPerWorkspace = 20;
-
-    // 동시에 살아있을 수 있는 PTY 터미널 수 — 초과 시 LRU로 정리 (스크롤백은 디스크 보존)
-    public const int MaxLiveTerminals = 5;
     public const int MaxContextItemTokens = 2_000; // 단일 메모/todo/계획 파일
 
     // 시스템 프롬프트 크기 제한 (TokenEstimator를 통한 토큰 기반)
