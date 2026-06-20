@@ -21,9 +21,6 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
     private readonly IGitService _gitService;
     private readonly ILogger<GitBranchWatcherService> _logger;
 
-    // _watcher / _debounceTimer / _watchedSession 은 FSW 콜백 스레드와
-    // Watch/Unwatch(세션 전환·Dispose) 양쪽에서 변경되므로 lock 으로 보호한다.
-    private readonly object _lock = new();
     private volatile bool _disposed;
     private FileSystemWatcher? _watcher;
     private Session? _watchedSession;
@@ -97,23 +94,19 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
 
     public void Unwatch()
     {
-        lock (_lock)
-        {
-            // FSW 이벤트를 먼저 끊은 뒤 타이머를 정리한다. 순서가 반대면
-            // 핸들러가 막 폐기된 타이머를 재할당해 ObjectDisposedException 이 날 수 있다.
-            if (_watcher != null)
-            {
-                _watcher.Changed -= OnHeadChanged;
-                _watcher.Created -= OnHeadChanged;
-                _watcher.Renamed -= OnHeadRenamed;
-                _watcher.Dispose();
-                _watcher = null;
-            }
+        _debounceTimer?.Dispose();
+        _debounceTimer = null;
 
-            _debounceTimer?.Dispose();
-            _debounceTimer = null;
-            _watchedSession = null;
+        if (_watcher != null)
+        {
+            _watcher.Changed -= OnHeadChanged;
+            _watcher.Created -= OnHeadChanged;
+            _watcher.Renamed -= OnHeadRenamed;
+            _watcher.Dispose();
+            _watcher = null;
         }
+
+        _watchedSession = null;
     }
 
     public void Watch(Session session)
@@ -132,31 +125,21 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
         if (!File.Exists(headPath))
             return;
 
-        // Read initial branch from HEAD file (IO — lock 밖에서 수행)
+        _watchedSession = session;
+
+        // Read initial branch from HEAD file
         UpdateBranchFromHeadFile(headPath, session);
 
         try
         {
-            var watcher = new FileSystemWatcher(gitDir, "HEAD")
+            _watcher = new FileSystemWatcher(gitDir, "HEAD")
             {
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName,
+                EnableRaisingEvents = true
             };
-            watcher.Changed += OnHeadChanged;
-            watcher.Created += OnHeadChanged;
-            watcher.Renamed += OnHeadRenamed;
-
-            lock (_lock)
-            {
-                if (_disposed)
-                {
-                    watcher.Dispose();
-                    return;
-                }
-
-                _watchedSession = session;
-                _watcher = watcher;
-                watcher.EnableRaisingEvents = true;
-            }
+            _watcher.Changed += OnHeadChanged;
+            _watcher.Created += OnHeadChanged;
+            _watcher.Renamed += OnHeadRenamed;
 
             _logger.LogDebug("세션 {SessionId}의 git HEAD 감시 중 {GitDir}", gitDir, session.Id);
         }
@@ -221,31 +204,24 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
         if (_disposed)
             return;
 
-        _logger.LogTrace("FileSystemWatcher가 HEAD에 대해 작동됨: {Path}", fullPath);
-        // Debounce: git operations can write HEAD multiple times in quick succession.
-        // 타이머 교체는 lock 안에서 원자적으로 — 동시 FSW 이벤트와 Unwatch 의 경합을 막는다.
-        lock (_lock)
+        _logger.LogWarning("[TRACE] FileSystemWatcher가 HEAD에 대해 작동됨: {Path}", fullPath);
+        // Debounce: git operations can write HEAD multiple times in quick succession
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(_ =>
         {
             if (_disposed)
                 return;
 
-            _debounceTimer?.Dispose();
-            _debounceTimer = new Timer(_ =>
+            var session = _watchedSession;
+            if (session == null)
             {
-                if (_disposed)
-                    return;
+                _logger.LogWarning("[TRACE] DebouncedHeadUpdate: _watchedSession이 NULL입니다");
+                return;
+            }
 
-                var session = _watchedSession;
-                if (session == null)
-                {
-                    _logger.LogTrace("DebouncedHeadUpdate: _watchedSession이 NULL입니다");
-                    return;
-                }
-
-                _logger.LogTrace("DebouncedHeadUpdate: 세션 {SessionId}에 대해 UpdateBranchFromHeadFile 실행 중", session.Id);
-                UpdateBranchFromHeadFile(fullPath, session);
-            }, null, DebounceMs, Timeout.Infinite);
-        }
+            _logger.LogWarning("[TRACE] DebouncedHeadUpdate: 세션 {SessionId}에 대해 UpdateBranchFromHeadFile 실행 중", session.Id);
+            UpdateBranchFromHeadFile(fullPath, session);
+        }, null, DebounceMs, Timeout.Infinite);
     }
 
     private void OnHeadChanged(object sender, FileSystemEventArgs e)
@@ -272,7 +248,7 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
             else
                 return;
 
-            _logger.LogTrace("HEAD 읽음: branch={Branch}, current={Current}, sessionId={SessionId}",
+            _logger.LogWarning("[TRACE] HEAD 읽음: branch={Branch}, current={Current}, sessionId={SessionId}",
                 branch, session.Git.BranchName, session.Id);
 
             if (!string.IsNullOrEmpty(branch) && branch != session.Git.BranchName)
@@ -282,7 +258,7 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
                 ApplyDerivedTitle(session, branch);
                 _chatState.NotifyStateChanged();
                 _eventBus.Publish(new BranchChangedEvent(session.Id, branch));
-                _logger.LogDebug("브랜치 변경됨: {Old} -> {New}, title={Title}, titleLocked={Locked}, sessionId={SessionId}",
+                _logger.LogWarning("[TRACE] 브랜치 변경됨: {Old} -> {New}, title={Title}, titleLocked={Locked}, sessionId={SessionId}",
                     oldBranch, branch, session.Title, session.TitleLocked, session.Id);
             }
         }

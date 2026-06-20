@@ -16,17 +16,7 @@ public static class AtomicFileWriter
         await WriteAsync(targetPath, existing + content).ConfigureAwait(false);
     }
 
-    public static Task WriteAsync(string targetPath, string content)
-    {
-        return WriteCoreAsync(targetPath, tmpPath => File.WriteAllTextAsync(tmpPath, content));
-    }
-
-    public static Task WriteAsync(string targetPath, byte[] content)
-    {
-        return WriteCoreAsync(targetPath, tmpPath => File.WriteAllBytesAsync(tmpPath, content));
-    }
-
-    private static async Task WriteCoreAsync(string targetPath, Func<string, Task> writeTmp)
+    public static async Task WriteAsync(string targetPath, string content)
     {
         var dir = Path.GetDirectoryName(targetPath);
         if (dir != null)
@@ -36,7 +26,7 @@ public static class AtomicFileWriter
         var tmpPath = $"{targetPath}.{Guid.NewGuid():N}.tmp";
         try
         {
-            await writeTmp(tmpPath).ConfigureAwait(false);
+            await File.WriteAllTextAsync(tmpPath, content).ConfigureAwait(false);
             File.Move(tmpPath, targetPath, true);
         }
         finally

@@ -117,7 +117,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
         }
 
         var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-        await Infrastructure.AtomicFileWriter.WriteAsync(TagsFilePath, json);
+        await File.WriteAllTextAsync(TagsFilePath, json);
     }
 
     // ===== Live Detection =====
@@ -876,16 +876,9 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
                 _index = JsonSerializer.Deserialize<SessionIndex>(json, IndexJsonOptions);
             }
         }
-        catch (JsonException ex)
+        catch
         {
-            // 인덱스 손상 — 침묵 폐기 대신 격리한 뒤 새로 시작.
-            // (인덱스는 세션 파일에서 재구성 가능한 파생 데이터라 손실 영향은 제한적)
-            Infrastructure.CorruptedFileQuarantine.Quarantine(IndexFilePath, logger, ex);
-        }
-        catch (Exception ex)
-        {
-            // I/O 등 일시적 오류 — 파일은 보존하고 이번에만 빈 인덱스로 진행.
-            logger.LogWarning(ex, "세션 인덱스 로드 실패(보존): {Path}", IndexFilePath);
+            // Corrupted index — start fresh
         }
 
         _index ??= new SessionIndex();
@@ -896,7 +889,7 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
         try
         {
             var json = JsonSerializer.Serialize(index, IndexJsonOptions);
-            await Infrastructure.AtomicFileWriter.WriteAsync(IndexFilePath, json);
+            await File.WriteAllTextAsync(IndexFilePath, json);
         }
         catch (Exception ex)
         {

@@ -257,10 +257,8 @@ public class ClaudeService(
                 agent.Dispose();
             }
 
-        // 영속 양방향 세션 정리.
-        // Task.Run 으로 감싸 호출자의 SynchronizationContext(UI 스레드 등)에서 분리한다.
-        // 그러지 않으면 동기 Dispose 안의 GetResult() 가 UI 컨텍스트에서 데드락날 수 있다.
-        try { Task.Run(() => sessionManager.RemoveAllAsync().AsTask()).GetAwaiter().GetResult(); }
+        // 영속 양방향 세션 정리
+        try { sessionManager.RemoveAllAsync().AsTask().GetAwaiter().GetResult(); }
         catch (Exception ex) { logger.LogDebug(ex, "양방향 세션 정리 중 오류"); }
 
         _capLock.Dispose();

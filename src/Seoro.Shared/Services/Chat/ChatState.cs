@@ -1,6 +1,4 @@
 
-using System.Collections.Concurrent;
-
 namespace Seoro.Shared.Services.Chat;
 
 public class SessionStreamingState
@@ -16,11 +14,9 @@ public class ChatState : IChatState
     private const int DebounceMs = 50;
 
     // 입력 초안 저장소 (세션당, 메모리만)
-    // 드래프트는 주로 UI 스레드에서 접근하지만 백그라운드 작업에서도 읽힐 수 있어
-    // 락 없는 Dictionary 동시 변경으로 인한 손상을 피하려고 ConcurrentDictionary 사용.
-    private readonly ConcurrentDictionary<string, string> _inputDrafts = new();
-    private readonly ConcurrentDictionary<string, List<PendingAttachment>> _attachmentDrafts = new();
-    private readonly ConcurrentDictionary<string, string> _skillDrafts = new();
+    private readonly Dictionary<string, string> _inputDrafts = new();
+    private readonly Dictionary<string, List<PendingAttachment>> _attachmentDrafts = new();
+    private readonly Dictionary<string, string> _skillDrafts = new();
 
     // 중재자: 타입화된 이벤트 버스
     private readonly IChatEventBus _eventBus;
@@ -295,7 +291,7 @@ public class ChatState : IChatState
     public void SetInputDraft(string sessionId, string text)
     {
         if (string.IsNullOrEmpty(text))
-            _inputDrafts.TryRemove(sessionId, out _);
+            _inputDrafts.Remove(sessionId);
         else
             _inputDrafts[sessionId] = text;
     }
@@ -303,7 +299,7 @@ public class ChatState : IChatState
     public void SetAttachmentDraft(string sessionId, List<PendingAttachment> attachments)
     {
         if (attachments.Count == 0)
-            _attachmentDrafts.TryRemove(sessionId, out _);
+            _attachmentDrafts.Remove(sessionId);
         else
             _attachmentDrafts[sessionId] = [..attachments];
     }
@@ -311,7 +307,7 @@ public class ChatState : IChatState
     public void SetSkillDraft(string sessionId, string? skillName)
     {
         if (string.IsNullOrEmpty(skillName))
-            _skillDrafts.TryRemove(sessionId, out _);
+            _skillDrafts.Remove(sessionId);
         else
             _skillDrafts[sessionId] = skillName;
     }

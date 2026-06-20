@@ -32,12 +32,6 @@ public static class AppPaths
     public static string AccountBackups { get; } = EnsureDir(Path.Combine(BaseDir, "account-backups"));
     public static string AccountsFile { get; } = Path.Combine(BaseDir, "accounts.json");
 
-    /// <summary>
-    ///     손상되어 로드에 실패한 데이터 파일을 격리(quarantine)하는 디렉터리.
-    ///     침묵 삭제 대신 이곳으로 옮겨 사용자가 복구를 시도하거나 원인을 파악할 수 있게 한다.
-    /// </summary>
-    public static string Corrupted { get; } = EnsureDir(Path.Combine(BaseDir, "corrupted"));
-
     private static string EnsureDir(string path)
     {
         Directory.CreateDirectory(path);

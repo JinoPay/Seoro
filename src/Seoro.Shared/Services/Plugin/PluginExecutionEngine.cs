@@ -231,18 +231,6 @@ public class PluginExecutionEngine(
         {
             var shell = await shellService.GetShellAsync();
             var entryPath = Path.Combine(plugin.Path, plugin.EntryPoint);
-
-            // 보안: EntryPoint 에 "../" 가 들어가면 Path.Combine 이 정규화하지 않아
-            // 플러그인 디렉터리 밖의 임의 실행 파일을 가리킬 수 있다. 진입 경로가
-            // 플러그인 디렉터리 내부인지 확인해 path traversal 을 차단한다.
-            if (!IsPathWithin(plugin.Path, entryPath))
-            {
-                logger.LogError("플러그인 '{Id}'의 진입점이 플러그인 디렉터리를 벗어남: {Entry}",
-                    pluginId, plugin.EntryPoint);
-                return new PluginExecutionResult(false, "",
-                    "플러그인 진입점이 허용된 디렉터리를 벗어났습니다.", -1);
-            }
-
             var command = BuildEntryPointCommand(entryPath, plugin.EntryPoint);
 
             // Environment variables (backward compatible)
@@ -293,32 +281,6 @@ public class PluginExecutionEngine(
         {
             logger.LogError(ex, "플러그인 '{Id}' 실행 실패", pluginId);
             return new PluginExecutionResult(false, "", ex.Message, -1);
-        }
-    }
-
-    /// <summary>
-    ///     <paramref name="candidate" /> 가 <paramref name="baseDir" /> 내부(또는 동일)인지 검사한다.
-    ///     심볼릭/상대 경로를 정규화한 뒤 비교해 "../" 기반 path traversal 을 차단한다.
-    /// </summary>
-    private static bool IsPathWithin(string baseDir, string candidate)
-    {
-        try
-        {
-            var baseFull = Path.GetFullPath(baseDir)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var candidateFull = Path.GetFullPath(candidate);
-
-            var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
-                ? StringComparison.OrdinalIgnoreCase
-                : StringComparison.Ordinal;
-
-            return candidateFull.Equals(baseFull, comparison)
-                   || candidateFull.StartsWith(baseFull + Path.DirectorySeparatorChar, comparison);
-        }
-        catch
-        {
-            // 경로 형식 자체가 잘못되면 안전 측면에서 거부.
-            return false;
         }
     }
 

@@ -201,18 +201,16 @@ public class ConflictWatcherService : IConflictWatcherService
         if (_disposed)
             return;
 
-        // 타이머 교체를 lock 안에서 원자적으로 수행한다. lock 밖에서 하면
-        // 같은 경로에 대한 동시 FSW 이벤트가 서로의 Timer를 Dispose/재할당해
-        // 이중 Dispose나 즉시 폐기되는 타이머가 발생한다. Unwatch/Dispose 와의 경합도 막는다.
+        WatchHandle? handle;
         lock (_lock)
         {
-            if (_disposed || !_watches.TryGetValue(workingDir, out var handle))
+            if (!_watches.TryGetValue(workingDir, out handle))
                 return;
-
-            handle.Timer?.Dispose();
-            handle.Timer = new Timer(_ => _ = EmitIfChangedAsync(workingDir),
-                null, DebounceMs, Timeout.Infinite);
         }
+
+        handle.Timer?.Dispose();
+        handle.Timer = new Timer(_ => _ = EmitIfChangedAsync(workingDir),
+            null, DebounceMs, Timeout.Infinite);
     }
 
     private async Task EmitIfChangedAsync(string workingDir)

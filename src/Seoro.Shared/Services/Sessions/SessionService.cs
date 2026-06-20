@@ -779,16 +779,9 @@ public partial class SessionService(
                     return session;
                 }
             }
-            catch (JsonException ex)
-            {
-                // 역직렬화 불가 = 파일 손상. 침묵 건너뛰기 대신 격리하여
-                // 사용자가 데이터 유실을 인지하고 반복 실패를 막는다.
-                CorruptedFileQuarantine.Quarantine(file, logger, ex);
-            }
             catch (Exception ex)
             {
-                // I/O 등 일시적 오류는 파일을 건드리지 않고 이번 로드만 건너뛴다.
-                logger.LogWarning(ex, "세션 파일 로드 실패(건너뜀): {File}", file);
+                logger.LogWarning(ex, "손상된 세션 파일 건너뜀: {File}", file);
             }
 
             return null;

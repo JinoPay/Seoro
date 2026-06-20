@@ -76,7 +76,7 @@ public class CominomiMigrationService(ILogger<CominomiMigrationService> logger)
             try
             {
                 var content = await File.ReadAllBytesAsync(src);
-                await AtomicFileWriter.WriteAsync(dest, content);
+                await File.WriteAllBytesAsync(dest, content);
                 copied++;
                 logger.LogInformation("루트 파일이 마이그레이션됨: {File}", fileName);
 
@@ -120,7 +120,7 @@ public class CominomiMigrationService(ILogger<CominomiMigrationService> logger)
                 try
                 {
                     var content = await File.ReadAllBytesAsync(srcFile);
-                    await AtomicFileWriter.WriteAsync(destFile, content);
+                    await File.WriteAllBytesAsync(destFile, content);
                     copied++;
                 }
                 catch (Exception ex)
@@ -166,7 +166,7 @@ public class CominomiMigrationService(ILogger<CominomiMigrationService> logger)
                 obj["OnboardingCompleted"] = false;
                 obj["LastSeenVersion"] = "";
                 var options = new JsonSerializerOptions { WriteIndented = true };
-                await AtomicFileWriter.WriteAsync(settingsPath, node.ToJsonString(options));
+                await File.WriteAllTextAsync(settingsPath, node.ToJsonString(options));
                 logger.LogInformation("마이그레이션된 settings.json의 온보딩 필드 초기화됨");
             }
         }

@@ -213,8 +213,7 @@ public class CodexService(
 
         foreach (var key in _appServerClients.Keys.ToList())
             if (_appServerClients.TryRemove(key, out var client))
-                // Task.Run 으로 호출자 컨텍스트와 분리해 동기 Dispose 의 데드락을 방지한다.
-                try { Task.Run(() => client.DisposeAsync().AsTask()).GetAwaiter().GetResult(); }
+                try { client.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
                 catch (Exception ex) { logger.LogDebug(ex, "Codex app-server 클라이언트 정리 오류"); }
     }
 
