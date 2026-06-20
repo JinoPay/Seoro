@@ -106,11 +106,6 @@ public class Session
     public HashSet<string> DisabledMcpServers { get; set; } = [];
 
     /// <summary>
-    ///     익스플로러에서 펼쳐둔 디렉터리 경로 — 앱 재진입 후에도 펼침 상태를 복원하기 위해 저장.
-    /// </summary>
-    public HashSet<string> ExplorerExpandedDirs { get; set; } = [];
-
-    /// <summary>
     ///     진행 중인 스트리밍 턴의 예상 토큰 사용량.
     ///     MessageStartHandler / MessageDeltaHandler에 의해 스트리밍 중 업데이트되고,
     ///     ResultHandler에 의해 완료 시 초기화됩니다 (오케스트레이터의 finally 블록에 의해서도).

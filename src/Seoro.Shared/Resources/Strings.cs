@@ -549,8 +549,6 @@ public static class Strings
 
     public static string Sidebar_Explorer_NoFilesFound => Get(nameof(Sidebar_Explorer_NoFilesFound));
     public static string Sidebar_Explorer_FileReadError(string error) => Get(nameof(Sidebar_Explorer_FileReadError), error);
-    public static string Sidebar_Explorer_ExpandAll => Get(nameof(Sidebar_Explorer_ExpandAll));
-    public static string Sidebar_Explorer_CollapseAll => Get(nameof(Sidebar_Explorer_CollapseAll));
 
     public static string Snackbar_AppUpdateAction => Get(nameof(Snackbar_AppUpdateAction));
     public static string Snackbar_AppUpdateReady => Get(nameof(Snackbar_AppUpdateReady));

@@ -522,8 +522,6 @@
   <data name="Snackbar_DiscardError" xml:space="preserve"><value>폐기 실패: {0}</value></data>
   <data name="Sidebar_Explorer_NoFilesFound" xml:space="preserve"><value>파일을 찾을 수 없습니다</value></data>
   <data name="Sidebar_Explorer_FileReadError" xml:space="preserve"><value>파일 읽기 오류: {0}</value></data>
-  <data name="Sidebar_Explorer_ExpandAll" xml:space="preserve"><value>모두 펼치기</value></data>
-  <data name="Sidebar_Explorer_CollapseAll" xml:space="preserve"><value>모두 접기</value></data>
 
   <!-- SnackbarExtensions -->
   <data name="Snackbar_PushSuccess" xml:space="preserve"><value>'{0}' 브랜치가 푸시되었습니다.</value></data>

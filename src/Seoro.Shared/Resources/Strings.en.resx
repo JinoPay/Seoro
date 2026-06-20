@@ -522,8 +522,6 @@
   <data name="Snackbar_DiscardError" xml:space="preserve"><value>Discard failed: {0}</value></data>
   <data name="Sidebar_Explorer_NoFilesFound" xml:space="preserve"><value>No files found</value></data>
   <data name="Sidebar_Explorer_FileReadError" xml:space="preserve"><value>File read error: {0}</value></data>
-  <data name="Sidebar_Explorer_ExpandAll" xml:space="preserve"><value>Expand all</value></data>
-  <data name="Sidebar_Explorer_CollapseAll" xml:space="preserve"><value>Collapse all</value></data>
 
   <!-- SnackbarExtensions -->
   <data name="Snackbar_PushSuccess" xml:space="preserve"><value>Branch '{0}' has been pushed.</value></data>

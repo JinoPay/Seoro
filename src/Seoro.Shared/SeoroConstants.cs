@@ -10,12 +10,6 @@ public static class SeoroConstants
 
     // 동시에 살아있을 수 있는 PTY 터미널 수 — 초과 시 LRU로 정리 (스크롤백은 디스크 보존)
     public const int MaxLiveTerminals = 5;
-
-    // 익스플로러 증분 트리 갱신 임계값 — 변경 파일 수가 이를 넘으면(브랜치 전환 등) 전체 재구축
-    public const int ExplorerIncrementalUpdateMaxChanges = 200;
-
-    // 익스플로러 펼침 상태 저장 상한 — 초과 시(거대 repo ExpandAll) 세션 JSON 비대화 방지를 위해 저장 생략
-    public const int ExplorerExpandedDirsSaveLimit = 2_000;
     public const int MaxContextItemTokens = 2_000; // 단일 메모/todo/계획 파일
 
     // 시스템 프롬프트 크기 제한 (TokenEstimator를 통한 토큰 기반)

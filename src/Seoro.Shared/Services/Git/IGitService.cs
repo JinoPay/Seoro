@@ -82,12 +82,6 @@ public interface IGitService
     Task<DiffSummary> GetDiffSummaryAsync(string workingDir, string baseBranch, CancellationToken ct = default);
 
     /// <summary>
-    ///     <see cref="GetDiffSummaryAsync"/> 의 경량판 — diff 본문 없이 FilePath/ChangeType 만 채운다.
-    ///     변경 여부 배지만 필요한 호출자(익스플로러)용. 3초 TTL 캐시 적용.
-    /// </summary>
-    Task<DiffSummary> GetDiffStatusAsync(string workingDir, string baseBranch, CancellationToken ct = default);
-
-    /// <summary>
     ///     워킹 트리의 현재 상태(HEAD 기준)를 staged/unstaged/untracked 로 분리해서 돌려준다.
     ///     VS Code 스타일 Git 패널이 사용한다. <c>git diff --cached --numstat</c> +
     ///     <c>git diff --numstat</c> + <c>git status --porcelain</c> + untracked 목록을 합성.
