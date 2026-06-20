@@ -11,25 +11,6 @@
     </div>
 </div>
 
-<div class="settings-group-title mt">@Strings.Settings_Experimental_Title</div>
-
-<div class="stack gap-3">
-    <div class="settings-toggle-row">
-        <div>
-            <span class="typo-body2">@Strings.Settings_Experimental_BidirectionalLabel</span>
-            <div class="typo-caption text-secondary">@Strings.Settings_Experimental_BidirectionalHint</div>
-        </div>
-        <Switch @bind-Value="Settings.UseBidirectionalProtocol" Tone="Tone.Warning"/>
-    </div>
-    <div class="settings-toggle-row">
-        <div>
-            <span class="typo-body2">@Strings.Settings_Experimental_CodexAppServerLabel</span>
-            <div class="typo-caption text-secondary">@Strings.Settings_Experimental_CodexAppServerHint</div>
-        </div>
-        <Switch @bind-Value="Settings.CodexUseAppServer" Tone="Tone.Warning"/>
-    </div>
-</div>
-
 <div class="settings-group-title mt">@Strings.Settings_Advanced_EnvVarsTitle</div>
 <small class="typo-caption text-secondary" style="margin-top: -4px;">
     @Strings.Settings_Advanced_EnvVarsHint

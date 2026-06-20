@@ -250,11 +250,6 @@ public static class Strings
     public static string Settings_Advanced_Desc => Get(nameof(Settings_Advanced_Desc));
     public static string Settings_Advanced_DebugModeLabel => Get(nameof(Settings_Advanced_DebugModeLabel));
     public static string Settings_Advanced_DebugModeHint => Get(nameof(Settings_Advanced_DebugModeHint));
-    public static string Settings_Experimental_Title => Get(nameof(Settings_Experimental_Title));
-    public static string Settings_Experimental_BidirectionalLabel => Get(nameof(Settings_Experimental_BidirectionalLabel));
-    public static string Settings_Experimental_BidirectionalHint => Get(nameof(Settings_Experimental_BidirectionalHint));
-    public static string Settings_Experimental_CodexAppServerLabel => Get(nameof(Settings_Experimental_CodexAppServerLabel));
-    public static string Settings_Experimental_CodexAppServerHint => Get(nameof(Settings_Experimental_CodexAppServerHint));
     public static string Settings_Advanced_EnvVarsTitle => Get(nameof(Settings_Advanced_EnvVarsTitle));
     public static string Settings_Advanced_EnvVarsHint => Get(nameof(Settings_Advanced_EnvVarsHint));
     public static string Settings_Advanced_EnvKeyPlaceholder => Get(nameof(Settings_Advanced_EnvKeyPlaceholder));

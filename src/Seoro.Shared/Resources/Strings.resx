@@ -228,11 +228,6 @@
   <data name="Settings_Advanced_Desc" xml:space="preserve"><value>Claude CLI 고급 설정 및 환경변수를 관리합니다.</value></data>
   <data name="Settings_Advanced_DebugModeLabel" xml:space="preserve"><value>디버그 모드</value></data>
   <data name="Settings_Advanced_DebugModeHint" xml:space="preserve"><value>활성화하면 Claude CLI에 --debug 플래그를 전달합니다.</value></data>
-  <data name="Settings_Experimental_Title" xml:space="preserve"><value>실험 기능</value></data>
-  <data name="Settings_Experimental_BidirectionalLabel" xml:space="preserve"><value>Claude 양방향 프로토콜</value></data>
-  <data name="Settings_Experimental_BidirectionalHint" xml:space="preserve"><value>영속 프로세스로 멀티턴과 즉시 취소를 지원합니다. Claude CLI가 stream-json 입력을 지원할 때만 동작하며, 문제 시 기존 방식으로 자동 폴백합니다.</value></data>
-  <data name="Settings_Experimental_CodexAppServerLabel" xml:space="preserve"><value>Codex app-server</value></data>
-  <data name="Settings_Experimental_CodexAppServerHint" xml:space="preserve"><value>Codex를 영속 app-server(JSON-RPC)로 실행합니다. 실험적 기능이며 문제 시 기존 exec 방식으로 자동 폴백합니다.</value></data>
   <data name="Settings_Advanced_EnvVarsTitle" xml:space="preserve"><value>프로세스 환경변수</value></data>
   <data name="Settings_Advanced_EnvVarsHint" xml:space="preserve"><value>Seoro에서 Claude CLI를 실행할 때 프로세스에 주입하는 환경변수입니다.</value></data>
   <data name="Settings_Advanced_EnvKeyPlaceholder" xml:space="preserve"><value>변수명</value></data>
