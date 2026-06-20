@@ -5,12 +5,12 @@
 <div class="session-monitor-card">
     <div class="session-monitor-header">
         <div class="session-monitor-title">
-            <Icon Svg="@Lucide.History" Size="14"/>
+            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small"/>
             @Strings.Dashboard_Session_Title
         </div>
-        <IconButton Icon="@Lucide.RefreshCw"
-                    Class="@(_loading ? "session-monitor-spin" : "")"
-                    OnClick="LoadRecent"/>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                       Class="@(_loading ? "session-monitor-spin" : "")"
+                       OnClick="LoadRecent"/>
     </div>
     <div class="session-monitor-list">
         @foreach (var session in _sessions)
@@ -25,9 +25,12 @@
                     <div class="session-monitor-message">"@Truncate(session.FirstMessage, 60)"</div>
                 }
                 <div class="session-monitor-meta">
-                    <span><Icon Svg="@Lucide.MessageSquare" Size="10"/> @session.MessageCount</span>
-                    <span><Icon Svg="@Lucide.Wrench" Size="10"/> @session.ToolCallCount</span>
-                    <span title="@Strings.Dashboard_Session_CostTooltip"><Icon Svg="@Lucide.DollarSign" Size="10"/> ~$@EstimateCost(session.EntryCount)</span>
+                    <span><MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small"
+                                   Style="font-size: 0.6rem;"/> @session.MessageCount</span>
+                    <span><MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small"
+                                   Style="font-size: 0.6rem;"/> @session.ToolCallCount</span>
+                    <span title="@Strings.Dashboard_Session_CostTooltip"><MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small"
+                                                            Style="font-size: 0.6rem;"/> ~$@EstimateCost(session.EntryCount)</span>
                 </div>
             </button>
         }
@@ -106,7 +109,7 @@
 
 <style>
     .session-monitor-card {
-        border: 1px solid var(--border-default);
+        border: 1px solid var(--mud-palette-lines-default);
         border-radius: 12px;
         padding: 16px;
     }
@@ -121,7 +124,7 @@
     .session-monitor-title {
         font-size: 0.85rem;
         font-weight: 500;
-        color: var(--text-secondary);
+        color: var(--mud-palette-text-secondary);
         display: flex;
         align-items: center;
         gap: 8px;
@@ -139,7 +142,7 @@
         width: 100%;
         text-align: left;
         padding: 8px 12px;
-        background: var(--bg-hover);
+        background: var(--mud-palette-action-default-hover);
         border-radius: 8px;
         cursor: pointer;
         transition: opacity 0.15s;
@@ -167,13 +170,13 @@
 
     .session-monitor-time {
         font-size: 0.6rem;
-        color: var(--text-secondary);
+        color: var(--mud-palette-text-secondary);
         flex-shrink: 0;
     }
 
     .session-monitor-message {
         font-size: 0.6rem;
-        color: var(--text-secondary);
+        color: var(--mud-palette-text-secondary);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -185,7 +188,7 @@
         gap: 12px;
         margin-top: 4px;
         font-size: 0.6rem;
-        color: var(--text-secondary);
+        color: var(--mud-palette-text-secondary);
     }
 
     .session-monitor-meta span {
@@ -211,7 +214,7 @@
         display: block;
         width: 100%;
         font-size: 0.7rem;
-        color: var(--accent);
+        color: var(--mud-palette-primary);
         background: none;
         border: none;
         cursor: pointer;
@@ -222,6 +225,6 @@
     }
 
     .session-monitor-footer-link:hover {
-        color: var(--accent-hover);
+        color: var(--mud-palette-primary-darken);
     }
 </style>

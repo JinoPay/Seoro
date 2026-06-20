@@ -1,7 +1,7 @@
 @inject ISkillRegistry SkillRegistry
 @inject IChatState ChatState
-@inject IToastService Snackbar
-@inject IModalService ModalService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <div class="settings-content-area wide">
     @if (_editingCommand == null)
@@ -12,23 +12,26 @@
                                   ShowSaveButton="false"
                                   Saving="false" OnSave="@(() => Task.CompletedTask)">
             <ExtraActions>
-                <TextField @bind-Value="_searchText" Placeholder="명령어 검색..."
-                           AdornmentIcon="@Lucide.Search"
-                           Immediate="true" Style="max-width: 200px;"/>
-                <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Secondary"
-                        StartIcon="@Lucide.Sparkles"
-                        OnClick="OpenTemplates">
+                <MudTextField @bind-Value="_searchText" Placeholder="명령어 검색..."
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Immediate="true" Style="max-width: 200px;"/>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.AutoAwesome"
+                           OnClick="OpenTemplates" Size="Size.Small"
+                           Style="text-transform: none;">
                     템플릿
-                </Button>
-                <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
-                        StartIcon="@Lucide.Plus"
-                        OnClick="CreateNew">
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="CreateNew" Size="Size.Small"
+                           Style="text-transform: none;">
                     새 명령어
-                </Button>
-                <Button StartIcon="@Lucide.RefreshCw"
-                        ButtonStyle="ButtonStyle.Text" OnClick="RefreshCommands">
+                </MudButton>
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                           Variant="Variant.Text" OnClick="RefreshCommands">
                     새로고침
-                </Button>
+                </MudButton>
             </ExtraActions>
         </ClaudeSettingScopeHeader>
     }
@@ -36,7 +39,8 @@
     {
         <div class="settings-content-header">
             <div class="stack-row items-center gap-2">
-                <IconButton Icon="@Lucide.ArrowLeft" OnClick="CancelEdit"/>
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"
+                               OnClick="CancelEdit"/>
                 <span class="typo-subtitle1">@GetEditTitle()</span>
             </div>
         </div>
@@ -46,29 +50,30 @@
         @if (_editingCommand != null)
         {
             <div class="stack gap-3 pa-3">
-                <TextField @bind-Value="_editName" Label="명령어 이름"
-                           Placeholder="my-command"
-                           Disabled="_isViewOnly"
-                           HelperText="슬래시(/) 없이 입력. 네임스페이스는 콜론으로 구분 (예: frontend:component)"/>
+                <MudTextField @bind-Value="_editName" Label="명령어 이름"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="my-command" Required="true"
+                              Disabled="_isViewOnly"
+                              HelperText="슬래시(/) 없이 입력. 네임스페이스는 콜론으로 구분 (예: frontend:component)"/>
 
-                <TextField @bind-Value="_editDescription" Label="설명"
-                           Placeholder="이 명령어의 기능을 설명합니다"
-                           Disabled="_isViewOnly"/>
+                <MudTextField @bind-Value="_editDescription" Label="설명"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="이 명령어의 기능을 설명합니다"
+                              Disabled="_isViewOnly"/>
 
-                <Select T="string" @bind-Value="_editScope" Label="범위"
-                        Fixed="true"
-                        Disabled="_isViewOnly">
-                    <SelectItem T="string" Value="@("user")" Text="사용자 (전역)">사용자 (전역)</SelectItem>
-                    <SelectItem T="string" Value="@("project")" Disabled="@(string.IsNullOrEmpty(_projectPath))"
-                                Text="프로젝트">
+                <MudSelect T="string" @bind-Value="_editScope" Label="범위"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Disabled="_isViewOnly">
+                    <MudSelectItem T="string" Value="@("user")">사용자 (전역)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("project")" Disabled="@(string.IsNullOrEmpty(_projectPath))">
                         프로젝트@(string.IsNullOrEmpty(_projectPath) ? " (워크스페이스 없음)" : "")
-                    </SelectItem>
-                </Select>
+                    </MudSelectItem>
+                </MudSelect>
 
-                <TextField @bind-Value="_editContent" Label="명령어 내용 (Markdown)"
-                           Lines="10"
-                           Placeholder="$ARGUMENTS 플레이스홀더로 인수를 받을 수 있습니다."
-                           Disabled="_isViewOnly"/>
+                <MudTextField @bind-Value="_editContent" Label="명령어 내용 (Markdown)"
+                              Variant="Variant.Outlined" Lines="10"
+                              Placeholder="$ARGUMENTS 플레이스홀더로 인수를 받을 수 있습니다."
+                              Disabled="_isViewOnly"/>
 
                 <div>
                     <div class="typo-subtitle2 mb-1">허용된 도구 (선택사항)</div>
@@ -76,12 +81,13 @@
                         @foreach (var tool in _availableTools)
                         {
                             var isChecked = _editAllowedTools.Contains(tool);
-                            <Chip ButtonStyle="@(isChecked ? ButtonStyle.Filled : ButtonStyle.Outlined)"
-                                  Tone="@(isChecked ? Tone.Primary : Tone.Default)"
-                                  Selected="@isChecked"
-                                  OnClick="@(() => { if (!_isViewOnly) ToggleTool(tool); })">
+                            <MudChip T="string" Size="Size.Small"
+                                     Variant="@(isChecked ? Variant.Filled : Variant.Outlined)"
+                                     Color="@(isChecked ? Color.Primary : Color.Default)"
+                                     Disabled="_isViewOnly"
+                                     OnClick="@(() => ToggleTool(tool))">
                                 @tool
-                            </Chip>
+                            </MudChip>
                         }
                     </div>
                 </div>
@@ -89,21 +95,21 @@
                 <div class="stack-row gap-2">
                     @if (!_isViewOnly)
                     {
-                        <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary" OnClick="SaveCommand"
-                                Disabled="@(string.IsNullOrWhiteSpace(_editName))">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveCommand"
+                                   Disabled="@(string.IsNullOrWhiteSpace(_editName))">
                             @(_isNewCommand ? "명령어 추가" : "저장")
-                        </Button>
+                        </MudButton>
                     }
-                    <Button ButtonStyle="ButtonStyle.Text" OnClick="CancelEdit">
+                    <MudButton Variant="Variant.Text" OnClick="CancelEdit">
                         @(_isViewOnly ? "돌아가기" : "취소")
-                    </Button>
+                    </MudButton>
                 </div>
             </div>
         }
         else if (_loading)
         {
             <div style="display: flex; justify-content: center; padding: 24px;">
-                <Spinner Size="16"/>
+                <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
             </div>
         }
         else if (!FilteredCommands.Any())
@@ -123,24 +129,28 @@
                             <div style="margin-left: auto; display: flex; gap: 2px; align-items: center;">
                                 @if (cmd.IsBuiltIn)
                                 {
-                                    <Chip ButtonStyle="ButtonStyle.Filled">내장</Chip>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                             Color="Color.Default">내장
+                                    </MudChip>
                                 }
-                                <Chip ButtonStyle="ButtonStyle.Outlined" Tone="@GetScopeTone(cmd.Scope)">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                         Color="@GetScopeColor(cmd.Scope)">
                                     @GetScopeLabel(cmd.Scope)
-                                </Chip>
+                                </MudChip>
                                 @if (!cmd.IsBuiltIn)
                                 {
-                                    <IconButton Icon="@Lucide.Pencil"
-                                                Tone="Tone.Primary"
-                                                OnClick="@(() => EditCommand(cmd))"/>
-                                    <IconButton Icon="@Lucide.Trash2"
-                                                Tone="Tone.Error"
-                                                OnClick="@(() => ConfirmDelete(cmd))"/>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="@(() => EditCommand(cmd))"/>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => ConfirmDelete(cmd))"/>
                                 }
                                 else
                                 {
-                                    <IconButton Icon="@Lucide.Eye"
-                                                OnClick="@(() => ViewCommand(cmd))"/>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
+                                                   Color="Color.Default"
+                                                   OnClick="@(() => ViewCommand(cmd))"/>
                                 }
                             </div>
                         </div>
@@ -154,11 +164,14 @@
                             <div class="skill-card-badges">
                                 @if (cmd.AcceptsArguments)
                                 {
-                                    <Chip Tone="Tone.Info">$ARGS</Chip>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                             Color="Color.Info">$ARGS
+                                    </MudChip>
                                 }
                                 @foreach (var tool in cmd.AllowedTools)
                                 {
-                                    <Chip Tone="Tone.Warning">@tool</Chip>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                             Color="Color.Warning">@tool</MudChip>
                                 }
                             </div>
                         }
@@ -284,7 +297,7 @@
 
     private async Task ConfirmDelete(SkillDefinition cmd)
     {
-        var result = await ModalService.ShowMessageBoxAsync(
+        var result = await DialogService.ShowMessageBoxAsync(
             "명령어 삭제",
             $"'/{cmd.Name}' 명령어를 삭제하시겠습니까?",
             "삭제", cancelText: "취소");
@@ -292,7 +305,7 @@
         if (result != true) return;
 
         await SkillRegistry.DeleteCommandAsync(cmd.Name, cmd.Scope, _projectPath);
-        Snackbar.Add($"명령어 '/{cmd.Name}'이 삭제되었습니다.", ToastSeverity.Success);
+        Snackbar.Add($"명령어 '/{cmd.Name}'이 삭제되었습니다.", Severity.Success);
         StateHasChanged();
     }
 
@@ -314,7 +327,7 @@
         await SkillRegistry.SaveCommandAsync(command, _projectPath);
 
         var savedScope = _editScope == "project" ? "프로젝트" : "사용자 (전역)";
-        Snackbar.Add($"명령어 '/{_editName}'이 {savedScope} 범위로 저장되었습니다.", ToastSeverity.Success);
+        Snackbar.Add($"명령어 '/{_editName}'이 {savedScope} 범위로 저장되었습니다.", Severity.Success);
         ResetEditForm();
         StateHasChanged();
     }
@@ -374,13 +387,13 @@
         StateHasChanged();
     }
 
-    private static Tone GetScopeTone(string scope)
+    private static Color GetScopeColor(string scope)
     {
         return scope switch
         {
-            "project" => Tone.Info,
-            "user" => Tone.Warning,
-            _ => Tone.Default
+            "project" => Color.Info,
+            "user" => Color.Warning,
+            _ => Color.Default
         };
     }
 
@@ -405,7 +418,7 @@
     }
 
     .skill-card {
-        border: 1px solid var(--border-default);
+        border: 1px solid var(--mud-palette-lines-default);
         border-radius: 8px;
         padding: 10px 12px;
     }

@@ -1,6 +1,6 @@
 @using System.Runtime.InteropServices
 @inject INotificationService NotificationService
-@inject IToastService Snackbar
+@inject ISnackbar Snackbar
 
 <div class="settings-section-title">@Strings.Settings_Notifications_Title</div>
 <div class="settings-section-desc">@Strings.Settings_Notifications_Desc</div>
@@ -11,7 +11,8 @@
             <span class="typo-body2">@Strings.Settings_Notifications_DesktopLabel</span>
             <div class="typo-caption text-secondary">@Strings.Settings_Notifications_DesktopHint</div>
         </div>
-        <Switch @bind-Value="Settings.NotificationsEnabled"/>
+        <MudSwitch T="bool" @bind-Value="Settings.NotificationsEnabled"
+                   Color="Color.Primary" UncheckedColor="Color.Default"/>
     </div>
 
     <div class="settings-toggle-row">
@@ -19,8 +20,9 @@
             <span class="typo-body2">@Strings.Settings_Notifications_SoundLabel</span>
             <div class="typo-caption text-secondary">@Strings.Settings_Notifications_SoundHint</div>
         </div>
-        <Switch @bind-Value="Settings.NotificationSound"
-                Disabled="@(!Settings.NotificationsEnabled)"/>
+        <MudSwitch T="bool" @bind-Value="Settings.NotificationSound"
+                   Color="Color.Primary" UncheckedColor="Color.Default"
+                   Disabled="@(!Settings.NotificationsEnabled)"/>
     </div>
 
     @if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
@@ -40,26 +42,26 @@
         </div>
     }
 
-    <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
-            OnClick="SendTestNotification" StartIcon="@Lucide.BellRing"
-            Disabled="@(!Settings.NotificationsEnabled)"
-            Style="align-self: flex-start;">
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+               OnClick="SendTestNotification" StartIcon="@Icons.Material.Filled.NotificationsActive"
+               Disabled="@(!Settings.NotificationsEnabled)"
+               Style="text-transform: none; align-self: flex-start;">
         @Strings.Settings_Notifications_TestButton
-    </Button>
+    </MudButton>
 
     @if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
     {
         @if (NotificationService.CurrentBackend == NotificationBackend.Native)
         {
-            <Alert Tone="Tone.Success" Dense="true" Class="mt-2">
+            <MudAlert Severity="Severity.Success" Dense="true" NoIcon="false" Class="mt-2">
                 @Strings.Settings_Notifications_NativeActive
-            </Alert>
+            </MudAlert>
         }
         else
         {
-            <Alert Tone="Tone.Warning" Dense="true" Class="mt-2">
+            <MudAlert Severity="Severity.Warning" Dense="true" NoIcon="false" Class="mt-2">
                 @Strings.Settings_Notifications_ScriptFallback
-            </Alert>
+            </MudAlert>
         }
     }
 </div>
@@ -80,7 +82,7 @@
     {
         await OnSave.InvokeAsync();
         await NotificationService.SendAsync("Seoro", Strings.Settings_Notifications_TestMsg, NotificationType.Info);
-        Snackbar.Add(Strings.Settings_Notifications_TestSent, ToastSeverity.Success);
+        Snackbar.Add(Strings.Settings_Notifications_TestSent, Severity.Success);
     }
 
 }

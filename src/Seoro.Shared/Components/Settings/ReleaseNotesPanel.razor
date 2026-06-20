@@ -4,7 +4,7 @@
 <div class="release-notes-panel">
     @if (_loading)
     {
-        <ProgressBar Indeterminate="true"/>
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary"/>
     }
     else if (_releases.Count > 0)
     {

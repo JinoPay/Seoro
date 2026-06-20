@@ -1,27 +1,31 @@
 <div class="input-toolbar">
     <div class="input-toolbar-left">
-        <Tooltip Text="@GetPermissionModeTooltip()" Placement="UiPlacement.Top">
-            <IconButton Icon="@GetPermissionModeIcon()"
-                        Tone="@GetPermissionModeTone()"
-                        OnClick="CyclePermissionMode"
-                        Disabled="@(Disabled || IsStreaming)"/>
-        </Tooltip>
+        <MudTooltip Text="@GetPermissionModeTooltip()" Placement="Placement.Top">
+            <MudIconButton Icon="@GetPermissionModeIcon()"
+                           Color="@GetPermissionModeColor()"
+                           Size="Size.Small"
+                           OnClick="CyclePermissionMode"
+                           Disabled="Disabled || IsStreaming"/>
+        </MudTooltip>
 
         @if (_capabilities?.SupportsEffortLevel != false)
         {
-            <Tooltip Text="@GetEffortLevelTooltip()" Placement="UiPlacement.Top">
-                <IconButton Icon="@Lucide.Brain"
-                            Active="@(EffortLevel is "max" or "xhigh" or "high")"
-                            OnClick="CycleEffortLevel"
-                            Disabled="@(Disabled || IsStreaming)"/>
-            </Tooltip>
+            <MudTooltip Text="@GetEffortLevelTooltip()" Placement="Placement.Top">
+                <MudIconButton Icon="@Icons.Material.Filled.Psychology"
+                               Color="@GetEffortLevelColor()"
+                               Size="Size.Small"
+                               OnClick="CycleEffortLevel"
+                               Disabled="@(Disabled || IsStreaming)"/>
+            </MudTooltip>
         }
 
-        <Tooltip Text="@Strings.Chat_Toolbar_AttachFile" Placement="UiPlacement.Top">
-            <IconButton Icon="@Lucide.Paperclip"
-                        OnClick="@(() => OnPickFiles.InvokeAsync())"
-                        Disabled="@(Disabled || IsStreaming)"/>
-        </Tooltip>
+        <MudTooltip Text="@Strings.Chat_Toolbar_AttachFile" Placement="Placement.Top">
+            <MudIconButton Icon="@Icons.Material.Filled.AttachFile"
+                           Color="Color.Default"
+                           Size="Size.Small"
+                           OnClick="@(() => OnPickFiles.InvokeAsync())"
+                           Disabled="Disabled || IsStreaming"/>
+        </MudTooltip>
 
         <ToolPicker DisabledMcpServers="DisabledMcpServers"
                     DisabledMcpServersChanged="OnDisabledMcpServersChanged"
@@ -30,63 +34,65 @@
                     ProjectPath="@CurrentSession?.Git?.WorktreePath"/>
 
         <div class="tool-picker-wrapper">
-            <Popover @bind-Open="_addDirPopoverOpen" Placement="PopoverPlacement.BottomStart" Fixed="true"
-                     PopoverClass="add-dir-popover">
-                <AnchorContent>
-                    <Tooltip Text="추가 디렉터리" Placement="UiPlacement.Top">
-                        <div class="tool-picker-btn-wrapper">
-                            <IconButton Icon="@Lucide.FolderPlus"
-                                        Tone="@(AdditionalDirs is { Count: > 0 } ? Tone.Primary : Tone.Default)"
-                                        OnClick="ToggleAddDirPopover"
-                                        Disabled="@Disabled"/>
-                            @if (AdditionalDirs is { Count: > 0 })
-                            {
-                                <div class="tool-picker-badge">@AdditionalDirs.Count</div>
-                            }
-                        </div>
-                    </Tooltip>
-                </AnchorContent>
-                <ChildContent>
-                    <div class="add-dir-popover-content">
-                        <div class="typo-subtitle2 mb-2">추가 작업 디렉터리</div>
-                        <AdditionalDirectoriesEditor Directories="AdditionalDirs"
-                                                     DirectoriesChanged="OnAdditionalDirsChangedInternal"
-                                                     Disabled="@(!IsAddDirEditable)"/>
-                    </div>
-                </ChildContent>
-            </Popover>
+            <MudTooltip Text="추가 디렉터리" Placement="Placement.Top">
+                <div class="tool-picker-btn-wrapper">
+                    <MudIconButton Icon="@Icons.Material.Filled.CreateNewFolder"
+                                   Color="@(AdditionalDirs is { Count: > 0 } ? Color.Primary : Color.Default)"
+                                   Size="Size.Small"
+                                   OnClick="ToggleAddDirPopover"
+                                   Disabled="@Disabled"/>
+                    @if (AdditionalDirs is { Count: > 0 })
+                    {
+                        <div class="tool-picker-badge">@AdditionalDirs.Count</div>
+                    }
+                </div>
+            </MudTooltip>
+
+            <MudPopover Open="_addDirPopoverOpen" AnchorOrigin="Origin.BottomLeft"
+                        TransformOrigin="Origin.TopLeft" Class="add-dir-popover">
+                <MudClickAwayListener OnClickAway="CloseAddDirPopover"/>
+                <div class="add-dir-popover-content">
+                    <div class="typo-subtitle2 mb-2">추가 작업 디렉터리</div>
+                    <AdditionalDirectoriesEditor Directories="AdditionalDirs"
+                                                 DirectoriesChanged="OnAdditionalDirsChangedInternal"
+                                                 Disabled="@(!IsAddDirEditable)"/>
+                </div>
+            </MudPopover>
         </div>
 
         @foreach (var dir in AdditionalDirs)
         {
-            <Tooltip Text="@dir" Placement="UiPlacement.Top">
-                <Chip ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
-                      OnClose="@(IsAddDirEditable ? EventCallback.Factory.Create<MouseEventArgs>(this, () => RemoveDirChip(dir)) : default)"
-                      Style="font-size: 0.7rem; font-family: monospace; height: 22px; margin: 0;">
+            <MudTooltip Text="@dir" Placement="Placement.Top">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                         Color="Color.Primary"
+                         OnClose="@(IsAddDirEditable ? () => RemoveDirChip(dir) : null)"
+                         Style="font-size: 0.7rem; font-family: monospace; height: 22px; margin: 0;">
                     @GetDirDisplayName(dir)
-                </Chip>
-            </Tooltip>
+                </MudChip>
+            </MudTooltip>
         }
 
         @if (CurrentSession?.IsCodex == true)
         {
-            <Tooltip Text="@(WebSearchEnabled ? Strings.Chat_Toolbar_WebSearchOn : Strings.Chat_Toolbar_WebSearchOff)" Placement="UiPlacement.Top">
-                <IconButton Icon="@Lucide.Telescope"
-                            Tone="@(WebSearchEnabled ? Tone.Info : Tone.Default)"
-                            OnClick="ToggleWebSearch"
-                            Disabled="@(Disabled || IsStreaming)"/>
-            </Tooltip>
+            <MudTooltip Text="@(WebSearchEnabled ? Strings.Chat_Toolbar_WebSearchOn : Strings.Chat_Toolbar_WebSearchOff)" Placement="Placement.Top">
+                <MudIconButton Icon="@Icons.Material.Filled.TravelExplore"
+                               Color="@(WebSearchEnabled ? Color.Info : Color.Default)"
+                               Size="Size.Small"
+                               OnClick="ToggleWebSearch"
+                               Disabled="Disabled || IsStreaming"/>
+            </MudTooltip>
         }
     </div>
 
     <div class="input-toolbar-right">
         @if (!string.IsNullOrEmpty(PlanFilePath))
         {
-            <Tooltip Text="@Strings.Chat_Toolbar_ViewPlan" Placement="UiPlacement.Top">
-                <IconButton Icon="@Lucide.Map"
-                            Tone="Tone.Warning"
-                            OnClick="@(() => OnViewPlan.InvokeAsync())"/>
-            </Tooltip>
+            <MudTooltip Text="@Strings.Chat_Toolbar_ViewPlan" Placement="Placement.Top">
+                <MudIconButton Icon="@Icons.Material.Filled.Map"
+                               Color="Color.Warning"
+                               Size="Size.Small"
+                               OnClick="@(() => OnViewPlan.InvokeAsync())"/>
+            </MudTooltip>
         }
 
         <TokenUsageRing CurrentSession="CurrentSession" Model="Model"/>
@@ -98,56 +104,66 @@
 
         @if (IsStreaming)
         {
-            <Button ButtonStyle="ButtonStyle.Filled"
-                    Tone="Tone.Error"
-                    StartIcon="@Lucide.Square"
-                    OnClick="@(() => OnCancel.InvokeAsync())"
-                    Class="stop-button-glow"
-                    Style="border-radius: 20px; min-width: 72px;">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Error"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Stop"
+                       OnClick="@(() => OnCancel.InvokeAsync())"
+                       Class="stop-button-glow"
+                       Style="border-radius: 20px; text-transform: none; min-width: 72px;">
                 @Strings.Chat_Toolbar_Stop
-            </Button>
+            </MudButton>
 
             @if (HasInput || HasAttachments || QueueCount > 0)
             {
-                <Tooltip Text="@Strings.Chat_Toolbar_QueueMessage" Placement="UiPlacement.Top">
-                    <IconButton Icon="@Lucide.Clock"
-                                OnClick="@(() => OnSend.InvokeAsync())"
-                                Disabled="@(Disabled || (!HasInput && !HasAttachments))"
-                                Class="chat-send-btn"/>
-                </Tooltip>
-                <Menu Icon="@Lucide.ChevronDown" Placement="PopoverPlacement.TopEnd" Fixed="true">
+                <MudTooltip Text="@Strings.Chat_Toolbar_QueueMessage" Placement="Placement.Top">
+                    <MudIconButton Icon="@Icons.Material.Filled.Schedule"
+                                   Color="Color.Primary"
+                                   Variant="Variant.Filled"
+                                   OnClick="@(() => OnSend.InvokeAsync())"
+                                   Disabled="@(Disabled || (!HasInput && !HasAttachments))"
+                                   Size="Size.Small"
+                                   Style="border-radius: 50%;"/>
+                </MudTooltip>
+                <MudMenu Icon="@Icons.Material.Filled.ArrowDropDown"
+                         Size="Size.Small"
+                         AnchorOrigin="Origin.TopRight"
+                         TransformOrigin="Origin.BottomRight">
                     @if (HasInput || HasAttachments)
                     {
-                        <MenuItem Icon="@Lucide.Zap"
-                                  Tone="Tone.Warning"
-                                  OnClick="@(() => OnSendNow.InvokeAsync())">
+                        <MudMenuItem Icon="@Icons.Material.Filled.FlashOn"
+                                     IconColor="Color.Warning"
+                                     OnClick="@(() => OnSendNow.InvokeAsync())">
                             <div>
                                 <div style="font-size: 0.85rem; font-weight: 500;">@Strings.Chat_Toolbar_SendNow</div>
                                 <div style="font-size: 0.7rem; opacity: 0.7;">@Strings.Chat_Toolbar_SendNow_Hint</div>
                             </div>
-                        </MenuItem>
+                        </MudMenuItem>
                     }
                     @if (QueueCount > 0)
                     {
                         @if (HasInput || HasAttachments)
                         {
-                            <Divider/>
+                            <MudDivider/>
                         }
-                        <MenuItem Icon="@Lucide.Trash2"
-                                  Tone="Tone.Error"
-                                  OnClick="@(() => OnClearQueue.InvokeAsync())">
+                        <MudMenuItem Icon="@Icons.Material.Filled.DeleteSweep"
+                                     IconColor="Color.Error"
+                                     OnClick="@(() => OnClearQueue.InvokeAsync())">
                             @($"{Strings.Chat_Queue_ClearAll} ({QueueCount})")
-                        </MenuItem>
+                        </MudMenuItem>
                     }
-                </Menu>
+                </MudMenu>
             }
         }
         else
         {
-            <IconButton Icon="@Lucide.ArrowUp"
-                        OnClick="@(() => OnSend.InvokeAsync())"
-                        Disabled="@(Disabled || (!HasInput && !HasAttachments))"
-                        Class="chat-send-btn"/>
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward"
+                           Color="Color.Primary"
+                           Variant="Variant.Filled"
+                           OnClick="@(() => OnSend.InvokeAsync())"
+                           Disabled="@(Disabled || (!HasInput && !HasAttachments))"
+                           Size="Size.Small"
+                           Style="border-radius: 50%;"/>
         }
     </div>
 </div>
@@ -187,6 +203,7 @@
     private bool _addDirPopoverOpen;
 
     private void ToggleAddDirPopover() => _addDirPopoverOpen = !_addDirPopoverOpen;
+    private void CloseAddDirPopover() => _addDirPopoverOpen = false;
 
     private async Task OnAdditionalDirsChangedInternal(List<string> dirs)
     {
@@ -225,17 +242,17 @@
     {
         return PermissionMode switch
         {
-            "plan" => Lucide.FileText,
-            _ => Lucide.SquarePen
+            "plan" => Icons.Material.Filled.Description,
+            _ => Icons.Material.Filled.EditNote
         };
     }
 
-    private Tone GetPermissionModeTone()
+    private Color GetPermissionModeColor()
     {
         return PermissionMode switch
         {
-            "plan" => Tone.Warning,
-            _ => Tone.Default
+            "plan" => Color.Warning,
+            _ => Color.Default
         };
     }
 
@@ -255,6 +272,15 @@
             "xhigh" => "Effort: X-High",
             "high" => "Effort: High",
             _ => Strings.Chat_EffortLevel_AutoTooltip(maxLevel)
+        };
+    }
+
+    private Color GetEffortLevelColor()
+    {
+        return EffortLevel switch
+        {
+            "max" or "xhigh" or "high" => Color.Secondary,
+            _ => Color.Default
         };
     }
 

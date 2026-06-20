@@ -23,13 +23,18 @@
                     @switch (entry.Status)
                     {
                         case TodoStatus.Completed:
-                            <Icon Svg="@Lucide.CircleCheck" Size="16" Tone="Tone.Success"/>
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                     Color="Color.Success"
+                                     Style="width: 16px; height: 16px;"/>
                             break;
                         case TodoStatus.InProgress:
-                            <Spinner Size="14" Tone="Tone.Warning"/>
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                 Color="Color.Warning"
+                                                 Style="width: 14px; height: 14px;"/>
                             break;
                         default:
-                            <Icon Svg="@Lucide.Circle" Size="16" Style="opacity: 0.4;"/>
+                            <MudIcon Icon="@Icons.Material.Filled.RadioButtonUnchecked" Size="Size.Small"
+                                     Style="width: 16px; height: 16px; opacity: 0.4;"/>
                             break;
                     }
                     <span class="todo-widget-text">@GetDisplayText(entry)</span>

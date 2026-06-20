@@ -22,14 +22,14 @@
 .todo-widget-progress {
     flex: 1;
     height: 4px;
-    background: var(--bg-active);
+    background: var(--mud-palette-action-disabled-background, rgba(255, 255, 255, 0.08));
     border-radius: 2px;
     overflow: hidden;
 }
 
 .todo-widget-progress-fill {
     height: 100%;
-    background: var(--color-success);
+    background: var(--mud-palette-success, #4caf50);
     transition: width 200ms ease-out;
 }
 

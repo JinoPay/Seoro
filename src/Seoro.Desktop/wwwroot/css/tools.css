@@ -9,12 +9,12 @@
 }
 
 .tool-card.running {
-    border-left: 2px solid var(--color-warning);
+    border-left: 2px solid var(--mud-palette-warning);
     animation: tool-border-pulse 2s ease-in-out infinite;
 }
 
 @keyframes tool-border-pulse {
-    0%, 100% { border-left-color: var(--color-warning); }
+    0%, 100% { border-left-color: var(--mud-palette-warning); }
     50% { border-left-color: var(--color-warning-border); }
 }
 
@@ -1061,23 +1061,28 @@
     width: 100%;
 }
 
-.askbar-custom-option .askbar-inline-textfield .ui-field__control {
-    background: transparent;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0;
+.askbar-custom-option .mud-input-control {
+    margin: 0 !important;
 }
 
-.askbar-custom-option .askbar-inline-textfield .ui-field__input {
-    padding: 8px 12px;
-    font-size: var(--text-sm);
+.askbar-custom-option .mud-input-slot {
+    padding: 8px 12px !important;
+    font-size: var(--text-sm) !important;
     font-weight: 500;
-    min-height: unset;
+    min-height: unset !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
 }
 
-.askbar-custom-option .askbar-inline-textfield .ui-field__input::placeholder {
+.askbar-custom-option .mud-input-slot::placeholder {
     font-weight: 400;
     opacity: 0.5;
+}
+
+.askbar-custom-option .mud-input-text::before,
+.askbar-custom-option .mud-input-text::after {
+    display: none !important;
 }
 
 .askbar-custom-option input,

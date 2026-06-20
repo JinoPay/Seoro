@@ -455,7 +455,6 @@
   <data name="Sidebar_Changes_GroupUntracked" xml:space="preserve"><value>추적 안 됨</value></data>
   <data name="Sidebar_Changes_GroupOther" xml:space="preserve"><value>기타</value></data>
   <data name="Git_Changes" xml:space="preserve"><value>변경사항</value></data>
-  <data name="Git_ChangesCount" xml:space="preserve"><value>변경사항 {0}건</value></data>
   <data name="Git_NoChanges" xml:space="preserve"><value>변경사항 없음</value></data>
   <data name="Git_StageAll" xml:space="preserve"><value>전체 스테이지</value></data>
   <data name="Git_StageFile" xml:space="preserve"><value>스테이지</value></data>

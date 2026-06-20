@@ -1,60 +1,61 @@
-<Popover @bind-Open="_open" Placement="PopoverPlacement.BottomEnd" Fixed="true"
-         Class="add-session-anchor" PopoverClass="add-session-popover">
-    <AnchorContent>
-        <IconButton Icon="@Lucide.Plus" Size="@IconSize"
-                    Disabled="Disabled"
-                    Class="@ButtonClass"
-                    Style="@Style"
-                    OnClick="Toggle"/>
-    </AnchorContent>
-    <ChildContent>
-        <div class="add-session-header">@Strings.Sidebar_AddSession_HeaderNew</div>
-        <div class="add-session-option" @onclick="HandleNewChat">
-            <div class="add-session-icon" style="background: var(--accent-dim);">
-                <Icon Svg="@Lucide.GitFork" Size="14"
-                      Style="color: var(--accent);"/>
+<div class="add-session-anchor">
+    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="@IconSize"
+                   Disabled="Disabled"
+                   Class="@ButtonClass"
+                   Style="@Style"
+                   OnClick="Toggle"/>
+</div>
+
+<MudPopover Open="_open" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter"
+            Class="add-session-popover" OverflowBehavior="OverflowBehavior.FlipAlways">
+    <div class="add-session-header">@Strings.Sidebar_AddSession_HeaderNew</div>
+    <div class="add-session-option" @onclick="HandleNewChat">
+        <div class="add-session-icon" style="background: var(--accent-dim);">
+            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
+                     Style="color: var(--accent);"/>
+        </div>
+        <div class="add-session-label">
+            <span class="add-session-title">@Strings.Sidebar_AddSession_NewWorktreeTitle</span>
+            <span class="add-session-desc">@Strings.Sidebar_AddSession_NewWorktreeDesc</span>
+        </div>
+    </div>
+    <div class="add-session-option" @onclick="HandleAddLocalDir">
+        <div class="add-session-icon" style="background: var(--color-warning-bg);">
+            <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small"
+                     Style="color: var(--color-warning);"/>
+        </div>
+        <div class="add-session-label">
+            <span class="add-session-title">@Strings.Sidebar_AddSession_LocalDirectoryTitle</span>
+            <span class="add-session-desc">@Strings.Sidebar_AddSession_LocalDirectoryDesc</span>
+        </div>
+    </div>
+    @if (CodexAvailable)
+    {
+        <div class="add-session-separator"></div>
+        <div class="add-session-option" @onclick="HandleNewCodexChat">
+            <div class="add-session-icon" style="background: var(--color-success-bg, rgba(0,200,120,0.12));">
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
+                         Style="color: var(--color-success, #00c878);"/>
             </div>
             <div class="add-session-label">
-                <span class="add-session-title">@Strings.Sidebar_AddSession_NewWorktreeTitle</span>
-                <span class="add-session-desc">@Strings.Sidebar_AddSession_NewWorktreeDesc</span>
+                <span class="add-session-title">@Strings.Sidebar_AddSession_CodexWorktreeTitle</span>
+                <span class="add-session-desc">@Strings.Sidebar_AddSession_CodexWorktreeDesc</span>
             </div>
         </div>
-        <div class="add-session-option" @onclick="HandleAddLocalDir">
-            <div class="add-session-icon" style="background: var(--color-warning-bg);">
-                <Icon Svg="@Lucide.Folder" Size="14"
-                      Style="color: var(--color-warning);"/>
+        <div class="add-session-option" @onclick="HandleAddCodexLocalDir">
+            <div class="add-session-icon" style="background: var(--color-success-bg, rgba(0,200,120,0.12));">
+                <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small"
+                         Style="color: var(--color-success, #00c878);"/>
             </div>
             <div class="add-session-label">
-                <span class="add-session-title">@Strings.Sidebar_AddSession_LocalDirectoryTitle</span>
-                <span class="add-session-desc">@Strings.Sidebar_AddSession_LocalDirectoryDesc</span>
+                <span class="add-session-title">@Strings.Sidebar_AddSession_CodexLocalTitle</span>
+                <span class="add-session-desc">@Strings.Sidebar_AddSession_CodexLocalDesc</span>
             </div>
         </div>
-        @if (CodexAvailable)
-        {
-            <div class="add-session-separator"></div>
-            <div class="add-session-option" @onclick="HandleNewCodexChat">
-                <div class="add-session-icon" style="background: var(--color-success-bg, rgba(0,200,120,0.12));">
-                    <Icon Svg="@Lucide.GitFork" Size="14"
-                          Style="color: var(--color-success, #00c878);"/>
-                </div>
-                <div class="add-session-label">
-                    <span class="add-session-title">@Strings.Sidebar_AddSession_CodexWorktreeTitle</span>
-                    <span class="add-session-desc">@Strings.Sidebar_AddSession_CodexWorktreeDesc</span>
-                </div>
-            </div>
-            <div class="add-session-option" @onclick="HandleAddCodexLocalDir">
-                <div class="add-session-icon" style="background: var(--color-success-bg, rgba(0,200,120,0.12));">
-                    <Icon Svg="@Lucide.Folder" Size="14"
-                          Style="color: var(--color-success, #00c878);"/>
-                </div>
-                <div class="add-session-label">
-                    <span class="add-session-title">@Strings.Sidebar_AddSession_CodexLocalTitle</span>
-                    <span class="add-session-desc">@Strings.Sidebar_AddSession_CodexLocalDesc</span>
-                </div>
-            </div>
-        }
-    </ChildContent>
-</Popover>
+    }
+</MudPopover>
+
+<MudOverlay Visible="_open" OnClick="Close" LockScroll="false"/>
 
 @code {
     [Parameter] public string WorkspaceId { get; set; } = "";
@@ -66,7 +67,7 @@
     [Parameter] public bool CodexAvailable { get; set; }
     [Parameter] public string? ButtonClass { get; set; }
     [Parameter] public string? Style { get; set; }
-    [Parameter] public UiSize IconSize { get; set; } = UiSize.Sm;
+    [Parameter] public Size IconSize { get; set; } = Size.Small;
 
     private bool _open;
 
@@ -74,6 +75,11 @@
     {
         if (!Disabled)
             _open = !_open;
+    }
+
+    private void Close()
+    {
+        _open = false;
     }
 
     private async Task HandleNewChat()

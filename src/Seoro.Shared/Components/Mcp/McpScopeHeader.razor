@@ -1,19 +1,15 @@
 <div class="settings-content-header">
     <div class="d-flex align-center gap-2">
-        <div class="d-flex align-center gap-1">
-            <Chip ButtonStyle="ButtonStyle.Outlined" Icon="@Lucide.Monitor"
-                  Selected="@(_scopeStr == "Desktop")"
-                  OnClick="@(() => OnScopeChanged("Desktop"))">Desktop</Chip>
-            <Chip ButtonStyle="ButtonStyle.Outlined" Icon="@Lucide.Globe"
-                  Selected="@(_scopeStr == "Global")"
-                  OnClick="@(() => OnScopeChanged("Global"))">글로벌</Chip>
-            <Chip ButtonStyle="ButtonStyle.Outlined" Icon="@Lucide.FolderDot"
-                  Selected="@(_scopeStr == "Local")"
-                  OnClick="@(() => OnScopeChanged("Local"))">로컬</Chip>
-            <Chip ButtonStyle="ButtonStyle.Outlined" Icon="@Lucide.Folder"
-                  Selected="@(_scopeStr == "Project")"
-                  OnClick="@(() => OnScopeChanged("Project"))">프로젝트</Chip>
-        </div>
+        <MudChipSet T="string" SelectedValue="@_scopeStr" SelectedValueChanged="OnScopeChanged"
+                    SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
+                    Variant="Variant.Outlined" Color="Color.Primary">
+            <MudChip T="string" Value="@("Desktop")" Icon="@Icons.Material.Filled.DesktopWindows">Desktop</MudChip>
+            <MudChip T="string" Value="@("Global")" Icon="@Icons.Material.Filled.Public">글로벌</MudChip>
+            <MudChip T="string" Value="@("Local")" Icon="@Icons.Material.Filled.FolderSpecial"
+                     Disabled="@NeedsProjectAndNone">로컬</MudChip>
+            <MudChip T="string" Value="@("Project")" Icon="@Icons.Material.Filled.Folder"
+                     Disabled="@NeedsProjectAndNone">프로젝트</MudChip>
+        </MudChipSet>
 
         @if (Scope is McpScope.Local or McpScope.Project)
         {
@@ -40,6 +36,7 @@
     [Parameter] public RenderFragment? ExtraActions { get; set; }
 
     private string _scopeStr => Scope.ToString();
+    private bool NeedsProjectAndNone => false; // Local/Project 탭은 항상 활성화됨; 빈 상태를 대신 표시
 
     private async Task OnScopeChanged(string value)
     {

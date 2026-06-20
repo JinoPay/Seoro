@@ -3,13 +3,13 @@
         <div class="settings-segmented">
             <button class="settings-seg-item @(Scope == ClaudeSettingsScope.Global ? "active" : "")"
                     @onclick="@(() => OnScopeChanged(ClaudeSettingsScope.Global))">
-                <Icon Svg="@Lucide.Globe" Size="14" Style="margin-right: 4px;"/>
+                <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Style="margin-right: 4px;"/>
                 글로벌
             </button>
             <button class="settings-seg-item @(Scope == ClaudeSettingsScope.Project ? "active" : "")"
                     disabled="@(string.IsNullOrEmpty(ProjectPath))"
                     @onclick="@(() => OnScopeChanged(ClaudeSettingsScope.Project))">
-                <Icon Svg="@Lucide.Folder" Size="14" Style="margin-right: 4px;"/>
+                <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Style="margin-right: 4px;"/>
                 프로젝트
             </button>
             @if (ShowLocalScope)
@@ -17,7 +17,7 @@
                 <button class="settings-seg-item @(Scope == ClaudeSettingsScope.Local ? "active" : "")"
                         disabled="@(string.IsNullOrEmpty(ProjectPath))"
                         @onclick="@(() => OnScopeChanged(ClaudeSettingsScope.Local))">
-                    <Icon Svg="@Lucide.Lock" Size="14" Style="margin-right: 4px;"/>
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Style="margin-right: 4px;"/>
                     @(LocalScopeLabel ?? "로컬")
                 </button>
             }
@@ -44,9 +44,10 @@
         }
         @if (ShowSaveButton)
         {
-            <Button Tone="Tone.Primary" ButtonStyle="ButtonStyle.Filled" OnClick="OnSave" Disabled="Saving">
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OnSave"
+                       Size="Size.Small" Style="text-transform: none;" Disabled="Saving">
                 @(Saving ? "저장 중..." : "저장")
-            </Button>
+            </MudButton>
         }
     </div>
 </div>

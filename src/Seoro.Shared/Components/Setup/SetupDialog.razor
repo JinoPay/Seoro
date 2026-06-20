@@ -2,15 +2,14 @@
 @using Seoro.Shared.Resources
 @inject IDependencyCheckService DependencyCheckService
 
-<Modal IsOpen="IsOpen" IsOpenChanged="OnVisibleChanged" MaxWidth="560px"
-       ShowCloseButton="false" CloseOnEscape="false">
-    <HeaderContent>
+<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
+    <TitleContent>
         <div class="typo-h6" style="display:flex;align-items:center;gap:8px;">
             <img src="logo.png" width="22" height="22" alt="Seoro"/>
             @Strings.Setup_Title
         </div>
-    </HeaderContent>
-    <ChildContent>
+    </TitleContent>
+    <DialogContent>
         <div class="stack gap-3 pa-2" style="min-width: 440px;">
             <p class="typo-body2 text-secondary">
                 @Strings.Setup_Desc
@@ -18,21 +17,21 @@
 
             @if (_loading)
             {
-                <ProgressBar Indeterminate="true"/>
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary"/>
             }
             else if (_results != null)
             {
                 @foreach (var dep in _results)
                 {
-                    <div class="ui-card pa-3">
+                    <MudPaper Class="pa-3" Elevation="0" Outlined="true">
                         <div class="stack-row items-center gap-2">
                             @if (dep.IsInstalled)
                             {
-                                <Icon Svg="@Lucide.CircleCheck" Tone="Tone.Success" Size="18"/>
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success"/>
                             }
                             else
                             {
-                                <Icon Svg="@Lucide.TriangleAlert" Tone="Tone.Warning" Size="18"/>
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning"/>
                             }
                             <div class="stack flex-1">
                                 <div class="typo-subtitle2">@dep.Name</div>
@@ -40,15 +39,15 @@
                             </div>
                             @if (dep.IsInstalled)
                             {
-                                <Chip Tone="Tone.Success">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
                                     @(dep.Version ?? Strings.Setup_Installed)
-                                </Chip>
+                                </MudChip>
                             }
                         </div>
 
                         @if (!dep.IsInstalled)
                         {
-                            <Divider Class="my-2"/>
+                            <MudDivider Class="my-2"/>
                             <div class="stack gap-1">
                                 <small class="typo-caption text-secondary">@Strings.Setup_HowToInstall</small>
                                 @{
@@ -59,10 +58,10 @@
                                     @foreach (var method in methods)
                                     {
                                         <div class="stack-row items-center gap-2">
-                                            <Chip ButtonStyle="ButtonStyle.Outlined"
-                                                  Style="min-width: 80px; justify-content: center;">
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                     Style="min-width: 80px; justify-content: center;">
                                                 @method.Label
-                                            </Chip>
+                                            </MudChip>
                                             <code style="flex: 1;">@method.InstallCommand</code>
                                         </div>
                                     }
@@ -73,33 +72,33 @@
                                         <code>@(_isMac ? dep.MacInstallHint : dep.WindowsInstallHint)</code>
                                     </p>
                                 }
-                                <TextLink Href="@dep.InstallUrl" Target="_blank" Class="typo-caption">
+                                <MudLink Href="@dep.InstallUrl" Target="_blank" Typo="Typo.caption">
                                     @dep.InstallUrl
-                                </TextLink>
+                                </MudLink>
                             </div>
                         }
-                    </div>
+                    </MudPaper>
                 }
             }
         </div>
-    </ChildContent>
-    <Footer>
+    </DialogContent>
+    <DialogActions>
         @if (_allInstalled)
         {
-            <Button Tone="Tone.Primary" ButtonStyle="ButtonStyle.Filled" OnClick="Close">
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close">
                 @Strings.Setup_Start
-            </Button>
+            </MudButton>
         }
         else
         {
-            <Button OnClick="Close">@Strings.Setup_Skip</Button>
-            <Button Tone="Tone.Primary" ButtonStyle="ButtonStyle.Filled" OnClick="Recheck"
-                    Disabled="_loading">
+            <MudButton OnClick="Close">@Strings.Setup_Skip</MudButton>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Recheck"
+                       Disabled="_loading">
                 @Strings.Setup_Recheck
-            </Button>
+            </MudButton>
         }
-    </Footer>
-</Modal>
+    </DialogActions>
+</MudDialog>
 
 @code {
     [Parameter] public bool IsOpen { get; set; }
@@ -109,6 +108,13 @@
     private bool _loading;
     private bool _allInstalled;
     private readonly bool _isMac = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        BackdropClick = false
+    };
 
     protected override async Task OnParametersSetAsync()
     {

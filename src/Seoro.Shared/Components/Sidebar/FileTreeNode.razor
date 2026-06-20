@@ -8,9 +8,9 @@
         <div class="sidebar-file-item dir@(hasDiff ? " has-diff" : "")"
              style="padding-left: @(indent + 8)px;"
              @onclick="() => OnToggleDir.InvokeAsync(node.FullPath)">
-            <Icon Svg="@(expanded ? Lucide.FolderOpen : Lucide.Folder)"
-                  Size="14"
-                  Style="@(hasDiff ? "opacity: 0.8; color: var(--color-info);" : "opacity: 0.6;")"/>
+            <MudIcon Icon="@(expanded ? Icons.Material.Filled.FolderOpen : Icons.Material.Filled.Folder)"
+                     Size="Size.Small"
+                     Style="@($"width: 14px; height: 14px; {(hasDiff ? "opacity: 0.8; color: var(--color-info);" : "opacity: 0.6;")}")"/>
             <span class="sidebar-file-name">@node.Name</span>
         </div>
 
@@ -30,9 +30,9 @@
         <div class="sidebar-file-item file@(fileDiff != null ? " modified" : "")"
              style="padding-left: @(indent + 8)px;"
              @onclick="() => OnOpenFile.InvokeAsync(node.FullPath)">
-            <Icon Svg="@GetFileIcon(fileDiff)"
-                  Size="14"
-                  Style="@GetFileIconColor(fileDiff)"/>
+            <MudIcon Icon="@GetFileIcon(fileDiff)"
+                     Size="Size.Small"
+                     Style="@($"width: 14px; height: 14px; {GetFileIconColor(fileDiff)}")"/>
             <span class="sidebar-file-name">@node.Name</span>
         </div>
     }
@@ -53,14 +53,14 @@
 
     private static string GetFileIcon(FileDiff? diff)
     {
-        if (diff == null) return Lucide.File;
+        if (diff == null) return Icons.Material.Filled.InsertDriveFile;
         return diff.ChangeType switch
         {
-            FileChangeType.Added => Lucide.FilePlus,
-            FileChangeType.Deleted => Lucide.Trash2,
-            FileChangeType.Renamed => Lucide.FilePen,
-            FileChangeType.Untracked => Lucide.CirclePlus,
-            _ => Lucide.SquarePen
+            FileChangeType.Added => Icons.Material.Filled.NoteAdd,
+            FileChangeType.Deleted => Icons.Material.Filled.Delete,
+            FileChangeType.Renamed => Icons.Material.Filled.DriveFileRenameOutline,
+            FileChangeType.Untracked => Icons.Material.Filled.AddCircleOutline,
+            _ => Icons.Material.Filled.EditNote
         };
     }
 
@@ -72,7 +72,7 @@
             FileChangeType.Added => "color: var(--color-success);",
             FileChangeType.Deleted => "color: var(--color-error);",
             FileChangeType.Renamed => "color: var(--color-warning);",
-            FileChangeType.Untracked => "color: var(--text-secondary);",
+            FileChangeType.Untracked => "color: var(--mud-palette-text-secondary);",
             _ => "color: var(--color-info);"
         };
     }

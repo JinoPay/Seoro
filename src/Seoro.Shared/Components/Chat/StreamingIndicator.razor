@@ -14,7 +14,8 @@
 
     @if (Phase == StreamingPhase.UsingTool && !string.IsNullOrEmpty(ActiveToolName))
     {
-        <Icon Svg="@ToolDisplayHelper.GetToolLucideIcon(ActiveToolName)" Size="15" Style="opacity: 0.8;"/>
+        <MudIcon Icon="@ToolDisplayHelper.GetToolIcon(ActiveToolName)" Size="Size.Small"
+                 Style="width: 15px; height: 15px; opacity: 0.8;"/>
         <span class="indicator-label">@ToolDisplayHelper.GetStreamingLabel(ActiveToolName)</span>
     }
     else if (Phase != StreamingPhase.WritingText)

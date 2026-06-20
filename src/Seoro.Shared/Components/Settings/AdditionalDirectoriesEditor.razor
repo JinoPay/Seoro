@@ -3,14 +3,15 @@
 <div class="stack gap-3">
     @if (Disabled)
     {
-        <Alert Tone="Tone.Info" Dense="true" Class="mb-1">
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-1">
             첫 메시지 이후에는 추가 디렉터리를 변경할 수 없습니다.
-        </Alert>
+        </MudAlert>
     }
 
     @if (Directories is { Count: > 0 })
     {
-        <table class="ui-table" style="border: 1px solid var(--border-default); border-radius: 8px;">
+        <MudSimpleTable Dense="true" Hover="true" Elevation="0"
+                        Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;">
             <thead>
             <tr>
                 <th>경로</th>
@@ -23,20 +24,21 @@
                 <tr class="settings-list-item">
                     <td class="typo-body2" style="font-family: monospace;">@dir</td>
                     <td>
-                        <IconButton Icon="@Lucide.Trash2"
-                                    Tone="Tone.Error" OnClick="@(() => Remove(dir))"
-                                    Class="settings-delete-btn"
-                                    Disabled="@Disabled"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                       Color="Color.Error" OnClick="@(() => Remove(dir))"
+                                       Class="settings-delete-btn"
+                                       Disabled="@Disabled"/>
                     </td>
                 </tr>
             }
             </tbody>
-        </table>
+        </MudSimpleTable>
     }
     else if (!Disabled)
     {
         <div class="settings-add-area" @onclick="BrowseFolder">
-            <Icon Svg="@Lucide.FolderPlus" Size="18" Style="opacity: 0.4;"/>
+            <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Size="Size.Medium"
+                     Style="opacity: 0.4;"/>
             <div class="typo-caption text-secondary mt-1">디렉토리를 추가하세요</div>
         </div>
     }
@@ -44,19 +46,19 @@
     @if (!Disabled)
     {
         <div class="d-flex gap-2 align-end">
-            <TextField @bind-Value="_newPath" Label="경로" Immediate="true"
-                       Placeholder="/path/to/directory" Style="flex: 1;"
-                       OnKeyDown="@(e =>
-                                  {
-                                      if (e.Key == "Enter") Add();
-                                  })"/>
-            <IconButton Icon="@Lucide.FolderOpen" Tone="Tone.Primary"
-                        OnClick="BrowseFolder" Title="찾아보기..."/>
-            <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
-                    OnClick="Add" Disabled="@(string.IsNullOrWhiteSpace(_newPath))"
-                    Style="min-width: 60px;">
+            <MudTextField T="string" @bind-Value="_newPath" Label="경로" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Placeholder="/path/to/directory" Style="flex: 1;"
+                          OnKeyUp="@(e =>
+                                   {
+                                       if (e.Key == "Enter") Add();
+                                   })"/>
+            <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
+                           OnClick="BrowseFolder" Size="Size.Small" title="찾아보기..."/>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       OnClick="Add" Disabled="@(string.IsNullOrWhiteSpace(_newPath))"
+                       Style="text-transform: none; min-width: 60px; height: 40px;">
                 추가
-            </Button>
+            </MudButton>
         </div>
     }
 </div>

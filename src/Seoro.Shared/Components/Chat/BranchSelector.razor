@@ -1,57 +1,66 @@
 @if (IsLoading)
 {
     <div class="branch-selector-loading">
-        <Spinner Size="14"/>
+        <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                             Style="width: 14px; height: 14px; color: var(--accent);"/>
         <span>브랜치 불러오는 중...</span>
     </div>
 }
 else if (BranchGroups.Count > 0)
 {
     <div class="branch-selector-wrapper">
-        <Popover Open="_branchMenuOpen" OpenChanged="HandleMenuOpenChanged"
-                 Placement="PopoverPlacement.BottomStart" Fixed="true" PopoverClass="branch-popover">
-            <AnchorContent>
-                <button class="branch-selector-pill" type="button" @onclick="ToggleBranchMenu">
-                    <Icon Svg="@Lucide.GitFork" Size="16" Style="opacity: 0.7;"/>
-                    <span class="branch-selector-name">@SelectedBranch</span>
-                    <Icon Svg="@Lucide.ChevronsUpDown" Size="16" Style="opacity: 0.4;"/>
-                </button>
-            </AnchorContent>
-            <ChildContent>
-                <div class="branch-search-container">
-                    <TextField @bind-Value="_branchSearchText"
-                               Placeholder="브랜치 검색..."
-                               Immediate="true"
-                               AdornmentIcon="@Lucide.Search"
-                               Style="font-size: var(--text-sm);"/>
-                </div>
-                <div class="branch-list">
-                    @foreach (var group in FilteredBranchGroups)
+        <button class="branch-selector-pill" type="button" @onclick="ToggleBranchMenu">
+            <MudIcon Icon="@Icons.Material.Filled.AccountTree"
+                     Style="font-size: 16px; opacity: 0.7;"/>
+            <span class="branch-selector-name">@SelectedBranch</span>
+            <MudIcon Icon="@Icons.Material.Filled.UnfoldMore"
+                     Style="font-size: 16px; opacity: 0.4;"/>
+        </button>
+
+        <MudPopover Open="@_branchMenuOpen" AnchorOrigin="Origin.BottomCenter"
+                    TransformOrigin="Origin.TopCenter" Class="branch-popover">
+            <div class="branch-search-container">
+                <MudTextField T="string" @bind-Value="_branchSearchText"
+                              Placeholder="브랜치 검색..."
+                              Variant="Variant.Text"
+                              Immediate="true"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Style="font-size: var(--text-sm);"/>
+            </div>
+            <MudList T="string" Dense="true" Class="branch-list">
+                @foreach (var group in FilteredBranchGroups)
+                {
+                    <div class="branch-group-header">@group.Name</div>
+                    @foreach (var branch in group.Branches)
                     {
-                        <div class="branch-group-header">@group.Name</div>
-                        @foreach (var branch in group.Branches)
-                        {
-                            <button type="button"
-                                    class="branch-item @(branch == SelectedBranch ? "branch-item-active" : "")"
-                                    @onclick="@(() => SelectBranch(branch))">
-                                <div class="branch-item-content">
-                                    <Icon Svg="@Lucide.GitFork" Size="14" Style="opacity: 0.5;"/>
-                                    <span class="branch-item-name">@branch</span>
-                                    @if (branch == SelectedBranch)
-                                    {
-                                        <Icon Svg="@Lucide.Check" Size="14" Style="color: var(--accent);"/>
-                                    }
-                                </div>
-                            </button>
-                        }
+                        <MudListItem T="string" OnClick="@(() => SelectBranch(branch))"
+                                     Class="@(branch == SelectedBranch ? "branch-item-active" : "")">
+                            <div class="branch-item-content">
+                                <MudIcon Icon="@Icons.Material.Filled.AccountTree"
+                                         Style="font-size: 14px; opacity: 0.5;"/>
+                                <span class="branch-item-name">@branch</span>
+                                @if (branch == SelectedBranch)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Check"
+                                             Style="font-size: 14px; color: var(--accent);"/>
+                                }
+                            </div>
+                        </MudListItem>
                     }
-                    @if (!FilteredBranchGroups.Any())
-                    {
-                        <div class="branch-no-results">일치하는 브랜치 없음</div>
-                    }
-                </div>
-            </ChildContent>
-        </Popover>
+                }
+                @if (!FilteredBranchGroups.Any())
+                {
+                    <div class="branch-no-results">일치하는 브랜치 없음</div>
+                }
+            </MudList>
+        </MudPopover>
+
+        @if (_branchMenuOpen)
+        {
+            <MudOverlay Visible="true" OnClick="CloseBranchMenu"
+                        DarkBackground="false" ZIndex="1"/>
+        }
     </div>
 }
 
@@ -79,10 +88,10 @@ else if (BranchGroups.Count > 0)
         if (!_branchMenuOpen) _branchSearchText = "";
     }
 
-    private void HandleMenuOpenChanged(bool open)
+    private void CloseBranchMenu()
     {
-        _branchMenuOpen = open;
-        if (!open) _branchSearchText = "";
+        _branchMenuOpen = false;
+        _branchSearchText = "";
     }
 
     private async Task SelectBranch(string branch)

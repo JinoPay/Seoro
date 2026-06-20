@@ -23,11 +23,11 @@
 }
 
 .todo-inline-chip.has-progress {
-    border-color: var(--color-warning);
+    border-color: var(--mud-palette-warning, #ffa726);
 }
 
 .todo-inline-chip.all-done {
-    border-color: var(--color-success);
+    border-color: var(--mud-palette-success, #4caf50);
 }
 
 .todo-inline-chip-main {
@@ -117,7 +117,7 @@
 
 .todo-inline-progress-fill {
     height: 100%;
-    background: var(--color-success);
+    background: var(--mud-palette-success, #4caf50);
     transition: width 220ms ease-out;
 }
 

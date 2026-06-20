@@ -9,7 +9,7 @@
         <div class="plan-review-header" @onclick="TogglePreview">
             <div class="plan-review-header-left">
                 <div class="plan-review-icon-badge">
-                    <Icon Svg="@Lucide.Map" Size="18"/>
+                    <MudIcon Icon="@Icons.Material.Filled.Map" Size="Size.Small" Style="width: 18px; height: 18px;"/>
                 </div>
                 <div class="plan-review-title-area">
                     <span class="plan-review-title">@Strings.Chat_Plan_ReviewTitle</span>
@@ -19,7 +19,8 @@
                     }
                 </div>
             </div>
-            <Icon Svg="@(_showPreview ? Lucide.ChevronUp : Lucide.ChevronDown)" Size="18" Style="opacity: 0.5;"/>
+            <MudIcon Icon="@(_showPreview ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                     Size="Size.Small" Style="width: 18px; height: 18px; opacity: 0.5;"/>
         </div>
 
         @* 플랜 콘텐츠 마크다운 *@
@@ -43,19 +44,19 @@
 
         @* 작업 버튼 *@
         <div class="plan-review-actions">
-            <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Success"
-                    StartIcon="@Lucide.Play"
-                    OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Approve))"
-                    Class="plan-review-btn plan-review-btn-approve">
+            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
+                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                       OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Approve))"
+                       Class="plan-review-btn plan-review-btn-approve">
                 @Strings.Chat_Plan_Approve
                 <kbd class="plan-review-kbd">@_approveShortcut</kbd>
-            </Button>
-            <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Error"
-                    StartIcon="@Lucide.X"
-                    OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Reject))"
-                    Class="plan-review-btn plan-review-btn-reject">
+            </MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.Close"
+                       OnClick="@(() => OnAction.InvokeAsync(PlanReviewAction.Reject))"
+                       Class="plan-review-btn plan-review-btn-reject">
                 @Strings.Chat_Plan_Reject
-            </Button>
+            </MudButton>
         </div>
 
     </div>

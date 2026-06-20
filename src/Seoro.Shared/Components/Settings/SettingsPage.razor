@@ -6,19 +6,19 @@
 <div class="settings-page">
     <div class="settings-page-nav">
         <button class="settings-back-btn" @onclick="GoBack">
-            <Icon Svg="@Lucide.ArrowLeft" Size="14"/>
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"/>
             @Strings.Nav_BackToApp
         </button>
 
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("dashboard")"
                     @onclick="@(() => SetSection("dashboard"))">
-                <Icon Svg="@Lucide.LayoutDashboard" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small"/>
                 @Strings.Nav_Dashboard
             </button>
             <button class="settings-nav-item @ActiveClass("usage")"
                     @onclick="@(() => SetSection("usage"))">
-                <Icon Svg="@Lucide.ChartColumn" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Small"/>
                 @Strings.Nav_Usage
             </button>
         </div>
@@ -27,32 +27,32 @@
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("general")"
                     @onclick="@(() => SetSection("general"))">
-                <Icon Svg="@Lucide.SlidersHorizontal" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small"/>
                 @Strings.Nav_General
             </button>
             <button class="settings-nav-item @ActiveClass("ai")"
                     @onclick="@(() => SetSection("ai"))">
-                <Icon Svg="@Lucide.Brain" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"/>
                 @Strings.Nav_AiModel
             </button>
             <button class="settings-nav-item @ActiveClass("notifications")"
                     @onclick="@(() => SetSection("notifications"))">
-                <Icon Svg="@Lucide.Bell" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small"/>
                 @Strings.Nav_Notifications
             </button>
             <button class="settings-nav-item @ActiveClass("terminal")"
                     @onclick="@(() => SetSection("terminal"))">
-                <Icon Svg="@Lucide.Terminal" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"/>
                 @Strings.Nav_Terminal
             </button>
             <button class="settings-nav-item @ActiveClass("git-merge")"
                     @onclick="@(() => SetSection("git-merge"))">
-                <Icon Svg="@Lucide.GitMerge" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.CallMerge" Size="Size.Small"/>
                 @Strings.Nav_GitMerge
             </button>
             <button class="settings-nav-item @ActiveClass("shortcuts")"
                     @onclick="@(() => SetSection("shortcuts"))">
-                <Icon Svg="@Lucide.Keyboard" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Keyboard" Size="Size.Small"/>
                 @Strings.Nav_Shortcuts
             </button>
         </div>
@@ -61,12 +61,12 @@
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("integrations")"
                     @onclick="@(() => SetSection("integrations"))">
-                <Icon Svg="@Lucide.Puzzle" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small"/>
                 @Strings.Nav_Integrations
             </button>
             <button class="settings-nav-item @ActiveClass("slash-commands")"
                     @onclick="@(() => SetSection("slash-commands"))">
-                <Icon Svg="@Lucide.Code" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small"/>
                 @Strings.Nav_SlashCommands
             </button>
         </div>
@@ -77,37 +77,37 @@
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("claude-settings")"
                     @onclick="@(() => SetSection("claude-settings"))">
-                <Icon Svg="@Lucide.SlidersHorizontal" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small"/>
                 @Strings.Nav_ClaudeSettings
             </button>
             <button class="settings-nav-item @ActiveClass("mcp")"
                     @onclick="@(() => SetSection("mcp"))">
-                <Icon Svg="@Lucide.Network" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small"/>
                 @Strings.Nav_McpServers
             </button>
             <button class="settings-nav-item @ActiveClass("hooks")"
                     @onclick="@(() => SetSection("hooks"))">
-                <Icon Svg="@Lucide.Zap" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small"/>
                 @Strings.Nav_Hooks
             </button>
             <button class="settings-nav-item @ActiveClass("rules")"
                     @onclick="@(() => SetSection("rules"))">
-                <Icon Svg="@Lucide.Shield" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small"/>
                 @Strings.Nav_Rules
             </button>
             <button class="settings-nav-item @ActiveClass("instructions")"
                     @onclick="@(() => SetSection("instructions"))">
-                <Icon Svg="@Lucide.FileText" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"/>
                 @Strings.Nav_Instructions
             </button>
             <button class="settings-nav-item @ActiveClass("plugins")"
                     @onclick="@(() => SetSection("plugins"))">
-                <Icon Svg="@Lucide.Puzzle" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small"/>
                 @Strings.Nav_Plugins
             </button>
             <button class="settings-nav-item @ActiveClass("accounts")"
                     @onclick="@(() => SetSection("accounts"))">
-                <Icon Svg="@Lucide.UserCog" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small"/>
                 @Strings.Nav_Accounts
             </button>
         </div>
@@ -116,12 +116,12 @@
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("session-replay")"
                     @onclick="@(() => SetSection("session-replay"))">
-                <Icon Svg="@Lucide.History" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small"/>
                 @Strings.Nav_SessionHistory
             </button>
             <button class="settings-nav-item @ActiveClass("memory")"
                     @onclick="@(() => SetSection("memory"))">
-                <Icon Svg="@Lucide.Cpu" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small"/>
                 @Strings.Nav_Memory
             </button>
         </div>
@@ -130,12 +130,12 @@
         <div class="settings-nav-section">
             <button class="settings-nav-item @ActiveClass("advanced")"
                     @onclick="@(() => SetSection("advanced"))">
-                <Icon Svg="@Lucide.Settings" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small"/>
                 @Strings.Nav_Advanced
             </button>
             <button class="settings-nav-item @ActiveClass("updates")"
                     @onclick="@(() => SetSection("updates"))">
-                <Icon Svg="@Lucide.HardDriveDownload" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.SystemUpdate" Size="Size.Small"/>
                 @Strings.Nav_Updates
             </button>
         </div>

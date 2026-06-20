@@ -1,37 +1,44 @@
 @inject IMcpService McpService
-@inject IToastService Snackbar
+@inject ISnackbar Snackbar
 
-<Modal IsOpen="IsOpen" IsOpenChanged="OnVisibleChanged" Title="JSON으로 가져오기" MaxWidth="520px">
-    <ChildContent>
+<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged">
+    <TitleContent>
+        <div class="typo-h6">
+            <MudIcon Icon="@Icons.Material.Filled.FileDownload" Class="mr-2"/>
+            JSON으로 가져오기
+        </div>
+    </TitleContent>
+    <DialogContent>
         <div class="stack gap-3">
-            <TextField Value="@_json" ValueChanged="OnJsonChanged"
-                       Label="MCP 설정 JSON" Lines="6"
-                       Placeholder='{"mcpServers": {"name": {"command": "...", "args": []}}}'/>
+            <MudTextField Value="@_json" ValueChanged="OnJsonChanged" T="string"
+                          Label="MCP 설정 JSON" Variant="Variant.Outlined" Lines="6"
+                          Placeholder='{"mcpServers": {"name": {"command": "...", "args": []}}}'/>
 
             @if (!string.IsNullOrWhiteSpace(_json) && _preview.Count > 0)
             {
-                <Alert Tone="Tone.Info" Dense="true">
+                <MudAlert Severity="Severity.Info" Dense="true">
                     가져올 서버: @string.Join(", ", _preview)
-                </Alert>
+                </MudAlert>
             }
             @if (!string.IsNullOrWhiteSpace(_json) && _parseError != null)
             {
-                <Alert Tone="Tone.Error" Dense="true">JSON 오류: @_parseError</Alert>
+                <MudAlert Severity="Severity.Error" Dense="true">JSON 오류: @_parseError</MudAlert>
             }
         </div>
-    </ChildContent>
-    <Footer>
-        <Button OnClick="Close">취소</Button>
-        <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary" OnClick="Import"
-                Disabled="@(string.IsNullOrWhiteSpace(_json) || _parseError != null || _importing)">
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">취소</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Import"
+                   Disabled="@(string.IsNullOrWhiteSpace(_json) || _parseError != null || _importing)">
             @if (_importing)
             {
-                <Spinner Size="14" Style="margin-right:6px;"/>
+                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                     Style="width:14px;height:14px;margin-right:6px;"/>
             }
             가져오기
-        </Button>
-    </Footer>
-</Modal>
+        </MudButton>
+    </DialogActions>
+</MudDialog>
 
 @code {
     [Parameter] public bool IsOpen { get; set; }
@@ -45,9 +52,9 @@
     private string? _parseError;
     private bool _importing;
 
-    private void OnJsonChanged(string? value)
+    private void OnJsonChanged(string value)
     {
-        _json = value ?? "";
+        _json = value;
         _preview.Clear();
         _parseError = null;
         if (string.IsNullOrWhiteSpace(value)) return;
@@ -78,7 +85,7 @@
 
         if (result.Success)
         {
-            Snackbar.Add(result.Error ?? "JSON 설정을 가져왔습니다.", ToastSeverity.Success);
+            Snackbar.Add(result.Error ?? "JSON 설정을 가져왔습니다.", Severity.Success);
             _json = "";
             _preview.Clear();
             await OnImported.InvokeAsync();
@@ -86,7 +93,7 @@
         }
         else
         {
-            Snackbar.Add($"가져오기 실패: {result.Error}", ToastSeverity.Error);
+            Snackbar.Add($"가져오기 실패: {result.Error}", Severity.Error);
         }
 
         StateHasChanged();

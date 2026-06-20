@@ -6,7 +6,7 @@
 @inject ISessionInitializer SessionInitializer
 @inject IJSRuntime JSRuntime
 @inject ILogger<ChatView> Logger
-@inject IToastService Snackbar
+@inject ISnackbar Snackbar
 @inject INotificationService NotificationService
 @inject INotificationHistoryService NotificationHistory
 @inject IChatEventBus EventBus
@@ -34,7 +34,8 @@
                     else if (session.Messages.Count == 0)
                     {
                         <div class="welcome-container">
-                            <Icon Svg="@Lucide.Terminal" Size="24" Tone="Tone.Primary" Style="opacity: 0.4;"/>
+                            <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Color="Color.Primary"
+                                     Style="opacity: 0.4;"/>
                             <span class="welcome-title">@Strings.Chat_WelcomeTitle</span>
                             @if (!session.Git.IsLocalDir &&
                                  (session.Status is SessionStatus.Pending or SessionStatus.Initializing ||
@@ -61,7 +62,7 @@
                 {
                     <div class="scroll-to-bottom-btn @(_askUserBarVisible ? "askbar-active" : "")"
                          @onclick="ScrollToBottom">
-                        <Icon Svg="@Lucide.ChevronDown" Size="14"/>
+                        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small"/>
                     </div>
                 }
             </CascadingValue>
@@ -523,7 +524,7 @@
         {
             MessageQueue.Enqueue(session.Id, input);
             if (isCurrentSession)
-                Snackbar.Add(Strings.Chat_Queue_Toast_Enqueued, ToastSeverity.Info);
+                Snackbar.Add(Strings.Chat_Queue_Toast_Enqueued, Severity.Info);
             return Task.CompletedTask;
         }
 
@@ -590,7 +591,7 @@
                     var remaining = MessageQueue.Count(sessionId);
                     await InvokeAsync(async () =>
                     {
-                        Snackbar.Add(Strings.Chat_Queue_AutoDispatching(remaining), ToastSeverity.Info);
+                        Snackbar.Add(Strings.Chat_Queue_AutoDispatching(remaining), Severity.Info);
                         await HandleSend(next.Input, session, workspace, branch);
                     });
                 }
@@ -628,7 +629,7 @@
             _sessionTasks.Remove(sessionId);
         }
 
-        Snackbar.Add(Strings.Chat_Queue_SentNow_Toast, ToastSeverity.Info);
+        Snackbar.Add(Strings.Chat_Queue_SentNow_Toast, Severity.Info);
 
         // 스트리밍 상태가 finally 블록에서 false로 전이된 후에 새 메시지 전송
         await HandleSend(input);

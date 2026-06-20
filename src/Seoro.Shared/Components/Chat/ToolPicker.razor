@@ -2,60 +2,66 @@
 @inject IChatState ChatState
 @implements IDisposable
 
-<Popover @bind-Open="_open" Placement="PopoverPlacement.TopStart" Fixed="true"
-         PopoverClass="tool-picker-popover">
-    <AnchorContent>
-        <Tooltip Text="@GetTooltipText()" Placement="UiPlacement.Top">
-            <div class="tool-picker-btn-wrapper">
-                <IconButton Icon="@Lucide.Puzzle"
-                            Tone="@(DisabledMcpServers.Count > 0 ? Tone.Warning : Tone.Default)"
-                            OnClick="TogglePopover"
-                            Disabled="@(Disabled || IsStreaming)"/>
-                @if (DisabledMcpServers.Count > 0)
-                {
-                    <span class="tool-picker-badge">@DisabledMcpServers.Count</span>
-                }
-            </div>
-        </Tooltip>
-    </AnchorContent>
-    <ChildContent>
-        <div class="tool-picker-header">@Strings.Chat_ToolPicker_McpServers</div>
+<MudTooltip Text="@GetTooltipText()" Placement="Placement.Top">
+    <div class="tool-picker-btn-wrapper">
+        <MudIconButton Icon="@Icons.Material.Filled.Extension"
+                       Color="@(DisabledMcpServers.Count > 0 ? Color.Warning : Color.Default)"
+                       Size="Size.Small"
+                       OnClick="TogglePopover"
+                       Disabled="Disabled || IsStreaming"/>
+        @if (DisabledMcpServers.Count > 0)
+        {
+            <span class="tool-picker-badge">@DisabledMcpServers.Count</span>
+        }
+    </div>
+</MudTooltip>
 
-        @if (_loading)
-        {
-            <div class="tool-picker-loading">
-                <Spinner Size="16"/>
-            </div>
-        }
-        else if (_servers.Count == 0)
-        {
-            <div class="tool-picker-empty">MCP 서버가 없습니다</div>
-        }
-        else
-        {
-            @foreach (var server in _servers)
-            {
-                var isEnabled = !DisabledMcpServers.Contains(server.Name);
-                <div class="tool-picker-row">
-                    <Switch Value="isEnabled"
-                            ValueChanged="@(v => ToggleServer(server.Name, v))"/>
-                    <span class="tool-picker-server-name @(isEnabled ? "" : "tool-picker-disabled-text")">
-                        @server.Name
-                    </span>
-                    <span class="tool-picker-scope-badge tool-picker-scope-@server.Scope">
-                        @server.Scope
-                    </span>
-                </div>
-            }
-        }
+<MudPopover Open="_open" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft"
+            Class="tool-picker-popover">
+    <div class="tool-picker-header">@Strings.Chat_ToolPicker_McpServers</div>
 
-        <Divider Class="my-1"/>
-        <div class="tool-picker-manage" @onclick="NavigateToMcp">
-            <Icon Svg="@Lucide.Settings" Size="14"/>
-            <span>@Strings.Chat_ToolPicker_ManageMcp</span>
+    @if (_loading)
+    {
+        <div class="tool-picker-loading">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true"/>
         </div>
-    </ChildContent>
-</Popover>
+    }
+    else if (_servers.Count == 0)
+    {
+        <div class="tool-picker-empty">MCP 서버가 없습니다</div>
+    }
+    else
+    {
+        @foreach (var server in _servers)
+        {
+            var isEnabled = !DisabledMcpServers.Contains(server.Name);
+            <div class="tool-picker-row">
+                <MudSwitch T="bool"
+                           Value="isEnabled"
+                           ValueChanged="@(v => ToggleServer(server.Name, v))"
+                           Color="Color.Primary"
+                           Size="Size.Small"/>
+                <span class="tool-picker-server-name @(isEnabled ? "" : "tool-picker-disabled-text")">
+                    @server.Name
+                </span>
+                <span class="tool-picker-scope-badge tool-picker-scope-@server.Scope">
+                    @server.Scope
+                </span>
+            </div>
+        }
+    }
+
+    <MudDivider Class="my-1"/>
+    <div class="tool-picker-manage" @onclick="NavigateToMcp">
+        <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small"/>
+        <span>@Strings.Chat_ToolPicker_ManageMcp</span>
+    </div>
+</MudPopover>
+
+@if (_open)
+{
+    <MudOverlay Visible="true" OnClick="ClosePopover" DarkBackground="false" ZIndex="1"/>
+}
 
 @code {
     [Parameter] public HashSet<string> DisabledMcpServers { get; set; } = [];
@@ -84,6 +90,8 @@
         if (_open && (_servers.Count == 0 || _loadedForProject != ProjectPath))
             await LoadServersAsync();
     }
+
+    private void ClosePopover() => _open = false;
 
     private async Task LoadServersAsync()
     {

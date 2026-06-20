@@ -2,7 +2,7 @@
 {
     <div class="mcp-cloud-section">
         <div class="mcp-group-label">
-            <Icon Svg="@Lucide.Cloud" Size="14" Style="opacity:0.6;"/>
+            <MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small" Style="opacity:0.6;"/>
             CLOUD (configured at claude.ai)
         </div>
         <div class="mcp-cloud-grid">
@@ -10,7 +10,7 @@
             {
                 <div class="mcp-cloud-card">
                     <div class="mcp-cloud-card-icon">
-                        <Icon Svg="@Lucide.Cloud" Size="14"/>
+                        <MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small"/>
                     </div>
                     <div>
                         <div class="typo-subtitle2">@server.Name</div>
@@ -41,7 +41,7 @@
         font-weight: 600;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: var(--text-secondary);
+        color: var(--mud-palette-text-secondary);
         margin-bottom: 8px;
     }
 
@@ -56,7 +56,7 @@
         align-items: center;
         gap: 10px;
         padding: 10px 12px;
-        border: 1px solid var(--border-default);
+        border: 1px solid var(--mud-palette-lines-default);
         border-radius: 8px;
         opacity: 0.65;
     }
@@ -65,8 +65,8 @@
         width: 32px;
         height: 32px;
         border-radius: 8px;
-        background: color-mix(in srgb, var(--color-info) 12%, transparent);
-        color: var(--color-info);
+        background: color-mix(in srgb, var(--mud-palette-info) 12%, transparent);
+        color: var(--mud-palette-info);
         display: flex;
         align-items: center;
         justify-content: center;

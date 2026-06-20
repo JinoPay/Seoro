@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Seoro.Shared.Services.Ui;
-using Seoro.Shared.UiKit;
+using MudBlazor;
 
 namespace Seoro.Shared.Services.Sessions;
 
@@ -11,8 +10,8 @@ public class SessionListFacade(
     IOptionsMonitor<AppSettings> appSettings,
     ISettingsService settingsService,
     SessionListDataService dataService,
-    IModalService dialogService,
-    IToastService snackbar,
+    IDialogService dialogService,
+    ISnackbar snackbar,
     ISkillRegistry skillRegistry,
     ICliProviderFactory cliProviderFactory,
     INotificationHistoryService notificationHistory,
@@ -164,7 +163,7 @@ public class SessionListFacade(
         }
         catch (Exception)
         {
-            snackbar.Add("삭제 중 오류가 발생했습니다.", ToastSeverity.Error);
+            snackbar.Add("삭제 중 오류가 발생했습니다.", Severity.Error);
             return false;
         }
     }

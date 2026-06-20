@@ -5,14 +5,14 @@
 <div class="replay-page">
     <div class="replay-page-header">
         <span class="typo-h6">세션 히스토리</span>
-        <Chip>@_totalCount 세션</Chip>
-        <Tooltip Text="새로고침">
-            <IconButton Icon="@Lucide.RefreshCw"
-                        Style="width: 22px; height: 22px; opacity: 0.5;"
-                        OnClick="RefreshSessionsAsync" Disabled="_loading"/>
-        </Tooltip>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@_totalCount 세션</MudChip>
+        <MudTooltip Text="새로고침">
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                           Style="width: 22px; height: 22px; opacity: 0.5;"
+                           OnClick="RefreshSessionsAsync" Disabled="_loading"/>
+        </MudTooltip>
         <button class="replay-nav-link" @onclick="@(() => ChatState.SetSettingsSection("usage"))">
-            <Icon Svg="@Lucide.ChartColumn" Size="14"/>
+            <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Small"/>
             사용량 분석 →
         </button>
     </div>
@@ -20,9 +20,10 @@
         @* === Left: Session list === *@
         <div class="replay-sidebar">
             <div class="replay-search-row">
-                <TextField @bind-Value="_search" Placeholder="전체 세션 검색..."
-                           AdornmentIcon="@Lucide.Search" Immediate="true"
-                           OnKeyDown="HandleSearchKeyDown" Class="mb-2"/>
+                <MudTextField T="string" @bind-Value="_search" Placeholder="전체 세션 검색..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                              OnKeyDown="HandleSearchKeyDown" Class="mb-2"/>
             </div>
 
             @* Live sessions *@
@@ -58,18 +59,18 @@
                                 <text>@_searchResults.Count 결과</text>
                             }
                         </span>
-                    <Button ButtonStyle="ButtonStyle.Text" Tone="Tone.Primary"
-                            OnClick="ClearSearch">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                               OnClick="ClearSearch" Style="text-transform: none; min-width: auto;">
                         초기화
-                    </Button>
+                    </MudButton>
                 </div>
 
                 @foreach (var result in _searchResults)
                 {
                     <div class="replay-item" @onclick="@(() => SelectSearchResult(result))">
                         <div class="d-flex align-center gap-2">
-                            <Icon Svg="@Lucide.Search" Size="12"
-                                  Style="color: var(--accent);"/>
+                            <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small"
+                                     Style="width: 12px; height: 12px; color: var(--mud-palette-primary);"/>
                             <span class="typo-caption text-truncate">@GetProjectDisplayName(result.ProjectPath)</span>
                         </div>
                         <div class="typo-caption text-secondary"
@@ -82,7 +83,7 @@
             else if (_loading)
             {
                 <div style="display: flex; justify-content: center; padding: 20px;">
-                    <Spinner Size="16"/>
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
                 </div>
             }
             else if (_sessions.Count == 0)
@@ -105,8 +106,8 @@
                             }
                             else
                             {
-                                <Icon Svg="@Lucide.History" Size="14"
-                                      Style="color: var(--accent);"/>
+                                <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small"
+                                         Style="width: 14px; height: 14px; color: var(--mud-palette-primary);"/>
                             }
                             <span class="typo-caption" style="font-weight: 500;">
                                     @GetProjectDisplayName(s.ProjectPath)
@@ -142,14 +143,15 @@
                 @if (_hasMoreSessions)
                 {
                     <div style="padding: 8px;">
-                        <Button ButtonStyle="ButtonStyle.Outlined" FullWidth="true"
-                                OnClick="LoadMoreSessions" Disabled="_loadingMore">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
+                                   OnClick="LoadMoreSessions" Disabled="_loadingMore"
+                                   Style="text-transform: none;">
                             @if (_loadingMore)
                             {
-                                <Spinner Size="14" Class="mr-1"/>
+                                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-1"/>
                             }
                             더 보기 (@_sessions.Count/@_totalCount)
-                        </Button>
+                        </MudButton>
                     </div>
                 }
             }
@@ -160,7 +162,7 @@
             @if (_selected == null)
             {
                 <div class="d-flex flex-column align-center justify-center" style="height: 300px; opacity: 0.5;">
-                    <Icon Svg="@Lucide.History" Size="24"/>
+                    <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large"/>
                     <div class="typo-body2 mt-2">왼쪽에서 세션을 선택하세요</div>
                     <div class="typo-caption mt-1">Claude Code 세션을 단계별로 재생합니다</div>
                 </div>
@@ -168,7 +170,7 @@
             else if (_loadingEvents)
             {
                 <div class="d-flex align-center justify-center" style="height: 200px;">
-                    <Spinner Size="16"/>
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
                     <span class="typo-body2 ml-2">세션 로딩 중...</span>
                 </div>
             }
@@ -194,27 +196,27 @@
                             <span>@FormatDuration(_selected.FirstTimestamp, _selected.LastTimestamp)</span>
                             <span>@_totalEvents 이벤트</span>
                         </div>
-                        <IconButton Icon="@Lucide.Copy"
-                                    OnClick="ExportSession" Title="마크다운 내보내기"
-                                    Style="width: 28px; height: 28px;"/>
-                        <IconButton Icon="@Lucide.Tag"
-                                    OnClick="@(() => _showTagEditor = !_showTagEditor)" Title="태그"
-                                    Style="width: 28px; height: 28px;"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
+                                       OnClick="ExportSession" title="마크다운 내보내기"
+                                       Style="width: 28px; height: 28px;"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.Label" Size="Size.Small"
+                                       OnClick="@(() => _showTagEditor = !_showTagEditor)" title="태그"
+                                       Style="width: 28px; height: 28px;"/>
                         @if (!_playing)
                         {
-                            <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
-                                    StartIcon="@Lucide.Play"
-                                    OnClick="StartReplay">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                                       OnClick="StartReplay" Style="text-transform: none;">
                                 재생
-                            </Button>
+                            </MudButton>
                         }
                         else
                         {
-                            <Button ButtonStyle="ButtonStyle.Outlined"
-                                    StartIcon="@Lucide.Pause"
-                                    OnClick="StopReplay">
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Pause"
+                                       OnClick="StopReplay" Style="text-transform: none;">
                                 중지 (@_visibleCount/@_displayEvents.Count)
-                            </Button>
+                            </MudButton>
                         }
                     </div>
                 </div>
@@ -228,22 +230,23 @@
                         {
                             <span class="replay-tag">
                                     @tag
-                                <IconButton Icon="@Lucide.X" Size="UiSize.Xs"
-                                            OnClick="@(() => RemoveTag(tag))"
-                                            Style="width: 14px; height: 14px; margin-left: 2px;"/>
+                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                               OnClick="@(() => RemoveTag(tag))"
+                                               Style="width: 14px; height: 14px; margin-left: 2px;"/>
                                 </span>
                         }
-                        <TextField @bind-Value="_tagInput" Placeholder="태그 추가..."
-                                   OnKeyDown="HandleTagKeyDown"
-                                   Style="max-width: 100px; font-size: 11px;"/>
+                        <MudTextField T="string" @bind-Value="_tagInput" Placeholder="태그 추가..."
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      OnKeyDown="HandleTagKeyDown"
+                                      Style="max-width: 100px; font-size: 11px;"/>
                         @foreach (var preset in _tagPresets)
                         {
                             if (!currentTags.Contains(preset))
                             {
-                                <Button ButtonStyle="ButtonStyle.Text" OnClick="@(() => AddTag(preset))"
-                                        Style="font-size: 10px; padding: 2px 6px;">
+                                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => AddTag(preset))"
+                                           Style="text-transform: none; min-width: auto; font-size: 10px; padding: 2px 6px;">
                                     @preset
-                                </Button>
+                                </MudButton>
                             }
                         }
                     </div>
@@ -257,7 +260,8 @@
                         {
                             <div class="replay-evt replay-evt-user">
                                 <div class="replay-evt-avatar replay-evt-avatar-user">
-                                    <Icon Svg="@Lucide.User" Size="14"/>
+                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small"
+                                             Style="width: 14px; height: 14px;"/>
                                 </div>
                                 <div class="replay-evt-body">
                                     <span class="replay-evt-label">사용자 · @FormatEventTime(evt.Timestamp)</span>
@@ -272,7 +276,8 @@
                         {
                             <div class="replay-evt replay-evt-assistant">
                                 <div class="replay-evt-avatar replay-evt-avatar-assistant">
-                                    <Icon Svg="@Lucide.Bot" Size="14"/>
+                                    <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small"
+                                             Style="width: 14px; height: 14px;"/>
                                 </div>
                                 <div class="replay-evt-body">
                                     <span class="replay-evt-label">Claude · @FormatEventTime(evt.Timestamp)</span>
@@ -282,8 +287,8 @@
                                         @foreach (var tc in evt.ToolCalls)
                                         {
                                             <div class="replay-tool-pill">
-                                                <Icon Svg="@GetToolIcon(tc.Name)" Size="12"
-                                                      Style="color: var(--color-warning);"/>
+                                                <MudIcon Icon="@GetToolIcon(tc.Name)" Size="Size.Small"
+                                                         Style="width: 12px; height: 12px; color: var(--mud-palette-warning);"/>
                                                 <span class="replay-tool-name">@tc.Name</span>
                                                 <span class="replay-tool-input">@tc.InputPreview</span>
                                             </div>
@@ -298,12 +303,12 @@
                                                 <div class="typo-body2"
                                                      style="white-space: pre-wrap; word-break: break-word;">@(evt.Content[..300])...
                                                 </div>
-                                                <Button ButtonStyle="ButtonStyle.Text"
-                                                        Tone="Tone.Primary"
-                                                        OnClick="@(() => ToggleExpand(idx))"
-                                                        Style="padding: 0; font-size: 11px;">
+                                                <MudButton Variant="Variant.Text" Size="Size.Small"
+                                                           Color="Color.Primary"
+                                                           OnClick="@(() => ToggleExpand(idx))"
+                                                           Style="text-transform: none; padding: 0; min-width: auto; font-size: 11px;">
                                                     더 보기
-                                                </Button>
+                                                </MudButton>
                                             }
                                             else
                                             {
@@ -311,12 +316,12 @@
                                                      style="white-space: pre-wrap; word-break: break-word;">@evt.Content</div>
                                                 @if (evt.Content.Length > 300)
                                                 {
-                                                    <Button ButtonStyle="ButtonStyle.Text"
-                                                            Tone="Tone.Primary"
-                                                            OnClick="@(() => ToggleExpand(idx))"
-                                                            Style="padding: 0; font-size: 11px;">
+                                                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                                                               Color="Color.Primary"
+                                                               OnClick="@(() => ToggleExpand(idx))"
+                                                               Style="text-transform: none; padding: 0; min-width: auto; font-size: 11px;">
                                                         접기
-                                                    </Button>
+                                                    </MudButton>
                                                 }
                                             }
                                         </div>
@@ -328,14 +333,14 @@
                         {
                             <div class="replay-evt-tool-result">
                                 <button class="replay-tool-result-toggle" @onclick="@(() => ToggleExpand(idx))">
-                                    <Icon Svg="@(_expandedEvents.Contains(idx)
-                                                   ? Lucide.ChevronDown
-                                                   : Lucide.ChevronRight)"
-                                          Size="12"/>
+                                    <MudIcon Icon="@(_expandedEvents.Contains(idx)
+                                                       ? Icons.Material.Filled.ExpandMore
+                                                       : Icons.Material.Filled.ChevronRight)"
+                                             Size="Size.Small" Style="width: 12px; height: 12px;"/>
                                     도구 출력 (@(evt.Content.Length)자)
                                     @if (evt.IsError)
                                     {
-                                        <span style="color: var(--color-error);">오류</span>
+                                        <span style="color: var(--mud-palette-error);">오류</span>
                                     }
                                 </button>
                                 @if (_expandedEvents.Contains(idx))
@@ -356,14 +361,15 @@
                     @if (_hasMoreEvents && !_playing)
                     {
                         <div style="padding: 12px 0;">
-                            <Button ButtonStyle="ButtonStyle.Outlined" FullWidth="true"
-                                    OnClick="LoadMoreEvents" Disabled="_loadingMoreEvents">
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
+                                       OnClick="LoadMoreEvents" Disabled="_loadingMoreEvents"
+                                       Style="text-transform: none;">
                                 @if (_loadingMoreEvents)
                                 {
-                                    <Spinner Size="14" Class="mr-1"/>
+                                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-1"/>
                                 }
                                 이벤트 더 보기 (@_events.Count/@_totalEvents)
-                            </Button>
+                            </MudButton>
                         </div>
                     }
                 </div>
@@ -765,16 +771,16 @@
     {
         return toolName switch
         {
-            "Bash" => Lucide.Terminal,
-            "Read" => Lucide.Eye,
-            "Write" => Lucide.Pencil,
-            "Edit" => Lucide.Pencil,
-            "Glob" => Lucide.Folder,
-            "Grep" => Lucide.Search,
-            "Agent" => Lucide.Bot,
-            "WebFetch" or "WebSearch" => Lucide.Globe,
-            "ToolSearch" => Lucide.Wrench,
-            _ => Lucide.Code
+            "Bash" => Icons.Material.Filled.Terminal,
+            "Read" => Icons.Material.Filled.Visibility,
+            "Write" => Icons.Material.Filled.Edit,
+            "Edit" => Icons.Material.Filled.Edit,
+            "Glob" => Icons.Material.Filled.Folder,
+            "Grep" => Icons.Material.Filled.Search,
+            "Agent" => Icons.Material.Filled.SmartToy,
+            "WebFetch" or "WebSearch" => Icons.Material.Filled.Language,
+            "ToolSearch" => Icons.Material.Filled.Build,
+            _ => Icons.Material.Filled.Code
         };
     }
 
@@ -808,7 +814,7 @@
         align-items: center;
         gap: 4px;
         font-size: 0.75rem;
-        color: var(--accent);
+        color: var(--mud-palette-primary);
         background: none;
         border: none;
         cursor: pointer;
@@ -818,8 +824,8 @@
     }
 
     .replay-nav-link:hover {
-        background: var(--bg-hover);
-        color: var(--accent-hover);
+        background: var(--mud-palette-action-default-hover);
+        color: var(--mud-palette-primary-darken);
     }
 
     .replay-layout {
@@ -832,7 +838,7 @@
     .replay-sidebar {
         width: 320px;
         min-width: 320px;
-        border-right: 1px solid var(--border-default);
+        border-right: 1px solid var(--mud-palette-lines-default);
         padding: 12px;
         overflow-y: auto;
     }
@@ -843,7 +849,7 @@
 
     .replay-live-section {
         padding: 8px 0;
-        border-bottom: 1px solid var(--border-default);
+        border-bottom: 1px solid var(--mud-palette-lines-default);
         margin-bottom: 4px;
     }
 
@@ -851,7 +857,7 @@
         font-size: 10px;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: var(--color-success);
+        color: var(--mud-palette-success);
         display: flex;
         align-items: center;
         gap: 4px;
@@ -863,7 +869,7 @@
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: var(--color-success);
+        background: var(--mud-palette-success);
         animation: pulse 2s infinite;
     }
 
@@ -871,7 +877,7 @@
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: var(--color-success);
+        background: var(--mud-palette-success);
         animation: pulse 2s infinite;
         flex-shrink: 0;
     }
@@ -898,7 +904,7 @@
         align-items: center;
         justify-content: space-between;
         padding: 6px 0;
-        border-bottom: 1px solid var(--border-default);
+        border-bottom: 1px solid var(--mud-palette-lines-default);
         margin-bottom: 4px;
     }
 
@@ -910,20 +916,20 @@
     }
 
     .replay-item:hover {
-        background: var(--bg-hover);
+        background: var(--mud-palette-action-default-hover);
     }
 
     .replay-item.active {
-        background: var(--accent-subtle);
-        border-left: 2px solid var(--accent);
+        background: var(--mud-palette-primary-hover);
+        border-left: 2px solid var(--mud-palette-primary);
     }
 
     .replay-tag {
         font-size: 9px;
         padding: 1px 6px;
         border-radius: 999px;
-        background: var(--accent-dim);
-        color: var(--accent);
+        background: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
+        color: var(--mud-palette-primary);
         display: inline-flex;
         align-items: center;
         gap: 2px;
@@ -942,7 +948,7 @@
         align-items: center;
         justify-content: space-between;
         padding: 12px 20px;
-        border-bottom: 1px solid var(--border-default);
+        border-bottom: 1px solid var(--mud-palette-lines-default);
         flex-shrink: 0;
     }
 
@@ -951,7 +957,7 @@
         align-items: center;
         gap: 6px;
         padding: 8px 20px;
-        border-bottom: 1px solid var(--border-default);
+        border-bottom: 1px solid var(--mud-palette-lines-default);
         flex-shrink: 0;
     }
 
@@ -980,13 +986,13 @@
     }
 
     .replay-evt-avatar-user {
-        background: var(--color-info-bg);
-        color: var(--color-info);
+        background: color-mix(in srgb, var(--mud-palette-info) 10%, transparent);
+        color: var(--mud-palette-info);
     }
 
     .replay-evt-avatar-assistant {
-        background: var(--accent-dim);
-        color: var(--accent);
+        background: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
+        color: var(--mud-palette-primary);
     }
 
     .replay-evt-body {
@@ -1009,13 +1015,13 @@
     }
 
     .replay-evt-card-user {
-        background: var(--color-info-bg);
-        border: 1px solid var(--color-info-border);
+        background: color-mix(in srgb, var(--mud-palette-info) 5%, transparent);
+        border: 1px solid color-mix(in srgb, var(--mud-palette-info) 20%, transparent);
     }
 
     .replay-evt-card-assistant {
-        background: var(--bg-surface);
-        border: 1px solid var(--border-default);
+        background: var(--mud-palette-surface);
+        border: 1px solid var(--mud-palette-lines-default);
     }
 
     .replay-tool-pill {
@@ -1023,14 +1029,14 @@
         align-items: center;
         gap: 6px;
         padding: 4px 10px;
-        background: var(--bg-base);
+        background: var(--mud-palette-background);
         border-radius: 6px;
         font-size: 12px;
     }
 
     .replay-tool-name {
         font-weight: 600;
-        color: var(--color-warning);
+        color: var(--mud-palette-warning);
     }
 
     .replay-tool-input {
@@ -1067,7 +1073,7 @@
     .replay-tool-result-content {
         margin-top: 4px;
         padding: 8px 12px;
-        background: var(--bg-base);
+        background: var(--mud-palette-background);
         border-radius: 6px;
         font-size: 11px;
         font-family: monospace;

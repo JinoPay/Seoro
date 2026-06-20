@@ -8,15 +8,19 @@
                 title="@Strings.Todo_FloaterTitle">
             @if (Snapshot.AllDone)
             {
-                <Icon Svg="@Lucide.CircleCheck" Size="14" Tone="Tone.Success"/>
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                         Color="Color.Success" Style="width: 14px; height: 14px;"/>
             }
             else if (Snapshot.HasInProgress)
             {
-                <Spinner Size="12" Tone="Tone.Warning"/>
+                <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                     Color="Color.Warning"
+                                     Style="width: 12px; height: 12px;"/>
             }
             else
             {
-                <Icon Svg="@Lucide.ListChecks" Size="14"/>
+                <MudIcon Icon="@Icons.Material.Filled.Checklist" Size="Size.Small"
+                         Style="width: 14px; height: 14px;"/>
             }
             <span class="todo-inline-current">@GetCurrentTaskText()</span>
             <span class="todo-inline-counter">@Snapshot.Completed/@Snapshot.Total</span>
@@ -25,7 +29,8 @@
                 @onclick="HandleDismiss"
                 type="button"
                 title="@Strings.Common_Close">
-            <Icon Svg="@Lucide.X" Size="12"/>
+            <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                     Style="width: 12px; height: 12px;"/>
         </button>
     </div>
 }
@@ -33,7 +38,8 @@ else if (State == TodoFloaterVisibility.Expanded && Snapshot is { Total: > 0 })
 {
     <div class="todo-inline-strip todo-inline-card">
         <div class="todo-inline-header" @onclick="HandleCollapse">
-            <Icon Svg="@Lucide.ChevronDown" Size="14" Style="opacity: 0.7;"/>
+            <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small"
+                     Style="width: 14px; height: 14px; opacity: 0.7;"/>
             <span class="todo-inline-title">@Strings.Todo_FloaterTitle</span>
             <span class="todo-inline-counter">@Snapshot.Completed/@Snapshot.Total</span>
             <button class="todo-inline-close"
@@ -41,7 +47,8 @@ else if (State == TodoFloaterVisibility.Expanded && Snapshot is { Total: > 0 })
                     @onclick:stopPropagation="true"
                     type="button"
                     title="@Strings.Common_Close">
-                <Icon Svg="@Lucide.X" Size="12"/>
+                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                         Style="width: 12px; height: 12px;"/>
             </button>
         </div>
         <div class="todo-inline-progress">
@@ -54,13 +61,18 @@ else if (State == TodoFloaterVisibility.Expanded && Snapshot is { Total: > 0 })
                     @switch (entry.Status)
                     {
                         case TodoStatus.Completed:
-                            <Icon Svg="@Lucide.CircleCheck" Size="14" Tone="Tone.Success"/>
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                     Color="Color.Success"
+                                     Style="width: 14px; height: 14px;"/>
                             break;
                         case TodoStatus.InProgress:
-                            <Spinner Size="12" Tone="Tone.Warning"/>
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                                 Color="Color.Warning"
+                                                 Style="width: 12px; height: 12px;"/>
                             break;
                         default:
-                            <Icon Svg="@Lucide.Circle" Size="14" Style="opacity: 0.4;"/>
+                            <MudIcon Icon="@Icons.Material.Filled.RadioButtonUnchecked" Size="Size.Small"
+                                     Style="width: 14px; height: 14px; opacity: 0.4;"/>
                             break;
                     }
                     <span class="todo-inline-text">@GetDisplayText(entry)</span>

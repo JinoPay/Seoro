@@ -6,12 +6,13 @@
 <div class="stack gap-3">
     <div class="settings-section-title" style="font-size: 0.8rem; opacity: 0.6; margin-bottom: -8px;">Claude</div>
 
-    <Select T="string" @bind-Value="Settings.DefaultModel" Label="@Strings.Settings_Ai_DefaultModelLabel"
-            Fixed="true"
-            HelperText="@Strings.Settings_Ai_DefaultModelHint">
+    <MudSelect T="string" @bind-Value="Settings.DefaultModel" Label="@Strings.Settings_Ai_DefaultModelLabel"
+               Variant="Variant.Outlined" Margin="Margin.Dense"
+               MaxHeight="400"
+               HelperText="@Strings.Settings_Ai_DefaultModelHint">
         @foreach (var model in ModelDefinitions.All.Where(m => m.Provider != "codex"))
         {
-            <SelectItem T="string" Value="@model.Id" Text="@model.DisplayName">
+            <MudSelectItem T="string" Value="@model.Id">
                 <div class="model-select-option">
                     <div class="model-select-name">
                         <span>@model.DisplayName</span>
@@ -29,9 +30,9 @@
                         <span class="model-select-desc" title="@model.Description">@model.Description</span>
                     }
                 </div>
-            </SelectItem>
+            </MudSelectItem>
         }
-    </Select>
+    </MudSelect>
 
     <div>
         <div class="settings-field-label">@Strings.Settings_Ai_EffortLevelLabel</div>
@@ -55,24 +56,27 @@
         <div class="settings-field-hint">@Strings.Settings_Ai_PermissionModeHint</div>
     </div>
 
-    <TextField @bind-Value="Settings.FallbackModel" Label="@Strings.Settings_Ai_FallbackModelLabel"
-               Placeholder="sonnet"
-               HelperText="@Strings.Settings_Ai_FallbackModelHint"/>
+    <MudTextField @bind-Value="Settings.FallbackModel" Label="@Strings.Settings_Ai_FallbackModelLabel"
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Placeholder="sonnet"
+                  HelperText="@Strings.Settings_Ai_FallbackModelHint"/>
 
-    <TextField @bind-Value="Settings.McpConfigPath" Label="@Strings.Settings_Ai_McpConfigPathLabel"
-               Placeholder="./mcp.json"
-               HelperText="@Strings.Settings_Ai_McpConfigPathHint"/>
+    <MudTextField @bind-Value="Settings.McpConfigPath" Label="@Strings.Settings_Ai_McpConfigPathLabel"
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Placeholder="./mcp.json"
+                  HelperText="@Strings.Settings_Ai_McpConfigPathHint"/>
 
     @if (_codexAvailable)
     {
         <div class="settings-section-title" style="font-size: 0.8rem; opacity: 0.6; margin-top: 8px; margin-bottom: -8px;">Codex</div>
 
-        <Select T="string" @bind-Value="Settings.DefaultCodexModel" Label="@Strings.Settings_Ai_CodexDefaultModelLabel"
-                Fixed="true"
-                HelperText="@Strings.Settings_Ai_CodexDefaultModelHint">
+        <MudSelect T="string" @bind-Value="Settings.DefaultCodexModel" Label="@Strings.Settings_Ai_CodexDefaultModelLabel"
+                   Variant="Variant.Outlined" Margin="Margin.Dense"
+                   MaxHeight="400"
+                   HelperText="@Strings.Settings_Ai_CodexDefaultModelHint">
             @foreach (var model in ModelDefinitions.All.Where(m => m.Provider == "codex"))
             {
-                <SelectItem T="string" Value="@model.Id" Text="@model.DisplayName">
+                <MudSelectItem T="string" Value="@model.Id">
                     <div class="model-select-option">
                         <div class="model-select-name">
                             <span>@model.DisplayName</span>
@@ -86,9 +90,9 @@
                             <span class="model-select-desc" title="@model.Description">@model.Description</span>
                         }
                     </div>
-                </SelectItem>
+                </MudSelectItem>
             }
-        </Select>
+        </MudSelect>
 
         <div>
             <div class="settings-field-label">@Strings.Settings_Ai_ReasoningEffortLabel</div>
@@ -129,7 +133,7 @@
         </div>
 
         <div>
-            <Switch @bind-Value="Settings.CodexWebSearch" Label="@Strings.Settings_Ai_WebSearchLabel"/>
+            <MudSwitch @bind-Value="Settings.CodexWebSearch" Label="@Strings.Settings_Ai_WebSearchLabel" Color="Color.Primary"/>
             <div class="settings-field-hint" style="margin-top: -8px;">@Strings.Settings_Ai_WebSearchHint</div>
         </div>
     }

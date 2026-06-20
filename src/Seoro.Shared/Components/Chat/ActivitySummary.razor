@@ -5,11 +5,13 @@
     <div class="activity-summary-header" @onclick="Toggle">
         @if (SummaryInfo.HasErrors)
         {
-            <Icon Svg="@Lucide.CircleAlert" Size="16" Tone="Tone.Error"/>
+            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error"
+                     Style="width: 16px; height: 16px;"/>
         }
         else
         {
-            <Icon Svg="@Lucide.CircleCheck" Size="16" Tone="Tone.Success"/>
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
+                     Style="width: 16px; height: 16px;"/>
         }
 
         <span class="activity-summary-text">@SummaryInfo.SummaryText</span>
@@ -31,7 +33,8 @@
             <span class="activity-summary-duration">@FormatDuration(Duration.Value)</span>
         }
 
-        <Icon Svg="@(_expanded ? Lucide.ChevronUp : Lucide.ChevronDown)" Size="16" Style="opacity: 0.4;"/>
+        <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                 Size="Size.Small" Style="opacity: 0.4; width: 16px; height: 16px;"/>
     </div>
 
     @if (_expanded)
@@ -46,10 +49,12 @@
                          @onclick:stopPropagation="true"
                          @onclick="@(() => ToggleThinking(idx))">
                         <div class="thinking-header">
-                            <Icon Svg="@Lucide.Brain" Size="14" Style="opacity: 0.6;"/>
+                            <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small"
+                                     Style="width: 14px; height: 14px; opacity: 0.6;"/>
                             <span>@GetThinkingPreview(thinkingText, _thinkingExpanded.Contains(idx))</span>
-                            <Icon Svg="@(_thinkingExpanded.Contains(idx) ? Lucide.ChevronUp : Lucide.ChevronDown)"
-                                  Size="14" Style="opacity: 0.4;"/>
+                            <MudIcon
+                                Icon="@(_thinkingExpanded.Contains(idx) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                Size="Size.Small" Style="opacity: 0.4; width: 14px; height: 14px;"/>
                         </div>
                         @if (_thinkingExpanded.Contains(idx))
                         {

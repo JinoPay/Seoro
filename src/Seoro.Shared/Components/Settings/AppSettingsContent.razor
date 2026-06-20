@@ -1,5 +1,5 @@
 @inject ISettingsService SettingsService
-@inject IToastService Snackbar
+@inject ISnackbar Snackbar
 
 <div class="settings-content-area">
     <div class="settings-content-header">
@@ -7,9 +7,10 @@
         <div style="flex: 1;"></div>
         @if (Section != "shortcuts")
         {
-            <Button Tone="Tone.Primary" ButtonStyle="ButtonStyle.Filled" OnClick="Save">
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
+                       Size="Size.Small" Style="text-transform: none;">
                 @Strings.Common_Save
-            </Button>
+            </MudButton>
         }
     </div>
 

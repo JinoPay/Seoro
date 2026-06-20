@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## Critical Context
-- **Tech Stack**: .NET 10.0 + Blazor + Photino.Blazor (desktop) + 자체 UI 킷 (`Components/Ui/` + Lucide 아이콘, MudBlazor 제거됨)
+- **Tech Stack**: .NET 10.0 + Blazor + Photino.Blazor (desktop) + MudBlazor v9 (UI)
 - **Solution**: `Seoro.slnx` (new XML solution format)
 - **Projects**:
   - `src/Seoro.Desktop` - Desktop app entry point (WinExe, Photino window)
@@ -158,7 +158,7 @@ tests/
 - `TerminalService` - 내장 PTY 터미널 관리
 - `LightboxService` - 이미지 라이트박스
 - `ToolDisplayHelper` - 도구 호출 표시 포매팅
-- `SnackbarExtensions` - IToastService 토스트 확장 (앱 업데이트 알림 등)
+- `SnackbarExtensions` - MudBlazor 스낵바 확장
 - `WorkspaceService` - 워크스페이스 (Git 저장소) 관리
 
 ### Migration

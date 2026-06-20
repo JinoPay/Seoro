@@ -7,11 +7,11 @@
     <div class="attachment-chips">
         @foreach (var attachment in Attachments)
         {
-            <Chip ButtonStyle="ButtonStyle.Outlined"
-                  Icon="@GetIcon(attachment)"
-                  OnClose="@(() => OnRemove.InvokeAsync(attachment))"
-                  OnClick="@(() => PreviewAttachment(attachment))"
-                  Style="font-size: 0.75rem; cursor: pointer;">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                     Icon="@GetIcon(attachment)"
+                     OnClose="@(() => OnRemove.InvokeAsync(attachment))"
+                     OnClick="@(() => PreviewAttachment(attachment))"
+                     Style="font-size: 0.75rem; cursor: pointer;">
                 @if (attachment is { IsImage: true, PreviewDataUrl: not null })
                 {
                     <img src="@attachment.PreviewDataUrl" alt="@attachment.FileName"
@@ -20,7 +20,7 @@
                          style="max-height: 48px; max-width: 80px; border-radius: 4px; margin-right: 4px; vertical-align: middle; cursor: pointer;"/>
                 }
                 @TruncateFileName(attachment.FileName)
-            </Chip>
+            </MudChip>
         }
     </div>
 }
@@ -31,17 +31,17 @@
 
     private static string GetIcon(PendingAttachment attachment)
     {
-        if (attachment.IsImage) return Lucide.Image;
+        if (attachment.IsImage) return Icons.Material.Filled.Image;
         var ext = Path.GetExtension(attachment.FileName).ToLowerInvariant();
         return ext switch
         {
-            ".md" or ".mdx" => Lucide.FileText,
+            ".md" or ".mdx" => Icons.Material.Filled.Description,
             ".json" or ".yaml" or ".yml" or ".xml" or ".toml" or ".ini" or ".cfg"
-                => Lucide.Braces,
+                => Icons.Material.Filled.DataObject,
             ".cs" or ".js" or ".ts" or ".py" or ".rs" or ".go" or ".java" or ".html"
                 or ".css" or ".sql" or ".sh" or ".bash" or ".ps1"
-                => Lucide.Code,
-            _ => Lucide.File
+                => Icons.Material.Filled.Code,
+            _ => Icons.Material.Filled.InsertDriveFile
         };
     }
 

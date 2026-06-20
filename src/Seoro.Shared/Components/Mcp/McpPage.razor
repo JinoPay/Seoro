@@ -1,36 +1,39 @@
 @inject IMcpService McpService
-@inject IToastService Snackbar
+@inject ISnackbar Snackbar
 
 <div class="settings-content-area wide">
     <McpScopeHeader Scope="_scope" ScopeChanged="OnScopeChanged"
                     ProjectPath="@_projectPath" ProjectPathChanged="OnProjectPathChanged">
         <ExtraActions>
-            <Button StartIcon="@Lucide.Sparkles"
-                    ButtonStyle="ButtonStyle.Outlined"
-                    OnClick="@(() => _galleryOpen = true)">
+            <MudButton StartIcon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small"
+                       Variant="Variant.Outlined"
+                       OnClick="@(() => _galleryOpen = true)"
+                       Style="text-transform: none;">
                 @Strings.Mcp_Page_Template
-            </Button>
-            <Tooltip Text="@Strings.Common_Refresh">
-                <Menu Icon="@Lucide.FileDown" Dense="true"
-                      Placement="PopoverPlacement.BottomEnd">
-                    <MenuItem Icon="@Lucide.Monitor"
-                              OnClick="ImportFromDesktop"
-                              Disabled="@(_scope == McpScope.Desktop)">
+            </MudButton>
+            <MudTooltip Text="@Strings.Common_Refresh">
+                <MudMenu Icon="@Icons.Material.Filled.FileDownload" Size="Size.Small"
+                         Variant="Variant.Outlined" Dense="true"
+                         AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                    <MudMenuItem Icon="@Icons.Material.Filled.DesktopWindows"
+                                 OnClick="ImportFromDesktop"
+                                 Disabled="@(_scope == McpScope.Desktop)">
                         Claude Desktop에서 가져오기
-                    </MenuItem>
-                    <MenuItem Icon="@Lucide.Code"
-                              OnClick="@(() => _importJsonOpen = true)">
+                    </MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Code"
+                                 OnClick="@(() => _importJsonOpen = true)">
                         @Strings.Mcp_Page_ImportJson
-                    </MenuItem>
-                </Menu>
-            </Tooltip>
+                    </MudMenuItem>
+                </MudMenu>
+            </MudTooltip>
             @if (_scope != McpScope.Desktop)
             {
-                <Button StartIcon="@Lucide.Plus"
-                        ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
-                        OnClick="OpenNewEditor">
+                <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"
+                           Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="OpenNewEditor"
+                           Style="text-transform: none;">
                     @Strings.Mcp_Page_AddServer
-                </Button>
+                </MudButton>
             }
         </ExtraActions>
     </McpScopeHeader>
@@ -39,13 +42,13 @@
         @if (_loading)
         {
             <div style="display:flex;justify-content:center;padding:48px;">
-                <Spinner Size="28"/>
+                <MudProgressCircular Indeterminate="true"/>
             </div>
         }
         else if ((_scope is McpScope.Local or McpScope.Project) && string.IsNullOrEmpty(_projectPath))
         {
             <div class="mcp-select-project">
-                <Icon Svg="@Lucide.Folder" Size="32" Style="opacity:0.3;" Class="mb-2"/>
+                <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:2rem;opacity:0.3;" Class="mb-2"/>
                 <div class="typo-body2 text-secondary">프로젝트를 선택하세요</div>
             </div>
         }
@@ -61,14 +64,14 @@
                     @if (_cloudServers.Count > 0)
                     {
                         <div class="mcp-group-label">
-                            <Icon Svg="@Lucide.Cloud" Size="14" Style="opacity:0.6;"/>
+                            <MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small" Style="opacity:0.6;"/>
                             CLOUD (configured at claude.ai)
                         </div>
                         <McpCloudServers Servers="_cloudServers"/>
                         @if (_servers.Count > 0)
                         {
                             <div class="mcp-group-label mt-3">
-                                <Icon Svg="@Lucide.Terminal" Size="14" Style="opacity:0.6;"/>
+                                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" Style="opacity:0.6;"/>
                                 @GetScopeLabel()
                             </div>
                         }
@@ -76,7 +79,7 @@
                     else if (_servers.Count > 0)
                     {
                         <div class="mcp-group-label">
-                            <Icon Svg="@Lucide.Terminal" Size="14" Style="opacity:0.6;"/>
+                            <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" Style="opacity:0.6;"/>
                             @GetScopeLabel()
                         </div>
                     }
@@ -203,13 +206,13 @@
         {
             result = await McpService.AddServerToScopeAsync(server, _scope, _projectPath);
             if (result.Success)
-                Snackbar.Add(Strings.Mcp_Page_ServerAdded(server.Name), ToastSeverity.Success);
+                Snackbar.Add(Strings.Mcp_Page_ServerAdded(server.Name), Severity.Success);
         }
         else
         {
             result = await McpService.UpdateServerInScopeAsync(_editingServer.Name, server, _scope, _projectPath);
             if (result.Success)
-                Snackbar.Add(Strings.Mcp_Page_ServerUpdated(server.Name), ToastSeverity.Success);
+                Snackbar.Add(Strings.Mcp_Page_ServerUpdated(server.Name), Severity.Success);
         }
 
         if (result.Success)
@@ -220,7 +223,7 @@
         }
         else
         {
-            Snackbar.Add(Strings.Common_SaveFailed(result.Error), ToastSeverity.Error);
+            Snackbar.Add(Strings.Common_SaveFailed(result.Error), Severity.Error);
         }
     }
 
@@ -229,7 +232,7 @@
         var result = await McpService.RemoveServerFromScopeAsync(server.Name, _scope, _projectPath);
         if (result.Success)
         {
-            Snackbar.Add(Strings.Mcp_Page_ServerRemoved(server.Name), ToastSeverity.Success);
+            Snackbar.Add(Strings.Mcp_Page_ServerRemoved(server.Name), Severity.Success);
             if (_editingServer?.Name == server.Name)
             {
                 _editorOpen = false;
@@ -239,7 +242,7 @@
         }
         else
         {
-            Snackbar.Add(Strings.Common_SaveFailed(result.Error), ToastSeverity.Error);
+            Snackbar.Add(Strings.Common_SaveFailed(result.Error), Severity.Error);
         }
     }
 
@@ -258,14 +261,14 @@
         var msg = status.ConnectionStatus == McpConnectionStatus.Reachable
             ? $"'{server.Name}' 연결 확인"
             : $"'{server.Name}' 연결 실패: {status.Error}";
-        Snackbar.Add(msg, status.ConnectionStatus == McpConnectionStatus.Reachable ? ToastSeverity.Success : ToastSeverity.Warning);
+        Snackbar.Add(msg, status.ConnectionStatus == McpConnectionStatus.Reachable ? Severity.Success : Severity.Warning);
     }
 
     private async Task ImportFromDesktop()
     {
         var result = await McpService.ImportFromClaudeDesktopAsync();
         Snackbar.Add(result.Success ? result.Error ?? "가져오기 완료" : result.Error ?? "가져오기 실패",
-            result.Success ? ToastSeverity.Success : ToastSeverity.Error);
+            result.Success ? Severity.Success : Severity.Error);
         if (result.Success) await RefreshServers();
     }
 
@@ -328,7 +331,7 @@
         font-weight: 600;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: var(--text-secondary);
+        color: var(--mud-palette-text-secondary);
         margin-bottom: 8px;
     }
 

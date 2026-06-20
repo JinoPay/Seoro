@@ -72,7 +72,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: var(--bg-base);
+    background: var(--mud-palette-background);
 }
 
 .overlay-page-header {
@@ -183,11 +183,11 @@
 }
 
 .notification-entry.unread {
-    background: var(--accent-subtle);
+    background: rgba(var(--mud-palette-primary-rgb, 119, 107, 231), 0.06);
 }
 
 .notification-entry.unread:hover {
-    background: var(--accent-dim);
+    background: rgba(var(--mud-palette-primary-rgb, 119, 107, 231), 0.1);
 }
 
 .notification-entry-content {
@@ -235,12 +235,12 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--accent);
+    background: var(--mud-palette-primary);
     flex-shrink: 0;
     margin-top: 6px;
 }
 
-.notification-badge .ui-badge {
+.notification-badge .mud-badge {
     font-size: 9px;
     min-width: 16px;
     height: 16px;
@@ -272,9 +272,9 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    border: 2px solid var(--border-default);
+    border: 2px solid var(--mud-palette-lines-default);
     background: transparent;
-    color: var(--text-secondary);
+    color: var(--mud-palette-text-secondary);
     font-size: 0.8rem;
     font-weight: 600;
     display: flex;
@@ -287,30 +287,30 @@
 }
 
 .onboarding-step:hover {
-    border-color: var(--text-primary);
+    border-color: var(--mud-palette-text-primary);
 }
 
 .onboarding-step.active {
-    border-color: var(--accent);
-    background: var(--accent);
-    color: var(--text-inverse);
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
 }
 
 .onboarding-step.completed {
-    border-color: var(--color-success);
-    background: color-mix(in srgb, var(--color-success) 15%, transparent);
-    color: var(--color-success);
+    border-color: var(--mud-palette-success);
+    background: color-mix(in srgb, var(--mud-palette-success) 15%, transparent);
+    color: var(--mud-palette-success);
 }
 
 .onboarding-step-line {
     width: 40px;
     height: 2px;
-    background: var(--border-default);
+    background: var(--mud-palette-lines-default);
     transition: background 0.2s ease;
 }
 
 .onboarding-step-line.completed {
-    background: var(--accent);
+    background: var(--mud-palette-primary);
 }
 
 .onboarding-content {
@@ -326,7 +326,7 @@
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    background: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -347,8 +347,8 @@
     gap: 10px;
     padding: 8px 12px;
     border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--bg-surface) 50%, transparent);
-    border: 1px solid var(--border-default);
+    background: color-mix(in srgb, var(--mud-palette-surface) 50%, transparent);
+    border: 1px solid var(--mud-palette-lines-default);
 }
 
 .onboarding-highlight .typo-body2 {
@@ -450,7 +450,7 @@
     gap: 6px;
 }
 
-.acct-usage-bar-row .ui-progress {
+.acct-usage-bar-row .mud-progress-linear {
     flex: 1;
     min-width: 0;
 }

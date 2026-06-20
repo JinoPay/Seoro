@@ -1,14 +1,13 @@
 @using Seoro.Shared.Resources
 
-<Modal IsOpen="IsOpen" IsOpenChanged="OnVisibleChanged" MaxWidth="560px"
-       ShowCloseButton="false" CloseOnEscape="false">
-    <HeaderContent>
+<MudDialog Visible="IsOpen" VisibleChanged="OnVisibleChanged" Options="_dialogOptions">
+    <TitleContent>
         <div class="stack-row items-center gap-2">
             <img src="logo.png" width="22" height="22" alt="Seoro"/>
             <span class="typo-h6">@Strings.Onboarding_Title</span>
         </div>
-    </HeaderContent>
-    <ChildContent>
+    </TitleContent>
+    <DialogContent>
         <div class="onboarding-dialog">
             @* Step indicator *@
             <div class="onboarding-steps">
@@ -25,7 +24,7 @@
                         @onclick="@(() => _currentStep = step)">
                         @if (step < _currentStep)
                         {
-                            <Icon Svg="@Lucide.Check" Size="14"/>
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small"/>
                         }
                         else
                         {
@@ -41,8 +40,8 @@
                 {
                     case 0:
                         <div class="onboarding-icon-wrap">
-                            <Icon Svg="@Lucide.Sparkles" Size="32"
-                                  Style="color: var(--accent);"/>
+                            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome"
+                                     Style="font-size: 32px; color: var(--mud-palette-primary);"/>
                         </div>
                         <div class="typo-h6" style="margin-top: 16px;">@Strings.Onboarding_Welcome_Title</div>
                         <p class="typo-body2 text-secondary" style="margin-top: 8px; line-height: 1.6;">
@@ -50,15 +49,17 @@
                         </p>
                         <div class="onboarding-highlights">
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.Code" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Feature1</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.GitFork" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Feature2</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.Terminal" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Feature3</span>
                             </div>
                         </div>
@@ -66,8 +67,8 @@
 
                     case 1:
                         <div class="onboarding-icon-wrap">
-                            <Icon Svg="@Lucide.FolderPlus" Size="32"
-                                  Style="color: var(--accent);"/>
+                            <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder"
+                                     Style="font-size: 32px; color: var(--mud-palette-primary);"/>
                         </div>
                         <div class="typo-h6" style="margin-top: 16px;">@Strings.Onboarding_Workspace_Title</div>
                         <p class="typo-body2 text-secondary" style="margin-top: 8px; line-height: 1.6;">
@@ -75,15 +76,16 @@
                         </p>
                         <div class="onboarding-highlights">
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.Plus" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Workspace_Step1</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.CloudDownload" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.CloudDownload" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Workspace_Step2</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.Folder" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Workspace_Step3</span>
                             </div>
                         </div>
@@ -91,8 +93,8 @@
 
                     case 2:
                         <div class="onboarding-icon-wrap">
-                            <Icon Svg="@Lucide.MessageCircle" Size="32"
-                                  Style="color: var(--accent);"/>
+                            <MudIcon Icon="@Icons.Material.Filled.Chat"
+                                     Style="font-size: 32px; color: var(--mud-palette-primary);"/>
                         </div>
                         <div class="typo-h6" style="margin-top: 16px;">@Strings.Onboarding_Session_Title</div>
                         <p class="typo-body2 text-secondary" style="margin-top: 8px; line-height: 1.6;">
@@ -100,15 +102,18 @@
                         </p>
                         <div class="onboarding-highlights">
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.GitBranch" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.CallSplit" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Session_Step1</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.ListPlus" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.PlaylistAdd" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Session_Step2</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.Diff" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.Difference" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Session_Step3</span>
                             </div>
                         </div>
@@ -116,8 +121,8 @@
 
                     case 3:
                         <div class="onboarding-icon-wrap">
-                            <Icon Svg="@Lucide.LayoutDashboard" Size="32"
-                                  Style="color: var(--accent);"/>
+                            <MudIcon Icon="@Icons.Material.Filled.Dashboard"
+                                     Style="font-size: 32px; color: var(--mud-palette-primary);"/>
                         </div>
                         <div class="typo-h6" style="margin-top: 16px;">@Strings.Onboarding_Layout_Title</div>
                         <p class="typo-body2 text-secondary" style="margin-top: 8px; line-height: 1.6;">
@@ -125,19 +130,23 @@
                         </p>
                         <div class="onboarding-highlights">
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.PanelLeft" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.ViewSidebar" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Layout_Sidebar</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.MessageSquare" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.ChatBubble" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Layout_Chat</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.Diff" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.Difference" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Layout_Panel</span>
                             </div>
                             <div class="onboarding-highlight">
-                                <Icon Svg="@Lucide.Settings" Size="14" Tone="Tone.Primary"/>
+                                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
+                                         Color="Color.Primary"/>
                                 <span class="typo-body2">@Strings.Onboarding_Layout_Settings</span>
                             </div>
                         </div>
@@ -145,35 +154,39 @@
                 }
             </div>
         </div>
-    </ChildContent>
-    <Footer>
+    </DialogContent>
+    <DialogActions>
         <div style="display: flex; justify-content: space-between; width: 100%;">
-            <Button ButtonStyle="ButtonStyle.Text" OnClick="Skip">
+            <MudButton Color="Color.Default" Variant="Variant.Text" OnClick="Skip"
+                       Style="text-transform: none;">
                 @Strings.Onboarding_Skip
-            </Button>
+            </MudButton>
             <div class="stack-row gap-2">
                 @if (_currentStep > 0)
                 {
-                    <Button ButtonStyle="ButtonStyle.Outlined" OnClick="PreviousStep">
+                    <MudButton Color="Color.Default" Variant="Variant.Outlined" OnClick="PreviousStep"
+                               Style="text-transform: none;">
                         @Strings.Onboarding_Prev
-                    </Button>
+                    </MudButton>
                 }
                 @if (_currentStep < TotalSteps - 1)
                 {
-                    <Button Tone="Tone.Primary" ButtonStyle="ButtonStyle.Filled" OnClick="NextStep">
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="NextStep"
+                               Style="text-transform: none;">
                         @Strings.Onboarding_Next
-                    </Button>
+                    </MudButton>
                 }
                 else
                 {
-                    <Button Tone="Tone.Primary" ButtonStyle="ButtonStyle.Filled" OnClick="Complete">
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Complete"
+                               Style="text-transform: none;">
                         @Strings.Onboarding_Start
-                    </Button>
+                    </MudButton>
                 }
             </div>
         </div>
-    </Footer>
-</Modal>
+    </DialogActions>
+</MudDialog>
 
 @code {
     [Parameter] public bool IsOpen { get; set; }
@@ -182,6 +195,14 @@
 
     private int _currentStep;
     private const int TotalSteps = 4;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        BackdropClick = false,
+        CloseOnEscapeKey = false
+    };
 
     private async Task OnVisibleChanged(bool visible)
     {

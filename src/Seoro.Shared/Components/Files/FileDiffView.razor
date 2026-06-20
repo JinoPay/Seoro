@@ -5,8 +5,8 @@
 
 <div class="filediff-view">
     <div class="filediff-header">
-        <Icon Svg="@GetFileIcon(Diff.ChangeType)" Size="16"
-              Style="@GetFileIconStyle(Diff.ChangeType)"/>
+        <MudIcon Icon="@GetFileIcon(Diff.ChangeType)" Size="Size.Small"
+                 Style="@($"width: 16px; height: 16px; {GetFileIconStyle(Diff.ChangeType)}")"/>
         <span class="filediff-path">@Diff.FilePath</span>
         <div class="diff-stats" style="margin-left: auto;">
             @if (Diff.Additions > 0)
@@ -18,10 +18,11 @@
                 <span class="deletions">-@Diff.Deletions</span>
             }
         </div>
-        <IconButton Icon="@(_isSplit ? Lucide.Rows3 : Lucide.Columns3)"
-                    Title="@(_isSplit ? "Unified로 보기" : "분할 보기")"
-                    OnClick="ToggleViewModeAsync"
-                    Style="margin-left: var(--space-2);"/>
+        <MudIconButton Icon="@(_isSplit ? Icons.Material.Filled.ViewStream : Icons.Material.Filled.ViewColumn)"
+                       Size="Size.Small"
+                       Title="@(_isSplit ? "Unified로 보기" : "분할 보기")"
+                       OnClick="ToggleViewModeAsync"
+                       Style="margin-left: var(--space-2);"/>
     </div>
 
     <div id="@_elementId" class="filediff-content @(_isSplit ? "split" : "")">
@@ -30,7 +31,7 @@
             @if (string.IsNullOrWhiteSpace(Diff.UnifiedDiff))
             {
                 <div class="filediff-empty">
-                    <Icon Svg="@Lucide.Info" Size="14" Style="opacity: 0.3;"/>
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Style="opacity: 0.3;"/>
                     <span>사용 가능한 diff가 없습니다</span>
                 </div>
             }
@@ -350,11 +351,11 @@
     {
         return type switch
         {
-            FileChangeType.Added => Lucide.FilePlus,
-            FileChangeType.Deleted => Lucide.Trash2,
-            FileChangeType.Renamed => Lucide.FilePen,
-            FileChangeType.Untracked => Lucide.CirclePlus,
-            _ => Lucide.SquarePen
+            FileChangeType.Added => Icons.Material.Filled.NoteAdd,
+            FileChangeType.Deleted => Icons.Material.Filled.Delete,
+            FileChangeType.Renamed => Icons.Material.Filled.DriveFileRenameOutline,
+            FileChangeType.Untracked => Icons.Material.Filled.AddCircleOutline,
+            _ => Icons.Material.Filled.EditNote
         };
     }
 
@@ -365,7 +366,7 @@
             FileChangeType.Added => "color: var(--color-success);",
             FileChangeType.Deleted => "color: var(--color-error);",
             FileChangeType.Renamed => "color: var(--color-warning);",
-            FileChangeType.Untracked => "color: var(--text-secondary);",
+            FileChangeType.Untracked => "color: var(--mud-palette-text-secondary);",
             _ => "color: var(--color-info);"
         };
     }

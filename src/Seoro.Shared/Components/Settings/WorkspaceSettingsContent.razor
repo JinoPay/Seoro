@@ -2,8 +2,8 @@
 @inject ISessionService SessionService
 @inject IGitService GitService
 @inject IChatState ChatState
-@inject IToastService Snackbar
-@inject IModalService ModalService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <div class="settings-content-area">
     @if (_workspace != null)
@@ -11,9 +11,10 @@
         <div class="settings-content-header">
             <h6 class="typo-h6" style="font-size: var(--text-lg);">@_workspace.Name</h6>
             <div style="flex: 1;"></div>
-            <Button Tone="Tone.Primary" ButtonStyle="ButtonStyle.Filled" OnClick="Save">
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
+                       Size="Size.Small" Style="text-transform: none;">
                 @Strings.Common_Save
-            </Button>
+            </MudButton>
         </div>
 
         <div class="ws-settings-tabs">
@@ -35,34 +36,36 @@
                 <div class="settings-section-desc">@Strings.Settings_Workspace_GeneralDesc</div>
 
                 <div class="stack gap-3">
-                    <TextField @bind-Value="_workspace.Name" Label="@Strings.Settings_Workspace_NameLabel"/>
+                    <MudTextField @bind-Value="_workspace.Name" Label="@Strings.Settings_Workspace_NameLabel"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"/>
 
-                    <Select T="string" @bind-Value="_workspace.DefaultModel" Label="@Strings.Settings_Ai_DefaultModelLabel"
-                            Fixed="true"
-                            HelperText="@Strings.Settings_Workspace_DefaultModelHint">
-                        <SelectItem T="string" Value="@("")" Text="@Strings.Settings_Workspace_UseAppDefault">@Strings.Settings_Workspace_UseAppDefault</SelectItem>
+                    <MudSelect T="string" @bind-Value="_workspace.DefaultModel" Label="@Strings.Settings_Ai_DefaultModelLabel"
+                               Variant="Variant.Outlined" Margin="Margin.Dense"
+                               HelperText="@Strings.Settings_Workspace_DefaultModelHint"
+                               Clearable="true">
+                        <MudSelectItem T="string" Value="@("")">@Strings.Settings_Workspace_UseAppDefault</MudSelectItem>
                         @foreach (var model in ModelDefinitions.All.Where(m => m.Provider != "codex"))
                         {
-                            <SelectItem T="string" Value="@model.Id" Text="@model.DisplayName">@model.DisplayName</SelectItem>
+                            <MudSelectItem T="string" Value="@model.Id">@model.DisplayName</MudSelectItem>
                         }
-                    </Select>
+                    </MudSelect>
 
                     @if (!string.IsNullOrEmpty(_workspace.RepoLocalPath))
                     {
-                        <TextField Value="@ShortenPath(_workspace.RepoLocalPath)" Label="@Strings.Settings_Workspace_RepoPathLabel"
-                                   ReadOnly="true"/>
+                        <MudTextField Value="@ShortenPath(_workspace.RepoLocalPath)" Label="@Strings.Settings_Workspace_RepoPathLabel"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" ReadOnly="true"/>
                     }
 
                     @if (!string.IsNullOrEmpty(_workspace.RepoUrl))
                     {
-                        <TextField Value="@_workspace.RepoUrl" Label="@Strings.Settings_Workspace_RepoUrlLabel"
-                                   ReadOnly="true"/>
+                        <MudTextField Value="@_workspace.RepoUrl" Label="@Strings.Settings_Workspace_RepoUrlLabel"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" ReadOnly="true"/>
                     }
 
-                    <TextField @bind-Value="_workspace.SystemPrompt" Label="@Strings.Settings_Workspace_SystemPromptLabel"
-                               Lines="4"
-                               Placeholder="@Strings.Settings_Workspace_SystemPromptPlaceholder"
-                               HelperText="@Strings.Settings_Workspace_SystemPromptHint"/>
+                    <MudTextField @bind-Value="_workspace.SystemPrompt" Label="@Strings.Settings_Workspace_SystemPromptLabel"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
+                                  Placeholder="@Strings.Settings_Workspace_SystemPromptPlaceholder"
+                                  HelperText="@Strings.Settings_Workspace_SystemPromptHint"/>
                 </div>
             }
             else if (_tab == "git")
@@ -73,27 +76,29 @@
                 <div class="stack gap-3">
                     @if (_branches.Count > 0)
                     {
-                        <Select T="string" @bind-Value="_workspace.DefaultBaseBranch"
-                                Label="@Strings.Settings_Workspace_DefaultBranchLabel"
-                                Fixed="true"
-                                HelperText="@Strings.Settings_Workspace_DefaultBranchHint">
-                            <SelectItem T="string" Value="@("")" Text="(자동)">(자동)</SelectItem>
+                        <MudSelect T="string" @bind-Value="_workspace.DefaultBaseBranch"
+                                   Label="@Strings.Settings_Workspace_DefaultBranchLabel"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   HelperText="@Strings.Settings_Workspace_DefaultBranchHint"
+                                   Clearable="true">
                             @foreach (var branch in _branches)
                             {
-                                <SelectItem T="string" Value="@branch">@branch</SelectItem>
+                                <MudSelectItem T="string" Value="@branch">@branch</MudSelectItem>
                             }
-                        </Select>
+                        </MudSelect>
                     }
                     else
                     {
-                        <TextField @bind-Value="_workspace.DefaultBaseBranch"
-                                   Label="@Strings.Settings_Workspace_DefaultBranchLabel"
-                                   Placeholder="origin/main"
-                                   HelperText="@Strings.Settings_Workspace_DefaultBranchAutoHint"/>
+                        <MudTextField @bind-Value="_workspace.DefaultBaseBranch"
+                                      Label="@Strings.Settings_Workspace_DefaultBranchLabel"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Placeholder="origin/main"
+                                      HelperText="@Strings.Settings_Workspace_DefaultBranchAutoHint"/>
                     }
 
-                    <TextField @bind-Value="_workspace.DefaultRemote" Label="@Strings.Settings_Workspace_DefaultRemoteLabel"
-                               Placeholder="origin"/>
+                    <MudTextField @bind-Value="_workspace.DefaultRemote" Label="@Strings.Settings_Workspace_DefaultRemoteLabel"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Placeholder="origin"/>
                 </div>
             }
             else if (_tab == "prompts")
@@ -102,25 +107,26 @@
                 <div class="settings-section-desc">@Strings.Settings_Workspace_PromptsDesc</div>
 
                 <div class="stack gap-4">
-                    <TextField @bind-Value="_workspace.Preferences.CodeReviewPrompt"
-                               Label="@Strings.Settings_Workspace_CodeReviewLabel"
-                               Lines="4"
-                               Placeholder="@Strings.Settings_Workspace_CodeReviewPlaceholder"/>
+                    <MudTextField @bind-Value="_workspace.Preferences.CodeReviewPrompt"
+                                  Label="@Strings.Settings_Workspace_CodeReviewLabel"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
+                                  Placeholder="@Strings.Settings_Workspace_CodeReviewPlaceholder"/>
 
-                    <TextField @bind-Value="_workspace.Preferences.GeneralPrompt"
-                               Label="@Strings.Settings_Workspace_GeneralPromptLabel"
-                               Lines="4"
-                               Placeholder="@Strings.Settings_Workspace_GeneralPromptPlaceholder"/>
+                    <MudTextField @bind-Value="_workspace.Preferences.GeneralPrompt"
+                                  Label="@Strings.Settings_Workspace_GeneralPromptLabel"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
+                                  Placeholder="@Strings.Settings_Workspace_GeneralPromptPlaceholder"/>
                 </div>
             }
 
             <div class="settings-danger-zone">
-                <div class="settings-group-title" style="color: var(--color-error);">@Strings.Settings_Workspace_DangerZoneTitle</div>
-                <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Error"
-                        StartIcon="@Lucide.Trash2"
-                        OnClick="DeleteWorkspace">
+                <div class="settings-group-title" style="color: var(--mud-palette-error);">@Strings.Settings_Workspace_DangerZoneTitle</div>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.Delete"
+                           OnClick="DeleteWorkspace"
+                           Style="text-transform: none;">
                     @Strings.Settings_Workspace_DeleteButton
-                </Button>
+                </MudButton>
                 <small class="typo-caption text-secondary" style="margin-top: 4px;">
                     @Strings.Settings_Workspace_DeleteWarning
                 </small>
@@ -130,7 +136,7 @@
     else
     {
         <div style="padding: var(--space-6); text-align: center;">
-            <Spinner Size="16"/>
+            <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
         </div>
     }
 </div>
@@ -196,7 +202,7 @@
     {
         if (_workspace == null) return;
 
-        var result = await ModalService.ShowMessageBoxAsync(
+        var result = await DialogService.ShowMessageBoxAsync(
             Strings.Settings_Workspace_DeleteDialogTitle,
             Strings.Settings_Workspace_DeleteDialogMsg(_workspace.Name),
             Strings.Common_Delete, cancelText: Strings.Common_Cancel);
@@ -218,12 +224,12 @@
                 ChatState.SetWorkspace(null!);
             }
 
-            Snackbar.Add(Strings.Settings_Workspace_DeleteSuccess(_workspace.Name), ToastSeverity.Success);
+            Snackbar.Add(Strings.Settings_Workspace_DeleteSuccess(_workspace.Name), Severity.Success);
             await OnWorkspaceDeleted.InvokeAsync();
         }
         catch (Exception ex)
         {
-            Snackbar.Add(Strings.Settings_Workspace_DeleteError(ex.Message), ToastSeverity.Error);
+            Snackbar.Add(Strings.Settings_Workspace_DeleteError(ex.Message), Severity.Error);
         }
     }
 

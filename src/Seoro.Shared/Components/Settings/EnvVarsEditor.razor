@@ -1,5 +1,6 @@
 <div class="stack gap-3">
-    <table class="ui-table" style="border: 1px solid var(--border-default); border-radius: 8px;">
+    <MudSimpleTable Dense="true" Hover="true" Elevation="0"
+                    Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;">
         <thead>
         <tr>
             <th style="width: 40%;">키</th>
@@ -16,8 +17,8 @@
                     <td class="typo-body2" style="font-family: monospace;">@kvp.Key</td>
                     <td class="typo-body2" style="font-family: monospace;">@kvp.Value</td>
                     <td>
-                        <IconButton Icon="@Lucide.Trash2"
-                                    Tone="Tone.Error" OnClick="@(() => Remove(kvp.Key))"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                       Color="Color.Error" OnClick="@(() => Remove(kvp.Key))"/>
                     </td>
                 </tr>
             }
@@ -31,26 +32,26 @@
             </tr>
         }
         </tbody>
-    </table>
+    </MudSimpleTable>
 
     <div class="d-flex gap-2 align-end">
-        <TextField @bind-Value="_newKey" Label="키" Immediate="true"
-                   Placeholder="VARIABLE_NAME" Style="flex: 1;"
-                   OnKeyDown="@(e =>
-                              {
-                                  if (e.Key == "Enter") Add();
-                              })"/>
-        <TextField @bind-Value="_newValue" Label="값" Immediate="true"
-                   Placeholder="value" Style="flex: 1;"
-                   OnKeyDown="@(e =>
-                              {
-                                  if (e.Key == "Enter") Add();
-                              })"/>
-        <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
-                OnClick="Add" Disabled="@(string.IsNullOrWhiteSpace(_newKey))"
-                Style="min-width: 60px;">
+        <MudTextField T="string" @bind-Value="_newKey" Label="키" Variant="Variant.Outlined"
+                      Margin="Margin.Dense" Placeholder="VARIABLE_NAME" Style="flex: 1;"
+                      OnKeyUp="@(e =>
+                               {
+                                   if (e.Key == "Enter") Add();
+                               })"/>
+        <MudTextField T="string" @bind-Value="_newValue" Label="값" Variant="Variant.Outlined"
+                      Margin="Margin.Dense" Placeholder="value" Style="flex: 1;"
+                      OnKeyUp="@(e =>
+                               {
+                                   if (e.Key == "Enter") Add();
+                               })"/>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                   OnClick="Add" Disabled="@(string.IsNullOrWhiteSpace(_newKey))"
+                   Style="text-transform: none; min-width: 60px; height: 40px;">
             추가
-        </Button>
+        </MudButton>
     </div>
 </div>
 

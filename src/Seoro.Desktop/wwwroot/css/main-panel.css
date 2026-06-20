@@ -88,8 +88,8 @@
     color: var(--color-error);
     background: var(--color-error-bg);
 }
-.merge-status-icon.status-offline { color: var(--text-secondary); }
-.merge-status-icon.status-unknown { color: var(--text-secondary); opacity: 0.5; }
+.merge-status-icon.status-offline { color: var(--mud-palette-text-secondary); }
+.merge-status-icon.status-unknown { color: var(--mud-palette-text-secondary); opacity: 0.5; }
 
 .merge-status-badge {
     font-family: var(--font-mono);
@@ -128,7 +128,7 @@
     background: var(--bg-surface);
     border: none;
     cursor: pointer;
-    color: var(--text-primary);
+    color: var(--mud-palette-text-primary);
     opacity: 0.65;
     transition: opacity 0.15s;
     white-space: nowrap;
@@ -173,7 +173,7 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     cursor: pointer;
-    color: var(--text-primary);
+    color: var(--mud-palette-text-primary);
     opacity: 0.8;
     transition: all 0.15s;
     white-space: nowrap;
@@ -277,7 +277,7 @@
 }
 
 .strategy-item:hover {
-    background: var(--bg-hover);
+    background: var(--mud-palette-action-default-hover);
 }
 
 .strategy-item.selected {
@@ -366,7 +366,8 @@
     margin-right: var(--space-1);
 }
 
-.toolbar-actions .ui-iconbtn:hover {
+.toolbar-actions .mud-icon-button:hover,
+.toolbar-actions .mud-menu button:hover {
     opacity: 0.9 !important;
     background: var(--bg-surface);
     border-radius: var(--radius-md);
@@ -681,24 +682,24 @@
 }
 
 .pr-badge-mergeable {
-    background: color-mix(in srgb, var(--color-success) 15%, transparent);
-    color: var(--color-success);
+    background: color-mix(in srgb, var(--mud-palette-success) 15%, transparent);
+    color: var(--mud-palette-success);
 }
 
 .pr-badge-conflict {
-    background: color-mix(in srgb, var(--color-error) 15%, transparent);
-    color: var(--color-error);
+    background: color-mix(in srgb, var(--mud-palette-error) 15%, transparent);
+    color: var(--mud-palette-error);
 }
 
 .pr-badge-blocked {
-    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
-    color: var(--color-warning);
+    background: color-mix(in srgb, var(--mud-palette-warning) 15%, transparent);
+    color: var(--mud-palette-warning);
 }
 
 .pr-badge-draft {
-    background: var(--bg-surface);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-default);
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-secondary);
+    border: 1px solid var(--mud-palette-lines-default);
 }
 
 .pr-badge-merged {
@@ -707,8 +708,8 @@
 }
 
 .pr-badge-unknown {
-    background: var(--bg-surface);
-    color: var(--text-secondary);
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-secondary);
 }
 
 /* ─── Merge split group ─── */
@@ -720,6 +721,24 @@
 
 .merge-split-group .merge-split-primary {
     border-radius: 4px 0 0 4px;
+}
+
+.merge-split-group .mud-menu {
+    display: flex;
+}
+
+.merge-split-group .mud-menu .mud-icon-button {
+    border-radius: 0 4px 4px 0;
+    background: color-mix(in srgb, var(--accent) 80%, transparent);
+    color: white;
+    width: 24px;
+    min-width: 24px;
+    height: 26px;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.merge-split-group .mud-menu .mud-icon-button:hover {
+    filter: brightness(1.12);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1151,7 +1170,7 @@
     gap: 2px;
 }
 
-.git-header-icon-btn.ui-iconbtn {
+.git-header-icon-btn.mud-icon-button {
     width: 20px;
     height: 20px;
     min-width: 0;
@@ -1159,9 +1178,8 @@
     opacity: 0.7;
 }
 
-.git-header-icon-btn .ui-icon {
-    width: 15px;
-    height: 15px;
+.git-header-icon-btn .mud-icon-root {
+    font-size: 15px;
 }
 
 .git-view-files {
@@ -1198,7 +1216,7 @@
 
 .git-group-header:hover {
     opacity: 1;
-    background: var(--bg-hover);
+    background: var(--mud-palette-action-default-hover);
 }
 
 .git-group-label {
@@ -1210,7 +1228,7 @@
     margin-left: auto;
     font-size: 0.7rem;
     opacity: 0.55;
-    background: var(--bg-hover);
+    background: var(--mud-palette-action-default-hover);
     border-radius: 8px;
     padding: 0 6px;
     min-width: 18px;
@@ -1234,7 +1252,7 @@
 }
 
 .git-file-row:hover {
-    background: var(--bg-hover);
+    background: var(--mud-palette-action-default-hover);
 }
 
 .git-file-main {
@@ -1261,9 +1279,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
-    /* 경로는 뒤쪽 세그먼트가 더 의미 있으므로 앞부분을 말줄임 (RTL 트릭, 콘텐츠는 LRM으로 감쌈) */
-    direction: rtl;
-    text-align: left;
 }
 
 .git-file-stats {
@@ -1310,7 +1325,7 @@
 
 .git-file-action-btn:hover:not(:disabled) {
     opacity: 1;
-    background: var(--bg-hover);
+    background: var(--mud-palette-action-default-hover);
 }
 
 .git-file-action-btn:disabled {
@@ -1341,7 +1356,7 @@
     width: 100%;
     font-family: inherit;
     font-size: var(--text-xs);
-    background: var(--bg-input, var(--bg-surface));
+    background: var(--bg-input, var(--mud-palette-surface));
     color: var(--text-primary);
     border: 1px solid var(--border-default);
     border-radius: 4px;
@@ -1426,11 +1441,10 @@
     margin-left: 4px;
 }
 
-/* Sync 메뉴 활성자 버튼 톤 다운: 좁은 padding + 작은 폰트 */
-.git-bottom-sync-mud.ui-btn {
+/* MudMenu 활성자(MudButton) 톤 다운: 좁은 padding + 작은 폰트 */
+.git-bottom-sync-mud.mud-button-root {
     min-width: 0;
     min-height: 0;
-    height: auto;
     padding: 1px 6px;
     font-size: 11px;
     text-transform: none;
@@ -1439,13 +1453,17 @@
     line-height: 1.4;
 }
 
-.git-bottom-sync-mud .ui-icon {
-    width: 12px;
-    height: 12px;
+.git-bottom-sync-mud .mud-button-icon-start,
+.git-bottom-sync-mud .mud-button-icon-end {
     margin: 0 1px;
 }
 
-.git-bottom-sync-mud.highlight.ui-btn {
+.git-bottom-sync-mud .mud-button-icon-start .mud-icon-root,
+.git-bottom-sync-mud .mud-button-icon-end .mud-icon-root {
+    font-size: 12px;
+}
+
+.git-bottom-sync-mud.highlight.mud-button-root {
     border-color: var(--accent);
     color: var(--accent);
 }
@@ -1604,7 +1622,7 @@
 .msb-strategy-pills {
     display: inline-flex;
     gap: 2px;
-    background: var(--bg-hover);
+    background: var(--mud-palette-action-default-hover);
     padding: 2px;
     border-radius: 4px;
 }
@@ -1621,7 +1639,7 @@
 }
 
 .msb-pill.active {
-    background: var(--bg-surface);
+    background: var(--mud-palette-surface);
     opacity: 1;
     font-weight: 600;
 }
@@ -1650,12 +1668,12 @@
 }
 
 .msb-status-chip.status-offline {
-    background: var(--bg-hover);
+    background: var(--mud-palette-action-default-hover);
     color: var(--text-secondary);
 }
 
 .msb-status-chip.status-unknown {
-    background: var(--bg-hover);
+    background: var(--mud-palette-action-default-hover);
     color: var(--text-secondary);
     opacity: 0.7;
 }
@@ -1739,12 +1757,12 @@
 }
 
 .git-graph-row:hover {
-    background: var(--bg-hover);
+    background: var(--mud-palette-action-default-hover);
 }
 
 .git-graph-row.selected {
-    background: var(--bg-hover);
-    box-shadow: inset 2px 0 0 var(--accent);
+    background: var(--mud-palette-action-default-hover);
+    box-shadow: inset 2px 0 0 var(--mud-palette-primary);
 }
 
 .git-graph-row .col-graph {
@@ -1757,7 +1775,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--accent);
+    background: var(--mud-palette-primary);
     box-shadow: 0 0 0 1px var(--bg-base);
 }
 
@@ -1790,7 +1808,7 @@
 }
 
 .ref-badge {
-    background: var(--bg-hover);
+    background: var(--mud-palette-action-default-hover);
     border: 1px solid var(--border-soft, rgba(128, 128, 128, 0.2));
     border-radius: 4px;
     padding: 0 6px;
@@ -1801,8 +1819,8 @@
 }
 
 .ref-badge.ref-head {
-    color: var(--accent);
-    border-color: var(--accent);
+    color: var(--mud-palette-primary);
+    border-color: var(--mud-palette-primary);
 }
 
 .ref-badge.ref-tag {
@@ -1872,7 +1890,7 @@
 }
 
 .git-graph-file:hover {
-    background: var(--bg-hover);
+    background: var(--mud-palette-action-default-hover);
 }
 
 .git-graph-file .file-status {

@@ -555,8 +555,8 @@ public class GitService(
         var stagedNumstatTask = RunGitBoundedAsync(workingDir, ct, "diff", "--cached", "--numstat");
         // 2) unstaged numstat (index ↔ worktree)
         var unstagedNumstatTask = RunGitBoundedAsync(workingDir, ct, "diff", "--numstat");
-        // 3) porcelain (XY 상태) — untracked 디렉토리는 파일 단위로 펼쳐서 표시
-        var porcelainTask = StatusPorcelainCoreAsync(workingDir, untrackedAll: true, ct);
+        // 3) porcelain (XY 상태)
+        var porcelainTask = GetStatusPorcelainAsync(workingDir, ct);
 
         var stagedNumstat = await stagedNumstatTask;
         var unstagedNumstat = await unstagedNumstatTask;
@@ -593,7 +593,6 @@ public class GitService(
             if (xy.X == '?' && xy.Y == '?')
             {
                 int addCount = 0;
-                var unifiedDiff = "";
                 var isBinary = IsLikelyBinary(path);
                 if (!isBinary)
                     try
@@ -602,17 +601,7 @@ public class GitService(
                         if (File.Exists(fullPath))
                         {
                             var content = await File.ReadAllTextAsync(fullPath, ct);
-                            var lines = content.Split('\n');
-                            addCount = lines.Length;
-
-                            // 합성 통합 diff — diff 탭에서 신규 파일 내용을 볼 수 있도록
-                            var diffBuilder = new StringBuilder();
-                            diffBuilder.AppendLine("--- /dev/null");
-                            diffBuilder.AppendLine($"+++ b/{path}");
-                            diffBuilder.AppendLine($"@@ -0,0 +1,{addCount} @@");
-                            foreach (var line in lines)
-                                diffBuilder.AppendLine("+" + line);
-                            unifiedDiff = diffBuilder.ToString();
+                            addCount = content.Split('\n').Length;
                         }
                     }
                     catch (Exception ex)
@@ -626,7 +615,6 @@ public class GitService(
                     ChangeType = FileChangeType.Untracked,
                     Staging = FileStagingState.Unstaged,
                     IsBinary = isBinary,
-                    UnifiedDiff = unifiedDiff,
                     Additions = addCount,
                     Deletions = 0
                 });
@@ -789,19 +777,9 @@ public class GitService(
         return files.ToList();
     }
 
-    public Task<List<string>> GetStatusPorcelainAsync(string workingDir, CancellationToken ct = default)
+    public async Task<List<string>> GetStatusPorcelainAsync(string workingDir, CancellationToken ct = default)
     {
-        return StatusPorcelainCoreAsync(workingDir, untrackedAll: false, ct);
-    }
-
-    private async Task<List<string>> StatusPorcelainCoreAsync(string workingDir, bool untrackedAll,
-        CancellationToken ct)
-    {
-        string[] args = untrackedAll
-            ? ["status", "--porcelain", "--untracked-files=all"]
-            : ["status", "--porcelain"];
-        // porcelain 첫 줄은 " M path"처럼 공백으로 시작할 수 있어 stdout trim 을 끄고 받는다.
-        var result = await RunGitCoreAsync(workingDir, LargeOutputMaxBytes, trimStdout: false, ct, args);
+        var result = await RunGitBoundedAsync(workingDir, ct, "status", "--porcelain");
         if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
             return [];
 
@@ -1515,16 +1493,16 @@ public class GitService(
 
     private async Task<GitResult> RunGitAsync(string workingDir, CancellationToken ct, params string[] args)
     {
-        return await RunGitCoreAsync(workingDir, null, true, ct, args);
+        return await RunGitCoreAsync(workingDir, null, ct, args);
     }
 
     private async Task<GitResult> RunGitBoundedAsync(string workingDir, CancellationToken ct, params string[] args)
     {
-        return await RunGitCoreAsync(workingDir, LargeOutputMaxBytes, true, ct, args);
+        return await RunGitCoreAsync(workingDir, LargeOutputMaxBytes, ct, args);
     }
 
-    private async Task<GitResult> RunGitCoreAsync(string workingDir, int? maxOutputBytes, bool trimStdout,
-        CancellationToken ct, params string[] args)
+    private async Task<GitResult> RunGitCoreAsync(string workingDir, int? maxOutputBytes, CancellationToken ct,
+        params string[] args)
     {
         var gitPath = await ResolveGitPathAsync();
         logger.LogDebug("git {Arguments}", string.Join(" ", args));
@@ -1534,8 +1512,7 @@ public class GitService(
             Arguments = args,
             WorkingDirectory = workingDir,
             EnvironmentVariables = SeoroConstants.Env.GitEnv,
-            MaxOutputBytes = maxOutputBytes,
-            TrimStdout = trimStdout
+            MaxOutputBytes = maxOutputBytes
         }, ct);
         if (result.Truncated)
             logger.LogWarning("git {Command} output truncated at {MaxBytes} bytes", args.FirstOrDefault(),

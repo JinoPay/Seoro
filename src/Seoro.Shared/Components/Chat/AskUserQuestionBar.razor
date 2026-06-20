@@ -6,7 +6,8 @@
         <div class="askbar-header">
             <div class="askbar-header-left">
                 <div class="askbar-icon-badge">
-                    <Icon Svg="@Lucide.MessagesSquare" Size="18"/>
+                    <MudIcon Icon="@Icons.Material.Filled.QuestionAnswer" Size="Size.Small"
+                             Style="width: 18px; height: 18px;"/>
                 </div>
                 <span class="askbar-title">응답 필요</span>
                 @if (_questions.Count > 1)
@@ -46,12 +47,16 @@
                         <span class="askbar-option-label">
                             @if (isSelected)
                             {
-                                <Icon Svg="@(q.MultiSelect ? Lucide.SquareCheck : Lucide.CircleCheck)"
-                                      Size="14" Style="color: var(--accent);"/>
+                                <MudIcon
+                                    Icon="@(q.MultiSelect ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckCircle)"
+                                    Size="Size.Small"
+                                    Style="width: 14px; height: 14px; color: var(--accent);"/>
                             }
                             else if (q.MultiSelect)
                             {
-                                <Icon Svg="@Lucide.Square" Size="14" Style="opacity: 0.4;"/>
+                                <MudIcon Icon="@Icons.Material.Filled.CheckBoxOutlineBlank"
+                                         Size="Size.Small"
+                                         Style="width: 14px; height: 14px; opacity: 0.4;"/>
                             }
                             @opt.Label
                         </span>
@@ -68,13 +73,15 @@
 
                 <div
                     class="askbar-option askbar-custom-option @(customActive ? "selected" : "") @(anyOptionSelected ? "dimmed" : "")">
-                    <TextField Value="@_customTexts[_currentPage]"
-                               ValueChanged="@((string? v) => OnCustomTextChanged(_currentPage, v ?? ""))"
-                               Placeholder="의견을 직접 입력하세요..."
-                               Lines="1"
-                               Immediate="true"
-                               Class="askbar-inline-textfield"
-                               OnKeyDown="HandleInputKeyDown"/>
+                    <MudTextField Value="@_customTexts[_currentPage]"
+                                  ValueChanged="@((string v) => OnCustomTextChanged(_currentPage, v))"
+                                  Placeholder="의견을 직접 입력하세요..."
+                                  Variant="Variant.Text"
+                                  Lines="1"
+                                  Immediate="true"
+                                  Underline="false"
+                                  Class="askbar-inline-textfield"
+                                  OnKeyDown="HandleInputKeyDown"/>
                 </div>
             </div>
         </div>
@@ -83,33 +90,33 @@
         <div class="askbar-actions">
             @if (!IsFirstPage)
             {
-                <Button ButtonStyle="ButtonStyle.Text"
-                        StartIcon="@Lucide.ArrowLeft"
-                        OnClick="GoPrevious"
-                        Class="askbar-nav-btn">
+                <MudButton Size="Size.Small" Variant="Variant.Text"
+                           StartIcon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="GoPrevious"
+                           Class="askbar-nav-btn">
                     이전
-                </Button>
+                </MudButton>
             }
             <div class="askbar-actions-spacer"></div>
             @if (IsLastPage)
             {
-                <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
-                        StartIcon="@Lucide.Send"
-                        Disabled="@(!CanSubmit || _submitted)"
-                        OnClick="Submit"
-                        Class="askbar-submit-btn">
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Send"
+                           Disabled="@(!CanSubmit || _submitted)"
+                           OnClick="Submit"
+                           Class="askbar-submit-btn">
                     응답 보내기
-                </Button>
+                </MudButton>
             }
             else
             {
-                <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
-                        EndIcon="@Lucide.ArrowRight"
-                        Disabled="@(!CurrentAnswered)"
-                        OnClick="GoNext"
-                        Class="askbar-submit-btn">
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                           EndIcon="@Icons.Material.Filled.ArrowForward"
+                           Disabled="@(!CurrentAnswered)"
+                           OnClick="GoNext"
+                           Class="askbar-submit-btn">
                     다음
-                </Button>
+                </MudButton>
             }
         </div>
     </div>

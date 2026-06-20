@@ -1,8 +1,8 @@
 @using System.Text.RegularExpressions
 @inject IRulesService RulesService
 @inject IChatState ChatState
-@inject IModalService ModalService
-@inject IToastService Snackbar
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <div class="settings-content-area">
     <ClaudeSettingScopeHeader Scope="_scope" ScopeChanged="OnScopeChanged"
@@ -10,14 +10,16 @@
                               ShowLocalScope="false"
                               Saving="false" OnSave="SaveSelected">
         <ExtraActions>
-            <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
-                    StartIcon="@Lucide.Sparkles" OnClick="@(() => _showTemplates = true)">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.AutoAwesome" OnClick="@(() => _showTemplates = true)"
+                       Style="text-transform: none;">
                 템플릿
-            </Button>
-            <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
-                    StartIcon="@Lucide.Plus" OnClick="CreateNewRule">
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="CreateNewRule"
+                       Style="text-transform: none;">
                 새 룰
-            </Button>
+            </MudButton>
         </ExtraActions>
     </ClaudeSettingScopeHeader>
 
@@ -25,9 +27,10 @@
         <div class="rules-layout">
             @* Left: Rule list *@
             <div class="rules-sidebar">
-                <TextField @bind-Value="_search" Placeholder="룰 검색..."
-                           AdornmentIcon="@Lucide.Search" Immediate="true"
-                           Class="mb-2"/>
+                <MudTextField T="string" @bind-Value="_search" Placeholder="룰 검색..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                              Class="mb-2"/>
 
                 @foreach (var rule in FilteredRules)
                 {
@@ -39,7 +42,8 @@
                             <div class="d-flex flex-wrap gap-1 mt-1">
                                 @foreach (var path in rule.PathFilters.Take(3))
                                 {
-                                    <Chip ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Info">@path</Chip>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                             Color="Color.Info">@path</MudChip>
                                 }
                             </div>
                         }
@@ -63,18 +67,19 @@
                     </div>
 
                     <div class="d-flex justify-space-between align-center mb-3">
-                        <TextField @bind-Value="_selectedRule.FileName" Label="파일명"
-                                   Style="max-width: 300px;"/>
+                        <MudTextField T="string" @bind-Value="_selectedRule.FileName" Label="파일명"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 300px;"/>
                         <div class="d-flex gap-2">
-                            <IconButton Icon="@(_showPreview ? Lucide.Pencil : Lucide.Eye)"
-                                        Active="@_showPreview" Tone="Tone.Primary"
-                                        OnClick="@(() => _showPreview = !_showPreview)"
-                                        Title="@(_showPreview ? "에디터로 전환" : "프리뷰로 전환")"/>
-                            <IconButton Icon="@Lucide.Trash2" Tone="Tone.Error"
-                                        OnClick="DeleteSelected"/>
-                            <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
-                                    OnClick="SaveSelected">저장
-                            </Button>
+                            <MudToggleIconButton @bind-Toggled="_showPreview"
+                                                 Icon="@Icons.Material.Filled.Visibility"
+                                                 ToggledIcon="@Icons.Material.Filled.Edit"
+                                                 Size="Size.Small" Color="Color.Primary"
+                                                 title="@(_showPreview ? "에디터로 전환" : "프리뷰로 전환")"/>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                           OnClick="DeleteSelected" Size="Size.Small"/>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                       OnClick="SaveSelected" Style="text-transform: none;">저장
+                            </MudButton>
                         </div>
                     </div>
 
@@ -86,16 +91,16 @@
                     }
                     else
                     {
-                        <TextField @bind-Value="_selectedRule.Content" Label="룰 내용 (Markdown)"
-                                   Lines="20"
-                                   Style="font-family: monospace; font-size: 0.8125rem;"
-                                   Placeholder="# Rule Title&#10;&#10;- Rule 1&#10;- Rule 2"/>
+                        <MudTextField T="string" @bind-Value="_selectedRule.Content" Label="룰 내용 (Markdown)"
+                                      Variant="Variant.Outlined" Lines="20"
+                                      Style="font-family: monospace; font-size: 0.8125rem;"
+                                      Placeholder="# Rule Title&#10;&#10;- Rule 1&#10;- Rule 2"/>
                     }
                 }
                 else
                 {
                     <div class="d-flex flex-column align-center justify-center" style="height: 300px; opacity: 0.5;">
-                        <Icon Svg="@Lucide.Shield" Size="24"/>
+                        <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Large"/>
                         <div class="typo-body2 mt-2">왼쪽에서 룰을 선택하거나 새 룰을 만드세요</div>
                     </div>
                 }
@@ -205,11 +210,11 @@
             _selectedRule.FilePath = newPath;
             await RulesService.SaveAsync(_selectedRule);
             _originalFilePath = newPath;
-            Snackbar.Add("룰이 저장되었습니다.", ToastSeverity.Success);
+            Snackbar.Add("룰이 저장되었습니다.", Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"저장 실패: {ex.Message}", ToastSeverity.Error);
+            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
         }
     }
 
@@ -217,7 +222,7 @@
     {
         if (_selectedRule == null) return;
 
-        var result = await ModalService.ShowMessageBoxAsync(
+        var result = await DialogService.ShowMessageBoxAsync(
             "룰 삭제",
             $"'{_selectedRule.FileName}'을(를) 삭제하시겠습니까?",
             "삭제", cancelText: "취소");
@@ -228,7 +233,7 @@
         _rules.Remove(_selectedRule);
         _selectedRule = _rules.FirstOrDefault();
         _originalFilePath = _selectedRule?.FilePath;
-        Snackbar.Add("룰이 삭제되었습니다.", ToastSeverity.Success);
+        Snackbar.Add("룰이 삭제되었습니다.", Severity.Success);
     }
 
     private async Task ApplyTemplate(TemplateDefinition template)
@@ -250,7 +255,7 @@
         await LoadRules();
         _selectedRule = _rules.FirstOrDefault(r => r.FileName == fileName);
         _originalFilePath = _selectedRule?.FilePath;
-        Snackbar.Add($"템플릿 '{template.Name}' 적용됨", ToastSeverity.Success);
+        Snackbar.Add($"템플릿 '{template.Name}' 적용됨", Severity.Success);
     }
 
     private static string RenderMarkdownToHtml(string markdown)
@@ -267,7 +272,7 @@
         html = Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
         html = Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
         html = Regex.Replace(html, @"`(.+?)`",
-            "<code style='background: var(--bg-base); padding: 2px 4px; border-radius: 3px;'>$1</code>");
+            "<code style='background: var(--mud-palette-background); padding: 2px 4px; border-radius: 3px;'>$1</code>");
         html = Regex.Replace(html, @"^- (.+)$",
             "<li>$1</li>", RegexOptions.Multiline);
         html = Regex.Replace(html, @"\n\n", "</p><p>");
@@ -287,7 +292,7 @@
     .rules-sidebar {
         width: 260px;
         min-width: 260px;
-        border-right: 1px solid var(--border-default);
+        border-right: 1px solid var(--mud-palette-lines-default);
         padding: 12px;
         overflow-y: auto;
         max-height: 70vh;
@@ -302,12 +307,12 @@
     }
 
     .rules-item:hover {
-        background: var(--bg-hover);
+        background: var(--mud-palette-action-default-hover);
     }
 
     .rules-item.active {
-        background: var(--accent-subtle);
-        border-left: 2px solid var(--accent);
+        background: var(--mud-palette-primary-hover);
+        border-left: 2px solid var(--mud-palette-primary);
     }
 
     .rules-editor {
@@ -318,8 +323,8 @@
     }
 
     .rules-preview {
-        background: var(--bg-base);
-        border: 1px solid var(--border-default);
+        background: var(--mud-palette-background);
+        border: 1px solid var(--mud-palette-lines-default);
         border-radius: 8px;
         padding: 20px;
         min-height: 400px;

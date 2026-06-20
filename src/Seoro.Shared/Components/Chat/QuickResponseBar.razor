@@ -3,11 +3,11 @@
     <div class="quick-response-bar">
         @foreach (var option in Options)
         {
-            <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
-                    OnClick="@(() => OnResponse.InvokeAsync(option))"
-                    Style="border-radius: 16px; padding: 2px 14px;">
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                       OnClick="@(() => OnResponse.InvokeAsync(option))"
+                       Style="text-transform: none; border-radius: 16px; font-size: var(--text-sm); padding: 2px 14px; min-width: 0;">
                 @option
-            </Button>
+            </MudButton>
         }
     </div>
 }

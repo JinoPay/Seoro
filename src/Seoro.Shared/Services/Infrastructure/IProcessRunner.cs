@@ -26,13 +26,6 @@ public record ProcessRunOptions
 
     public string[] Arguments { get; init; } = [];
     public TimeSpan? Timeout { get; init; }
-
-    /// <summary>
-    ///     When false, stdout is returned verbatim without trimming whitespace.
-    ///     Required for position-sensitive output such as <c>git status --porcelain</c>,
-    ///     where the first line may begin with a meaningful space.
-    /// </summary>
-    public bool TrimStdout { get; init; } = true;
 }
 
 public record ProcessResult(bool Success, string Stdout, string Stderr, int ExitCode, bool Truncated = false);

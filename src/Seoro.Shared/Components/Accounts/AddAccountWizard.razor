@@ -1,125 +1,137 @@
 @inject IClaudeAccountService AccountService
 @inject IClaudeCredentialService CredentialService
-@inject IToastService Snackbar
+@inject ISnackbar Snackbar
 @inject IJSRuntime JS
 @implements IDisposable
 
-<div class="stack gap-3" style="min-width: 380px;">
-    @switch (_step)
-    {
-        case WizardStep.Confirm:
-            <div class="typo-caption text-secondary">
-                현재 계정의 인증 정보를 백업한 후 로그아웃 상태로 만듭니다.
-                새 계정으로 로그인하면 자동으로 감지됩니다.
-            </div>
-
-            @if (_activeEmail != null)
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Primary"/>
+            <span class="typo-subtitle1">새 계정 추가</span>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="stack gap-3" style="min-width: 380px;">
+            @switch (_step)
             {
-                <div class="d-flex align-center gap-2 pa-2"
-                     style="background: var(--bg-sidebar); border-radius: 8px;">
-                    <Icon Svg="@Lucide.CircleUser" Size="14" Tone="Tone.Info"/>
-                    <div>
-                        <div class="typo-caption text-secondary">현재 활성 계정</div>
-                        <div class="typo-body2">@_activeEmail</div>
+                case WizardStep.Confirm:
+                    <div class="typo-caption text-secondary">
+                        현재 계정의 인증 정보를 백업한 후 로그아웃 상태로 만듭니다.
+                        새 계정으로 로그인하면 자동으로 감지됩니다.
                     </div>
-                </div>
+
+                    @if (_activeEmail != null)
+                    {
+                        <div class="d-flex align-center gap-2 pa-2"
+                             style="background: var(--mud-palette-background-grey); border-radius: 8px;">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Small" Color="Color.Info"/>
+                            <div>
+                                <div class="typo-caption text-secondary">현재 활성 계정</div>
+                                <div class="typo-body2">@_activeEmail</div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (_activeEmail == null && !_loading)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            활성 계정이 없습니다. 바로 로그인 단계로 진행합니다.
+                        </MudAlert>
+                    }
+                    break;
+
+                case WizardStep.WaitingLogin:
+                    @if (_preparing)
+                    {
+                        <div class="d-flex flex-column align-center gap-2 pa-4">
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
+                            <div class="typo-caption text-secondary">백업 및 로그아웃 처리 중...</div>
+                        </div>
+                    }
+                    else if (_prepareError != null)
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true">@_prepareError</MudAlert>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Success" Dense="true" Class="mb-2">
+                            이전 계정이 안전하게 백업되었습니다.
+                        </MudAlert>
+
+                        <div class="typo-caption text-secondary">
+                            터미널에서 아래 명령어를 실행하여 새 계정으로 로그인하세요.
+                        </div>
+
+                        <div class="d-flex align-center gap-2 pa-2"
+                             style="background: var(--mud-palette-background-grey); border-radius: 8px; font-family: var(--mud-typography-monospace);">
+                            <code style="flex: 1;">claude login</code>
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                           Size="Size.Small" Color="Color.Default"
+                                           OnClick="CopyLoginCommand"/>
+                        </div>
+
+                        <div class="d-flex align-center gap-2 pa-2">
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary"/>
+                            <span class="typo-caption text-secondary">로그인 대기 중...</span>
+                        </div>
+                    }
+                    break;
+
+                case WizardStep.Register:
+                    @if (!string.IsNullOrEmpty(_detectedEmail))
+                    {
+                        <div class="d-flex align-center gap-2 pa-2"
+                             style="background: var(--mud-palette-background-grey); border-radius: 8px;">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Small" Color="Color.Success"/>
+                            <div>
+                                <div class="typo-caption text-secondary">감지된 새 계정</div>
+                                <div class="typo-body2">@_detectedEmail</div>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined"
+                                     Style="height: 20px; margin-left: auto;">로그인됨</MudChip>
+                        </div>
+                    }
+
+                    <MudTextField @bind-Value="_profileName" Label="프로필 이름"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Placeholder="예: 개인, 회사, 프리랜서..."
+                                  HelperText="여러 계정을 구분하는 이름"
+                                  Immediate="true" AutoFocus="true"
+                                  @onkeydown="OnKeyDown"/>
+                    break;
             }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        @switch (_step)
+        {
+            case WizardStep.Confirm:
+                <MudButton OnClick="Cancel" Variant="Variant.Text">취소</MudButton>
+                <MudButton OnClick="GoToWaitingLogin" Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="@_loading">
+                    계속
+                </MudButton>
+                break;
 
-            @if (_activeEmail == null && !_loading)
-            {
-                <Alert Tone="Tone.Info" Dense="true">
-                    활성 계정이 없습니다. 바로 로그인 단계로 진행합니다.
-                </Alert>
-            }
-            break;
+            case WizardStep.WaitingLogin:
+                <MudButton OnClick="CancelWithRestore" Variant="Variant.Text"
+                           Disabled="@_preparing">취소</MudButton>
+                break;
 
-        case WizardStep.WaitingLogin:
-            @if (_preparing)
-            {
-                <div class="d-flex flex-column align-center gap-2 pa-4">
-                    <Spinner Size="16"/>
-                    <div class="typo-caption text-secondary">백업 및 로그아웃 처리 중...</div>
-                </div>
-            }
-            else if (_prepareError != null)
-            {
-                <Alert Tone="Tone.Error" Dense="true">@_prepareError</Alert>
-            }
-            else
-            {
-                <Alert Tone="Tone.Success" Dense="true" Class="mb-2">
-                    이전 계정이 안전하게 백업되었습니다.
-                </Alert>
-
-                <div class="typo-caption text-secondary">
-                    터미널에서 아래 명령어를 실행하여 새 계정으로 로그인하세요.
-                </div>
-
-                <div class="d-flex align-center gap-2 pa-2"
-                     style="background: var(--bg-sidebar); border-radius: 8px; font-family: var(--font-mono);">
-                    <code style="flex: 1;">claude login</code>
-                    <IconButton Icon="@Lucide.Copy"
-                                OnClick="CopyLoginCommand"/>
-                </div>
-
-                <div class="d-flex align-center gap-2 pa-2">
-                    <Spinner Size="16"/>
-                    <span class="typo-caption text-secondary">로그인 대기 중...</span>
-                </div>
-            }
-            break;
-
-        case WizardStep.Register:
-            @if (!string.IsNullOrEmpty(_detectedEmail))
-            {
-                <div class="d-flex align-center gap-2 pa-2"
-                     style="background: var(--bg-sidebar); border-radius: 8px;">
-                    <Icon Svg="@Lucide.CircleUser" Size="14" Tone="Tone.Success"/>
-                    <div>
-                        <div class="typo-caption text-secondary">감지된 새 계정</div>
-                        <div class="typo-body2">@_detectedEmail</div>
-                    </div>
-                    <Chip Tone="Tone.Success" ButtonStyle="ButtonStyle.Outlined"
-                          Style="margin-left: auto;">로그인됨</Chip>
-                </div>
-            }
-
-            <TextField @bind-Value="_profileName" Label="프로필 이름"
-                       Placeholder="예: 개인, 회사, 프리랜서..."
-                       HelperText="여러 계정을 구분하는 이름"
-                       Immediate="true" AutoFocus="true"
-                       OnKeyDown="OnKeyDown"/>
-            break;
-    }
-</div>
-<div class="ui-modal__footer">
-    @switch (_step)
-    {
-        case WizardStep.Confirm:
-            <Button OnClick="Cancel" ButtonStyle="ButtonStyle.Text">취소</Button>
-            <Button OnClick="GoToWaitingLogin" ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
-                    Disabled="@_loading">
-                계속
-            </Button>
-            break;
-
-        case WizardStep.WaitingLogin:
-            <Button OnClick="CancelWithRestore" ButtonStyle="ButtonStyle.Text"
-                    Disabled="@_preparing">취소</Button>
-            break;
-
-        case WizardStep.Register:
-            <Button OnClick="CancelWithRestore" ButtonStyle="ButtonStyle.Text">취소</Button>
-            <Button OnClick="ConfirmRegister" ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
-                    Disabled="@(!CanRegister)" StartIcon="@Lucide.Save">
-                등록
-            </Button>
-            break;
-    }
-</div>
+            case WizardStep.Register:
+                <MudButton OnClick="CancelWithRestore" Variant="Variant.Text">취소</MudButton>
+                <MudButton OnClick="ConfirmRegister" Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="@(!CanRegister)" StartIcon="@Icons.Material.Filled.Save">
+                    등록
+                </MudButton>
+                break;
+        }
+    </DialogActions>
+</MudDialog>
 
 @code {
-    [CascadingParameter] private IModalInstance Modal { get; set; } = null!;
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
 
     private enum WizardStep { Confirm, WaitingLogin, Register }
 
@@ -223,16 +235,16 @@
         try
         {
             var account = await AccountService.RegisterCurrentAsync(_profileName.Trim());
-            Snackbar.Add($"'{account.ProfileName}' 계정이 등록되었습니다.", ToastSeverity.Success);
-            Modal.Close(ModalResult.Ok(account));
+            Snackbar.Add($"'{account.ProfileName}' 계정이 등록되었습니다.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(account));
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"등록 실패: {ex.Message}", ToastSeverity.Error);
+            Snackbar.Add($"등록 실패: {ex.Message}", Severity.Error);
         }
     }
 
-    private void Cancel() => Modal.Cancel();
+    private void Cancel() => MudDialog.Cancel();
 
     private async Task CancelWithRestore()
     {
@@ -246,21 +258,21 @@
             try
             {
                 await AccountService.RestoreAfterCancelAsync(idToRestore);
-                Snackbar.Add("이전 계정이 복원되었습니다.", ToastSeverity.Info);
+                Snackbar.Add("이전 계정이 복원되었습니다.", Severity.Info);
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"계정 복원 실패: {ex.Message}", ToastSeverity.Error);
+                Snackbar.Add($"계정 복원 실패: {ex.Message}", Severity.Error);
             }
         }
 
-        Modal.Cancel();
+        MudDialog.Cancel();
     }
 
     private async Task CopyLoginCommand()
     {
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", "claude login");
-        Snackbar.Add("클립보드에 복사되었습니다.", ToastSeverity.Info);
+        Snackbar.Add("클립보드에 복사되었습니다.", Severity.Info);
     }
 
     private async Task OnKeyDown(KeyboardEventArgs e)

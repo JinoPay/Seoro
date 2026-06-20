@@ -7,14 +7,14 @@
 <div class="stack gap-3">
     <div class="stack-row items-center gap-2">
         <span class="typo-body2">@Strings.Settings_Updates_CurrentVersion</span>
-        <Chip>
+        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">
             @(Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "개발 모드")
-        </Chip>
+        </MudChip>
         @if (!UpdateService.IsInstalled)
         {
-            <Chip Tone="Tone.Info" ButtonStyle="ButtonStyle.Outlined">
+            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
                 @Strings.Settings_Updates_DevBuild
-            </Chip>
+            </MudChip>
         }
     </div>
 
@@ -23,7 +23,8 @@
             <span class="typo-body2">@Strings.Settings_Updates_AutoCheckLabel</span>
             <div class="typo-caption text-secondary">@Strings.Settings_Updates_AutoCheckHint</div>
         </div>
-        <Switch @bind-Value="Settings.AutoUpdateEnabled"/>
+        <MudSwitch T="bool" @bind-Value="Settings.AutoUpdateEnabled"
+                   Color="Color.Primary" UncheckedColor="Color.Default"/>
     </div>
 
     @if (Settings.AutoUpdateEnabled)
@@ -42,60 +43,62 @@
         </div>
     }
 
-    <Button ButtonStyle="ButtonStyle.Outlined" Tone="Tone.Primary"
-            OnClick="CheckForUpdates"
-            StartIcon="@(_updateChecking ? null : Lucide.RefreshCw)"
-            Disabled="@(_updateChecking || _updateDownloading)"
-            Style="align-self: flex-start;">
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+               OnClick="CheckForUpdates"
+               StartIcon="@Icons.Material.Filled.Refresh"
+               Disabled="@(_updateChecking || _updateDownloading)"
+               Style="text-transform: none; align-self: flex-start;">
         @if (_updateChecking)
         {
-            <Spinner Size="14" Style="margin-right: 8px;"/>
+            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                 Style="width: 16px; height: 16px; margin-right: 8px;"/>
             @Strings.Settings_Updates_Checking
         }
         else
         {
             @Strings.Settings_Updates_CheckButton
         }
-    </Button>
+    </MudButton>
 
     @if (_updateError != null)
     {
-        <Alert Tone="Tone.Error" Dense="true">@_updateError</Alert>
+        <MudAlert Severity="Severity.Error" Dense="true">@_updateError</MudAlert>
     }
     else if (_updateReady)
     {
-        <Alert Tone="Tone.Success" Dense="true">
+        <MudAlert Severity="Severity.Success" Dense="true">
             @Strings.Settings_Updates_Ready
-        </Alert>
-        <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
-                OnClick="@(() => UpdateService.ApplyUpdateAndRestart())"
-                StartIcon="@Lucide.RotateCcw"
-                Style="align-self: flex-start;">
+        </MudAlert>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   OnClick="@(() => UpdateService.ApplyUpdateAndRestart())"
+                   StartIcon="@Icons.Material.Filled.RestartAlt"
+                   Style="text-transform: none; align-self: flex-start;">
             @Strings.Settings_Updates_RestartButton
-        </Button>
+        </MudButton>
     }
     else if (_updateDownloading)
     {
-        <Alert Tone="Tone.Info" Dense="true">
-            <Spinner Size="14" Style="margin-right: 8px;"/>
+        <MudAlert Severity="Severity.Info" Dense="true">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                 Style="width: 16px; height: 16px; margin-right: 8px;"/>
             @Strings.Settings_Updates_Downloading
-        </Alert>
+        </MudAlert>
     }
     else if (_updateInfo != null)
     {
-        <Alert Tone="Tone.Info" Dense="true">
+        <MudAlert Severity="Severity.Info" Dense="true">
             @Strings.Settings_Updates_Available(_updateInfo.TargetVersion.ToString())
             @if (_updateInfo.DownloadSize.HasValue)
             {
                 @:(@FormatSize(_updateInfo.DownloadSize.Value))
             }
-        </Alert>
-        <Button ButtonStyle="ButtonStyle.Filled" Tone="Tone.Primary"
-                OnClick="DownloadUpdate"
-                StartIcon="@Lucide.Download"
-                Style="align-self: flex-start;">
+        </MudAlert>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   OnClick="DownloadUpdate"
+                   StartIcon="@Icons.Material.Filled.Download"
+                   Style="text-transform: none; align-self: flex-start;">
             @Strings.Settings_Updates_DownloadButton
-        </Button>
+        </MudButton>
     }
     else if (!_updateChecking)
     {
@@ -106,9 +109,9 @@
 
     @if (!UpdateService.IsInstalled)
     {
-        <Alert Tone="Tone.Warning" Dense="true" Class="mt-2">
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
             @Strings.Settings_Updates_DevBuildWarning
-        </Alert>
+        </MudAlert>
     }
 </div>
 
