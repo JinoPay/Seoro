@@ -32,7 +32,7 @@
         }
 
         @* Tree body — single Virtualize over flat list *@
-        <div class="tree-body">
+        <div class="tree-body" role="tree" aria-label="@Strings.Dashboard_Stats_Sessions">
             <Virtualize Items="_flatRows" Context="row" ItemSize="40" OverscanCount="5">
                 @switch (row.Kind)
                 {

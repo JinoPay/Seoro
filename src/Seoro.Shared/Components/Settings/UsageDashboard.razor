@@ -12,9 +12,9 @@
             <MudChipSet T="string" SelectedValue="_selectedRange" SelectedValueChanged="OnRangeChanged"
                         SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
                         Variant="Variant.Outlined" Color="Color.Primary">
-                <MudChip T="string" Value="@("7")">7일</MudChip>
-                <MudChip T="string" Value="@("30")">30일</MudChip>
-                <MudChip T="string" Value="@("all")">전체</MudChip>
+                <MudChip T="string" Value="@("7")">@Strings.Usage_RangeDays(7)</MudChip>
+                <MudChip T="string" Value="@("30")">@Strings.Usage_RangeDays(30)</MudChip>
+                <MudChip T="string" Value="@("all")">@Strings.Common_All</MudChip>
             </MudChipSet>
         </div>
         <div style="display: flex; align-items: center; gap: 4px;">
@@ -22,14 +22,14 @@
             {
                 <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="width: 20px; height: 20px;"/>
             }
-            <MudTooltip Text="통계 새로고침">
+            <MudTooltip Text="@Strings.Usage_RefreshStats">
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                                Disabled="_refreshing || _loading"
                                OnClick="OnRefreshClick"/>
             </MudTooltip>
             <button class="analytics-nav-link" @onclick="@(() => ChatState.SetSettingsSection("session-replay"))">
                 <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small"/>
-                세션 히스토리 →
+                @Strings.Usage_SessionHistory
             </button>
         </div>
     </div>
@@ -50,42 +50,42 @@
             <div class="analytics-activity-header">
                 <div class="analytics-section-title" style="margin-bottom: 0;">
                     <MudIcon Icon="@Icons.Material.Filled.Insights" Size="Size.Small"/>
-                    전체 활동 요약
+                    @Strings.Usage_ActivitySummary
                 </div>
                 <span
-                    class="analytics-activity-badge">@(_selectedRange == "all" ? "컴퓨터 내 모든 세션" : $"최근 {_selectedRange}일")</span>
+                    class="analytics-activity-badge">@(_selectedRange == "all" ? Strings.Usage_AllSessions : Strings.Usage_RecentDays(_selectedRange))</span>
             </div>
             <div class="analytics-activity-stats">
                 <div class="analytics-activity-stat">
                     <MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Small" Style="font-size: 0.85rem;"/>
                     <span class="analytics-activity-num">@FormatNumber(summary.Sessions)</span>
-                    <span class="analytics-activity-label">세션</span>
+                    <span class="analytics-activity-label">@Strings.Usage_Sessions</span>
                 </div>
                 <div class="analytics-activity-stat">
                     <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small"
                              Style="font-size: 0.85rem;"/>
                     <span class="analytics-activity-num">@FormatNumber(summary.Messages)</span>
-                    <span class="analytics-activity-label">메시지</span>
+                    <span class="analytics-activity-label">@Strings.Usage_Messages</span>
                 </div>
                 <div class="analytics-activity-stat">
                     <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Style="font-size: 0.85rem;"/>
                     <span class="analytics-activity-num">@FormatNumber(summary.ToolCalls)</span>
-                    <span class="analytics-activity-label">도구 호출</span>
+                    <span class="analytics-activity-label">@Strings.Usage_ToolCalls</span>
                 </div>
                 <div class="analytics-activity-stat">
                     <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Style="font-size: 0.85rem;"/>
                     <span class="analytics-activity-num">@summary.ActiveDays</span>
-                    <span class="analytics-activity-label">활동일</span>
+                    <span class="analytics-activity-label">@Strings.Usage_ActiveDays</span>
                 </div>
             </div>
             @if (_dashStats.Cost is { } cost)
             {
                 <div class="analytics-activity-cost">
-                    <span>오늘 $@cost.Today.ToString("F2")</span>
+                    <span>@Strings.Usage_Today $@cost.Today.ToString("F2")</span>
                     <span class="analytics-activity-sep">·</span>
-                    <span>이번달 $@cost.ThisMonth.ToString("F2")</span>
+                    <span>@Strings.Usage_ThisMonth $@cost.ThisMonth.ToString("F2")</span>
                     <span class="analytics-activity-sep">·</span>
-                    <span>추정 $@cost.MonthlyProjection.ToString("F2")/월</span>
+                    <span>@Strings.Usage_Projected $@cost.MonthlyProjection.ToString("F2")@Strings.Usage_PerMonth</span>
                 </div>
             }
         </div>
@@ -97,11 +97,11 @@
                     <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small"/>
                 </div>
                 <div class="analytics-stat-content">
-                    <div class="analytics-stat-label">총 비용</div>
+                    <div class="analytics-stat-label">@Strings.Usage_TotalCost</div>
                     <div class="analytics-stat-value" style="color: var(--mud-palette-success);">
                         $@_stats.TotalCost.ToString("F2")
                     </div>
-                    <div class="analytics-stat-subtitle">$@CostPerMessage.ToString("F4")/메시지 · @summary.Sessions 세션
+                    <div class="analytics-stat-subtitle">$@CostPerMessage.ToString("F4")@Strings.Usage_PerMessage · @Strings.Usage_NSessions(summary.Sessions)
                     </div>
                 </div>
             </div>
@@ -111,11 +111,11 @@
                     <MudIcon Icon="@Icons.Material.Filled.Token" Size="Size.Small"/>
                 </div>
                 <div class="analytics-stat-content">
-                    <div class="analytics-stat-label">총 토큰</div>
+                    <div class="analytics-stat-label">@Strings.Usage_TotalTokens</div>
                     <div class="analytics-stat-value" style="color: var(--mud-palette-info);">
                         @FormatTokens(_stats.TotalTokens)
                     </div>
-                    <div class="analytics-stat-subtitle">평균 @FormatTokens(AvgDailyTokens)/일</div>
+                    <div class="analytics-stat-subtitle">@Strings.Usage_AvgPerDay(FormatTokens(AvgDailyTokens))</div>
                 </div>
             </div>
 
@@ -124,14 +124,14 @@
                     <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small"/>
                 </div>
                 <div class="analytics-stat-content">
-                    <div class="analytics-stat-label">최장 세션</div>
+                    <div class="analytics-stat-label">@Strings.Usage_LongestSession</div>
                     <div class="analytics-stat-value" style="color: var(--mud-palette-warning);">
                         @FormatDuration(_selectedRange == "all"
                             ? _dashStats.LongestSessionMs > 0 ? _dashStats.LongestSessionMs : _stats.LongestSession?.DurationMs ?? 0
                             : _stats.LongestSession?.DurationMs ?? 0)
                     </div>
                     <div
-                        class="analytics-stat-subtitle">@(_selectedRange == "all" ? "전체 세션 중 최장" : $"최근 {_selectedRange}일 중 최장")</div>
+                        class="analytics-stat-subtitle">@(_selectedRange == "all" ? Strings.Usage_LongestAll : Strings.Usage_LongestRecent(_selectedRange))</div>
                 </div>
             </div>
 
@@ -140,7 +140,7 @@
                     <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small"/>
                 </div>
                 <div class="analytics-stat-content">
-                    <div class="analytics-stat-label">활성 시작</div>
+                    <div class="analytics-stat-label">@Strings.Usage_ActiveSince</div>
                     <div class="analytics-stat-value" style="color: var(--mud-palette-primary);">
                         @FormatActiveSince(GetFirstSessionDate())
                     </div>
@@ -155,7 +155,7 @@
             <div class="analytics-section-card">
                 <div class="analytics-section-title">
                     <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small"/>
-                    모델별 사용량
+                    @Strings.Usage_ByModel
                 </div>
                 @foreach (var model in _stats.ByModel)
                 {
@@ -176,7 +176,7 @@
                             @{ var modelTotal = Math.Max(model.InputTokens + model.OutputTokens + model.CacheCreationTokens + model.CacheReadTokens, 1); }
                             <div class="analytics-bar-item">
                                 <div class="analytics-bar-label">
-                                    <span>입력</span>
+                                    <span>@Strings.Usage_Input</span>
                                     <span>@FormatTokens(model.InputTokens)</span>
                                 </div>
                                 <div class="analytics-bar-track">
@@ -186,7 +186,7 @@
                             </div>
                             <div class="analytics-bar-item">
                                 <div class="analytics-bar-label">
-                                    <span>출력</span>
+                                    <span>@Strings.Usage_Output</span>
                                     <span>@FormatTokens(model.OutputTokens)</span>
                                 </div>
                                 <div class="analytics-bar-track">
@@ -196,7 +196,7 @@
                             </div>
                             <div class="analytics-bar-item">
                                 <div class="analytics-bar-label">
-                                    <span>캐시 읽기</span>
+                                    <span>@Strings.Usage_CacheRead</span>
                                     <span>@FormatTokens(model.CacheReadTokens)</span>
                                 </div>
                                 <div class="analytics-bar-track">
@@ -206,7 +206,7 @@
                             </div>
                             <div class="analytics-bar-item">
                                 <div class="analytics-bar-label">
-                                    <span>캐시 쓰기</span>
+                                    <span>@Strings.Usage_CacheWrite</span>
                                     <span>@FormatTokens(model.CacheCreationTokens)</span>
                                 </div>
                                 <div class="analytics-bar-track">
@@ -227,9 +227,9 @@
                 <div class="analytics-section-header">
                     <div class="analytics-section-title">
                         <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small"/>
-                        일별 활동 (@(_selectedRange == "all" ? "전체" : $"{_selectedRange}일"))
+                        @Strings.Usage_DailyActivity (@(_selectedRange == "all" ? Strings.Common_All : Strings.Usage_RangeDays(_selectedRange)))
                     </div>
-                    <span class="analytics-section-meta">평균 @AvgDailyMessages 메시지/일</span>
+                    <span class="analytics-section-meta">@Strings.Usage_AvgMessagesPerDay(AvgDailyMessages)</span>
                 </div>
                 @{
                     var rangeDays = _selectedRange == "all"
@@ -252,7 +252,7 @@
                             {
                                 var heightPct = day.MessageCount > 0 ? Math.Max((double)day.MessageCount / maxDailyMessages * 100, 2) : 2;
                                 <div class="analytics-chart-bar-wrapper"
-                                     title="@FormatChartDate(day.Date): @day.MessageCount 메시지 · @day.SessionCount 세션">
+                                     title="@FormatChartDate(day.Date): @day.MessageCount @Strings.Usage_Messages · @day.SessionCount @Strings.Usage_Sessions">
                                     <div class="analytics-chart-bar @(day.MessageCount == 0 ? "inactive" : "")"
                                          style="height: @heightPct.ToString("F1")%;"></div>
                                 </div>
@@ -266,7 +266,7 @@
                 }
                 else
                 {
-                    <p class="analytics-no-data">데이터 없음</p>
+                    <p class="analytics-no-data">@Strings.Usage_NoData</p>
                 }
             </div>
 
@@ -281,12 +281,12 @@
                 <div class="analytics-section-header">
                     <div class="analytics-section-title">
                         <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small"/>
-                        시간대별 활동
+                        @Strings.Usage_HourlyActivity
                     </div>
                     @if (peakHourIdx >= 0)
                     {
                         <span
-                            class="analytics-section-meta">피크: @($"{peakHourIdx:D2}:00") (@hourCounts[peakHourIdx]건)</span>
+                            class="analytics-section-meta">@Strings.Usage_Peak($"{peakHourIdx:D2}:00", hourCounts[peakHourIdx])</span>
                     }
                 </div>
                 @if (hourCounts.Any(h => h > 0))
@@ -304,7 +304,7 @@
                                 var hourCount = hourCounts[h];
                                 var heightPct = hourCount > 0 ? Math.Max((double)hourCount / maxHour * 100, 2) : 2;
                                 var isPeak = h == peakHourIdx;
-                                <div class="analytics-chart-bar-wrapper" title="@($"{h:D2}:00 — {hourCount}세션")">
+                                <div class="analytics-chart-bar-wrapper" title="@($"{h:D2}:00 — {hourCount} {Strings.Usage_Sessions}")">
                                     <div
                                         class="analytics-chart-bar @(isPeak ? "peak" : "") @(hourCount == 0 ? "inactive" : "")"
                                         style="height: @heightPct.ToString("F1")%;"></div>
@@ -322,7 +322,7 @@
                 }
                 else
                 {
-                    <p class="analytics-no-data">데이터 없음</p>
+                    <p class="analytics-no-data">@Strings.Usage_NoData</p>
                 }
             </div>
         </div>
@@ -333,31 +333,30 @@
             <div class="analytics-section-card">
                 <div class="analytics-section-title">
                     <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small"/>
-                    캐시 효율
+                    @Strings.Usage_CacheEfficiency
                 </div>
                 <div class="analytics-cache-stats">
                     <div class="analytics-cache-stat">
-                        <div class="analytics-cache-stat-label">캐시 히트율</div>
+                        <div class="analytics-cache-stat-label">@Strings.Usage_CacheHitRate</div>
                         <div class="analytics-cache-stat-value" style="color: var(--mud-palette-success);">
                             @CacheEfficiencyRate.ToString("F1")%
                         </div>
-                        <div class="analytics-cache-stat-sub">캐시에서 @FormatTokens(_stats?.TotalCacheReadTokens ?? 0) 토큰
+                        <div class="analytics-cache-stat-sub">@Strings.Usage_CacheFromTokens(FormatTokens(_stats?.TotalCacheReadTokens ?? 0))
                         </div>
                     </div>
                     <div class="analytics-cache-stat">
-                        <div class="analytics-cache-stat-label">총 캐시 볼륨</div>
+                        <div class="analytics-cache-stat-label">@Strings.Usage_TotalCacheVolume</div>
                         <div class="analytics-cache-stat-value" style="color: var(--mud-palette-info);">
                             @FormatTokens(TotalCacheTokens)
                         </div>
-                        <div class="analytics-cache-stat-sub">읽기 @FormatTokens(_stats?.TotalCacheReadTokens ?? 0) ·
-                            쓰기 @FormatTokens(_stats?.TotalCacheCreationTokens ?? 0)</div>
+                        <div class="analytics-cache-stat-sub">@Strings.Usage_ReadWriteTokens(FormatTokens(_stats?.TotalCacheReadTokens ?? 0), FormatTokens(_stats?.TotalCacheCreationTokens ?? 0))</div>
                     </div>
                     <div class="analytics-cache-stat">
-                        <div class="analytics-cache-stat-label">예상 절감액</div>
+                        <div class="analytics-cache-stat-label">@Strings.Usage_EstimatedSavings</div>
                         <div class="analytics-cache-stat-value" style="color: var(--mud-palette-success);">
                             $@EstimatedCacheSavings.ToString("F2")
                         </div>
-                        <div class="analytics-cache-stat-sub">정가 입력 토큰 대비</div>
+                        <div class="analytics-cache-stat-sub">@Strings.Usage_VsListPrice</div>
                     </div>
                 </div>
 
@@ -374,21 +373,21 @@
                 }
                 <div class="analytics-segmented-bar">
                     <div class="analytics-segment input" style="width: @GetPercent(inputTokens, allTokens)%"
-                         title="입력: @FormatTokens(inputTokens)"></div>
+                         title="@Strings.Usage_Input: @FormatTokens(inputTokens)"></div>
                     <div class="analytics-segment cache-read"
                          style="width: @GetPercent(cacheReadTokens, allTokens)%"
-                         title="캐시 읽기: @FormatTokens(cacheReadTokens)"></div>
+                         title="@Strings.Usage_CacheRead: @FormatTokens(cacheReadTokens)"></div>
                     <div class="analytics-segment cache-write"
                          style="width: @GetPercent(cacheCreationTokens, allTokens)%"
-                         title="캐시 쓰기: @FormatTokens(cacheCreationTokens)"></div>
+                         title="@Strings.Usage_CacheWrite: @FormatTokens(cacheCreationTokens)"></div>
                 </div>
                 <div class="analytics-segment-legend">
                     <span class="legend-item"><span
-                            class="legend-dot input"></span>입력 (@GetPercent(inputTokens, allTokens)%)</span>
+                            class="legend-dot input"></span>@Strings.Usage_Input (@GetPercent(inputTokens, allTokens)%)</span>
                     <span class="legend-item"><span
-                            class="legend-dot cache-read"></span>캐시 읽기 (@GetPercent(cacheReadTokens, allTokens)%)</span>
+                            class="legend-dot cache-read"></span>@Strings.Usage_CacheRead (@GetPercent(cacheReadTokens, allTokens)%)</span>
                     <span class="legend-item"><span
-                            class="legend-dot cache-write"></span>캐시 쓰기 (@GetPercent(cacheCreationTokens, allTokens)%)</span>
+                            class="legend-dot cache-write"></span>@Strings.Usage_CacheWrite (@GetPercent(cacheCreationTokens, allTokens)%)</span>
                 </div>
             </div>
         }
@@ -399,15 +398,15 @@
             <div class="analytics-section-card">
                 <div class="analytics-section-title">
                     <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Small"/>
-                    프로젝트별 사용량
+                    @Strings.Usage_ByProject
                 </div>
                 <MudSimpleTable Dense="true" Hover="true" Striped="true" Class="usage-table">
                     <thead>
                     <tr>
-                        <th>프로젝트</th>
-                        <th style="text-align: right;">비용</th>
-                        <th style="text-align: right;">토큰</th>
-                        <th style="text-align: right;">세션</th>
+                        <th>@Strings.Usage_ColProject</th>
+                        <th style="text-align: right;">@Strings.Usage_ColCost</th>
+                        <th style="text-align: right;">@Strings.Usage_ColTokens</th>
+                        <th style="text-align: right;">@Strings.Usage_Sessions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -429,18 +428,18 @@
         <div class="usage-export-actions">
             <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download"
                        Disabled="_exporting" Size="Size.Small">
-                @(_exporting ? "내보내는 중..." : "CSV 내보내기")
+                @(_exporting ? Strings.Usage_Exporting : Strings.Usage_ExportCsv)
             </MudButton>
             <MudButton OnClick="ExportJson" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.DataObject"
                        Disabled="_exporting" Size="Size.Small">
-                @(_exporting ? "내보내는 중..." : "JSON 내보내기")
+                @(_exporting ? Strings.Usage_Exporting : Strings.Usage_ExportJson)
             </MudButton>
         </div>
     }
     else
     {
         <p class="analytics-no-data" style="padding: 40px; text-align: center;">
-            사용량 데이터가 없습니다.
+            @Strings.Usage_NoUsageData
         </p>
     }
 </div>
@@ -547,7 +546,7 @@
     {
         if (date == null) return "";
         var days = (int)(DateTime.UtcNow - date.Value).TotalDays;
-        return $"{days}일 전";
+        return Strings.Usage_DaysAgo(days);
     }
 
     private static string FormatChartDate(string date)

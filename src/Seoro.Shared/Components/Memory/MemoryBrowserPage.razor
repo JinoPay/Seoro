@@ -4,21 +4,21 @@
 
 <div class="settings-content-area wide">
     <div class="settings-content-header">
-        <span class="typo-h6">메모리 브라우저</span>
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@_entries.Count 항목</MudChip>
+        <span class="typo-h6">@Strings.Memory_Title</span>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@Strings.Memory_ItemCount(_entries.Count)</MudChip>
     </div>
     <div class="settings-content-body">
         <div class="memory-layout">
             @* Left: Filters + List *@
             <div class="memory-sidebar">
-                <MudTextField T="string" @bind-Value="_search" Placeholder="검색..."
+                <MudTextField T="string" @bind-Value="_search" Placeholder="@Strings.Memory_SearchPlaceholder"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
                               Class="mb-2"/>
 
-                <MudSelect T="string" @bind-Value="_selectedWorkspace" Label="워크스페이스"
+                <MudSelect T="string" @bind-Value="_selectedWorkspace" Label="@Strings.Memory_WorkspaceLabel"
                            Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="mb-2">
-                    <MudSelectItem T="string" Value="@("")">전체</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("")">@Strings.Common_All</MudSelectItem>
                     @foreach (var ws in _workspaces)
                     {
                         <MudSelectItem T="string" Value="@ws.Id">@ws.Name</MudSelectItem>
@@ -28,13 +28,13 @@
                 <MudChipSet T="MemoryType?" SelectedValue="_selectedType" SelectedValueChanged="OnTypeChanged"
                             SelectionMode="SelectionMode.SingleSelection" CheckMark="false"
                             Variant="Variant.Outlined" Class="mb-2" Style="flex-wrap: wrap;">
-                    <MudChip T="MemoryType?" Value="@((MemoryType?)null)" Color="Color.Default">전체</MudChip>
-                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.User)" Color="Color.Primary">사용자</MudChip>
-                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Feedback)" Color="Color.Warning">피드백
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)null)" Color="Color.Default">@Strings.Common_All</MudChip>
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.User)" Color="Color.Primary">@Strings.Memory_TypeUser</MudChip>
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Feedback)" Color="Color.Warning">@Strings.Memory_TypeFeedback
                     </MudChip>
-                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Project)" Color="Color.Info">프로젝트
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Project)" Color="Color.Info">@Strings.Memory_TypeProject
                     </MudChip>
-                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Reference)" Color="Color.Secondary">참조
+                    <MudChip T="MemoryType?" Value="@((MemoryType?)MemoryType.Reference)" Color="Color.Secondary">@Strings.Memory_TypeReference
                     </MudChip>
                 </MudChipSet>
 
@@ -73,7 +73,7 @@
                     @if (!FilteredEntries.Any())
                     {
                         <div class="typo-caption text-secondary text-center pa-4">
-                            메모리 항목이 없습니다
+                            @Strings.Memory_Empty
                         </div>
                     }
                 }
@@ -96,23 +96,23 @@
                     @if (_editing)
                     {
                         <div class="stack gap-3 pa-3">
-                            <MudTextField @bind-Value="_editName" Label="이름" Variant="Variant.Outlined"
+                            <MudTextField @bind-Value="_editName" Label="@Strings.Common_Name" Variant="Variant.Outlined"
                                           Margin="Margin.Dense"/>
-                            <MudTextField @bind-Value="_editDescription" Label="설명" Variant="Variant.Outlined"
+                            <MudTextField @bind-Value="_editDescription" Label="@Strings.Common_Description" Variant="Variant.Outlined"
                                           Margin="Margin.Dense"/>
-                            <MudSelect T="MemoryType" @bind-Value="_editType" Label="타입"
+                            <MudSelect T="MemoryType" @bind-Value="_editType" Label="@Strings.Memory_TypeLabel"
                                        Variant="Variant.Outlined" Margin="Margin.Dense">
-                                <MudSelectItem T="MemoryType" Value="MemoryType.User">사용자</MudSelectItem>
-                                <MudSelectItem T="MemoryType" Value="MemoryType.Feedback">피드백</MudSelectItem>
-                                <MudSelectItem T="MemoryType" Value="MemoryType.Project">프로젝트</MudSelectItem>
-                                <MudSelectItem T="MemoryType" Value="MemoryType.Reference">참조</MudSelectItem>
+                                <MudSelectItem T="MemoryType" Value="MemoryType.User">@Strings.Memory_TypeUser</MudSelectItem>
+                                <MudSelectItem T="MemoryType" Value="MemoryType.Feedback">@Strings.Memory_TypeFeedback</MudSelectItem>
+                                <MudSelectItem T="MemoryType" Value="MemoryType.Project">@Strings.Memory_TypeProject</MudSelectItem>
+                                <MudSelectItem T="MemoryType" Value="MemoryType.Reference">@Strings.Memory_TypeReference</MudSelectItem>
                             </MudSelect>
-                            <MudTextField @bind-Value="_editContent" Label="내용" Variant="Variant.Outlined"
+                            <MudTextField @bind-Value="_editContent" Label="@Strings.Common_Content" Variant="Variant.Outlined"
                                           Lines="12"/>
                             <div class="stack-row gap-2">
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveEdit">저장
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveEdit">@Strings.Common_Save
                                 </MudButton>
-                                <MudButton Variant="Variant.Text" OnClick="CancelEdit">취소</MudButton>
+                                <MudButton Variant="Variant.Text" OnClick="CancelEdit">@Strings.Common_Cancel</MudButton>
                             </div>
                         </div>
                     }
@@ -136,8 +136,7 @@
                             }
                             <div class="memory-content-view">@_selected.Content</div>
                             <div class="typo-caption text-secondary mt-3" style="opacity: 0.5;">
-                                생성: @_selected.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm") &middot;
-                                수정: @_selected.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                @Strings.Memory_CreatedModified(_selected.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"), _selected.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))
                             </div>
                         </div>
                     }
@@ -146,7 +145,7 @@
                 {
                     <div class="d-flex flex-column align-center justify-center" style="height: 300px; opacity: 0.5;">
                         <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Large"/>
-                        <div class="typo-body2 mt-2">왼쪽에서 메모리를 선택하세요</div>
+                        <div class="typo-body2 mt-2">@Strings.Memory_SelectHint</div>
                     </div>
                 }
             </div>
@@ -243,7 +242,7 @@
         _selected.UpdatedAt = DateTime.UtcNow;
         await MemoryService.SaveAsync(_selected);
         _editing = false;
-        Snackbar.Add("메모리가 저장되었습니다.", Severity.Success);
+        Snackbar.Add(Strings.Memory_Saved, Severity.Success);
         StateHasChanged();
     }
 
@@ -254,7 +253,7 @@
         _entries.Remove(_selected);
         _selected = null;
         _editing = false;
-        Snackbar.Add("메모리가 삭제되었습니다.", Severity.Success);
+        Snackbar.Add(Strings.Memory_Deleted, Severity.Success);
         StateHasChanged();
     }
 
@@ -285,11 +284,11 @@
     {
         return type switch
         {
-            MemoryType.User => "사용자",
-            MemoryType.Feedback => "피드백",
-            MemoryType.Project => "프로젝트",
-            MemoryType.Reference => "참조",
-            _ => "기타"
+            MemoryType.User => Strings.Memory_TypeUser,
+            MemoryType.Feedback => Strings.Memory_TypeFeedback,
+            MemoryType.Project => Strings.Memory_TypeProject,
+            MemoryType.Reference => Strings.Memory_TypeReference,
+            _ => Strings.Memory_TypeOther
         };
     }
 

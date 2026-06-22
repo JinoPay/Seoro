@@ -986,6 +986,9 @@ public static class Strings
     public static string Plugins_Update => Get(nameof(Plugins_Update));
     public static string Plugins_UpdateFailed(object arg0) => Get(nameof(Plugins_UpdateFailed), arg0);
     public static string Plugins_UpdateSuccess(object arg0) => Get(nameof(Plugins_UpdateSuccess), arg0);
+    public static string Plugins_VerbEnable => Get(nameof(Plugins_VerbEnable));
+    public static string Plugins_VerbDisable => Get(nameof(Plugins_VerbDisable));
+    public static string Plugins_LocalSource => Get(nameof(Plugins_LocalSource));
     public static string Rules_ContentLabel => Get(nameof(Rules_ContentLabel));
     public static string Rules_DeleteConfirm(object arg0) => Get(nameof(Rules_DeleteConfirm), arg0);
     public static string Rules_DeleteError(object arg0) => Get(nameof(Rules_DeleteError), arg0);
@@ -1065,6 +1068,95 @@ public static class Strings
     public static string Error_SessionFileCorrupted => Get(nameof(Error_SessionFileCorrupted));
     public static string Error_ProcessFailed => Get(nameof(Error_ProcessFailed));
     public static string Error_HookFailed => Get(nameof(Error_HookFailed));
+
+    // ── Common (shared labels) ──
+    public static string Common_All => Get(nameof(Common_All));
+    public static string Common_Name => Get(nameof(Common_Name));
+    public static string Common_Description => Get(nameof(Common_Description));
+    public static string Common_Content => Get(nameof(Common_Content));
+
+    // ── Memory Browser (additions) ──
+    public static string Memory_ItemCount(object count) => Get(nameof(Memory_ItemCount), count);
+    public static string Memory_WorkspaceLabel => Get(nameof(Memory_WorkspaceLabel));
+
+    // ── Slash Commands ──
+    public static string SlashCommands_SearchPlaceholder => Get(nameof(SlashCommands_SearchPlaceholder));
+    public static string SlashCommands_Templates => Get(nameof(SlashCommands_Templates));
+    public static string SlashCommands_New => Get(nameof(SlashCommands_New));
+    public static string SlashCommands_NameLabel => Get(nameof(SlashCommands_NameLabel));
+    public static string SlashCommands_NameHelper => Get(nameof(SlashCommands_NameHelper));
+    public static string SlashCommands_DescriptionPlaceholder => Get(nameof(SlashCommands_DescriptionPlaceholder));
+    public static string SlashCommands_ScopeLabel => Get(nameof(SlashCommands_ScopeLabel));
+    public static string SlashCommands_ScopeUserGlobal => Get(nameof(SlashCommands_ScopeUserGlobal));
+    public static string SlashCommands_ScopeProject => Get(nameof(SlashCommands_ScopeProject));
+    public static string SlashCommands_NoWorkspaceSuffix => Get(nameof(SlashCommands_NoWorkspaceSuffix));
+    public static string SlashCommands_ContentLabel => Get(nameof(SlashCommands_ContentLabel));
+    public static string SlashCommands_ContentPlaceholder => Get(nameof(SlashCommands_ContentPlaceholder));
+    public static string SlashCommands_AllowedTools => Get(nameof(SlashCommands_AllowedTools));
+    public static string SlashCommands_Add => Get(nameof(SlashCommands_Add));
+    public static string SlashCommands_Back => Get(nameof(SlashCommands_Back));
+    public static string SlashCommands_NotFound => Get(nameof(SlashCommands_NotFound));
+    public static string SlashCommands_BuiltIn => Get(nameof(SlashCommands_BuiltIn));
+    public static string SlashCommands_DeleteTitle => Get(nameof(SlashCommands_DeleteTitle));
+    public static string SlashCommands_DeleteConfirm(object arg0) => Get(nameof(SlashCommands_DeleteConfirm), arg0);
+    public static string SlashCommands_Deleted(object arg0) => Get(nameof(SlashCommands_Deleted), arg0);
+    public static string SlashCommands_Saved(object arg0, object arg1) => Get(nameof(SlashCommands_Saved), arg0, arg1);
+    public static string SlashCommands_DetailTitle => Get(nameof(SlashCommands_DetailTitle));
+    public static string SlashCommands_EditTitle => Get(nameof(SlashCommands_EditTitle));
+    public static string SlashCommands_ScopeShort_Default => Get(nameof(SlashCommands_ScopeShort_Default));
+    public static string SlashCommands_ScopeShort_User => Get(nameof(SlashCommands_ScopeShort_User));
+    public static string SlashCommands_ScopeShort_Project => Get(nameof(SlashCommands_ScopeShort_Project));
+
+    // ── Usage Dashboard ──
+    public static string Usage_RangeDays(object arg0) => Get(nameof(Usage_RangeDays), arg0);
+    public static string Usage_RefreshStats => Get(nameof(Usage_RefreshStats));
+    public static string Usage_SessionHistory => Get(nameof(Usage_SessionHistory));
+    public static string Usage_ActivitySummary => Get(nameof(Usage_ActivitySummary));
+    public static string Usage_AllSessions => Get(nameof(Usage_AllSessions));
+    public static string Usage_RecentDays(object arg0) => Get(nameof(Usage_RecentDays), arg0);
+    public static string Usage_Sessions => Get(nameof(Usage_Sessions));
+    public static string Usage_Messages => Get(nameof(Usage_Messages));
+    public static string Usage_ToolCalls => Get(nameof(Usage_ToolCalls));
+    public static string Usage_ActiveDays => Get(nameof(Usage_ActiveDays));
+    public static string Usage_Today => Get(nameof(Usage_Today));
+    public static string Usage_ThisMonth => Get(nameof(Usage_ThisMonth));
+    public static string Usage_Projected => Get(nameof(Usage_Projected));
+    public static string Usage_PerMonth => Get(nameof(Usage_PerMonth));
+    public static string Usage_TotalCost => Get(nameof(Usage_TotalCost));
+    public static string Usage_PerMessage => Get(nameof(Usage_PerMessage));
+    public static string Usage_NSessions(object arg0) => Get(nameof(Usage_NSessions), arg0);
+    public static string Usage_TotalTokens => Get(nameof(Usage_TotalTokens));
+    public static string Usage_AvgPerDay(object arg0) => Get(nameof(Usage_AvgPerDay), arg0);
+    public static string Usage_LongestSession => Get(nameof(Usage_LongestSession));
+    public static string Usage_LongestAll => Get(nameof(Usage_LongestAll));
+    public static string Usage_LongestRecent(object arg0) => Get(nameof(Usage_LongestRecent), arg0);
+    public static string Usage_ActiveSince => Get(nameof(Usage_ActiveSince));
+    public static string Usage_ByModel => Get(nameof(Usage_ByModel));
+    public static string Usage_Input => Get(nameof(Usage_Input));
+    public static string Usage_Output => Get(nameof(Usage_Output));
+    public static string Usage_CacheRead => Get(nameof(Usage_CacheRead));
+    public static string Usage_CacheWrite => Get(nameof(Usage_CacheWrite));
+    public static string Usage_DailyActivity => Get(nameof(Usage_DailyActivity));
+    public static string Usage_AvgMessagesPerDay(object arg0) => Get(nameof(Usage_AvgMessagesPerDay), arg0);
+    public static string Usage_NoData => Get(nameof(Usage_NoData));
+    public static string Usage_HourlyActivity => Get(nameof(Usage_HourlyActivity));
+    public static string Usage_Peak(object arg0, object arg1) => Get(nameof(Usage_Peak), arg0, arg1);
+    public static string Usage_CacheEfficiency => Get(nameof(Usage_CacheEfficiency));
+    public static string Usage_CacheHitRate => Get(nameof(Usage_CacheHitRate));
+    public static string Usage_CacheFromTokens(object arg0) => Get(nameof(Usage_CacheFromTokens), arg0);
+    public static string Usage_TotalCacheVolume => Get(nameof(Usage_TotalCacheVolume));
+    public static string Usage_ReadWriteTokens(object arg0, object arg1) => Get(nameof(Usage_ReadWriteTokens), arg0, arg1);
+    public static string Usage_EstimatedSavings => Get(nameof(Usage_EstimatedSavings));
+    public static string Usage_VsListPrice => Get(nameof(Usage_VsListPrice));
+    public static string Usage_ByProject => Get(nameof(Usage_ByProject));
+    public static string Usage_ColProject => Get(nameof(Usage_ColProject));
+    public static string Usage_ColCost => Get(nameof(Usage_ColCost));
+    public static string Usage_ColTokens => Get(nameof(Usage_ColTokens));
+    public static string Usage_Exporting => Get(nameof(Usage_Exporting));
+    public static string Usage_ExportCsv => Get(nameof(Usage_ExportCsv));
+    public static string Usage_ExportJson => Get(nameof(Usage_ExportJson));
+    public static string Usage_NoUsageData => Get(nameof(Usage_NoUsageData));
+    public static string Usage_DaysAgo(object arg0) => Get(nameof(Usage_DaysAgo), arg0);
 
     internal static string Get(string name)
     {

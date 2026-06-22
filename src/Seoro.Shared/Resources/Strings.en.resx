@@ -1170,5 +1170,89 @@ Importing will copy the data and delete the original Cominomi folder.</value></d
   <data name="Error_SessionFileCorrupted" xml:space="preserve"><value>The session file is corrupted and could not be loaded. The corrupted file has been quarantined for recovery.</value></data>
   <data name="Error_ProcessFailed" xml:space="preserve"><value>An external process failed to run. Please try again in a moment.</value></data>
   <data name="Error_HookFailed" xml:space="preserve"><value>A hook failed to run. Check the hook command and its configuration.</value></data>
+  <data name="Common_All" xml:space="preserve"><value>All</value></data>
+  <data name="Common_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Common_Description" xml:space="preserve"><value>Description</value></data>
+  <data name="Common_Content" xml:space="preserve"><value>Content</value></data>
+  <data name="Memory_ItemCount" xml:space="preserve"><value>{0} items</value></data>
+  <data name="Memory_WorkspaceLabel" xml:space="preserve"><value>Workspace</value></data>
+  <data name="Plugins_VerbEnable" xml:space="preserve"><value>enabled</value></data>
+  <data name="Plugins_VerbDisable" xml:space="preserve"><value>disabled</value></data>
+  <data name="Plugins_LocalSource" xml:space="preserve"><value>Local</value></data>
+  <data name="SlashCommands_SearchPlaceholder" xml:space="preserve"><value>Search commands...</value></data>
+  <data name="SlashCommands_Templates" xml:space="preserve"><value>Templates</value></data>
+  <data name="SlashCommands_New" xml:space="preserve"><value>New command</value></data>
+  <data name="SlashCommands_NameLabel" xml:space="preserve"><value>Command name</value></data>
+  <data name="SlashCommands_NameHelper" xml:space="preserve"><value>Enter without a leading slash. Separate namespaces with a colon (e.g. frontend:component)</value></data>
+  <data name="SlashCommands_DescriptionPlaceholder" xml:space="preserve"><value>Describe what this command does</value></data>
+  <data name="SlashCommands_ScopeLabel" xml:space="preserve"><value>Scope</value></data>
+  <data name="SlashCommands_ScopeUserGlobal" xml:space="preserve"><value>User (global)</value></data>
+  <data name="SlashCommands_ScopeProject" xml:space="preserve"><value>Project</value></data>
+  <data name="SlashCommands_NoWorkspaceSuffix" xml:space="preserve"><value> (no workspace)</value></data>
+  <data name="SlashCommands_ContentLabel" xml:space="preserve"><value>Command content (Markdown)</value></data>
+  <data name="SlashCommands_ContentPlaceholder" xml:space="preserve"><value>Use the $ARGUMENTS placeholder to accept arguments.</value></data>
+  <data name="SlashCommands_AllowedTools" xml:space="preserve"><value>Allowed tools (optional)</value></data>
+  <data name="SlashCommands_Add" xml:space="preserve"><value>Add command</value></data>
+  <data name="SlashCommands_Back" xml:space="preserve"><value>Back</value></data>
+  <data name="SlashCommands_NotFound" xml:space="preserve"><value>No commands found.</value></data>
+  <data name="SlashCommands_BuiltIn" xml:space="preserve"><value>Built-in</value></data>
+  <data name="SlashCommands_DeleteTitle" xml:space="preserve"><value>Delete command</value></data>
+  <data name="SlashCommands_DeleteConfirm" xml:space="preserve"><value>Delete the '/{0}' command?</value></data>
+  <data name="SlashCommands_Deleted" xml:space="preserve"><value>Command '/{0}' was deleted.</value></data>
+  <data name="SlashCommands_Saved" xml:space="preserve"><value>Command '/{0}' was saved to the {1} scope.</value></data>
+  <data name="SlashCommands_DetailTitle" xml:space="preserve"><value>Command details</value></data>
+  <data name="SlashCommands_EditTitle" xml:space="preserve"><value>Edit command</value></data>
+  <data name="SlashCommands_ScopeShort_Default" xml:space="preserve"><value>Default</value></data>
+  <data name="SlashCommands_ScopeShort_User" xml:space="preserve"><value>User</value></data>
+  <data name="SlashCommands_ScopeShort_Project" xml:space="preserve"><value>Project</value></data>
+  <data name="Usage_RangeDays" xml:space="preserve"><value>{0} days</value></data>
+  <data name="Usage_RefreshStats" xml:space="preserve"><value>Refresh stats</value></data>
+  <data name="Usage_SessionHistory" xml:space="preserve"><value>Session history →</value></data>
+  <data name="Usage_ActivitySummary" xml:space="preserve"><value>Activity summary</value></data>
+  <data name="Usage_AllSessions" xml:space="preserve"><value>All sessions on this computer</value></data>
+  <data name="Usage_RecentDays" xml:space="preserve"><value>Last {0} days</value></data>
+  <data name="Usage_Sessions" xml:space="preserve"><value>Sessions</value></data>
+  <data name="Usage_Messages" xml:space="preserve"><value>Messages</value></data>
+  <data name="Usage_ToolCalls" xml:space="preserve"><value>Tool calls</value></data>
+  <data name="Usage_ActiveDays" xml:space="preserve"><value>Active days</value></data>
+  <data name="Usage_Today" xml:space="preserve"><value>Today</value></data>
+  <data name="Usage_ThisMonth" xml:space="preserve"><value>This month</value></data>
+  <data name="Usage_Projected" xml:space="preserve"><value>Projected</value></data>
+  <data name="Usage_PerMonth" xml:space="preserve"><value>/mo</value></data>
+  <data name="Usage_TotalCost" xml:space="preserve"><value>Total cost</value></data>
+  <data name="Usage_PerMessage" xml:space="preserve"><value>/msg</value></data>
+  <data name="Usage_NSessions" xml:space="preserve"><value>{0} sessions</value></data>
+  <data name="Usage_TotalTokens" xml:space="preserve"><value>Total tokens</value></data>
+  <data name="Usage_AvgPerDay" xml:space="preserve"><value>Avg {0}/day</value></data>
+  <data name="Usage_LongestSession" xml:space="preserve"><value>Longest session</value></data>
+  <data name="Usage_LongestAll" xml:space="preserve"><value>Longest of all sessions</value></data>
+  <data name="Usage_LongestRecent" xml:space="preserve"><value>Longest in last {0} days</value></data>
+  <data name="Usage_ActiveSince" xml:space="preserve"><value>Active since</value></data>
+  <data name="Usage_ByModel" xml:space="preserve"><value>Usage by model</value></data>
+  <data name="Usage_Input" xml:space="preserve"><value>Input</value></data>
+  <data name="Usage_Output" xml:space="preserve"><value>Output</value></data>
+  <data name="Usage_CacheRead" xml:space="preserve"><value>Cache read</value></data>
+  <data name="Usage_CacheWrite" xml:space="preserve"><value>Cache write</value></data>
+  <data name="Usage_DailyActivity" xml:space="preserve"><value>Daily activity</value></data>
+  <data name="Usage_AvgMessagesPerDay" xml:space="preserve"><value>Avg {0} messages/day</value></data>
+  <data name="Usage_NoData" xml:space="preserve"><value>No data</value></data>
+  <data name="Usage_HourlyActivity" xml:space="preserve"><value>Hourly activity</value></data>
+  <data name="Usage_Peak" xml:space="preserve"><value>Peak: {0} ({1})</value></data>
+  <data name="Usage_CacheEfficiency" xml:space="preserve"><value>Cache efficiency</value></data>
+  <data name="Usage_CacheHitRate" xml:space="preserve"><value>Cache hit rate</value></data>
+  <data name="Usage_CacheFromTokens" xml:space="preserve"><value>{0} tokens from cache</value></data>
+  <data name="Usage_TotalCacheVolume" xml:space="preserve"><value>Total cache volume</value></data>
+  <data name="Usage_ReadWriteTokens" xml:space="preserve"><value>Read {0} · Write {1}</value></data>
+  <data name="Usage_EstimatedSavings" xml:space="preserve"><value>Estimated savings</value></data>
+  <data name="Usage_VsListPrice" xml:space="preserve"><value>vs. list-price input tokens</value></data>
+  <data name="Usage_ByProject" xml:space="preserve"><value>Usage by project</value></data>
+  <data name="Usage_ColProject" xml:space="preserve"><value>Project</value></data>
+  <data name="Usage_ColCost" xml:space="preserve"><value>Cost</value></data>
+  <data name="Usage_ColTokens" xml:space="preserve"><value>Tokens</value></data>
+  <data name="Usage_Exporting" xml:space="preserve"><value>Exporting...</value></data>
+  <data name="Usage_ExportCsv" xml:space="preserve"><value>Export CSV</value></data>
+  <data name="Usage_ExportJson" xml:space="preserve"><value>Export JSON</value></data>
+  <data name="Usage_NoUsageData" xml:space="preserve"><value>No usage data.</value></data>
+  <data name="Usage_DaysAgo" xml:space="preserve"><value>{0} days ago</value></data>
 
 </root>

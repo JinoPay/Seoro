@@ -1,11 +1,13 @@
 @if (IsOpen && FilteredCommands.Count > 0)
 {
-    <div class="slash-popup">
+    <div class="slash-popup" role="listbox" aria-label="@Strings.Nav_SlashCommands">
         @for (var i = 0; i < FilteredCommands.Count; i++)
         {
             var idx = i;
             var cmd = FilteredCommands[idx];
             <div class="slash-popup-item @(idx == SelectedIndex ? "slash-popup-item-active" : "")"
+                 role="option"
+                 aria-selected="@(idx == SelectedIndex)"
                  @onmouseenter="@(() => OnHover.InvokeAsync(idx))"
                  @onclick="@(() => OnCommandSelected.InvokeAsync(cmd))"
                  @onclick:stopPropagation="true">

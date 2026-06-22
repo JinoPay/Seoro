@@ -5,8 +5,8 @@
 <div class="settings-content-area wide">
     <div class="settings-content-header">
         <div>
-            <span class="typo-h6">플러그인</span>
-            <div class="typo-caption text-secondary">플러그인을 검색하고 관리합니다</div>
+            <span class="typo-h6">@Strings.Plugins_Title</span>
+            <div class="typo-caption text-secondary">@Strings.Plugins_Desc</div>
         </div>
     </div>
 
@@ -24,7 +24,7 @@
                 <div class="plugins-tab-switcher">
                     <button class="plugins-tab-btn @(_activeTab == "installed" ? "active" : "")"
                             @onclick="@(() => SetTab("installed"))">
-                        설치됨
+                        @Strings.Plugins_TabInstalled
                         @if (InstalledCount > 0)
                         {
                             <span class="plugins-tab-badge">@InstalledCount</span>
@@ -32,7 +32,7 @@
                     </button>
                     <button class="plugins-tab-btn @(_activeTab == "marketplace" ? "active" : "")"
                             @onclick="@(() => SetTab("marketplace"))">
-                        마켓플레이스
+                        @Strings.Plugins_TabMarketplace
                         @if (_installCounts.Count > 0)
                         {
                             <span class="plugins-tab-badge plugins-tab-badge--muted">@_installCounts.Count</span>
@@ -41,7 +41,7 @@
                 </div>
                 <div style="flex:1;"></div>
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                               Size="Size.Small" title="새로고침"
+                               Size="Size.Small" title="@Strings.Common_Refresh"
                                OnClick="RefreshAll"/>
             </div>
 
@@ -50,7 +50,7 @@
                          Size="Size.Small" Class="plugins-search-icon"/>
                 <input class="plugins-search-input"
                        type="text"
-                       placeholder="@(_activeTab == "installed" ? "설치된 플러그인 검색..." : "마켓플레이스 플러그인 검색...")"
+                       placeholder="@(_activeTab == "installed" ? Strings.Plugins_SearchInstalled : Strings.Plugins_SearchMarketplace)"
                        @bind="_search" @bind:event="oninput"/>
             </div>
 
@@ -67,13 +67,13 @@
                         <MudIcon Icon="@Icons.Material.Filled.Extension"
                                  Style="font-size:36px; opacity:0.18;"/>
                         <p class="typo-body2 text-secondary mt-2">
-                            @(_search.Length > 0 ? "검색 결과가 없습니다" : "설치된 플러그인이 없습니다")
+                            @(_search.Length > 0 ? Strings.Plugins_NoResults : Strings.Plugins_NoneInstalled)
                         </p>
                         @if (_search.Length == 0)
                         {
                             <p class="typo-caption text-secondary" style="text-align:center;">
-                                마켓플레이스에서 플러그인을 설치하거나<br/>
-                                <code>@PluginService.PluginsDirectory</code>에 폴더를 추가하세요
+                                @Strings.Plugins_NoneInstalledHint<br/>
+                                <code>@PluginService.PluginsDirectory</code>
                             </p>
                         }
                     </div>
@@ -102,14 +102,14 @@
                                         }
                                         else if (p.HasUpdate)
                                         {
-                                            <MudTooltip Text="업데이트">
+                                            <MudTooltip Text="@Strings.Plugins_Update">
                                                 <MudIconButton Icon="@Icons.Material.Filled.SystemUpdateAlt"
                                                                Size="Size.Small"
                                                                Class="plugin-card-action-btn"
                                                                OnClick="@(() => UpdatePlugin(p))"/>
                                             </MudTooltip>
                                         }
-                                        <MudTooltip Text="제거">
+                                        <MudTooltip Text="@Strings.Plugins_Uninstall">
                                             <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline"
                                                            Size="Size.Small" Color="Color.Error"
                                                            Class="plugin-card-action-btn"
@@ -136,11 +136,11 @@
                                     }
                                     @if (!p.Enabled)
                                     {
-                                        <span class="plugin-tag plugin-tag--muted">비활성</span>
+                                        <span class="plugin-tag plugin-tag--muted">@Strings.Plugins_Inactive</span>
                                     }
                                     @if (blocked)
                                     {
-                                        <span class="plugin-tag plugin-tag--danger">차단됨</span>
+                                        <span class="plugin-tag plugin-tag--danger">@Strings.Plugins_Blocked</span>
                                     }
                                 </div>
                             </div>
@@ -154,7 +154,7 @@
                                     </div>
                                     <div class="plugin-card-info">
                                         <span class="plugin-card-name">@p.Name</span>
-                                        <span class="plugin-card-sub">@(p.Description ?? "로컬")</span>
+                                        <span class="plugin-card-sub">@(p.Description ?? Strings.Plugins_LocalSource)</span>
                                     </div>
                                     <MudSwitch T="bool" Value="@p.IsEnabled"
                                                ValueChanged="@(v => ToggleLocalPlugin(p, v))"
@@ -191,7 +191,7 @@
                     {
                         <div class="plugins-section-title mt-4">
                             <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Small"/>
-                            차단됨
+                            @Strings.Plugins_Blocked
                         </div>
                         <div class="stack gap-1 mt-1">
                             @foreach (var b in _blockedPlugins)
@@ -213,7 +213,7 @@
                                Size="Size.Small" Variant="Variant.Text"
                                Style="text-transform:none;"
                                OnClick="OpenPluginsDirectory">
-                        플러그인 디렉토리 열기
+                        @Strings.Plugins_OpenDirectory
                     </MudButton>
                 </div>
             }
@@ -229,12 +229,12 @@
                         <MudIcon Icon="@Icons.Material.Filled.Store"
                                  Style="font-size:36px; opacity:0.18;"/>
                         <p class="typo-body2 text-secondary mt-2">
-                            @(_search.Length > 0 ? "검색 결과가 없습니다" : "마켓플레이스 데이터가 없습니다")
+                            @(_search.Length > 0 ? Strings.Plugins_NoResults : Strings.Plugins_NoMarketplace)
                         </p>
                         @if (_search.Length == 0)
                         {
                             <p class="typo-caption text-secondary">
-                                Claude CLI가 아직 마켓플레이스 캐시를 다운로드하지 않았습니다
+                                @Strings.Plugins_MarketplaceHint
                             </p>
                         }
                     </div>
@@ -268,7 +268,7 @@
                                         <div class="plugin-installed-label">
                                             <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
                                                      Size="Size.Small"/>
-                                            설치됨
+                                            @Strings.Plugins_TabInstalled
                                             @if (installed != null)
                                             {
                                                 <span class="plugin-installed-version">v@(installed.Version)</span>
@@ -285,11 +285,11 @@
                                                 <MudProgressCircular Size="Size.Small"
                                                                      Indeterminate="true"
                                                                      Style="width:14px;height:14px;"/>
-                                                <span>설치 중...</span>
+                                                <span>@Strings.Plugins_Installing</span>
                                             }
                                             else
                                             {
-                                                <span>설치</span>
+                                                <span>@Strings.Plugins_Install</span>
                                             }
                                         </button>
                                     }
@@ -307,14 +307,14 @@
 @if (_uninstallingPlugin != null)
 {
     <MudDialog Visible="true" Options="@(new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true })">
-        <TitleContent>플러그인 제거</TitleContent>
+        <TitleContent>@Strings.Plugins_UninstallTitle</TitleContent>
         <DialogContent>
-            <p>'<strong>@_uninstallingPlugin.Split('@')[0]</strong>'을 제거하시겠습니까?</p>
+            <p>@((MarkupString)Strings.Plugins_UninstallConfirm($"<strong>{_uninstallingPlugin.Split('@')[0]}</strong>"))</p>
         </DialogContent>
         <DialogActions>
-            <MudButton OnClick="@(() => _uninstallingPlugin = null)">취소</MudButton>
+            <MudButton OnClick="@(() => _uninstallingPlugin = null)">@Strings.Common_Cancel</MudButton>
             <MudButton Color="Color.Error" Variant="Variant.Filled"
-                       OnClick="DoUninstall">제거</MudButton>
+                       OnClick="DoUninstall">@Strings.Plugins_Uninstall</MudButton>
         </DialogActions>
     </MudDialog>
 }
@@ -450,14 +450,14 @@
 
     private static (string icon, Color color, string label) GetStatusDisplay(PluginInfo p) =>
         !p.IsEnabled
-            ? (Icons.Material.Filled.PauseCircle, Color.Default, "비활성")
+            ? (Icons.Material.Filled.PauseCircle, Color.Default, Strings.Plugins_Inactive)
             : p.Status switch
             {
-                PluginStatus.Valid => (Icons.Material.Filled.CheckCircle, Color.Success, "정상"),
-                PluginStatus.Loaded => (Icons.Material.Filled.CheckCircle, Color.Success, "로드됨"),
-                PluginStatus.Invalid => (Icons.Material.Filled.Error, Color.Error, "오류"),
-                PluginStatus.Error => (Icons.Material.Filled.Error, Color.Error, "오류"),
-                _ => (Icons.Material.Filled.RadioButtonUnchecked, Color.Default, "확인 중")
+                PluginStatus.Valid => (Icons.Material.Filled.CheckCircle, Color.Success, Strings.Plugins_StatusNormal),
+                PluginStatus.Loaded => (Icons.Material.Filled.CheckCircle, Color.Success, Strings.Plugins_StatusLoaded),
+                PluginStatus.Invalid => (Icons.Material.Filled.Error, Color.Error, Strings.Plugins_StatusError),
+                PluginStatus.Error => (Icons.Material.Filled.Error, Color.Error, Strings.Plugins_StatusError),
+                _ => (Icons.Material.Filled.RadioButtonUnchecked, Color.Default, Strings.Plugins_StatusChecking)
             };
 
     // ── Actions ──────────────────────────────────────────────────────────
@@ -470,12 +470,12 @@
         _installingPlugin = null;
         if (success)
         {
-            Snackbar.Add($"'{pluginName.Split('@')[0]}' 설치 완료", Severity.Success);
+            Snackbar.Add(Strings.Plugins_InstallSuccess(pluginName.Split('@')[0]), Severity.Success);
             await LoadAllAsync();
         }
         else
         {
-            Snackbar.Add($"설치 실패: {output}", Severity.Error);
+            Snackbar.Add(Strings.Plugins_InstallFailed(output), Severity.Error);
             StateHasChanged();
         }
     }
@@ -490,12 +490,12 @@
         if (success)
         {
             p.Enabled = enabled;
-            Snackbar.Add($"'{p.Name}' {(enabled ? "활성화" : "비활성화")}", Severity.Info);
+            Snackbar.Add(Strings.Plugins_ToggleSuccess(p.Name, enabled ? Strings.Plugins_VerbEnable : Strings.Plugins_VerbDisable), Severity.Info);
             StateHasChanged();
         }
         else
         {
-            Snackbar.Add($"실패: {output}", Severity.Error);
+            Snackbar.Add(Strings.Plugins_ToggleFailed(output), Severity.Error);
         }
     }
 
@@ -508,12 +508,12 @@
         _updatingPlugin = null;
         if (success)
         {
-            Snackbar.Add($"'{p.Name}' 업데이트 완료 (재시작 후 적용)", Severity.Success);
+            Snackbar.Add(Strings.Plugins_UpdateSuccess(p.Name), Severity.Success);
             await LoadAllAsync();
         }
         else
         {
-            Snackbar.Add($"업데이트 실패: {output}", Severity.Error);
+            Snackbar.Add(Strings.Plugins_UpdateFailed(output), Severity.Error);
             StateHasChanged();
         }
     }
@@ -529,12 +529,12 @@
         var (success, output) = await PluginService.UninstallMarketplacePluginAsync(name);
         if (success)
         {
-            Snackbar.Add($"'{name.Split('@')[0]}' 제거 완료", Severity.Success);
+            Snackbar.Add(Strings.Plugins_RemoveSuccess(name.Split('@')[0]), Severity.Success);
             await LoadAllAsync();
         }
         else
         {
-            Snackbar.Add($"제거 실패: {output}", Severity.Error);
+            Snackbar.Add(Strings.Plugins_RemoveFailed(output), Severity.Error);
         }
     }
 
@@ -542,7 +542,7 @@
     {
         await PluginService.SetPluginEnabledAsync(p.Id, enabled);
         p.IsEnabled = enabled;
-        Snackbar.Add($"'{p.Name}' {(enabled ? "활성화" : "비활성화")}", Severity.Info);
+        Snackbar.Add(Strings.Plugins_ToggleSuccess(p.Name, enabled ? Strings.Plugins_VerbEnable : Strings.Plugins_VerbDisable), Severity.Info);
         StateHasChanged();
     }
 
@@ -550,6 +550,6 @@
     {
         await PluginService.EnsurePluginsDirectoryAsync();
         try { Process.Start(new ProcessStartInfo { FileName = PluginService.PluginsDirectory, UseShellExecute = true }); }
-        catch { Snackbar.Add("디렉토리를 열 수 없습니다", Severity.Warning); }
+        catch (Exception ex) { Snackbar.Add(Strings.Plugins_OpenDirFailed(ex.Message), Severity.Warning); }
     }
 }

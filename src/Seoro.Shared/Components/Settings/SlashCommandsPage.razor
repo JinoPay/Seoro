@@ -12,7 +12,7 @@
                                   ShowSaveButton="false"
                                   Saving="false" OnSave="@(() => Task.CompletedTask)">
             <ExtraActions>
-                <MudTextField @bind-Value="_searchText" Placeholder="명령어 검색..."
+                <MudTextField @bind-Value="_searchText" Placeholder="@Strings.SlashCommands_SearchPlaceholder"
                               Variant="Variant.Outlined" Margin="Margin.Dense"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                               Immediate="true" Style="max-width: 200px;"/>
@@ -20,17 +20,17 @@
                            StartIcon="@Icons.Material.Filled.AutoAwesome"
                            OnClick="OpenTemplates" Size="Size.Small"
                            Style="text-transform: none;">
-                    템플릿
+                    @Strings.SlashCommands_Templates
                 </MudButton>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.Add"
                            OnClick="CreateNew" Size="Size.Small"
                            Style="text-transform: none;">
-                    새 명령어
+                    @Strings.SlashCommands_New
                 </MudButton>
                 <MudButton StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                            Variant="Variant.Text" OnClick="RefreshCommands">
-                    새로고침
+                    @Strings.Common_Refresh
                 </MudButton>
             </ExtraActions>
         </ClaudeSettingScopeHeader>
@@ -50,33 +50,33 @@
         @if (_editingCommand != null)
         {
             <div class="stack gap-3 pa-3">
-                <MudTextField @bind-Value="_editName" Label="명령어 이름"
+                <MudTextField @bind-Value="_editName" Label="@Strings.SlashCommands_NameLabel"
                               Variant="Variant.Outlined" Margin="Margin.Dense"
                               Placeholder="my-command" Required="true"
                               Disabled="_isViewOnly"
-                              HelperText="슬래시(/) 없이 입력. 네임스페이스는 콜론으로 구분 (예: frontend:component)"/>
+                              HelperText="@Strings.SlashCommands_NameHelper"/>
 
-                <MudTextField @bind-Value="_editDescription" Label="설명"
+                <MudTextField @bind-Value="_editDescription" Label="@Strings.Common_Description"
                               Variant="Variant.Outlined" Margin="Margin.Dense"
-                              Placeholder="이 명령어의 기능을 설명합니다"
+                              Placeholder="@Strings.SlashCommands_DescriptionPlaceholder"
                               Disabled="_isViewOnly"/>
 
-                <MudSelect T="string" @bind-Value="_editScope" Label="범위"
+                <MudSelect T="string" @bind-Value="_editScope" Label="@Strings.SlashCommands_ScopeLabel"
                            Variant="Variant.Outlined" Margin="Margin.Dense"
                            Disabled="_isViewOnly">
-                    <MudSelectItem T="string" Value="@("user")">사용자 (전역)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("user")">@Strings.SlashCommands_ScopeUserGlobal</MudSelectItem>
                     <MudSelectItem T="string" Value="@("project")" Disabled="@(string.IsNullOrEmpty(_projectPath))">
-                        프로젝트@(string.IsNullOrEmpty(_projectPath) ? " (워크스페이스 없음)" : "")
+                        @Strings.SlashCommands_ScopeProject@(string.IsNullOrEmpty(_projectPath) ? Strings.SlashCommands_NoWorkspaceSuffix : "")
                     </MudSelectItem>
                 </MudSelect>
 
-                <MudTextField @bind-Value="_editContent" Label="명령어 내용 (Markdown)"
+                <MudTextField @bind-Value="_editContent" Label="@Strings.SlashCommands_ContentLabel"
                               Variant="Variant.Outlined" Lines="10"
-                              Placeholder="$ARGUMENTS 플레이스홀더로 인수를 받을 수 있습니다."
+                              Placeholder="@Strings.SlashCommands_ContentPlaceholder"
                               Disabled="_isViewOnly"/>
 
                 <div>
-                    <div class="typo-subtitle2 mb-1">허용된 도구 (선택사항)</div>
+                    <div class="typo-subtitle2 mb-1">@Strings.SlashCommands_AllowedTools</div>
                     <div class="slash-command-tools-panel">
                         @foreach (var tool in _availableTools)
                         {
@@ -97,11 +97,11 @@
                     {
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveCommand"
                                    Disabled="@(string.IsNullOrWhiteSpace(_editName))">
-                            @(_isNewCommand ? "명령어 추가" : "저장")
+                            @(_isNewCommand ? Strings.SlashCommands_Add : Strings.Common_Save)
                         </MudButton>
                     }
                     <MudButton Variant="Variant.Text" OnClick="CancelEdit">
-                        @(_isViewOnly ? "돌아가기" : "취소")
+                        @(_isViewOnly ? Strings.SlashCommands_Back : Strings.Common_Cancel)
                     </MudButton>
                 </div>
             </div>
@@ -115,7 +115,7 @@
         else if (!FilteredCommands.Any())
         {
             <p class="typo-body2 text-secondary pa-4 text-center">
-                명령어를 찾을 수 없습니다.
+                @Strings.SlashCommands_NotFound
             </p>
         }
         else
@@ -130,7 +130,7 @@
                                 @if (cmd.IsBuiltIn)
                                 {
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
-                                             Color="Color.Default">내장
+                                             Color="Color.Default">@Strings.SlashCommands_BuiltIn
                                     </MudChip>
                                 }
                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
@@ -298,14 +298,14 @@
     private async Task ConfirmDelete(SkillDefinition cmd)
     {
         var result = await DialogService.ShowMessageBoxAsync(
-            "명령어 삭제",
-            $"'/{cmd.Name}' 명령어를 삭제하시겠습니까?",
-            "삭제", cancelText: "취소");
+            Strings.SlashCommands_DeleteTitle,
+            Strings.SlashCommands_DeleteConfirm(cmd.Name),
+            Strings.Common_Delete, cancelText: Strings.Common_Cancel);
 
         if (result != true) return;
 
         await SkillRegistry.DeleteCommandAsync(cmd.Name, cmd.Scope, _projectPath);
-        Snackbar.Add($"명령어 '/{cmd.Name}'이 삭제되었습니다.", Severity.Success);
+        Snackbar.Add(Strings.SlashCommands_Deleted(cmd.Name), Severity.Success);
         StateHasChanged();
     }
 
@@ -326,8 +326,8 @@
 
         await SkillRegistry.SaveCommandAsync(command, _projectPath);
 
-        var savedScope = _editScope == "project" ? "프로젝트" : "사용자 (전역)";
-        Snackbar.Add($"명령어 '/{_editName}'이 {savedScope} 범위로 저장되었습니다.", Severity.Success);
+        var savedScope = _editScope == "project" ? Strings.SlashCommands_ScopeProject : Strings.SlashCommands_ScopeUserGlobal;
+        Snackbar.Add(Strings.SlashCommands_Saved(_editName, savedScope), Severity.Success);
         ResetEditForm();
         StateHasChanged();
     }
@@ -361,9 +361,9 @@
 
     private string GetEditTitle()
     {
-        if (_isViewOnly) return "명령어 상세";
-        if (!_isNewCommand) return "명령어 편집";
-        return "새 명령어";
+        if (_isViewOnly) return Strings.SlashCommands_DetailTitle;
+        if (!_isNewCommand) return Strings.SlashCommands_EditTitle;
+        return Strings.SlashCommands_New;
     }
 
     private void OpenTemplates()
@@ -401,9 +401,9 @@
     {
         return scope switch
         {
-            "default" => "기본",
-            "user" => "사용자",
-            "project" => "프로젝트",
+            "default" => Strings.SlashCommands_ScopeShort_Default,
+            "user" => Strings.SlashCommands_ScopeShort_User,
+            "project" => Strings.SlashCommands_ScopeShort_Project,
             _ => scope
         };
     }
