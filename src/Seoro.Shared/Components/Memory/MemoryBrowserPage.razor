@@ -48,7 +48,7 @@
                 {
                     @foreach (var entry in FilteredEntries)
                     {
-                        <div class="@MemoryItemClass(entry)" @onclick="@(() => SelectEntry(entry))">
+                        <div @key="entry.Id" class="@MemoryItemClass(entry)" @onclick="@(() => SelectEntry(entry))">
                             <div class="d-flex align-center gap-2">
                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
                                          Color="@GetTypeColor(entry.Type)"

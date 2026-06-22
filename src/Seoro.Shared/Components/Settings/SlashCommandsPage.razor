@@ -123,7 +123,7 @@
             <div class="skill-card-list">
                 @foreach (var cmd in FilteredCommands)
                 {
-                    <div class="@($"skill-card {(cmd.IsBuiltIn ? "builtin" : "custom")}")">
+                    <div @key="@($"{(cmd.IsBuiltIn ? "b" : "c")}:{cmd.Name}")" class="@($"skill-card {(cmd.IsBuiltIn ? "builtin" : "custom")}")">
                         <div class="skill-card-header">
                             <span style="font-family: var(--font-mono); font-weight: 600;">/@cmd.Name</span>
                             <div style="margin-left: auto; display: flex; gap: 2px; align-items: center;">

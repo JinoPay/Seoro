@@ -85,7 +85,7 @@
                         {
                             var blocked = IsBlocked(p.Name);
                             var updating = _updatingPlugin == p.Name;
-                            <div class="plugin-card @(!p.Enabled ? "plugin-card--disabled" : "") @(blocked ? "plugin-card--blocked" : "")">
+                            <div @key="p.Name" class="plugin-card @(!p.Enabled ? "plugin-card--disabled" : "") @(blocked ? "plugin-card--blocked" : "")">
                                 <div class="plugin-card-top">
                                     <div class="plugin-card-avatar @(!p.Enabled ? "plugin-card-avatar--off" : "")">
                                         <MudIcon Icon="@Icons.Material.Filled.Extension" Size="Size.Small"/>
@@ -147,7 +147,7 @@
                         }
                         @foreach (var p in filteredLocal)
                         {
-                            <div class="plugin-card">
+                            <div @key="p.Name" class="plugin-card">
                                 <div class="plugin-card-top">
                                     <div class="plugin-card-avatar plugin-card-avatar--local">
                                         <MudIcon Icon="@Icons.Material.Filled.FolderSpecial" Size="Size.Small"/>

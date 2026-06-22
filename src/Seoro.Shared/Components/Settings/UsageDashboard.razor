@@ -161,7 +161,7 @@
                 {
                     var color = GetModelColor(model.Model);
                     var pricing = ModelDefinitions.GetPricing(model.Model);
-                    <div class="analytics-model-row">
+                    <div @key="model.Model" class="analytics-model-row">
                         <div class="analytics-model-header">
                             <div class="analytics-model-name">
                                 <span class="analytics-model-dot" style="background: @color;"></span>
@@ -413,7 +413,7 @@
                     <tbody>
                     @foreach (var p in _stats.ByProject)
                     {
-                        <tr>
+                        <tr @key="p.ProjectPath">
                             <td title="@p.ProjectPath">@p.ProjectName</td>
                             <td style="text-align: right;">$@p.TotalCost.ToString("F4")</td>
                             <td style="text-align: right;">@FormatTokens(p.TotalTokens)</td>

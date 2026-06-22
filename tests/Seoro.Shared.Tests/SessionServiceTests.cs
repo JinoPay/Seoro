@@ -317,6 +317,7 @@ public class SessionServiceTests : IDisposable
         public Task<SquashMergeResult> SquashMergeViaTempCloneAsync(string mainRepoDir, string sourceWorktreePath, string sourceBranchName, string targetBranchName, string commitMessage, IProgress<string>? progress = null, CancellationToken ct = default)
             => Task.FromResult(SquashMergeResult.Succeeded(""));
         public Task InvalidateBranchCacheAsync(string repoDir) => Task.CompletedTask;
+        public Task InvalidateStatusCacheAsync(string workingDir) => Task.CompletedTask;
 
         // GitView 도입으로 추가된 API
         public Task<DiffSummary> GetWorkingTreeStatusAsync(string workingDir, CancellationToken ct = default)

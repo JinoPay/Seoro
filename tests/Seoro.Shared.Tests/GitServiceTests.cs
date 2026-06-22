@@ -241,6 +241,128 @@ public class GitServiceTests
         Assert.Equal("", result);
     }
 
+    // --- GetWorkingTreeStatusAsync: 캐시 + 무효화 + 단일 비행 ---
+
+    [Fact]
+    public async Task GetWorkingTreeStatusAsync_SecondCallWithinTtl_DoesNotSpawnAgain()
+    {
+        _processRunner.NextResult = new ProcessResult(true, "", "", 0);
+
+        await _sut.GetWorkingTreeStatusAsync("/repo");
+        var countAfterFirst = _processRunner.Invocations.Count;
+
+        await _sut.GetWorkingTreeStatusAsync("/repo");
+
+        Assert.Equal(countAfterFirst, _processRunner.Invocations.Count);
+    }
+
+    [Fact]
+    public async Task GetWorkingTreeStatusAsync_CachedCall_ReturnsSameInstance()
+    {
+        _processRunner.NextResult = new ProcessResult(true, "", "", 0);
+
+        var first = await _sut.GetWorkingTreeStatusAsync("/repo");
+        var second = await _sut.GetWorkingTreeStatusAsync("/repo");
+
+        Assert.Same(first, second);
+    }
+
+    [Fact]
+    public async Task GetWorkingTreeStatusAsync_AfterStageFile_CacheInvalidated()
+    {
+        _processRunner.NextResult = new ProcessResult(true, "", "", 0);
+
+        await _sut.GetWorkingTreeStatusAsync("/repo");
+        var countAfterFirst = _processRunner.Invocations.Count;
+
+        await _sut.StageFileAsync("/repo", "src/a.cs");
+
+        await _sut.GetWorkingTreeStatusAsync("/repo");
+
+        // stage(1회) + status 재계산(3회) — 캐시가 무효화되어 다시 spawn 되어야 한다
+        Assert.Equal(countAfterFirst + 4, _processRunner.Invocations.Count);
+    }
+
+    [Fact]
+    public async Task GetWorkingTreeStatusAsync_AfterInvalidateStatusCacheAsync_Recomputes()
+    {
+        _processRunner.NextResult = new ProcessResult(true, "", "", 0);
+
+        await _sut.GetWorkingTreeStatusAsync("/repo");
+        var countAfterFirst = _processRunner.Invocations.Count;
+
+        await _sut.InvalidateStatusCacheAsync("/repo");
+        await _sut.GetWorkingTreeStatusAsync("/repo");
+
+        Assert.Equal(countAfterFirst * 2, _processRunner.Invocations.Count);
+    }
+
+    [Fact]
+    public async Task GetWorkingTreeStatusAsync_ConcurrentCalls_SingleFlight()
+    {
+        var gated = new GatedProcessRunner();
+        var sut = new GitService(
+            NullLogger<GitService>.Instance,
+            gated,
+            new FakeOptionsMonitor(),
+            new FakeShellService());
+
+        var first = sut.GetWorkingTreeStatusAsync("/repo");
+        var second = sut.GetWorkingTreeStatusAsync("/repo");
+
+        // 두 호출이 모두 시작될 시간을 준 뒤 게이트 해제
+        await Task.Delay(50);
+        gated.Release();
+
+        var r1 = await first;
+        var r2 = await second;
+
+        Assert.Same(r1, r2);
+        // 파이프라인이 한 번만 실행됨 (staged numstat + unstaged numstat + porcelain = 3회)
+        Assert.Equal(3, gated.Invocations.Count);
+    }
+
+    // --- HasUnresolvedConflictsAsync ---
+
+    [Fact]
+    public async Task HasUnresolvedConflictsAsync_NoMergeHead_NoProcessSpawn()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"git_tests_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(tempDir, ".git"));
+        try
+        {
+            var result = await _sut.HasUnresolvedConflictsAsync(tempDir);
+
+            Assert.False(result);
+            // MERGE_HEAD 가 없으면 git 프로세스를 전혀 띄우지 않아야 한다
+            Assert.Empty(_processRunner.Invocations);
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task HasUnresolvedConflictsAsync_MergeHeadWithConflictMarker_ReturnsTrue()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"git_tests_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(tempDir, ".git"));
+        await File.WriteAllTextAsync(Path.Combine(tempDir, ".git", "MERGE_HEAD"), "abc123\n");
+        try
+        {
+            _processRunner.NextResult = new ProcessResult(true, "UU src/conflict.cs\n", "", 0);
+
+            var result = await _sut.HasUnresolvedConflictsAsync(tempDir);
+
+            Assert.True(result);
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, recursive: true); } catch { }
+        }
+    }
+
     // --- Shared stub ---
 
     private class StubProcessRunner : IProcessRunner
@@ -254,6 +376,32 @@ public class GitServiceTests
             Invocations.Add(options);
             var result = ResultQueue.Count > 0 ? ResultQueue.Dequeue() : NextResult;
             return Task.FromResult(result);
+        }
+
+        public Task<StreamingProcess> RunStreamingAsync(ProcessRunOptions options, CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>Release() 전까지 모든 RunAsync 를 블로킹하는 러너 — 단일 비행(coalescing) 검증용.</summary>
+    private class GatedProcessRunner : IProcessRunner
+    {
+        private readonly TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public List<ProcessRunOptions> Invocations { get; } = [];
+
+        public void Release() => _gate.TrySetResult();
+
+        public async Task<ProcessResult> RunAsync(ProcessRunOptions options, CancellationToken ct = default)
+        {
+            lock (Invocations)
+            {
+                Invocations.Add(options);
+            }
+
+            await _gate.Task;
+            return new ProcessResult(true, "", "", 0);
         }
 
         public Task<StreamingProcess> RunStreamingAsync(ProcessRunOptions options, CancellationToken ct = default)
