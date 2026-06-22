@@ -12,20 +12,31 @@ public static class AtomicFileWriter
     /// </summary>
     public static async Task AppendAsync(string targetPath, string content)
     {
-        var existing = File.Exists(targetPath) ? await File.ReadAllTextAsync(targetPath) : "";
-        await WriteAsync(targetPath, existing + content);
+        var existing = File.Exists(targetPath) ? await File.ReadAllTextAsync(targetPath).ConfigureAwait(false) : "";
+        await WriteAsync(targetPath, existing + content).ConfigureAwait(false);
     }
 
-    public static async Task WriteAsync(string targetPath, string content)
+    public static Task WriteAsync(string targetPath, string content)
+    {
+        return WriteCoreAsync(targetPath, tmpPath => File.WriteAllTextAsync(tmpPath, content));
+    }
+
+    public static Task WriteAsync(string targetPath, byte[] content)
+    {
+        return WriteCoreAsync(targetPath, tmpPath => File.WriteAllBytesAsync(tmpPath, content));
+    }
+
+    private static async Task WriteCoreAsync(string targetPath, Func<string, Task> writeTmp)
     {
         var dir = Path.GetDirectoryName(targetPath);
         if (dir != null)
             Directory.CreateDirectory(dir);
 
-        var tmpPath = targetPath + ".tmp";
+        // 동일 대상에 대한 동시 쓰기가 임시 파일을 공유하지 않도록 고유한 이름 사용
+        var tmpPath = $"{targetPath}.{Guid.NewGuid():N}.tmp";
         try
         {
-            await File.WriteAllTextAsync(tmpPath, content);
+            await writeTmp(tmpPath).ConfigureAwait(false);
             File.Move(tmpPath, targetPath, true);
         }
         finally

@@ -310,10 +310,29 @@ public class ClaudeService(
 
         var reader = process.StandardOutput;
 
-        await foreach (var evt in ReadStreamEventsAsync(reader, token))
+        var completedNormally = false;
+        try
         {
-            ctx.AnyEvents = true;
-            yield return evt;
+            await foreach (var evt in ReadStreamEventsAsync(reader, token))
+            {
+                ctx.AnyEvents = true;
+                yield return evt;
+            }
+
+            completedNormally = true;
+        }
+        finally
+        {
+            // 소비자가 await foreach 를 조기에 break/dispose 하면 아래 정상 정리 코드가
+            // 실행되지 않아 자식 프로세스가 그대로 살아남는다(누수).
+            // 비정상 종료 시 등록을 해제하고 프로세스를 강제 종료한다.
+            if (!completedNormally)
+            {
+                if (_agents.TryGetValue(agentKey, out var current) && ReferenceEquals(current, agent))
+                    _agents.TryRemove(agentKey, out _);
+                agent.Cancel();
+                agent.Dispose();
+            }
         }
 
         await FinishProcess(process, token);

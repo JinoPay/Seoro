@@ -22,7 +22,10 @@ public class AppSettingsFactory(ILogger<AppSettingsFactory> logger) : IOptionsFa
             var result = settings ?? new AppSettings();
             result.DefaultModel = ModelDefinitions.NormalizeModelId(result.DefaultModel);
             if (migrated && migratedJson != null)
-                AtomicFileWriter.WriteAsync(path, migratedJson).GetAwaiter().GetResult();
+                // Create()는 동기 인터페이스(IOptionsFactory)라 async화할 수 없다.
+                // Task.Run 으로 호출자의 SynchronizationContext(UI 스레드 등)와 분리해
+                // 동기 GetResult() 가 UI 컨텍스트에서 데드락나는 것을 방지한다.
+                Task.Run(() => AtomicFileWriter.WriteAsync(path, migratedJson)).GetAwaiter().GetResult();
             return result;
         }
         catch (Exception ex)

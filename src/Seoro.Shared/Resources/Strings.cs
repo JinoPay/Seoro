@@ -1047,6 +1047,25 @@ public static class Strings
     public static string WhatsNew_TypeStyle => Get(nameof(WhatsNew_TypeStyle));
     public static string WhatsNew_TypeTranslation => Get(nameof(WhatsNew_TypeTranslation));
 
+    // ── Error Messages (AppError 친화 메시지, ErrorCode 별) ──
+    public static string Error_WorktreeCreationFailed => Get(nameof(Error_WorktreeCreationFailed));
+    public static string Error_BranchPushRejected => Get(nameof(Error_BranchPushRejected));
+    public static string Error_BranchPushFailed => Get(nameof(Error_BranchPushFailed));
+    public static string Error_BranchRenameFailed => Get(nameof(Error_BranchRenameFailed));
+    public static string Error_BranchDeleteFailed => Get(nameof(Error_BranchDeleteFailed));
+    public static string Error_WorktreeRemoveFailed => Get(nameof(Error_WorktreeRemoveFailed));
+    public static string Error_GitCloneFailed => Get(nameof(Error_GitCloneFailed));
+    public static string Error_NotAGitRepo => Get(nameof(Error_NotAGitRepo));
+    public static string Error_StreamingFailed => Get(nameof(Error_StreamingFailed));
+    public static string Error_ClaudeProcessFailed => Get(nameof(Error_ClaudeProcessFailed));
+    public static string Error_CodexProcessFailed => Get(nameof(Error_CodexProcessFailed));
+    public static string Error_CodexSandboxViolation => Get(nameof(Error_CodexSandboxViolation));
+    public static string Error_SessionNotFound => Get(nameof(Error_SessionNotFound));
+    public static string Error_WorkspaceNotFound => Get(nameof(Error_WorkspaceNotFound));
+    public static string Error_SessionFileCorrupted => Get(nameof(Error_SessionFileCorrupted));
+    public static string Error_ProcessFailed => Get(nameof(Error_ProcessFailed));
+    public static string Error_HookFailed => Get(nameof(Error_HookFailed));
+
     internal static string Get(string name)
     {
         var value = Rm.GetString(name, CultureInfo.CurrentUICulture);

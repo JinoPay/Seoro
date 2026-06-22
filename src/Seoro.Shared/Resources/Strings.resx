@@ -1152,5 +1152,22 @@ Seoro로 데이터를 가져오시겠습니까?
   <data name="WhatsNew_TypeStyle" xml:space="preserve"><value>스타일</value></data>
   <data name="WhatsNew_TypeTranslation" xml:space="preserve"><value>번역</value></data>
   <data name="Rules_ContentLabel" xml:space="preserve"><value>내용</value></data>
+  <data name="Error_WorktreeCreationFailed" xml:space="preserve"><value>워크트리 생성에 실패했습니다. 디스크 공간과 폴더 권한을 확인한 뒤 다시 시도하세요.</value></data>
+  <data name="Error_BranchPushRejected" xml:space="preserve"><value>원격 브랜치가 더 앞서 있어 푸시가 거부되었습니다. 먼저 풀(pull)하거나 강제 푸시 여부를 확인하세요.</value></data>
+  <data name="Error_BranchPushFailed" xml:space="preserve"><value>브랜치 푸시에 실패했습니다. 네트워크 연결과 원격 저장소 권한을 확인하세요.</value></data>
+  <data name="Error_BranchRenameFailed" xml:space="preserve"><value>브랜치 이름 변경에 실패했습니다. 같은 이름의 브랜치가 이미 있는지 확인하세요.</value></data>
+  <data name="Error_BranchDeleteFailed" xml:space="preserve"><value>브랜치 삭제에 실패했습니다. 현재 체크아웃된 브랜치는 삭제할 수 없습니다.</value></data>
+  <data name="Error_WorktreeRemoveFailed" xml:space="preserve"><value>워크트리 제거에 실패했습니다. 해당 폴더를 사용 중인 프로그램이 없는지 확인하세요.</value></data>
+  <data name="Error_GitCloneFailed" xml:space="preserve"><value>저장소 클론에 실패했습니다. 저장소 URL과 네트워크 연결을 확인하세요.</value></data>
+  <data name="Error_NotAGitRepo" xml:space="preserve"><value>Git 저장소가 아닙니다. 올바른 저장소 경로인지 확인하세요.</value></data>
+  <data name="Error_StreamingFailed" xml:space="preserve"><value>응답을 받는 중 문제가 발생했습니다. 잠시 후 다시 시도하세요.</value></data>
+  <data name="Error_ClaudeProcessFailed" xml:space="preserve"><value>Claude CLI 실행에 실패했습니다. 설치 상태와 로그인 상태를 확인하세요.</value></data>
+  <data name="Error_CodexProcessFailed" xml:space="preserve"><value>Codex CLI 실행에 실패했습니다. 설치 상태와 API 키 설정을 확인하세요.</value></data>
+  <data name="Error_CodexSandboxViolation" xml:space="preserve"><value>샌드박스 정책에 의해 작업이 차단되었습니다. 권한/샌드박스 설정을 확인하세요.</value></data>
+  <data name="Error_SessionNotFound" xml:space="preserve"><value>세션을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 시도하세요.</value></data>
+  <data name="Error_WorkspaceNotFound" xml:space="preserve"><value>워크스페이스를 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 시도하세요.</value></data>
+  <data name="Error_SessionFileCorrupted" xml:space="preserve"><value>세션 파일이 손상되어 불러올 수 없습니다. 손상된 파일은 복구를 위해 격리되었습니다.</value></data>
+  <data name="Error_ProcessFailed" xml:space="preserve"><value>외부 프로세스 실행에 실패했습니다. 잠시 후 다시 시도하세요.</value></data>
+  <data name="Error_HookFailed" xml:space="preserve"><value>훅 실행에 실패했습니다. 훅 명령과 설정을 확인하세요.</value></data>
 
 </root>

@@ -238,8 +238,27 @@ public class CodexService(
 
         // Codex JSONL 이벤트를 StreamEvent로 변환하여 yield
         var converter = new CodexEventConverter();
-        await foreach (var evt in ReadAndConvertCodexEventsAsync(process.StandardOutput, converter, token))
-            yield return evt;
+        var completedNormally = false;
+        try
+        {
+            await foreach (var evt in ReadAndConvertCodexEventsAsync(process.StandardOutput, converter, token))
+                yield return evt;
+
+            completedNormally = true;
+        }
+        finally
+        {
+            // 소비자가 await foreach 를 조기에 break/dispose 하면 아래 정상 정리 코드가
+            // 실행되지 않아 자식 프로세스가 그대로 살아남는다(누수).
+            // 비정상 종료 시 등록을 해제하고 프로세스를 강제 종료한다.
+            if (!completedNormally)
+            {
+                if (_agents.TryGetValue(agentKey, out var current) && ReferenceEquals(current, agent))
+                    _agents.TryRemove(agentKey, out _);
+                agent.Cancel();
+                agent.Dispose();
+            }
+        }
 
         // 프로세스 종료 대기
         try

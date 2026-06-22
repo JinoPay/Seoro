@@ -22,8 +22,8 @@ public class SessionInitializer(
         var defaultBranchTask = gitService.DetectDefaultBranchAsync(repoLocalPath);
         await Task.WhenAll(branchGroupsTask, defaultBranchTask);
 
-        var groups = branchGroupsTask.Result;
-        var defaultBranch = defaultBranchTask.Result
+        var groups = await branchGroupsTask;
+        var defaultBranch = await defaultBranchTask
                             ?? groups.SelectMany(g => g.Branches).FirstOrDefault()
                             ?? "";
 

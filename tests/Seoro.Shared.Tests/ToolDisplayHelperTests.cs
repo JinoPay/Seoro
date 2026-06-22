@@ -1,10 +1,19 @@
 using Seoro.Shared.Models;
+using Seoro.Shared.Resources;
 using Seoro.Shared.Services;
 
 namespace Seoro.Shared.Tests;
 
 public class ToolDisplayHelperTests
 {
+    public ToolDisplayHelperTests()
+    {
+        // 이 테스트들은 한국어 출력을 단언하므로 실행 머신 로케일과 무관하게
+        // 결정적이 되도록 UI culture 를 명시적으로 ko 로 고정한다.
+        // (고정 전에는 영어 로케일 머신에서 en 리소스가 선택돼 실패했다.)
+        Strings.SetCulture("ko");
+    }
+
     [Theory]
     [InlineData("Read", """{"file_path": "/src/app/Component.razor"}""", "Read app/Component.razor")]
     [InlineData("Write", """{"file_path": "/src/services/MyService.cs"}""", "Write services/MyService.cs")]

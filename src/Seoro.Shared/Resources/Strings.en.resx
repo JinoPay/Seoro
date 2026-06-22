@@ -1153,5 +1153,22 @@ Importing will copy the data and delete the original Cominomi folder.</value></d
   <data name="WhatsNew_TypeStyle" xml:space="preserve"><value>Style</value></data>
   <data name="WhatsNew_TypeTranslation" xml:space="preserve"><value>Translation</value></data>
   <data name="Rules_ContentLabel" xml:space="preserve"><value>Content</value></data>
+  <data name="Error_WorktreeCreationFailed" xml:space="preserve"><value>Failed to create the worktree. Check disk space and folder permissions, then try again.</value></data>
+  <data name="Error_BranchPushRejected" xml:space="preserve"><value>Push was rejected because the remote branch is ahead. Pull first, or consider a force push.</value></data>
+  <data name="Error_BranchPushFailed" xml:space="preserve"><value>Failed to push the branch. Check your network connection and remote repository permissions.</value></data>
+  <data name="Error_BranchRenameFailed" xml:space="preserve"><value>Failed to rename the branch. Check whether a branch with the same name already exists.</value></data>
+  <data name="Error_BranchDeleteFailed" xml:space="preserve"><value>Failed to delete the branch. The currently checked-out branch cannot be deleted.</value></data>
+  <data name="Error_WorktreeRemoveFailed" xml:space="preserve"><value>Failed to remove the worktree. Make sure no program is using that folder.</value></data>
+  <data name="Error_GitCloneFailed" xml:space="preserve"><value>Failed to clone the repository. Check the repository URL and your network connection.</value></data>
+  <data name="Error_NotAGitRepo" xml:space="preserve"><value>This is not a Git repository. Check that the repository path is correct.</value></data>
+  <data name="Error_StreamingFailed" xml:space="preserve"><value>A problem occurred while receiving the response. Please try again in a moment.</value></data>
+  <data name="Error_ClaudeProcessFailed" xml:space="preserve"><value>Failed to run the Claude CLI. Check that it is installed and that you are logged in.</value></data>
+  <data name="Error_CodexProcessFailed" xml:space="preserve"><value>Failed to run the Codex CLI. Check that it is installed and that the API key is configured.</value></data>
+  <data name="Error_CodexSandboxViolation" xml:space="preserve"><value>The operation was blocked by the sandbox policy. Check your permission/sandbox settings.</value></data>
+  <data name="Error_SessionNotFound" xml:space="preserve"><value>Session not found. Refresh the list and try again.</value></data>
+  <data name="Error_WorkspaceNotFound" xml:space="preserve"><value>Workspace not found. Refresh the list and try again.</value></data>
+  <data name="Error_SessionFileCorrupted" xml:space="preserve"><value>The session file is corrupted and could not be loaded. The corrupted file has been quarantined for recovery.</value></data>
+  <data name="Error_ProcessFailed" xml:space="preserve"><value>An external process failed to run. Please try again in a moment.</value></data>
+  <data name="Error_HookFailed" xml:space="preserve"><value>A hook failed to run. Check the hook command and its configuration.</value></data>
 
 </root>
