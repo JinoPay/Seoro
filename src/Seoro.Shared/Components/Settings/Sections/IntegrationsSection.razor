@@ -1,5 +1,5 @@
 @using System.Runtime.InteropServices
-@inject IClaudeService ClaudeService
+@inject ICliProviderFactory CliProviderFactory
 @inject IDependencyCheckService DependencyCheckService
 
 <div class="settings-section-title">@Strings.Settings_Integrations_Title</div>
@@ -273,6 +273,9 @@
 </div>
 
 @code {
+    // AgentBridge "claude" 어댑터(ICliProvider)를 통해 CLI 탐지/버전을 조회한다.
+    private ICliProvider ClaudeService => CliProviderFactory.GetProvider("claude");
+
     [Parameter][EditorRequired] public AppSettings Settings { get; set; } = null!;
 
     private bool _claudeCliChecking;

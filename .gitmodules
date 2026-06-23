@@ -1,0 +1,3 @@
+[submodule "external/AgentBridge"]
+	path = external/AgentBridge
+	url = https://github.com/JinoPay/AgentBridge.Net.git

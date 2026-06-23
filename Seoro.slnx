@@ -6,4 +6,9 @@
   <Folder Name="/tests/">
     <Project Path="tests/Seoro.Shared.Tests/Seoro.Shared.Tests.csproj" />
   </Folder>
+  <Folder Name="/external/">
+    <Project Path="external/AgentBridge/src/AgentBridge.Core/AgentBridge.Core.csproj" />
+    <Project Path="external/AgentBridge/src/AgentBridge.Claude/AgentBridge.Claude.csproj" />
+    <Project Path="external/AgentBridge/src/AgentBridge.Codex/AgentBridge.Codex.csproj" />
+  </Folder>
 </Solution>

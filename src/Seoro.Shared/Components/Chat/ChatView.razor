@@ -1,6 +1,5 @@
 @inject IChatState ChatState
 @inject IChatMessageOrchestrator Orchestrator
-@inject IClaudeService ClaudeService
 @inject ICliProviderFactory CliProviderFactory
 @inject ISessionService SessionService
 @inject ISessionWorktreeManager WorktreeManager
@@ -768,7 +767,7 @@
         if (session != null)
             CliProviderFactory.GetProviderForSession(session).Cancel(session.Id);
         else
-            ClaudeService.Cancel(null);
+            CliProviderFactory.GetProvider("claude").Cancel(null);
         if (session?.Id != null && _sessionTasks.TryGetValue(session.Id, out var entry))
         {
             entry.Cts.Cancel();

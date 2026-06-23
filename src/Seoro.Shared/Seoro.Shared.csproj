@@ -12,6 +12,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- AgentBridge.NET (git submodule at external/AgentBridge) — 에이전트 실행 엔진 -->
+    <ProjectReference Include="..\..\external\AgentBridge\src\AgentBridge.Core\AgentBridge.Core.csproj" />
+    <ProjectReference Include="..\..\external\AgentBridge\src\AgentBridge.Claude\AgentBridge.Claude.csproj" />
+    <ProjectReference Include="..\..\external\AgentBridge\src\AgentBridge.Codex\AgentBridge.Codex.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Markdig" Version="1.1.2" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
     <PackageReference Include="ModelContextProtocol" Version="1.2.0" />

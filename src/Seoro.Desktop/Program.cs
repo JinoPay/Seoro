@@ -44,7 +44,8 @@ public static class Program
         try
         {
             services.GetService<IWorktreeSyncService>()?.Dispose();
-            services.GetService<IClaudeService>()?.Dispose();
+            foreach (var provider in services.GetServices<ICliProvider>())
+                provider.Dispose();
             services.GetService<IGitBranchWatcherService>()?.Dispose();
             services.GetService<IConflictWatcherService>()?.Dispose();
             services.GetService<IMergeStatusService>()?.Dispose();
@@ -205,12 +206,8 @@ public static class Program
         appBuilder.Services.AddSingleton<IMergeStatusService, MergeStatusService>();
         appBuilder.Services.AddSingleton<IPullRequestService, PullRequestService>();
         appBuilder.Services.AddSingleton<IWorktreeSyncService, WorktreeSyncService>();
-        appBuilder.Services.AddSingleton<ClaudeService>();
-        appBuilder.Services.AddSingleton<IClaudeService>(sp => sp.GetRequiredService<ClaudeService>());
-        appBuilder.Services.AddSingleton<Seoro.Shared.Services.Codex.CodexService>();
-        // ICliProvider로 두 구현체 모두 등록 (CliProviderFactory가 IEnumerable<ICliProvider> 주입받음)
-        appBuilder.Services.AddSingleton<ICliProvider>(sp => sp.GetRequiredService<ClaudeService>());
-        appBuilder.Services.AddSingleton<ICliProvider>(sp => sp.GetRequiredService<Seoro.Shared.Services.Codex.CodexService>());
+        // AgentBridge.NET 엔진 + Seoro ICliProvider 어댑터(claude/codex) 등록.
+        appBuilder.Services.AddSeoroCliProviders();
         appBuilder.Services.AddSingleton<ICliProviderFactory, CliProviderFactory>();
         appBuilder.Services.AddSingleton<ICliAvailabilityService, CliAvailabilityService>();
         appBuilder.Services.AddSingleton<IContextService, ContextService>();
