@@ -28,7 +28,6 @@ public partial class SessionService(
     // Full session cache: avoids redundant disk reads for the same session within a short window
     private readonly ConcurrentDictionary<string, (Session Session, DateTime LoadedAt)> _sessionCache = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new();
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _worktreeInitLocks = new();
 
     // In-memory metadata cache: avoids re-reading all files on every call
     private readonly ConcurrentDictionary<string, Session> _metadataCache = new();
@@ -297,6 +296,12 @@ public partial class SessionService(
         return session;
     }
 
+    /// <summary>
+    ///     단기 세션 캐시에서 항목을 제거한다. 워크트리 작업처럼 외부에서 세션 상태를
+    ///     변경한 뒤 디스크의 최신 상태를 다시 읽어야 할 때 호출한다.
+    /// </summary>
+    public void InvalidateSessionCache(string sessionId) => _sessionCache.TryRemove(sessionId, out _);
+
     public async Task<Session> CreateLocalDirSessionAsync(string model, string workspaceId, string provider = "claude")
     {
         Guard.NotNullOrWhiteSpace(model, nameof(model));
@@ -373,176 +378,6 @@ public partial class SessionService(
         });
 
         return session;
-    }
-
-    public async Task<Session> InitializeWorktreeAsync(string sessionId, string baseBranch)
-    {
-        Guard.NotNullOrWhiteSpace(sessionId, nameof(sessionId));
-        Guard.NotNullOrWhiteSpace(baseBranch, nameof(baseBranch));
-
-        var semaphore = _worktreeInitLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync();
-        try
-        {
-            // Invalidate cache so we read the latest state from disk after waiting on the lock
-            _sessionCache.TryRemove(sessionId, out _);
-
-            var session = await LoadSessionAsync(sessionId);
-            if (session == null)
-                throw new InvalidOperationException($"Session '{sessionId}' not found.");
-
-            // Guard: if another call already initialized this session, return as-is
-            if (session.Status != SessionStatus.Pending)
-            {
-                logger.LogDebug("세션 {SessionId}의 워크트리 초기화 건너뜀: 상태는 {Status}", sessionId,
-                    session.Status);
-                return session;
-            }
-
-            var workspace = await workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
-            if (workspace == null)
-                throw new InvalidOperationException($"Workspace '{session.WorkspaceId}' not found.");
-
-            var branchName = $"{SeoroConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
-            var worktreesDir = await workspaceService.GetWorktreesDirAsync();
-
-            session.Git.BranchName = branchName;
-            session.Git.BaseBranch = baseBranch;
-            session.Git.WorktreePath = Path.Combine(worktreesDir, session.Id);
-            session.TransitionStatus(SessionStatus.Initializing);
-
-            try
-            {
-                var result = await gitService.AddWorktreeAsync(
-                    workspace.RepoLocalPath, session.Git.WorktreePath, branchName, baseBranch);
-
-                if (!result.Success)
-                {
-                    session.TransitionStatus(SessionStatus.Error);
-                    session.Error = AppError.WorktreeCreation(result.Error);
-                }
-                else
-                {
-                    session.Git.BaseCommit =
-                        await gitService.ResolveCommitHashAsync(workspace.RepoLocalPath, baseBranch) ?? "";
-                    session.TransitionStatus(SessionStatus.Ready);
-                    // Initialize .context/ directory for collaboration
-                    await contextService.EnsureContextDirectoryAsync(session.Git.WorktreePath);
-                    await CopyLocalSettingsToWorktreeAsync(workspace.RepoLocalPath, session.Git.WorktreePath);
-                    logger.LogInformation("세션 {SessionId}의 워크트리 초기화됨 (브랜치: {Branch})", sessionId,
-                        branchName);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "세션 {SessionId}의 워크트리 초기화 실패", sessionId);
-                session.TransitionStatus(SessionStatus.Error);
-                session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
-            }
-
-            await SaveSessionAsync(session);
-            return session;
-        }
-        finally
-        {
-            semaphore.Release();
-        }
-    }
-
-    public async Task<Session> RebaseWorktreeAsync(string sessionId, string newBaseBranch)
-    {
-        Guard.NotNullOrWhiteSpace(sessionId, nameof(sessionId));
-        Guard.NotNullOrWhiteSpace(newBaseBranch, nameof(newBaseBranch));
-
-        var semaphore = _worktreeInitLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync();
-        try
-        {
-            _sessionCache.TryRemove(sessionId, out _);
-
-            var session = await LoadSessionAsync(sessionId);
-            if (session == null)
-                throw new InvalidOperationException($"Session '{sessionId}' not found.");
-
-            if (session.Status != SessionStatus.Ready)
-            {
-                logger.LogDebug("세션 {SessionId}의 워크트리 리베이스 건너뜀: 상태는 {Status}", sessionId,
-                    session.Status);
-                return session;
-            }
-
-            // No-op if already on the requested base branch
-            if (session.Git.BaseBranch == newBaseBranch)
-                return session;
-
-            var workspace = await workspaceService.LoadWorkspaceAsync(session.WorkspaceId);
-            if (workspace == null)
-                throw new InvalidOperationException($"Workspace '{session.WorkspaceId}' not found.");
-
-            // Tear down existing worktree and branch
-            var oldWorktreePath = session.Git.WorktreePath;
-            var oldBranchName = session.Git.BranchName;
-
-            if (!string.IsNullOrEmpty(oldWorktreePath))
-                await gitService.RemoveWorktreeAsync(workspace.RepoLocalPath, oldWorktreePath);
-            if (!string.IsNullOrEmpty(oldBranchName))
-                await gitService.DeleteBranchAsync(workspace.RepoLocalPath, oldBranchName);
-
-            // Create new worktree on the new base branch
-            var branchName = $"{SeoroConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
-            var worktreesDir = await workspaceService.GetWorktreesDirAsync();
-
-            session.Git.BranchName = branchName;
-            session.Git.BaseBranch = newBaseBranch;
-            session.Git.WorktreePath = Path.Combine(worktreesDir, session.Id);
-
-            try
-            {
-                var result = await gitService.AddWorktreeAsync(
-                    workspace.RepoLocalPath, session.Git.WorktreePath, branchName, newBaseBranch);
-
-                if (!result.Success)
-                {
-                    session.TransitionStatus(SessionStatus.Error);
-                    session.Error = AppError.WorktreeCreation(result.Error);
-                }
-                else
-                {
-                    session.Git.BaseCommit =
-                        await gitService.ResolveCommitHashAsync(workspace.RepoLocalPath, newBaseBranch) ?? "";
-                    await contextService.EnsureContextDirectoryAsync(session.Git.WorktreePath);
-                    await CopyLocalSettingsToWorktreeAsync(workspace.RepoLocalPath, session.Git.WorktreePath);
-                    logger.LogInformation(
-                        "세션 {SessionId}의 워크트리 리베이스됨 (브랜치: {BaseBranch})", sessionId, newBaseBranch);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "세션 {SessionId}의 워크트리 리베이스 실패", sessionId);
-                session.TransitionStatus(SessionStatus.Error);
-                session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
-            }
-
-            await SaveSessionAsync(session);
-            return session;
-        }
-        finally
-        {
-            semaphore.Release();
-        }
-    }
-
-    private async Task CopyLocalSettingsToWorktreeAsync(string repoPath, string worktreePath)
-    {
-        var source = Path.Combine(repoPath, ".claude", "settings.local.json");
-        if (!File.Exists(source))
-            return;
-
-        var destDir = Path.Combine(worktreePath, ".claude");
-        Directory.CreateDirectory(destDir);
-
-        var dest = Path.Combine(destDir, "settings.local.json");
-        await Task.Run(() => File.Copy(source, dest, overwrite: true));
     }
 
     private static string SanitizePathSegment(string name)

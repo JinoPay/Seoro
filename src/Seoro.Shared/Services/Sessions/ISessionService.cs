@@ -11,6 +11,5 @@ public interface ISessionService
     Task<Session?> LoadSessionAsync(string sessionId);
     Task<Session> CreateLocalDirSessionAsync(string model, string workspaceId, string provider = "claude");
     Task<Session> CreatePendingSessionAsync(string model, string workspaceId, string provider = "claude");
-    Task<Session> InitializeWorktreeAsync(string sessionId, string baseBranch);
-    Task<Session> RebaseWorktreeAsync(string sessionId, string newBaseBranch);
+    void InvalidateSessionCache(string sessionId);
 }

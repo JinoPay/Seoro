@@ -7,6 +7,7 @@ namespace Seoro.Shared.Services.Sessions;
 public class SessionListFacade(
     IChatState chatState,
     ISessionService sessionService,
+    ISessionWorktreeManager worktreeManager,
     IOptionsMonitor<AppSettings> appSettings,
     ISettingsService settingsService,
     SessionListDataService dataService,
@@ -236,7 +237,7 @@ public class SessionListFacade(
         try
         {
             var defaultBranch = await gitService.DetectDefaultBranchAsync(ws.RepoLocalPath) ?? "main";
-            var updated = await sessionService.InitializeWorktreeAsync(session.Id, defaultBranch);
+            var updated = await worktreeManager.InitializeWorktreeAsync(session.Id, defaultBranch);
 
             session.Git.WorktreePath = updated.Git.WorktreePath;
             session.Git.BranchName = updated.Git.BranchName;

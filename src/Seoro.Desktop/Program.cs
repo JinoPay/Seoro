@@ -220,6 +220,7 @@ public static class Program
         appBuilder.Services.AddSingleton<ITaskService, TaskService>();
         appBuilder.Services.AddSingleton<INativeMessageReader, NativeMessageReader>();
         appBuilder.Services.AddSingleton<ISessionService, SessionService>();
+        appBuilder.Services.AddSingleton<ISessionWorktreeManager, SessionWorktreeManager>();
         appBuilder.Services.AddSingleton<IWorkspaceService, WorkspaceService>();
         appBuilder.Services.AddSingleton<ISettingsService, SettingsService>();
         appBuilder.Services.AddSingleton<CominomiMigrationService>();

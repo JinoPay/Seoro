@@ -3,6 +3,7 @@
 @inject IClaudeService ClaudeService
 @inject ICliProviderFactory CliProviderFactory
 @inject ISessionService SessionService
+@inject ISessionWorktreeManager WorktreeManager
 @inject ISessionInitializer SessionInitializer
 @inject IJSRuntime JSRuntime
 @inject ILogger<ChatView> Logger
@@ -393,7 +394,7 @@
         StateHasChanged();
         try
         {
-            var updated = await SessionService.RebaseWorktreeAsync(session.Id, newBranch);
+            var updated = await WorktreeManager.RebaseWorktreeAsync(session.Id, newBranch);
             session.Git.WorktreePath = updated.Git.WorktreePath;
             session.Git.BranchName = updated.Git.BranchName;
             session.Git.BaseBranch = updated.Git.BaseBranch;

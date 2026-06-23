@@ -101,7 +101,8 @@ tests/
 - `SystemInitHandler` → `MessageStartHandler` → `ContentBlockStartHandler` → `ContentBlockDeltaHandler` → `ContentBlockStopHandler` → `MessageDeltaHandler` → `AssistantMessageHandler` → `UserMessageHandler` → `ResultHandler` → `ErrorHandler`
 
 ### Session & Workspace
-- `SessionService` - 세션 CRUD 및 영속화
+- `SessionService` - 세션 CRUD·영속화·캐싱·아카이빙 (워크트리 수명주기는 SessionWorktreeManager로 분리)
+- `SessionWorktreeManager` - 세션 Git 워크트리 생성/리베이스 (Git 작업 묶음, SessionService에 캐시 무효화 위임)
 - `SessionInitializer` - 새 세션 초기화 로직
 - `SessionStatusPolicy` - 세션 상태 전이 유효성 검증 (정적 정책, 상태 변경은 Session.TransitionStatus가 수행)
 - `SessionListDataService` / `SessionListFacade` - 세션 목록 데이터 및 UI 파사드
