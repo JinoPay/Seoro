@@ -1,7 +1,7 @@
 
 namespace Seoro.Shared.Services.Chat.StreamEventHandlers;
 
-public class ContentBlockStopHandler(IChatState chatState, ISessionService sessionService) : IStreamEventHandler
+public class ContentBlockStopHandler(IChatState chatState) : IStreamEventHandler
 {
     public string EventType => "content_block_stop";
 
@@ -34,7 +34,6 @@ public class ContentBlockStopHandler(IChatState chatState, ISessionService sessi
         }
 
         chatState.SetPhase(StreamingPhase.Thinking, sessionId: ctx.Session.Id);
-        _ = sessionService.SaveSessionAsync(ctx.Session);
 
         return Task.CompletedTask;
     }

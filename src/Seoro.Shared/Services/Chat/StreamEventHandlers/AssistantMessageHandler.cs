@@ -6,7 +6,6 @@ namespace Seoro.Shared.Services.Chat.StreamEventHandlers;
 public class AssistantMessageHandler(
     IChatState chatState,
     IEventBus eventBus,
-    ISessionService sessionService,
     ILogger<AssistantMessageHandler> logger) : IStreamEventHandler
 {
     public string EventType => "assistant";
@@ -59,7 +58,8 @@ public class AssistantMessageHandler(
         if (hasNewText && ctx.Session.Git.IsLocalDir && !ctx.Session.TitleLocked)
             TryExtractTitleMarker(ctx);
 
-        _ = sessionService.SaveSessionAsync(ctx.Session);
+        // 메타데이터 영속화는 스트림 종료 시 ChatMessageOrchestrator가 일괄 담당한다.
+        // (핸들러가 Sessions 도메인을 직접 의존하지 않도록 중간 저장을 제거)
 
         return Task.CompletedTask;
     }
