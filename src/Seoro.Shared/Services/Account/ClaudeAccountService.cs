@@ -9,7 +9,7 @@ namespace Seoro.Shared.Services.Account;
 
 public class ClaudeAccountService(
     IClaudeCredentialService credentialService,
-    IChatState chatState,
+    IStreamingStateQuery streamingState,
     HttpClient httpClient,
     ILogger<ClaudeAccountService> logger) : IClaudeAccountService
 {
@@ -176,7 +176,7 @@ public class ClaudeAccountService(
         }
     }
 
-    public bool CanSwitch() => !chatState.HasAnyStreaming();
+    public bool CanSwitch() => !streamingState.HasAnyStreaming();
 
     public async Task<bool> SwitchToAsync(string targetAccountId)
     {

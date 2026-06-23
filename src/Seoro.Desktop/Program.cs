@@ -196,6 +196,7 @@ public static class Program
         appBuilder.Services.AddSingleton<IActiveSessionRegistry, ActiveSessionRegistry>();
         appBuilder.Services.AddSingleton<IEventBus, EventBus>();
         appBuilder.Services.AddSingleton<IChatState, ChatState>();
+        appBuilder.Services.AddSingleton<IStreamingStateQuery, ChatStreamingStateQuery>();
         appBuilder.Services.AddSingleton<IMessageQueueService, MessageQueueService>();
         appBuilder.Services.AddSingleton<LightboxService>();
         appBuilder.Services.AddSingleton<IGitService, GitService>();

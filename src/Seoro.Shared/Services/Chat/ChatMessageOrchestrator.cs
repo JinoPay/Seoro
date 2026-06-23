@@ -14,6 +14,7 @@ public class ChatMessageOrchestrator(
     IActiveSessionRegistry activeSessionRegistry,
     IGitBranchWatcherService branchWatcher,
     IClaudeSettingsService claudeSettingsService,
+    IEventBus eventBus,
     ILogger<ChatMessageOrchestrator> logger)
     : IChatMessageOrchestrator
 {
@@ -202,6 +203,7 @@ public class ChatMessageOrchestrator(
 
             chatState.FinishMessage(assistantMsg);
             chatState.SetStreaming(false, session.Id);
+            eventBus.Publish(new StreamingStoppedEvent(session.Id));
 
             chatState.NotifyStateChanged();
             await sessionService.SaveSessionAsync(session);
