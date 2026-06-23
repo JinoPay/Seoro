@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Seoro.Shared;
 using Seoro.Shared.Models;
 using Seoro.Shared.Services;
+using Seoro.Shared.Services.Sessions.Native;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -32,12 +32,21 @@ public class SessionServiceTests : IDisposable
             _hooksEngine,
             new ActiveSessionRegistry(),
             new FakeWorktreeSyncService(),
+            new NativeMessageReader(NullLogger<NativeMessageReader>.Instance),
             NullLogger<SessionService>.Instance);
 
         // Override internal _sessionsDir via reflection
         var field = typeof(SessionService).GetField("_sessionsDir",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         field.SetValue(_sut, _tempDir);
+    }
+
+    private void ClearSessionCache()
+    {
+        var field = typeof(SessionService).GetField("_sessionCache",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        var cache = field.GetValue(_sut)!;
+        cache.GetType().GetMethod("Clear")!.Invoke(cache, null);
     }
 
     public void Dispose()
@@ -126,17 +135,20 @@ public class SessionServiceTests : IDisposable
 
         await _sut.SaveSessionAsync(session);
 
-        // Verify files exist
+        // 메타데이터 사이드카만 저장됨 (메시지는 CLI 네이티브 jsonl이 소스 — 별도 복제본 없음)
         Assert.True(File.Exists(Path.Combine(_tempDir, "test-roundtrip.json")));
-        Assert.True(File.Exists(Path.Combine(_tempDir, "test-roundtrip.messages.json")));
+        Assert.False(File.Exists(Path.Combine(_tempDir, "test-roundtrip.messages.json")));
+
+        // 단기 세션 캐시를 비워 디스크 + 네이티브 재로드 경로를 강제
+        ClearSessionCache();
 
         var loaded = await _sut.LoadSessionAsync("test-roundtrip");
 
         Assert.NotNull(loaded);
         Assert.Equal("test-roundtrip", loaded.Id);
         Assert.Equal("Test Session", loaded.Title);
-        Assert.Single(loaded.Messages);
-        Assert.Equal("Hello!", loaded.Messages[0].Text);
+        // ConversationId/네이티브 파일이 없으므로 메시지는 비어 있음 (clean break)
+        Assert.Empty(loaded.Messages);
         Assert.Equal("draft message", loaded.DraftInputText);
         Assert.Single(loaded.DraftAttachments);
         Assert.Equal("image.png", loaded.DraftAttachments[0].FileName);
@@ -170,31 +182,6 @@ public class SessionServiceTests : IDisposable
 
         // Title should remain as city name — no fallback to first user message
         Assert.Equal("Seoul", session.Title);
-    }
-
-    // --- Tool output truncation ---
-
-    [Fact]
-    public async Task SaveSessionAsync_TruncatesLongToolOutput()
-    {
-        var session = new Session { Id = "trunc-test", CityName = "A", Title = "A" };
-        session.SetInitialStatus(SessionStatus.Ready);
-        var longOutput = new string('z', 3000);
-        session.Messages.Add(new ChatMessage
-        {
-            Role = MessageRole.Assistant,
-            ToolCalls = [new ToolCall { Id = "tc-1", Name = "Read", Output = longOutput }]
-        });
-
-        await _sut.SaveSessionAsync(session);
-
-        // Read messages file directly
-        var messagesJson = await File.ReadAllTextAsync(Path.Combine(_tempDir, "trunc-test.messages.json"));
-        var messages = JsonSerializer.Deserialize<List<ChatMessage>>(messagesJson, JsonDefaults.Options)!;
-        var savedOutput = messages[0].ToolCalls[0].Output;
-
-        Assert.True(savedOutput.Length < longOutput.Length);
-        Assert.Contains("[...truncated", savedOutput);
     }
 
     // --- DeleteSessionAsync ---

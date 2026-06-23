@@ -16,6 +16,7 @@ using Seoro.Shared.Resources;
 using Seoro.Shared.Services.Cli;
 using Seoro.Shared.Services.Claude;
 using Seoro.Shared.Services.Infrastructure;
+using Seoro.Shared.Services.Sessions.Native;
 using NotificationService = Seoro.Desktop.Services.NotificationService;
 
 namespace Seoro.Desktop;
@@ -216,6 +217,7 @@ public static class Program
         appBuilder.Services.AddSingleton<IHooksEngine, HooksEngine>();
         appBuilder.Services.AddSingleton<ISkillRegistry, SkillRegistry>();
         appBuilder.Services.AddSingleton<ITaskService, TaskService>();
+        appBuilder.Services.AddSingleton<INativeMessageReader, NativeMessageReader>();
         appBuilder.Services.AddSingleton<ISessionService, SessionService>();
         appBuilder.Services.AddSingleton<IWorkspaceService, WorkspaceService>();
         appBuilder.Services.AddSingleton<ISettingsService, SettingsService>();

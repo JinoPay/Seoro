@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Seoro.Shared.Services.Migration;
+using Seoro.Shared.Services.Sessions.Native;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -15,12 +16,12 @@ public partial class SessionService(
     IHooksEngine hooksEngine,
     IActiveSessionRegistry activeSessionRegistry,
     IWorktreeSyncService worktreeSyncService,
+    INativeMessageReader nativeMessageReader,
     ILogger<SessionService> logger)
     : ISessionService
 {
     private const int MaxSessionCacheEntries = 64;
 
-    private const int MaxToolOutputLength = 2000;
     private static readonly TimeSpan ScavengeInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan SessionCacheTtl = TimeSpan.FromSeconds(2);
 
@@ -222,16 +223,9 @@ public partial class SessionService(
                 _metadataCache[session.Id] = cached;
             }
 
-            // Save messages separately (with tool output truncation)
-            if (messages.Count > 0)
-            {
-                var truncated = TruncateToolOutputs(messages);
-                var messagesJson = JsonSerializer.Serialize(truncated, JsonDefaults.Options);
-                var messagesPath = Path.Combine(_sessionsDir, $"{session.Id}.messages.json");
-                await AtomicFileWriter.WriteAsync(messagesPath, messagesJson);
-            }
-
-            logger.LogDebug("세션 {SessionId} 저장됨: {MessageCount} 메시지", session.Id, messages.Count);
+            // 메시지는 CLI 네이티브 jsonl이 단일 진실 소스이므로 별도 복제본을 저장하지 않습니다.
+            // (메타데이터만 사이드카로 유지. 메시지는 LoadSessionAsync에서 네이티브 파일로부터 재구성.)
+            logger.LogDebug("세션 {SessionId} 메타데이터 저장됨", session.Id);
         }
         catch (Exception ex)
         {
@@ -304,19 +298,9 @@ public partial class SessionService(
             await AtomicFileWriter.WriteAsync(path, upgraded);
         }
 
-        // Load messages from separate file (new format)
-        var messagesPath = Path.Combine(_sessionsDir, $"{sessionId}.messages.json");
-        if (File.Exists(messagesPath))
-        {
-            var messagesJson = await File.ReadAllTextAsync(messagesPath);
-            var messages = JsonSerializer.Deserialize<List<ChatMessage>>(messagesJson, JsonDefaults.Options);
-            if (messages != null)
-                session.Messages = messages;
-        }
-        // else: old format — messages are already inline from the main JSON
-
-        foreach (var msg in session.Messages)
-            msg.MigrateToParts();
+        // 메시지는 CLI 네이티브 jsonl(단일 진실 소스)에서 재구성합니다.
+        // (NativeMessageReader가 MigrateToParts 호출 및 파일 부재 시 빈 목록 반환을 처리.)
+        session.Messages = await nativeMessageReader.ReadAsync(session);
 
         _sessionCache[sessionId] = (session, DateTime.UtcNow);
         EnforceSessionCacheCapacity();
@@ -629,54 +613,11 @@ public partial class SessionService(
         await Task.Run(() => File.Copy(source, dest, overwrite: true));
     }
 
-    private static List<ChatMessage> TruncateToolOutputs(List<ChatMessage> messages)
-    {
-        return messages.Select(msg =>
-        {
-            var needsTruncation = msg.ToolCalls.Any(tc => tc.Output.Length > MaxToolOutputLength)
-                                  || msg.Parts.Any(p =>
-                                      p.ToolCall != null && p.ToolCall.Output.Length > MaxToolOutputLength);
-
-            if (!needsTruncation)
-                return msg;
-
-            return new ChatMessage
-            {
-                Id = msg.Id,
-                Role = msg.Role,
-                Text = msg.Text,
-                Timestamp = msg.Timestamp,
-                IsStreaming = msg.IsStreaming,
-                StreamingStartedAt = msg.StreamingStartedAt,
-                StreamingFinishedAt = msg.StreamingFinishedAt,
-                Attachments = msg.Attachments,
-                ToolCalls = msg.ToolCalls.Select(TruncateToolCall).ToList(),
-                Parts = msg.Parts.Select(p => p.ToolCall != null
-                    ? new ContentPart { Type = p.Type, Text = p.Text, ToolCall = TruncateToolCall(p.ToolCall) }
-                    : p).ToList()
-            };
-        }).ToList();
-    }
-
     private static string SanitizePathSegment(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
         var sanitized = string.Concat(name.Select(c => Array.IndexOf(invalid, c) >= 0 ? '_' : c));
         return string.IsNullOrWhiteSpace(sanitized) ? "unnamed" : sanitized;
-    }
-
-    private static ToolCall TruncateToolCall(ToolCall tc)
-    {
-        if (tc.Output.Length <= MaxToolOutputLength) return tc;
-        return new ToolCall
-        {
-            Id = tc.Id,
-            Name = tc.Name,
-            Input = tc.Input,
-            Output = tc.Output[..MaxToolOutputLength] + $"\n[...truncated, {tc.Output.Length} chars total]",
-            IsError = tc.IsError,
-            IsComplete = tc.IsComplete
-        };
     }
 
     /// <summary>
