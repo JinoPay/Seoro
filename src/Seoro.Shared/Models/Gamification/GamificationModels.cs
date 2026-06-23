@@ -80,18 +80,6 @@ public class ConfigItem
     public string Name { get; set; } = "";
 }
 
-public record SessionIndexStats(
-    int TotalSessions,
-    int TotalMessages,
-    int TotalToolCalls,
-    int DaysActive,
-    int TotalProjects,
-    List<DailyActivityEntry> DailyActivity,
-    int[] HourCounts,
-    int NightSessions,
-    int MorningSessions,
-    long LongestSessionMs);
-
 public class DashboardStats
 {
     public CostSummary Cost { get; set; } = new();

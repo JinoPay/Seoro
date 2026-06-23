@@ -171,42 +171,6 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
         });
     }
 
-    public async Task<List<SessionReplaySummary>> SearchIndexAsync(string query, int maxResults = 20)
-    {
-        await EnsureIndexLoadedAsync();
-        var index = _index!;
-
-        if (string.IsNullOrWhiteSpace(query))
-            return [];
-
-        var tokens = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var scored = new List<(SessionIndexEntry entry, int score)>();
-
-        foreach (var entry in index.Entries.Values)
-        {
-            var score = 0;
-            foreach (var token in tokens)
-            {
-                if (entry.FirstMessage?.Contains(token, StringComparison.OrdinalIgnoreCase) == true)
-                    score += 3;
-                if (entry.ProjectPath.Contains(token, StringComparison.OrdinalIgnoreCase))
-                    score += 2;
-                if (entry.Id.Contains(token, StringComparison.OrdinalIgnoreCase))
-                    score += 1;
-            }
-
-            if (score > 0)
-                scored.Add((entry, score));
-        }
-
-        return scored
-            .OrderByDescending(x => x.score)
-            .ThenByDescending(x => x.entry.FirstTimestamp ?? DateTime.MinValue)
-            .Take(maxResults)
-            .Select(x => IndexEntryToSummary(x.entry))
-            .ToList();
-    }
-
     // ===== Search =====
 
     public Task<List<SessionSearchResult>> SearchAsync(string query, int maxResults = 20)
@@ -295,67 +259,6 @@ public class SessionReplayService(ILogger<SessionReplayService> logger) : ISessi
 
             return results;
         });
-    }
-
-    // ===== Aggregated Index Stats (lightweight, no list allocation) =====
-
-    public async Task<SessionIndexStats> GetIndexStatsAsync()
-    {
-        await EnsureIndexLoadedAsync();
-        var index = _index!;
-
-        var dailyMap = new Dictionary<string, DailyActivityEntry>();
-        var projectPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var hourCounts = new int[24];
-        int nightSessions = 0, morningSessions = 0;
-        long longestMs = 0;
-
-        foreach (var e in index.Entries.Values)
-        {
-            var dateKey = e.FirstTimestamp?.ToLocalTime().ToString("yyyy-MM-dd") ?? "";
-            if (string.IsNullOrEmpty(dateKey)) continue;
-
-            if (!dailyMap.TryGetValue(dateKey, out var entry))
-            {
-                entry = new DailyActivityEntry { Date = dateKey };
-                dailyMap[dateKey] = entry;
-            }
-
-            entry.MessageCount += e.UserMessageCount;
-            entry.SessionCount++;
-            entry.ToolCallCount += e.ToolCallCount;
-
-            if (!string.IsNullOrEmpty(e.ProjectPath))
-                projectPaths.Add(e.ProjectPath);
-
-            if (e.FirstTimestamp.HasValue)
-            {
-                var hour = e.FirstTimestamp.Value.ToLocalTime().Hour;
-                hourCounts[hour]++;
-                if (hour >= 22 || hour < 4) nightSessions++;
-                if (hour >= 5 && hour < 9) morningSessions++;
-            }
-
-            if (e.FirstTimestamp.HasValue && e.LastTimestamp.HasValue)
-            {
-                var ms = (long)(e.LastTimestamp.Value - e.FirstTimestamp.Value).TotalMilliseconds;
-                if (ms > longestMs) longestMs = ms;
-            }
-        }
-
-        var dailyActivity = dailyMap.Values.OrderBy(d => d.Date).ToList();
-
-        return new SessionIndexStats(
-            index.Entries.Count,
-            index.Entries.Values.Sum(e => e.UserMessageCount),
-            index.Entries.Values.Sum(e => e.ToolCallCount),
-            dailyMap.Count,
-            projectPaths.Count,
-            dailyActivity,
-            hourCounts,
-            nightSessions,
-            morningSessions,
-            longestMs);
     }
 
     // ===== List Sessions (paginated, sorted by session timestamp) =====

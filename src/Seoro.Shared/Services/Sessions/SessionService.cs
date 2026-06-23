@@ -169,31 +169,6 @@ public partial class SessionService(
         logger.LogInformation("세션 {SessionId} 삭제됨", sessionId);
     }
 
-    public async Task RenameBranchAsync(string sessionId, string newBranchName)
-    {
-        var session = await LoadSessionAsync(sessionId);
-        if (session == null || session.Status != SessionStatus.Ready)
-            return;
-
-        var oldBranch = session.Git.BranchName;
-        if (oldBranch == newBranchName)
-            return;
-
-        var result = await gitService.RenameBranchAsync(session.Git.WorktreePath, oldBranch, newBranchName);
-        if (result.Success)
-        {
-            session.Git.BranchName = newBranchName;
-            await SaveSessionAsync(session);
-            logger.LogInformation("세션 {SessionId} 브랜치 이름 변경: {OldBranch} -> {NewBranch}", sessionId,
-                oldBranch, newBranchName);
-        }
-        else
-        {
-            logger.LogWarning("세션 {SessionId}의 브랜치 이름 변경 실패: {OldBranch} -> {NewBranch}: {Error}",
-                sessionId, oldBranch, newBranchName, result.Error);
-        }
-    }
-
     public async Task SaveSessionAsync(Session session)
     {
         // Skip saving if this session has been deleted (race with fire-and-forget saves)
@@ -396,63 +371,6 @@ public partial class SessionService(
             ["SEORO_CITY_NAME"] = cityName,
             ["SEORO_WORKSPACE_ID"] = workspaceId
         });
-
-        return session;
-    }
-
-    public async Task<Session> CreateSessionAsync(string model, string workspaceId, string baseBranch, string provider = "claude")
-    {
-        Guard.NotNullOrWhiteSpace(model, nameof(model));
-        Guard.NotNullOrWhiteSpace(workspaceId, nameof(workspaceId));
-        Guard.NotNullOrWhiteSpace(baseBranch, nameof(baseBranch));
-
-        var workspace = await workspaceService.LoadWorkspaceAsync(workspaceId);
-        if (workspace == null)
-            throw new InvalidOperationException($"Workspace '{workspaceId}' not found.");
-
-        await EnforceSessionLimitAsync(workspaceId);
-
-        var branchName = $"{SeoroConstants.BranchPrefix}{DateTime.Now:yyyyMMdd-HHmmss}";
-        var worktreesDir = await workspaceService.GetWorktreesDirAsync();
-
-        var settings = appSettings.CurrentValue;
-        var session = new Session
-        {
-            Model = model,
-            Provider = provider,
-            WorkspaceId = workspaceId,
-            Git = { BranchName = branchName, BaseBranch = baseBranch },
-            EffortLevel = settings.DefaultEffortLevel,
-            PermissionMode = settings.DefaultPermissionMode
-        };
-        session.TransitionStatus(SessionStatus.Initializing);
-
-        session.Git.WorktreePath = Path.Combine(worktreesDir, session.Id);
-
-        try
-        {
-            var result = await gitService.AddWorktreeAsync(
-                workspace.RepoLocalPath, session.Git.WorktreePath, branchName, baseBranch);
-
-            if (!result.Success)
-            {
-                session.TransitionStatus(SessionStatus.Error);
-                session.Error = AppError.WorktreeCreation(result.Error);
-            }
-            else
-            {
-                session.Git.BaseCommit =
-                    await gitService.ResolveCommitHashAsync(workspace.RepoLocalPath, baseBranch) ?? "";
-                session.TransitionStatus(SessionStatus.Ready);
-                await CopyLocalSettingsToWorktreeAsync(workspace.RepoLocalPath, session.Git.WorktreePath);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "워크스페이스 {WorkspaceId}의 세션 워크트리 생성 실패", workspaceId);
-            session.TransitionStatus(SessionStatus.Error);
-            session.Error = AppError.FromException(ErrorCode.WorktreeCreationFailed, ex);
-        }
 
         return session;
     }
