@@ -1,4 +1,4 @@
-@inject ISessionReplayService ReplayService
+@inject ISessionIndexService IndexService
 @inject IChatState ChatState
 @implements IDisposable
 
@@ -58,7 +58,7 @@
         _loading = true;
         try
         {
-            var result = await ReplayService.ListSessionsAsync(5, 0);
+            var result = await IndexService.ListSessionsAsync(5, 0);
             _sessions = result.Sessions;
         }
         catch

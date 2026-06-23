@@ -1,4 +1,8 @@
-@inject ISessionReplayService ReplayService
+@inject ISessionIndexService IndexService
+@inject ISessionSearchService SearchService
+@inject ISessionTranscriptReader TranscriptReader
+@inject ILiveSessionDetector LiveDetector
+@inject ISessionTagStore TagStore
 @inject IChatState ChatState
 @implements IDisposable
 
@@ -433,9 +437,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var listTask = ReplayService.ListSessionsAsync(10, 0);
-        var tagsTask = ReplayService.GetTagsAsync();
-        var liveTask = ReplayService.DetectLiveSessionsAsync();
+        var listTask = IndexService.ListSessionsAsync(10, 0);
+        var tagsTask = TagStore.GetTagsAsync();
+        var liveTask = LiveDetector.DetectLiveSessionsAsync();
 
         await Task.WhenAll(listTask, tagsTask, liveTask);
 
@@ -456,7 +460,7 @@
         {
             try
             {
-                _liveSessions = await ReplayService.DetectLiveSessionsAsync();
+                _liveSessions = await LiveDetector.DetectLiveSessionsAsync();
                 MarkLiveSessions();
                 await InvokeAsync(StateHasChanged);
             }
@@ -484,11 +488,11 @@
 
         try
         {
-            await ReplayService.RefreshSessionIndexAsync(force: true);
+            await IndexService.RefreshSessionIndexAsync(force: true);
 
-            var listTask = ReplayService.ListSessionsAsync(10, 0);
-            var tagsTask = ReplayService.GetTagsAsync();
-            var liveTask = ReplayService.DetectLiveSessionsAsync();
+            var listTask = IndexService.ListSessionsAsync(10, 0);
+            var tagsTask = TagStore.GetTagsAsync();
+            var liveTask = LiveDetector.DetectLiveSessionsAsync();
             await Task.WhenAll(listTask, tagsTask, liveTask);
 
             var result = listTask.Result;
@@ -517,7 +521,7 @@
 
         try
         {
-            var result = await ReplayService.ListSessionsAsync(10, _sessions.Count);
+            var result = await IndexService.ListSessionsAsync(10, _sessions.Count);
             _sessions.AddRange(result.Sessions);
             _hasMoreSessions = result.HasMore;
             _totalCount = result.Total;
@@ -548,7 +552,7 @@
 
         try
         {
-            var result = await ReplayService.LoadSessionAsync(session.FilePath, 50, 0);
+            var result = await TranscriptReader.LoadSessionAsync(session.FilePath, 50, 0);
             _events = result.Events;
             _displayEvents = _events;
             _hasMoreEvents = result.HasMore;
@@ -574,7 +578,7 @@
 
         try
         {
-            var result = await ReplayService.LoadSessionAsync(_selected.FilePath, 50, _events.Count);
+            var result = await TranscriptReader.LoadSessionAsync(_selected.FilePath, 50, _events.Count);
             _events.AddRange(result.Events);
             _displayEvents = _events;
             _hasMoreEvents = result.HasMore;
@@ -602,7 +606,7 @@
 
         try
         {
-            _searchResults = await ReplayService.SearchAsync(_search, 20);
+            _searchResults = await SearchService.SearchAsync(_search, 20);
         }
         catch
         {
@@ -663,8 +667,8 @@
         var current = GetSessionTags(_selected.Id);
         if (current.Contains(tag)) return;
         var newTags = new List<string>(current) { tag };
-        await ReplayService.SetTagAsync(_selected.Id, newTags);
-        _tagsData = await ReplayService.GetTagsAsync();
+        await TagStore.SetTagAsync(_selected.Id, newTags);
+        _tagsData = await TagStore.GetTagsAsync();
         StateHasChanged();
     }
 
@@ -672,8 +676,8 @@
     {
         if (_selected == null) return;
         var current = GetSessionTags(_selected.Id).Where(t => t != tag).ToList();
-        await ReplayService.SetTagAsync(_selected.Id, current);
-        _tagsData = await ReplayService.GetTagsAsync();
+        await TagStore.SetTagAsync(_selected.Id, current);
+        _tagsData = await TagStore.GetTagsAsync();
         StateHasChanged();
     }
 
@@ -684,7 +688,7 @@
         if (_selected == null) return;
         try
         {
-            var md = await ReplayService.ExportToMarkdownAsync(_selected.FilePath);
+            var md = await TranscriptReader.ExportToMarkdownAsync(_selected.FilePath);
             // JS interop을 통해 클립보드에 복사하는 것이 이상적이지만 현재는 그냥 저장
             StateHasChanged();
         }

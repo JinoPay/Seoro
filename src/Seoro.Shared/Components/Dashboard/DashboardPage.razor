@@ -1,6 +1,6 @@
 @inject IGamificationService GamificationService
 @inject IStatsCacheService StatsCacheService
-@inject ISessionReplayService ReplayService
+@inject ISessionIndexService IndexService
 @inject IChatState ChatState
 
 <div class="settings-content-area wide">
@@ -117,7 +117,7 @@
     {
         // 병렬: 통계 캐시 갱신 + 세션 인덱스 갱신 (SessionMonitor용)
         var t1 = StatsCacheService.RefreshIfStaleAsync();
-        var t2 = ReplayService.RefreshSessionIndexAsync();
+        var t2 = IndexService.RefreshSessionIndexAsync();
         await Task.WhenAll(t1, t2);
 
         _stats = await GamificationService.GetDashboardStatsAsync();
@@ -132,7 +132,7 @@
         // 병렬: 통계 캐시 강제 갱신 + 세션 인덱스 강제 갱신 (SessionMonitor용)
         await Task.WhenAll(
             StatsCacheService.ForceRefreshAsync(),
-            ReplayService.RefreshSessionIndexAsync(true));
+            IndexService.RefreshSessionIndexAsync(true));
         _stats = await GamificationService.ForceRefreshDashboardAsync();
 
         _refreshing = false;

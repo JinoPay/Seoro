@@ -37,7 +37,8 @@ src/
       Chat/                         # 채팅 & 스트리밍 (17개)
         StreamEventHandlers/          # 스트림 이벤트 핸들러 파이프라인 (12개)
       Events/                       # 도메인 중립 이벤트 버스 (3개)
-      Sessions/                     # 세션 관리 (12개)
+      Sessions/                     # 세션 관리 (11개)
+        History/                      # CLI 네이티브 세션 읽기/인덱싱/검색 (7개)
       Git/                          # Git 통합 (15개)
       Settings/                     # 설정 관리 (8개)
       Knowledge/                    # 컨텐츠 & 지식 (12개)
@@ -103,9 +104,18 @@ tests/
 - `SessionService` - 세션 CRUD 및 영속화
 - `SessionInitializer` - 새 세션 초기화 로직
 - `SessionStatusPolicy` - 세션 상태 전이 유효성 검증 (정적 정책, 상태 변경은 Session.TransitionStatus가 수행)
-- `SessionReplayService` - 세션 타임라인 리플레이 및 내비게이션
 - `SessionListDataService` / `SessionListFacade` - 세션 목록 데이터 및 UI 파사드
 - `ActiveSessionRegistry` - 활성 세션 레지스트리 (동시 세션 제한)
+- `IStreamingStateQuery` / `ChatStreamingStateQuery` - 스트리밍 진행 여부 좁은 쿼리 (Account가 IChatState 대신 의존)
+
+### Session History (`Services/Sessions/History/`)
+구 `SessionReplayService`(913줄)를 책임별로 분해. CLI 네이티브 jsonl(`~/.claude/projects/`) 읽기 전용.
+- `IClaudeProjectStore` - projects 세션 파일 열거 + 해시→경로 복원 (유일한 파일시스템 접근점)
+- `ISessionIndexService` - 메타데이터 인덱싱(QuickScan, 첫 30줄 + 크기 추정) 및 세션 목록
+- `ISessionSearchService` - 라인 단위 풀텍스트 검색
+- `ISessionTranscriptReader` - 개별 세션 이벤트 로드 / 마크다운 내보내기
+- `ILiveSessionDetector` - 최근(5분 이내) 수정 세션 감지
+- `ISessionTagStore` - 세션 태그/메모 저장 (seoro-session-tags.json)
 
 ### Statistics / Usage (`Services/Statistics/`)
 - `StatsCacheService` / `IStatsCacheService` - 사용량 통계(토큰/비용/활동) 읽기 전용 집계. `~/.claude/stats-cache.json` + `history.jsonl`을 수정하지 않고 그대로 읽음 (게임화 전용이 아니라 일반 사용량 대시보드가 소비)

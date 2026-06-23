@@ -268,7 +268,12 @@ public static class Program
         appBuilder.Services.AddSingleton<IRulesService, RulesService>();
         appBuilder.Services.AddSingleton<IInstructionsService, InstructionsService>();
         appBuilder.Services.AddSingleton<IGamificationService, GamificationService>();
-        appBuilder.Services.AddSingleton<ISessionReplayService, SessionReplayService>();
+        appBuilder.Services.AddSingleton<IClaudeProjectStore, ClaudeProjectStore>();
+        appBuilder.Services.AddSingleton<ISessionIndexService, SessionIndexService>();
+        appBuilder.Services.AddSingleton<ISessionSearchService, SessionSearchService>();
+        appBuilder.Services.AddSingleton<ISessionTranscriptReader, SessionTranscriptReader>();
+        appBuilder.Services.AddSingleton<ILiveSessionDetector, LiveSessionDetector>();
+        appBuilder.Services.AddSingleton<ISessionTagStore, SessionTagStore>();
         appBuilder.Services.AddSingleton<IWindowCloseGuardService, WindowCloseGuardService>();
 
         // Load external model definitions

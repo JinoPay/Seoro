@@ -91,7 +91,7 @@ public partial class NativeMessageReader(ILogger<NativeMessageReader> logger) : 
     ///     cwd 경로를 Claude의 프로젝트 디렉토리 이름으로 변환합니다.
     ///     Claude는 영숫자가 아닌 모든 문자를 '-'로 치환합니다.
     ///     예: /Users/me/Projects/Seoro → -Users-me-Projects-Seoro, net10.0 → net10-0
-    ///     <see cref="SessionReplayService.ProjectHashToPath" />의 역함수입니다.
+    ///     <see cref="History.ClaudeProjectStore.HashToPath" />의 역함수입니다.
     /// </summary>
     internal static string PathToProjectHash(string cwd)
     {

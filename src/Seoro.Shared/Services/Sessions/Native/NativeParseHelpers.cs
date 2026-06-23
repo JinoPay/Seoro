@@ -12,7 +12,7 @@ internal static class NativeParseHelpers
     /// <summary>
     ///     "timestamp" 노드를 DateTime으로 안전하게 변환합니다.
     ///     ISO 8601 문자열 또는 Unix 밀리초 숫자 모두 지원합니다.
-    ///     (SessionReplayService / StatsCacheService와 동일한 처리.)
+    ///     (History.ReplayJsonHelpers / StatsCacheService와 동일한 처리.)
     /// </summary>
     public static DateTime? ParseTimestamp(JsonNode? tsNode)
     {

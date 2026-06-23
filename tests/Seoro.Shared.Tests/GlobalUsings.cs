@@ -14,6 +14,7 @@ global using Seoro.Shared.Services.Notification;
 global using Seoro.Shared.Services.Platform;
 global using Seoro.Shared.Services.Plugin;
 global using Seoro.Shared.Services.Sessions;
+global using Seoro.Shared.Services.Sessions.History;
 global using Seoro.Shared.Services.Settings;
 global using Seoro.Shared.Services.Statistics;
 
