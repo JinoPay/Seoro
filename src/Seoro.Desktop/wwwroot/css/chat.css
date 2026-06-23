@@ -113,14 +113,19 @@
     line-height: 1;
 }
 
-/* 시간은 평소엔 숨기고, 메시지에 마우스를 올리면 측면에 자연스럽게 표시 */
+/* 시간은 평소엔 숨기고, 마우스를 올리면 코너에 작은 라벨로 표시.
+   툴 그룹 등 풀폭 박스와 겹쳐도 배경+z-index 로 박스 위에 깔끔히 뜬다. */
 .message-time-hover {
     position: absolute;
-    top: var(--space-2);
+    top: var(--space-1);
+    padding: 0 var(--space-1);
     font-size: var(--text-xs);
     font-weight: 400;
     color: var(--text-secondary);
+    background: var(--bg-base);
+    border-radius: var(--radius-sm);
     opacity: 0;
+    z-index: 2;
     transition: opacity var(--transition);
     white-space: nowrap;
     pointer-events: none;
@@ -128,11 +133,11 @@
 }
 
 .assistant-message .message-time-hover {
-    right: var(--space-3);
+    right: var(--space-2);
 }
 
 .user-message .message-time-hover {
-    left: var(--space-3);
+    left: var(--space-2);
 }
 
 .message-bubble:hover .message-time-hover {
