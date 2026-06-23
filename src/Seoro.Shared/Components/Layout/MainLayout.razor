@@ -681,7 +681,8 @@
 
     public async ValueTask DisposeAsync()
     {
-        await _updateTimerCts?.CancelAsync();
+        if (_updateTimerCts is not null)
+            await _updateTimerCts.CancelAsync();
         _updateTimerCts?.Dispose();
         ChatState.OnChange -= HandleStateChanged;
         ThemeService.OnThemeChanged -= HandleThemeChanged;

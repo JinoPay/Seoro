@@ -363,29 +363,32 @@
 
                 @* Segmented bar *@
                 @{
-                    var allTokens = _stats.TotalInputTokens + _stats.TotalCacheReadTokens + _stats.TotalCacheCreationTokens;
+                    var inputTokens = _stats!.TotalInputTokens;
+                    var cacheReadTokens = _stats.TotalCacheReadTokens;
+                    var cacheCreationTokens = _stats.TotalCacheCreationTokens;
+                    var allTokens = inputTokens + cacheReadTokens + cacheCreationTokens;
                     if (allTokens == 0)
                     {
                         allTokens = 1;
                     }
                 }
                 <div class="analytics-segmented-bar">
-                    <div class="analytics-segment input" style="width: @GetPercent(_stats.TotalInputTokens, allTokens)%"
-                         title="입력: @FormatTokens(_stats.TotalInputTokens)"></div>
+                    <div class="analytics-segment input" style="width: @GetPercent(inputTokens, allTokens)%"
+                         title="입력: @FormatTokens(inputTokens)"></div>
                     <div class="analytics-segment cache-read"
-                         style="width: @GetPercent(_stats.TotalCacheReadTokens, allTokens)%"
-                         title="캐시 읽기: @FormatTokens(_stats.TotalCacheReadTokens)"></div>
+                         style="width: @GetPercent(cacheReadTokens, allTokens)%"
+                         title="캐시 읽기: @FormatTokens(cacheReadTokens)"></div>
                     <div class="analytics-segment cache-write"
-                         style="width: @GetPercent(_stats.TotalCacheCreationTokens, allTokens)%"
-                         title="캐시 쓰기: @FormatTokens(_stats.TotalCacheCreationTokens)"></div>
+                         style="width: @GetPercent(cacheCreationTokens, allTokens)%"
+                         title="캐시 쓰기: @FormatTokens(cacheCreationTokens)"></div>
                 </div>
                 <div class="analytics-segment-legend">
                     <span class="legend-item"><span
-                            class="legend-dot input"></span>입력 (@GetPercent(_stats.TotalInputTokens, allTokens)%)</span>
+                            class="legend-dot input"></span>입력 (@GetPercent(inputTokens, allTokens)%)</span>
                     <span class="legend-item"><span
-                            class="legend-dot cache-read"></span>캐시 읽기 (@GetPercent(_stats.TotalCacheReadTokens, allTokens)%)</span>
+                            class="legend-dot cache-read"></span>캐시 읽기 (@GetPercent(cacheReadTokens, allTokens)%)</span>
                     <span class="legend-item"><span
-                            class="legend-dot cache-write"></span>캐시 쓰기 (@GetPercent(_stats.TotalCacheCreationTokens, allTokens)%)</span>
+                            class="legend-dot cache-write"></span>캐시 쓰기 (@GetPercent(cacheCreationTokens, allTokens)%)</span>
                 </div>
             </div>
         }

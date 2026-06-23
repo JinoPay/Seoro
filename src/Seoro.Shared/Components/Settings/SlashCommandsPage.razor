@@ -378,7 +378,7 @@
         ResetEditForm();
         _editName = template.Name.ToLowerInvariant().Replace(' ', '-');
         _editDescription = template.Description;
-        _editContent = template.Content;
+        _editContent = template.Content ?? "";
         _editScope = _scope == ClaudeSettingsScope.Project && !string.IsNullOrEmpty(_projectPath)
             ? "project"
             : "user";

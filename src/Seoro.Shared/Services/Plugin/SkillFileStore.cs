@@ -27,6 +27,11 @@ public class SkillFileStore(ILogger logger)
                 ".claude", "commands");
         }
 
+        if (string.IsNullOrEmpty(dir))
+            dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".claude", "commands");
+
         Directory.CreateDirectory(dir);
 
         var fileName = command.Name.Replace(':', Path.DirectorySeparatorChar) + ".md";

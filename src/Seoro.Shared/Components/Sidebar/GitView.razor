@@ -351,16 +351,16 @@
     };
 
     private static void AddIconBtn(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b, int seq,
-        string icon, string title, bool disabled, Action onClick)
+        string icon, string title, bool disabled, Func<Task> onClick)
     {
         b.OpenElement(seq, "button");
         b.AddAttribute(seq + 1, "class", "git-file-action-btn");
         b.AddAttribute(seq + 2, "title", title);
         b.AddAttribute(seq + 3, "disabled", disabled);
-        b.AddAttribute(seq + 4, "onclick", (Microsoft.AspNetCore.Components.Web.MouseEventArgs e) =>
+        b.AddAttribute(seq + 4, "onclick", async (Microsoft.AspNetCore.Components.Web.MouseEventArgs e) =>
         {
             // 부모(파일 행) 클릭 핸들러 호출 방지
-            onClick();
+            await onClick();
         });
         b.AddEventStopPropagationAttribute(seq + 5, "onclick", true);
         b.OpenComponent<MudIcon>(seq + 6);

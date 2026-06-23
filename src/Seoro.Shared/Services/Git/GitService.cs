@@ -272,11 +272,9 @@ public class GitService(
         var stdoutBuilder = new StringBuilder();
         var stdoutTask = Task.Run(async () =>
         {
-            while (!process.StandardOutput.EndOfStream)
-            {
-                var line = await process.StandardOutput.ReadLineAsync(ct);
-                if (line != null) stdoutBuilder.AppendLine(line);
-            }
+            string? line;
+            while ((line = await process.StandardOutput.ReadLineAsync(ct)) != null)
+                stdoutBuilder.AppendLine(line);
         }, ct);
 
         // Git clone은 진행 상황을 stderr에 씀
@@ -284,7 +282,7 @@ public class GitService(
         var stderrTask = Task.Run(async () =>
         {
             var buffer = new char[256];
-            while (!process.StandardError.EndOfStream)
+            while (true)
             {
                 int read;
                 try
@@ -296,6 +294,7 @@ public class GitService(
                     break;
                 }
 
+                if (read == 0) break;
                 if (read > 0)
                 {
                     var text = new string(buffer, 0, read);

@@ -29,9 +29,13 @@
                      Style="font-size: 0.75rem; cursor: pointer;">
                 @Strings.Chat_Queue_OverflowMore(hidden.Count)
             </MudChip>
+            @if (_popoverOpen)
+            {
+                <MudOverlay Visible="true" OnClick="ClosePopover" AutoClose="false"
+                            Style="background-color: transparent;"/>
+            }
             <MudPopover Open="_popoverOpen" AnchorOrigin="Origin.TopLeft"
                         TransformOrigin="Origin.BottomLeft" Class="queued-overflow-popover">
-                <MudClickAwayListener OnClickAway="ClosePopover"/>
                 <div class="queued-overflow-content">
                     @foreach (var (msg, idx) in Queue.Select((m, i) => (m, i)).Skip(MaxVisible))
                     {

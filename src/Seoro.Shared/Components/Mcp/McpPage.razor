@@ -223,7 +223,7 @@
         }
         else
         {
-            Snackbar.Add(Strings.Common_SaveFailed(result.Error), Severity.Error);
+            Snackbar.Add(Strings.Common_SaveFailed(result.Error ?? ""), Severity.Error);
         }
     }
 
@@ -242,7 +242,7 @@
         }
         else
         {
-            Snackbar.Add(Strings.Common_SaveFailed(result.Error), Severity.Error);
+            Snackbar.Add(Strings.Common_SaveFailed(result.Error ?? ""), Severity.Error);
         }
     }
 

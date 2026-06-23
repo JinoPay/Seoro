@@ -216,7 +216,7 @@ public class CodexService(
         logger.LogDebug("실행 중: {FileName} {Arguments}", fileName, arguments);
         var loginPath = await shellService.GetLoginShellPathAsync();
         var process = StartProcess(fileName, arguments, workingDir, envVars, loginPath);
-        var agent = new AgentProcess(process, cts, logger);
+        var agent = new AgentProcess(process, cts);
         _agents[agentKey] = agent;
 
         // 메시지를 stdin으로 전송 (system prompt + user message 조합)
@@ -237,7 +237,7 @@ public class CodexService(
         }, token);
 
         // Codex JSONL 이벤트를 StreamEvent로 변환하여 yield
-        var converter = new CodexEventConverter(logger);
+        var converter = new CodexEventConverter();
         await foreach (var evt in ReadAndConvertCodexEventsAsync(process.StandardOutput, converter, token))
             yield return evt;
 
@@ -283,7 +283,7 @@ public class CodexService(
         CodexEventConverter converter,
         [EnumeratorCancellation] CancellationToken token)
     {
-        while (!reader.EndOfStream && !token.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
             string? line;
             try
@@ -292,6 +292,7 @@ public class CodexService(
             }
             catch (OperationCanceledException) { break; }
 
+            if (line == null) break;
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             logger.LogDebug("Codex 원본 라인: {Line}", line);
@@ -354,7 +355,7 @@ public class CodexService(
         return process;
     }
 
-    private sealed class AgentProcess(Process process, CancellationTokenSource cts, ILogger logger) : IDisposable
+    private sealed class AgentProcess(Process process, CancellationTokenSource cts) : IDisposable
     {
         public void Dispose()
         {
@@ -380,7 +381,7 @@ public class CodexService(
 ///     Codex CLI의 ThreadEvent JSONL을 Claude StreamEvent로 변환한다.
 ///     Codex item.* 라이프사이클 → content_block_* 라이프사이클 매핑.
 /// </summary>
-internal class CodexEventConverter(ILogger logger)
+internal class CodexEventConverter
 {
     // item ID별 누적 텍스트 추적 (text delta 계산용)
     private readonly Dictionary<string, string> _textAccum = new();

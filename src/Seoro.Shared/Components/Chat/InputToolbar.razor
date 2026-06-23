@@ -48,9 +48,13 @@
                 </div>
             </MudTooltip>
 
+            @if (_addDirPopoverOpen)
+            {
+                <MudOverlay Visible="true" OnClick="CloseAddDirPopover" AutoClose="false"
+                            Style="background-color: transparent;"/>
+            }
             <MudPopover Open="_addDirPopoverOpen" AnchorOrigin="Origin.BottomLeft"
                         TransformOrigin="Origin.TopLeft" Class="add-dir-popover">
-                <MudClickAwayListener OnClickAway="CloseAddDirPopover"/>
                 <div class="add-dir-popover-content">
                     <div class="typo-subtitle2 mb-2">추가 작업 디렉터리</div>
                     <AdditionalDirectoriesEditor Directories="AdditionalDirs"

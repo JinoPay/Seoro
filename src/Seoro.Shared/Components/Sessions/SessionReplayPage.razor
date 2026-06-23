@@ -419,7 +419,6 @@
 
     // UI 상태
     private HashSet<int> _expandedEvents = [];
-    private bool _exportCopied;
 
     private List<SessionReplaySummary> FilteredSessions => string.IsNullOrWhiteSpace(_search) || _searchMode
         ? _sessions
@@ -687,10 +686,6 @@
         {
             var md = await ReplayService.ExportToMarkdownAsync(_selected.FilePath);
             // JS interop을 통해 클립보드에 복사하는 것이 이상적이지만 현재는 그냥 저장
-            _exportCopied = true;
-            StateHasChanged();
-            await Task.Delay(2000);
-            _exportCopied = false;
             StateHasChanged();
         }
         catch

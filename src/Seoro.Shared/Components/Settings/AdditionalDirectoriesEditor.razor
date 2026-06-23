@@ -48,9 +48,9 @@
         <div class="d-flex gap-2 align-end">
             <MudTextField T="string" @bind-Value="_newPath" Label="경로" Variant="Variant.Outlined"
                           Margin="Margin.Dense" Placeholder="/path/to/directory" Style="flex: 1;"
-                          OnKeyUp="@(e =>
+                          OnKeyUp="@(async e =>
                                    {
-                                       if (e.Key == "Enter") Add();
+                                       if (e.Key == "Enter") await Add();
                                    })"/>
             <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary"
                            OnClick="BrowseFolder" Size="Size.Small" title="찾아보기..."/>

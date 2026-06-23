@@ -7,7 +7,7 @@
                        OnClick="@OnToggleFilter"/>
         <MudIconButton Icon="@(ShowArchived ? Icons.Material.Filled.Unarchive : Icons.Material.Outlined.Archive)"
                        Size="Size.Small"
-                       Title="@(ShowArchived ? Strings.Sidebar_HideArchived : Strings.Sidebar_ShowArchived)"
+                       title="@(ShowArchived ? Strings.Sidebar_HideArchived : Strings.Sidebar_ShowArchived)"
                        Style="@($"width: 24px; height: 24px; opacity: {(ShowArchived ? "0.9" : "0.5")};")"
                        OnClick="@OnToggleArchived"/>
         <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"

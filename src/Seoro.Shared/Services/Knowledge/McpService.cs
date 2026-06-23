@@ -759,7 +759,8 @@ public class McpService(
                 {
                     Command = server.Command,
                     Arguments = server.Args.Count > 0 ? server.Args : null,
-                    Name = server.Name
+                    Name = server.Name,
+                    EnvironmentVariables = new Dictionary<string, string?>()
                 };
                 if (server.Env.Count > 0)
                     foreach (var (k, v) in server.Env)

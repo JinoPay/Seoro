@@ -1,12 +1,11 @@
 using System.Text.Json;
-using Microsoft.Extensions.Logging.Abstractions;
 using Seoro.Shared.Services.Codex;
 
 namespace Seoro.Shared.Tests;
 
 public class CodexEventConverterTests
 {
-    private static CodexEventConverter CreateConverter() => new(NullLogger.Instance);
+    private static CodexEventConverter CreateConverter() => new();
 
     private static JsonElement Parse(string json) => JsonSerializer.Deserialize<JsonElement>(json);
 

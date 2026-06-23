@@ -4,7 +4,6 @@ namespace Seoro.Shared.Services.Chat;
 
 public class ChatMessageOrchestrator(
     IChatState chatState,
-    IClaudeService claudeService,
     ICliProviderFactory cliProviderFactory,
     ISessionService sessionService,
     IAttachmentService attachmentService,

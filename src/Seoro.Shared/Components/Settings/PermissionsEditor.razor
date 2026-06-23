@@ -21,9 +21,9 @@
         <div class="d-flex gap-2">
             <MudTextField T="string" @bind-Value="_allowInput" Placeholder="Bash(npm run *)"
                           Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1;"
-                          OnKeyUp="@(e =>
+                          OnKeyUp="@(async e =>
                                    {
-                                       if (e.Key == "Enter") AddRule("allow");
+                                       if (e.Key == "Enter") await AddRule("allow");
                                    })"
                           HelperText="도구 패턴 입력 후 Enter 또는 추가 버튼"/>
             <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Success"
@@ -53,9 +53,9 @@
         <div class="d-flex gap-2">
             <MudTextField T="string" @bind-Value="_askInput" Placeholder="Edit(/src/**/*.config)"
                           Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1;"
-                          OnKeyUp="@(e =>
+                          OnKeyUp="@(async e =>
                                    {
-                                       if (e.Key == "Enter") AddRule("ask");
+                                       if (e.Key == "Enter") await AddRule("ask");
                                    })"
                           HelperText="확인이 필요한 도구 패턴"/>
             <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Warning"
@@ -85,9 +85,9 @@
         <div class="d-flex gap-2">
             <MudTextField T="string" @bind-Value="_denyInput" Placeholder="WebFetch(domain:*)"
                           Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1;"
-                          OnKeyUp="@(e =>
+                          OnKeyUp="@(async e =>
                                    {
-                                       if (e.Key == "Enter") AddRule("deny");
+                                       if (e.Key == "Enter") await AddRule("deny");
                                    })"
                           HelperText="차단할 도구 패턴"/>
             <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Error"

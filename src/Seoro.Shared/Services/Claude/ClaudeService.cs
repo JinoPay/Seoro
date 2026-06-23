@@ -355,7 +355,7 @@ public class ClaudeService(
         StreamReader reader,
         [EnumeratorCancellation] CancellationToken token)
     {
-        while (!reader.EndOfStream && !token.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
             string? line;
             try
@@ -367,6 +367,7 @@ public class ClaudeService(
                 break;
             }
 
+            if (line == null) break;
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             logger.LogDebug("Claude 원본 라인: {Line}", line);

@@ -37,15 +37,15 @@
     <div class="d-flex gap-2 align-end">
         <MudTextField T="string" @bind-Value="_newKey" Label="키" Variant="Variant.Outlined"
                       Margin="Margin.Dense" Placeholder="VARIABLE_NAME" Style="flex: 1;"
-                      OnKeyUp="@(e =>
+                      OnKeyUp="@(async e =>
                                {
-                                   if (e.Key == "Enter") Add();
+                                   if (e.Key == "Enter") await Add();
                                })"/>
         <MudTextField T="string" @bind-Value="_newValue" Label="값" Variant="Variant.Outlined"
                       Margin="Margin.Dense" Placeholder="value" Style="flex: 1;"
-                      OnKeyUp="@(e =>
+                      OnKeyUp="@(async e =>
                                {
-                                   if (e.Key == "Enter") Add();
+                                   if (e.Key == "Enter") await Add();
                                })"/>
         <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
                    OnClick="Add" Disabled="@(string.IsNullOrWhiteSpace(_newKey))"
