@@ -49,7 +49,7 @@ public static class Program
             services.GetService<IConflictWatcherService>()?.Dispose();
             services.GetService<IMergeStatusService>()?.Dispose();
             (services.GetService<ChatState>() as IDisposable)?.Dispose();
-            (services.GetService<SessionListDataService>() as IDisposable)?.Dispose();
+            (services.GetService<SessionListState>() as IDisposable)?.Dispose();
 
             if (services.GetService<ITerminalService>() is IAsyncDisposable termDisposable)
                 termDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
@@ -258,7 +258,8 @@ public static class Program
         appBuilder.Services.AddSingleton<ISystemPromptBuilder, SystemPromptBuilder>();
         appBuilder.Services.AddSingleton<ISessionInitializer, SessionInitializer>();
         appBuilder.Services.AddSingleton<IChatMessageOrchestrator, ChatMessageOrchestrator>();
-        appBuilder.Services.AddSingleton<SessionListDataService>();
+        appBuilder.Services.AddSingleton<ISessionDiffStatsService, SessionListDiffStatsService>();
+        appBuilder.Services.AddSingleton<SessionListState>();
         appBuilder.Services.AddScoped<ISessionListFacade, SessionListFacade>();
         appBuilder.Services.AddSingleton<IThemeService, ThemeService>();
         appBuilder.Services.AddSingleton<HttpClient>();

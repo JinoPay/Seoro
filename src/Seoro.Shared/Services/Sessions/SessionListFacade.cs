@@ -10,7 +10,8 @@ public class SessionListFacade(
     ISessionWorktreeManager worktreeManager,
     IOptionsMonitor<AppSettings> appSettings,
     ISettingsService settingsService,
-    SessionListDataService dataService,
+    SessionListState dataService,
+    ISessionDiffStatsService diffStatsService,
     IDialogService dialogService,
     ISnackbar snackbar,
     ISkillRegistry skillRegistry,
@@ -53,7 +54,7 @@ public class SessionListFacade(
         else
             chatState.NotifyStateChanged();
 
-        dataService.DiffStatsCache.Remove(session.Id);
+        diffStatsService.Remove(session.Id);
         dataService.RebuildOrderedSessions();
         snackbar.SessionArchived();
 
@@ -86,7 +87,7 @@ public class SessionListFacade(
         if (workspace == null)
             return Task.FromResult<(Workspace?, Session?, string?)>((null, null, null));
 
-        var projectName = SessionListDataService.GetProjectName(workspace);
+        var projectName = SessionListState.GetProjectName(workspace);
 
         Session? lastSession = null;
         if (!string.IsNullOrEmpty(settings.LastSessionId)
@@ -123,7 +124,7 @@ public class SessionListFacade(
         else
             chatState.NotifyStateChanged(); // Refresh LandingPage recent chats list
 
-        dataService.DiffStatsCache.Remove(session.Id);
+        diffStatsService.Remove(session.Id);
         dataService.RebuildOrderedSessions();
         snackbar.SessionDeleted();
 
@@ -145,7 +146,7 @@ public class SessionListFacade(
         else
             chatState.NotifyStateChanged();
 
-        dataService.DiffStatsCache.Remove(session.Id);
+        diffStatsService.Remove(session.Id);
         dataService.RebuildOrderedSessions();
         dataService.NotifyDataChanged();
         snackbar.SessionDeleted();
@@ -168,7 +169,7 @@ public class SessionListFacade(
                 {
                     cliProviderFactory.GetProviderForSession(session).Cancel(session.Id);
                     notificationHistory.MarkSessionAsRead(session.Id);
-                    dataService.DiffStatsCache.Remove(session.Id);
+                    diffStatsService.Remove(session.Id);
                 }
 
             // Delete all sessions

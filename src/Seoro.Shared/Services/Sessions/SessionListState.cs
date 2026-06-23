@@ -2,27 +2,27 @@ using Microsoft.Extensions.Logging;
 
 namespace Seoro.Shared.Services.Sessions;
 
-public class SessionListDataService : IDisposable
+public class SessionListState : IDisposable
 {
-    private readonly IGitService _gitService;
-    private readonly ILogger<SessionListDataService> _logger;
+    private readonly ISessionDiffStatsService _diffStatsService;
+    private readonly ILogger<SessionListState> _logger;
     private readonly ISessionService _sessionService;
     private readonly IWorkspaceService _workspaceService;
 
-    public SessionListDataService(
+    public SessionListState(
         ISessionService sessionService,
-        IGitService gitService, IWorkspaceService workspaceService,
-        ILogger<SessionListDataService> logger)
+        ISessionDiffStatsService diffStatsService, IWorkspaceService workspaceService,
+        ILogger<SessionListState> logger)
     {
         _sessionService = sessionService;
-        _gitService = gitService;
+        _diffStatsService = diffStatsService;
         _workspaceService = workspaceService;
         _logger = logger;
 
         _workspaceService.OnWorkspaceSaved += HandleWorkspaceSaved;
+        // diff 통계 갱신도 동일한 데이터 변경 알림으로 전파해 UI가 한 경로만 구독하도록 한다.
+        _diffStatsService.OnChanged += NotifyDataChanged;
     }
-
-    public Dictionary<string, (int Additions, int Deletions)> DiffStatsCache { get; } = new();
 
     public Dictionary<string, List<Session>> SessionCache { get; } = new();
     public List<(Session Session, Workspace Workspace)> OrderedSessions { get; } = [];
@@ -35,6 +35,7 @@ public class SessionListDataService : IDisposable
     public void Dispose()
     {
         _workspaceService.OnWorkspaceSaved -= HandleWorkspaceSaved;
+        _diffStatsService.OnChanged -= NotifyDataChanged;
         OnDataChanged = null;
     }
 
@@ -113,32 +114,6 @@ public class SessionListDataService : IDisposable
         OnDataChanged?.Invoke();
     }
 
-    public async Task LoadDiffStatsForWorkspaceAsync(Workspace ws, List<Session> sessions)
-    {
-        foreach (var session in sessions)
-        {
-            if (session.Status == SessionStatus.Pending || session.Git.IsLocalDir
-                                                        || string.IsNullOrEmpty(session.Git.WorktreePath)
-                                                        || !Directory.Exists(session.Git.WorktreePath)
-                                                        || string.IsNullOrEmpty(session.Git.BaseBranch))
-                continue;
-
-            try
-            {
-                var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.GetDiffBase());
-                if (stats.Additions > 0 || stats.Deletions > 0)
-                {
-                    DiffStatsCache[session.Id] = stats;
-                    OnDataChanged?.Invoke();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Failed to load diff stats for session {SessionId}", session.Id);
-            }
-        }
-    }
-
     public async Task LoadSessionsForProjectAsync(string projectName)
     {
         var workspacesInGroup = Workspaces.Where(w => GetProjectName(w) == projectName);
@@ -147,7 +122,7 @@ public class SessionListDataService : IDisposable
             {
                 var sessions = await _sessionService.GetSessionsByWorkspaceAsync(ws.Id);
                 SessionCache[ws.Id] = sessions;
-                _ = LoadDiffStatsForWorkspaceAsync(ws, sessions);
+                _ = _diffStatsService.LoadForWorkspaceAsync(sessions);
             }
 
         RebuildOrderedSessions();
@@ -156,27 +131,6 @@ public class SessionListDataService : IDisposable
     public async Task LoadWorkspacesAsync()
     {
         Workspaces = await _workspaceService.GetWorkspacesAsync();
-    }
-
-    public async Task RefreshDiffStatsAsync(string sessionId)
-    {
-        var session = OrderedSessions.FirstOrDefault(o => o.Session.Id == sessionId).Session;
-        if (session == null || session.Git.IsLocalDir
-                            || string.IsNullOrEmpty(session.Git.WorktreePath)
-                            || !Directory.Exists(session.Git.WorktreePath)
-                            || string.IsNullOrEmpty(session.Git.BaseBranch))
-            return;
-
-        try
-        {
-            var stats = await _gitService.GetDiffStatAsync(session.Git.WorktreePath, session.Git.GetDiffBase());
-            DiffStatsCache[sessionId] = stats;
-            OnDataChanged?.Invoke();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Failed to refresh diff stats for session {SessionId}", sessionId);
-        }
     }
 
     public async Task RefreshWorkspacesAsync()

@@ -1,6 +1,7 @@
 @inject IChatState ChatState
 @inject IEventBus EventBus
-@inject SessionListDataService DataService
+@inject SessionListState DataService
+@inject ISessionDiffStatsService DiffStatsService
 @inject ISessionListFacade Facade
 @inject ISkillRegistry SkillRegistry
 @inject IJSRuntime JS
@@ -123,7 +124,7 @@
                     case SidebarRowKind.Session:
                         var isStreaming = ChatState.IsSessionStreaming(row.Session!.Id);
                         var isCompleted = ChatState.IsSessionCompleted(row.Session!.Id);
-                        var hasDiffStats = DataService.DiffStatsCache.TryGetValue(row.Session!.Id, out var stats);
+                        var hasDiffStats = DiffStatsService.TryGetDiffStats(row.Session!.Id, out var stats);
                         <SessionItem Session="row.Session!"
                                      SessionTitle="@row.Session!.Title"
                                      SessionBranch="@row.Session!.Git.BranchName"
@@ -215,7 +216,7 @@
         var sessionIndex = 0;
 
         foreach (var group in DataService.GetFilteredWorkspaces(_filterText)
-                     .GroupBy(SessionListDataService.GetProjectName)
+                     .GroupBy(SessionListState.GetProjectName)
                      .OrderBy(g => g.Min(w => w.SortIndex))
                      .ThenByDescending(g => g.Max(w => w.UpdatedAt)))
         {
@@ -251,7 +252,7 @@
                 if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
                 {
                     var currentId = ChatState.CurrentSession?.Id;
-                    foreach (var session in SessionListDataService.FilterSessions(sessions, _filterText)
+                    foreach (var session in SessionListState.FilterSessions(sessions, _filterText)
                                  .Where(s => _showArchived || s.Status != SessionStatus.Archived))
                     {
                         // 활성 세션의 라이브 세션 인스턴스 사용 —
@@ -297,7 +298,7 @@
         }
 
         var projectNames = DataService.GetFilteredWorkspaces(null)
-            .GroupBy(SessionListDataService.GetProjectName)
+            .GroupBy(SessionListState.GetProjectName)
             .OrderBy(g => g.Min(w => w.SortIndex))
             .ThenByDescending(g => g.Max(w => w.UpdatedAt))
             .Select(g => g.Key)
@@ -445,7 +446,7 @@
     public async Task OnExpandAllProjects()
     {
         foreach (var name in DataService.Workspaces
-                     .Select(SessionListDataService.GetProjectName).Distinct())
+                     .Select(SessionListState.GetProjectName).Distinct())
         {
             if (_expandedProjects.Add(name))
                 await DataService.LoadSessionsForProjectAsync(name);
@@ -559,7 +560,7 @@
     private async Task ReloadWorkspaces()
     {
         var invalidProjects = _expandedProjects
-            .Where(p => DataService.Workspaces.All(w => SessionListDataService.GetProjectName(w) != p))
+            .Where(p => DataService.Workspaces.All(w => SessionListState.GetProjectName(w) != p))
             .ToList();
         foreach (var p in invalidProjects) _expandedProjects.Remove(p);
 
@@ -692,7 +693,7 @@
             {
                 foreach (var ordered in DataService.OrderedSessions)
                 {
-                    _ = DataService.RefreshDiffStatsAsync(ordered.Session.Id);
+                    _ = DiffStatsService.RefreshAsync(ordered.Session);
                 }
             }
 

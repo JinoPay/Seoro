@@ -37,7 +37,7 @@ src/
       Chat/                         # 채팅 & 스트리밍 (17개)
         StreamEventHandlers/          # 스트림 이벤트 핸들러 파이프라인 (12개)
       Events/                       # 도메인 중립 이벤트 버스 (3개)
-      Sessions/                     # 세션 관리 (11개)
+      Sessions/                     # 세션 관리 (13개)
         History/                      # CLI 네이티브 세션 읽기/인덱싱/검색 (7개)
       Git/                          # Git 통합 (15개)
       Settings/                     # 설정 관리 (8개)
@@ -105,7 +105,9 @@ tests/
 - `SessionWorktreeManager` - 세션 Git 워크트리 생성/리베이스 (Git 작업 묶음, SessionService에 캐시 무효화 위임)
 - `SessionInitializer` - 새 세션 초기화 로직
 - `SessionStatusPolicy` - 세션 상태 전이 유효성 검증 (정적 정책, 상태 변경은 Session.TransitionStatus가 수행)
-- `SessionListDataService` / `SessionListFacade` - 세션 목록 데이터 및 UI 파사드
+- `SessionListState` - 세션 목록 UI 상태/캐시 집계 (구 SessionListDataService — "Data"가 아니라 가변 상태+변경 이벤트가 실체)
+- `SessionListDiffStatsService` - 세션 목록용 Git diff 통계 계산/캐싱 (State에서 Git 작업 분리)
+- `SessionListFacade` - 세션 생성/선택/삭제/워크스페이스 정리 오케스트레이션
 - `ActiveSessionRegistry` - 활성 세션 레지스트리 (동시 세션 제한)
 - `IStreamingStateQuery` / `ChatStreamingStateQuery` - 스트리밍 진행 여부 좁은 쿼리 (Account가 IChatState 대신 의존)
 
