@@ -2,6 +2,7 @@
 @using Seoro.Shared.Helpers
 @inject IChatState ChatState
 @inject LightboxService Lightbox
+@inject IAttachmentService AttachmentService
 @inject IJSRuntime JS
 
 @if (Message.Role == MessageRole.System)
@@ -19,31 +20,13 @@
 
 <div class="message-bubble @(Message.Role == MessageRole.User ? "user-message" : "assistant-message")">
     <div class="message-layout">
-        <div class="message-avatar">
-            @if (Message.Role == MessageRole.User)
-            {
-                <MudAvatar Color="Color.Primary" Variant="Variant.Filled"
-                           Style="width: 22px; height: 22px; font-size: 12px; background: rgba(167, 139, 250, 0.2); color: var(--accent);">
-                    <MudIcon Icon="@Icons.Material.Filled.Person" Style="width: 13px; height: 13px;"/>
-                </MudAvatar>
-            }
-            else
-            {
-                <MudAvatar Variant="Variant.Filled"
-                           Style="width: 22px; height: 22px; font-size: 12px; background: var(--color-info-bg); color: var(--color-info);">
-                    <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="width: 13px; height: 13px;"/>
-                </MudAvatar>
-            }
-        </div>
         <div class="message-content" id="msg-@(Message.Id)">
-            <div class="message-header">
-                <span class="role-name">@(Message.Role == MessageRole.User ? Strings.Chat_UserRoleName : ProviderDisplayName)</span>
-                <span class="message-time">@Message.Timestamp.ToLocalTime().ToString("HH:mm")</span>
-                @if (Message is { Role: MessageRole.Assistant, Duration: not null } && !HasActivitySummary())
-                {
+            @if (Message is { Role: MessageRole.Assistant, Duration: not null } && !HasActivitySummary())
+            {
+                <div class="message-header">
                     <span class="message-duration">@FormatDuration(Message.Duration.Value)</span>
-                }
-            </div>
+                </div>
+            }
 
             @if (Message.Attachments.Count > 0)
             {
@@ -208,6 +191,7 @@
             }
         </div>
     </div>
+    <span class="message-time-hover">@Message.Timestamp.ToLocalTime().ToString("HH:mm")</span>
 </div>
 
 <MudMenu @ref="_imageContextMenu"
@@ -225,12 +209,6 @@
 
 @code {
     [Parameter][EditorRequired] public ChatMessage Message { get; set; } = null!;
-
-    private string ProviderDisplayName => ChatState.CurrentSession?.Provider switch
-    {
-        "codex" => "Codex",
-        _ => "Claude"
-    };
 
     private readonly Dictionary<string, string> _imageCache = new();
     private readonly HashSet<int> _thinkingExpanded = [];
@@ -312,10 +290,10 @@
             && !attachment.OriginalFileName.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
             return;
 
-        var worktreePath = ChatState.CurrentSession?.Git.WorktreePath;
-        if (string.IsNullOrEmpty(worktreePath)) return;
+        var session = ChatState.CurrentSession;
+        if (session == null) return;
 
-        var filePath = Path.Combine(worktreePath, ".seoro-attachments", attachment.StoredFileName);
+        var filePath = AttachmentService.GetAttachmentPath(session.WorkspaceId, session.Id, attachment.StoredFileName);
         if (!File.Exists(filePath)) return;
 
         var content = File.ReadAllText(filePath);
@@ -345,11 +323,11 @@
         if (_imageCache.TryGetValue(attachment.Id, out var cached))
             return cached;
 
-        var worktreePath = ChatState.CurrentSession?.Git.WorktreePath;
-        if (string.IsNullOrEmpty(worktreePath))
+        var session = ChatState.CurrentSession;
+        if (session == null)
             return string.Empty;
 
-        var filePath = Path.Combine(worktreePath, ".seoro-attachments", attachment.StoredFileName);
+        var filePath = AttachmentService.GetAttachmentPath(session.WorkspaceId, session.Id, attachment.StoredFileName);
         if (!File.Exists(filePath))
             return string.Empty;
 

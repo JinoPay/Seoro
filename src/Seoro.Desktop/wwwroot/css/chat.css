@@ -78,6 +78,7 @@
 
 /* ===== Message Bubbles (Claude.ai Style) ===== */
 .message-bubble {
+    position: relative;
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-lg);
     transition: background var(--transition);
@@ -93,20 +94,6 @@
     display: flex;
     gap: var(--space-2);
     align-items: flex-start;
-}
-
-.message-avatar {
-    flex-shrink: 0;
-    padding-top: 1px;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-}
-
-.message-avatar .mud-avatar {
-    width: 22px;
-    height: 22px;
-    font-size: 12px;
 }
 
 .message-content {
@@ -126,21 +113,30 @@
     line-height: 1;
 }
 
-.message-header .role-name {
-    font-weight: 600;
-    opacity: 0.7;
-    white-space: nowrap;
-}
-
-.message-header .message-time {
+/* 시간은 평소엔 숨기고, 메시지에 마우스를 올리면 측면에 자연스럽게 표시 */
+.message-time-hover {
+    position: absolute;
+    top: var(--space-2);
+    font-size: var(--text-xs);
     font-weight: 400;
-    opacity: 0.3;
+    color: var(--text-secondary);
+    opacity: 0;
     transition: opacity var(--transition);
     white-space: nowrap;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
 }
 
-.message-bubble:hover .message-time {
-    opacity: 0.6;
+.assistant-message .message-time-hover {
+    right: var(--space-3);
+}
+
+.user-message .message-time-hover {
+    left: var(--space-3);
+}
+
+.message-bubble:hover .message-time-hover {
+    opacity: 0.45;
 }
 
 .message-duration {
@@ -167,22 +163,6 @@
     border-radius: var(--radius-md) var(--radius-md) var(--radius-sm) var(--radius-md);
     padding: var(--space-2) var(--space-3);
     max-width: 80%;
-}
-
-.user-message .message-avatar {
-    display: none;
-}
-
-.user-message .message-header {
-    justify-content: flex-end;
-}
-
-.user-message .message-header .role-name {
-    order: 1;
-}
-
-.user-message .message-header .message-time {
-    order: 0;
 }
 
 .assistant-message {

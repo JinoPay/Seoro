@@ -58,15 +58,16 @@ public class ChatMessageOrchestrator(
         {
             FileAttachment attachment;
             if (pending is { FilePath: not null, Data.Length: 0 })
-                attachment =
-                    await attachmentService.CopyFileToWorktreeAsync(pending.FilePath, session.Git.WorktreePath);
+                attachment = await attachmentService.CopyFileToSessionAsync(
+                    pending.FilePath, session.WorkspaceId, session.Id);
             else
-                attachment = await attachmentService.SaveBytesToWorktreeAsync(
-                    pending.Data, pending.FileName, pending.ContentType, session.Git.WorktreePath);
+                attachment = await attachmentService.SaveBytesToSessionAsync(
+                    pending.Data, pending.FileName, pending.ContentType, session.WorkspaceId, session.Id);
             fileAttachments.Add(attachment);
         }
 
-        var messageForClaude = attachmentService.BuildMessageWithAttachments(input.Text, fileAttachments);
+        var messageForClaude = attachmentService.BuildMessageWithAttachments(
+            input.Text, fileAttachments, session.WorkspaceId, session.Id);
 
         // --- 사용자 메시지 ---
         if (fileAttachments.Count > 0)

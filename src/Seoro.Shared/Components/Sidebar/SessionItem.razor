@@ -113,6 +113,13 @@
         }
     }
     <MudDivider/>
+    @if (Session.Status != SessionStatus.Archived)
+    {
+        <MudMenuItem OnClick="@(() => OnArchive.InvokeAsync())"
+                     Icon="@Icons.Material.Outlined.Archive">
+            @Strings.Sidebar_Archive
+        </MudMenuItem>
+    }
     <MudMenuItem OnClick="@(() => OnDelete.InvokeAsync())"
                  Icon="@Icons.Material.Filled.Close">
         @Strings.Common_Delete
@@ -133,6 +140,7 @@
     [Parameter] public bool ShowShortcuts { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public EventCallback OnArchive { get; set; }
     [Parameter] public EventCallback OnOpenFolder { get; set; }
     [Parameter] public EventCallback<string> OnOpenInIde { get; set; }
     [Parameter] public List<IdeInfo>? AvailableIdes { get; set; }

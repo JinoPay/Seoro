@@ -44,6 +44,11 @@ public static class SnackbarExtensions
         snackbar.Add(Strings.Snackbar_SessionDeleted, Severity.Info);
     }
 
+    public static void SessionArchived(this ISnackbar snackbar)
+    {
+        snackbar.Add(Strings.Snackbar_SessionArchived, Severity.Info);
+    }
+
     public static void SettingsSaved(this ISnackbar snackbar)
     {
         snackbar.Add(Strings.Snackbar_SettingsSaved, Severity.Success);

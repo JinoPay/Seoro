@@ -421,6 +421,9 @@ public static class Strings
     // ── Sidebar Components ──
     public static string Sidebar_WorkspaceSettings => Get(nameof(Sidebar_WorkspaceSettings));
     public static string Sidebar_DeleteWorkspace => Get(nameof(Sidebar_DeleteWorkspace));
+    public static string Sidebar_Archive => Get(nameof(Sidebar_Archive));
+    public static string Sidebar_ShowArchived => Get(nameof(Sidebar_ShowArchived));
+    public static string Sidebar_HideArchived => Get(nameof(Sidebar_HideArchived));
     public static string Sidebar_WelcomeMessage => Get(nameof(Sidebar_WelcomeMessage));
     public static string Sidebar_NewWorkspace => Get(nameof(Sidebar_NewWorkspace));
     public static string Sidebar_OpenFolder => Get(nameof(Sidebar_OpenFolder));
@@ -542,6 +545,7 @@ public static class Strings
     public static string Snackbar_AppUpdateReady => Get(nameof(Snackbar_AppUpdateReady));
     public static string Snackbar_AppUpdateRestartAction => Get(nameof(Snackbar_AppUpdateRestartAction));
     public static string Snackbar_SessionDeleted => Get(nameof(Snackbar_SessionDeleted));
+    public static string Snackbar_SessionArchived => Get(nameof(Snackbar_SessionArchived));
     public static string Snackbar_SettingsSaved => Get(nameof(Snackbar_SettingsSaved));
     public static string Tool_AgentSingle => Get(nameof(Tool_AgentSingle));
     public static string Tool_BashSingle => Get(nameof(Tool_BashSingle));

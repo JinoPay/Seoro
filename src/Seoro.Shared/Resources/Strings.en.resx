@@ -399,6 +399,9 @@
   <!-- Sidebar Components -->
   <data name="Sidebar_WorkspaceSettings" xml:space="preserve"><value>Workspace Settings</value></data>
   <data name="Sidebar_DeleteWorkspace" xml:space="preserve"><value>Delete Workspace</value></data>
+  <data name="Sidebar_Archive" xml:space="preserve"><value>Archive</value></data>
+  <data name="Sidebar_ShowArchived" xml:space="preserve"><value>Show Archived</value></data>
+  <data name="Sidebar_HideArchived" xml:space="preserve"><value>Hide Archived</value></data>
   <data name="Sidebar_WelcomeMessage" xml:space="preserve"><value>Create a workspace to get started</value></data>
   <data name="Sidebar_NewWorkspace" xml:space="preserve"><value>New Workspace</value></data>
   <data name="Sidebar_OpenFolder" xml:space="preserve"><value>Open Folder</value></data>
@@ -522,6 +525,7 @@
   <data name="Snackbar_WorkspaceDeleted" xml:space="preserve"><value>Workspace '{0}' has been deleted.</value></data>
   <data name="Snackbar_SettingsSaved" xml:space="preserve"><value>Settings saved.</value></data>
   <data name="Snackbar_SessionDeleted" xml:space="preserve"><value>Session deleted.</value></data>
+  <data name="Snackbar_SessionArchived" xml:space="preserve"><value>Session archived.</value></data>
   <data name="Snackbar_ConflictDetected" xml:space="preserve"><value>Merge conflict detected on branch '{0}'.</value></data>
   <data name="Snackbar_StreamingError" xml:space="preserve"><value>Response error: {0}</value></data>
   <data name="Snackbar_IssueLinked" xml:space="preserve"><value>Issue #{0} linked</value></data>

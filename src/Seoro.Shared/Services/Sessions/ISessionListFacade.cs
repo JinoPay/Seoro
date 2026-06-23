@@ -9,6 +9,12 @@ public interface ISessionListFacade
     Task CleanupSessionAsync(Session session);
 
     /// <summary>
+    ///     Shows confirmation dialog, archives the session (hides it but keeps metadata and the native jsonl),
+    ///     cleans up caches, and notifies the user. Returns true if the session was actually archived.
+    /// </summary>
+    Task<bool> ArchiveSessionAsync(Session session);
+
+    /// <summary>
     ///     Loads a full session, sets ChatState (workspace + session), and persists selection.
     /// </summary>
     Task SelectSessionAsync(Session session, Workspace? ws, List<Workspace> workspaces);

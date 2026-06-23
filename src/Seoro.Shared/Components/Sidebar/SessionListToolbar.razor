@@ -5,6 +5,11 @@
                        Size="Size.Small"
                        Style="width: 24px; height: 24px; opacity: 0.5;"
                        OnClick="@OnToggleFilter"/>
+        <MudIconButton Icon="@(ShowArchived ? Icons.Material.Filled.Unarchive : Icons.Material.Outlined.Archive)"
+                       Size="Size.Small"
+                       Title="@(ShowArchived ? Strings.Sidebar_HideArchived : Strings.Sidebar_ShowArchived)"
+                       Style="@($"width: 24px; height: 24px; opacity: {(ShowArchived ? "0.9" : "0.5")};")"
+                       OnClick="@OnToggleArchived"/>
         <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
                        Style="width: 24px; height: 24px; opacity: 0.5;"
                        OnClick="@OnCreateWorkspace"/>
@@ -27,8 +32,10 @@
 
 @code {
     [Parameter] public bool FilterVisible { get; set; }
+    [Parameter] public bool ShowArchived { get; set; }
     [Parameter] public string? FilterText { get; set; }
     [Parameter] public EventCallback OnToggleFilter { get; set; }
+    [Parameter] public EventCallback OnToggleArchived { get; set; }
     [Parameter] public EventCallback OnCreateWorkspace { get; set; }
     [Parameter] public EventCallback<string> FilterTextChanged { get; set; }
 }

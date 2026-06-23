@@ -26,6 +26,39 @@ public class SessionListFacade(
         session.TransitionStatus(SessionStatus.Archived);
     }
 
+    public async Task<bool> ArchiveSessionAsync(Session session)
+    {
+        var isStreaming = chatState.IsSessionStreaming(session.Id);
+        var confirmMessage = isStreaming
+            ? $"'{session.Title}' 세션이 현재 진행 중입니다. AI 프로세스를 종료하고 보관하시겠습니까?"
+            : $"'{session.Title}' 세션을 보관하시겠습니까? 대화 기록은 유지되며 목록에서 숨겨집니다.";
+
+        var result = await dialogService.ShowMessageBoxAsync(
+            "세션 보관", confirmMessage,
+            "보관", cancelText: "취소");
+
+        if (result != true) return false;
+
+        // 프로바이더에 맞는 프로세스 종료
+        cliProviderFactory.GetProviderForSession(session).Cancel(session.Id);
+
+        await sessionService.CleanupSessionAsync(session.Id);
+        // 사이드바가 보유한 인스턴스 상태를 갱신해 필터가 즉시 반영되도록 함
+        session.TransitionStatus(SessionStatus.Archived);
+        notificationHistory.MarkSessionAsRead(session.Id);
+
+        if (chatState.CurrentSession?.Id == session.Id)
+            chatState.SetSession(null!);
+        else
+            chatState.NotifyStateChanged();
+
+        dataService.DiffStatsCache.Remove(session.Id);
+        dataService.RebuildOrderedSessions();
+        snackbar.SessionArchived();
+
+        return true;
+    }
+
     public async Task SelectSessionAsync(Session session, Workspace? ws, List<Workspace> workspaces)
     {
         ws ??= workspaces.FirstOrDefault(w => w.Id == session.WorkspaceId);

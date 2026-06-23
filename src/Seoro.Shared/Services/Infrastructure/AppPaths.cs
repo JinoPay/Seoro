@@ -7,6 +7,7 @@ public static class AppPaths
         "Seoro");
 
     public static string ArchivedContexts { get; } = EnsureDir(Path.Combine(BaseDir, "archived-contexts"));
+    public static string Attachments { get; } = EnsureDir(Path.Combine(BaseDir, "attachments"));
     public static string Memory { get; } = EnsureDir(Path.Combine(BaseDir, "memory"));
     public static string Repos { get; } = EnsureDir(Path.Combine(BaseDir, "repos"));
 
@@ -31,6 +32,24 @@ public static class AppPaths
 
     public static string AccountBackups { get; } = EnsureDir(Path.Combine(BaseDir, "account-backups"));
     public static string AccountsFile { get; } = Path.Combine(BaseDir, "accounts.json");
+
+    /// <summary>
+    ///     세션별 첨부파일 디렉터리: <c>attachments/&lt;workspaceId&gt;/&lt;sessionId&gt;/</c>.
+    ///     디렉터리를 생성하지 않고 경로만 계산한다(읽기 경로 해석에도 사용되므로).
+    /// </summary>
+    public static string AttachmentsForSession(string workspaceId, string sessionId)
+    {
+        return Path.Combine(Attachments, SanitizeSegment(workspaceId), SanitizeSegment(sessionId));
+    }
+
+    private static string SanitizeSegment(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "unnamed";
+        var invalid = Path.GetInvalidFileNameChars();
+        var sanitized = string.Concat(name.Select(c => Array.IndexOf(invalid, c) >= 0 ? '_' : c));
+        return string.IsNullOrWhiteSpace(sanitized) ? "unnamed" : sanitized;
+    }
 
     private static string EnsureDir(string path)
     {

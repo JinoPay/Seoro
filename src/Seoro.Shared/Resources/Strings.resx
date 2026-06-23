@@ -399,6 +399,9 @@
   <!-- Sidebar Components -->
   <data name="Sidebar_WorkspaceSettings" xml:space="preserve"><value>워크스페이스 설정</value></data>
   <data name="Sidebar_DeleteWorkspace" xml:space="preserve"><value>워크스페이스 삭제</value></data>
+  <data name="Sidebar_Archive" xml:space="preserve"><value>보관</value></data>
+  <data name="Sidebar_ShowArchived" xml:space="preserve"><value>보관함 보기</value></data>
+  <data name="Sidebar_HideArchived" xml:space="preserve"><value>보관함 숨기기</value></data>
   <data name="Sidebar_WelcomeMessage" xml:space="preserve"><value>워크스페이스를 만들어 시작하세요</value></data>
   <data name="Sidebar_NewWorkspace" xml:space="preserve"><value>새 워크스페이스</value></data>
   <data name="Sidebar_OpenFolder" xml:space="preserve"><value>폴더 열기</value></data>
@@ -522,6 +525,7 @@
   <data name="Snackbar_WorkspaceDeleted" xml:space="preserve"><value>'{0}' 워크스페이스가 삭제되었습니다.</value></data>
   <data name="Snackbar_SettingsSaved" xml:space="preserve"><value>설정이 저장되었습니다.</value></data>
   <data name="Snackbar_SessionDeleted" xml:space="preserve"><value>세션이 삭제되었습니다.</value></data>
+  <data name="Snackbar_SessionArchived" xml:space="preserve"><value>세션이 보관되었습니다.</value></data>
   <data name="Snackbar_ConflictDetected" xml:space="preserve"><value>'{0}' 브랜치에서 병합 충돌이 감지되었습니다.</value></data>
   <data name="Snackbar_StreamingError" xml:space="preserve"><value>응답 오류: {0}</value></data>
   <data name="Snackbar_IssueLinked" xml:space="preserve"><value>Issue #{0} 연결됨</value></data>

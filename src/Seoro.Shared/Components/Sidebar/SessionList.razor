@@ -18,8 +18,10 @@
         @if (SidebarOpen)
         {
             <SessionListToolbar FilterVisible="_filterVisible"
+                                ShowArchived="_showArchived"
                                 FilterText="@_filterText"
                                 OnToggleFilter="ToggleFilter"
+                                OnToggleArchived="ToggleArchived"
                                 OnCreateWorkspace="@(() => _createDialogOpen = true)"
                                 FilterTextChanged="@(v =>
                                                    {
@@ -138,6 +140,7 @@
                                      AvailableIdes="_availableIdes"
                                      OnClick="@(() => SelectSession(row.Session!, row.Workspace))"
                                      OnDelete="@(() => DeleteSession(row.Session!))"
+                                     OnArchive="@(() => ArchiveSession(row.Session!))"
                                      OnOpenFolder="@(() => OpenSessionFolder(row.Session!, row.Workspace))"
                                      OnOpenInIde="@(cmd => OpenSessionInIde(row.Session!, row.Workspace, cmd))"/>
                         break;
@@ -173,6 +176,7 @@
     private bool _createDialogOpen;
     private bool _isCreatingSession;
     private bool _filterVisible;
+    private bool _showArchived;
     private bool _ctrlHeld;
     private bool _codexAvailable;
     private string? _filterText;
@@ -224,7 +228,7 @@
             {
                 if (DataService.SessionCache.TryGetValue(ws.Id, out var cachedSessions))
                 {
-                    sessionCount += cachedSessions.Count;
+                    sessionCount += cachedSessions.Count(s => _showArchived || s.Status != SessionStatus.Archived);
                     if (!hasStreaming)
                         hasStreaming = cachedSessions.Any(s => ChatState.IsSessionStreaming(s.Id));
                 }
@@ -247,7 +251,8 @@
                 if (DataService.SessionCache.TryGetValue(ws.Id, out var sessions))
                 {
                     var currentId = ChatState.CurrentSession?.Id;
-                    foreach (var session in SessionListDataService.FilterSessions(sessions, _filterText))
+                    foreach (var session in SessionListDataService.FilterSessions(sessions, _filterText)
+                                 .Where(s => _showArchived || s.Status != SessionStatus.Archived))
                     {
                         // 활성 세션의 라이브 세션 인스턴스 사용 —
                         // 캐시 항목은 마지막 디스크 저장의 오래된 복제본입니다
@@ -522,6 +527,12 @@
         RebuildFlatRows();
     }
 
+    private void ToggleArchived()
+    {
+        _showArchived = !_showArchived;
+        RebuildFlatRows();
+    }
+
     private async Task ToggleProject(string projectName)
     {
         if (!SidebarOpen)
@@ -603,6 +614,13 @@
     private async Task DeleteSession(Session session)
     {
         if (await Facade.DeleteSessionAsync(session))
+            RebuildFlatRows();
+        StateHasChanged();
+    }
+
+    private async Task ArchiveSession(Session session)
+    {
+        if (await Facade.ArchiveSessionAsync(session))
             RebuildFlatRows();
         StateHasChanged();
     }

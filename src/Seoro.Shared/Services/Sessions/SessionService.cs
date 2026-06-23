@@ -141,6 +141,20 @@ public partial class SessionService(
             var messagesPath = Path.Combine(_sessionsDir, $"{sessionId}.messages.json");
             if (File.Exists(messagesPath))
                 File.Delete(messagesPath);
+
+            // 세션 첨부파일 폴더 제거 (앱데이터, jsonl 진실 소스와 무관한 로컬 캐시).
+            // 아카이브가 아닌 영구 삭제에서만 제거한다.
+            if (session != null && !string.IsNullOrEmpty(session.WorkspaceId))
+                try
+                {
+                    var attachmentsDir = AppPaths.AttachmentsForSession(session.WorkspaceId, sessionId);
+                    if (Directory.Exists(attachmentsDir))
+                        Directory.Delete(attachmentsDir, true);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "세션 {SessionId}의 첨부파일 폴더 제거 실패", sessionId);
+                }
         }
         finally
         {

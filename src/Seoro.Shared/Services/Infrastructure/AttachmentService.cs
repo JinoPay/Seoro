@@ -5,19 +5,20 @@ namespace Seoro.Shared.Services.Infrastructure;
 
 public interface IAttachmentService
 {
-    string BuildMessageWithAttachments(string userText, List<FileAttachment> attachments);
-    string GetAttachmentPath(string worktreePath, string storedFileName);
-    Task<FileAttachment> CopyFileToWorktreeAsync(string sourceFilePath, string worktreePath);
+    string BuildMessageWithAttachments(string userText, List<FileAttachment> attachments, string workspaceId,
+        string sessionId);
 
-    Task<FileAttachment>
-        SaveBytesToWorktreeAsync(byte[] data, string fileName, string contentType, string worktreePath);
+    string GetAttachmentPath(string workspaceId, string sessionId, string storedFileName);
+    Task<FileAttachment> CopyFileToSessionAsync(string sourceFilePath, string workspaceId, string sessionId);
+
+    Task<FileAttachment> SaveBytesToSessionAsync(byte[] data, string fileName, string contentType,
+        string workspaceId, string sessionId);
 }
 
 public class AttachmentService(ILogger<AttachmentService> logger) : IAttachmentService
 {
-    private const string AttachmentsDir = ".seoro-attachments";
-
-    public string BuildMessageWithAttachments(string userText, List<FileAttachment> attachments)
+    public string BuildMessageWithAttachments(string userText, List<FileAttachment> attachments, string workspaceId,
+        string sessionId)
     {
         if (attachments.Count == 0)
             return userText;
@@ -26,7 +27,9 @@ public class AttachmentService(ILogger<AttachmentService> logger) : IAttachmentS
         foreach (var a in attachments)
         {
             var label = a.IsImage ? "Attached image" : "Attached file";
-            sb.AppendLine($"[{label}: {AttachmentsDir}/{a.StoredFileName} (original: {a.OriginalFileName})]");
+            // 앱데이터(워크트리 밖)에 저장되므로 Claude가 cwd 무관하게 읽도록 절대경로를 사용한다.
+            var absolutePath = GetAttachmentPath(workspaceId, sessionId, a.StoredFileName);
+            sb.AppendLine($"[{label}: {absolutePath} (original: {a.OriginalFileName})]");
         }
 
         if (!string.IsNullOrWhiteSpace(userText))
@@ -38,17 +41,19 @@ public class AttachmentService(ILogger<AttachmentService> logger) : IAttachmentS
         return sb.ToString();
     }
 
-    public string GetAttachmentPath(string worktreePath, string storedFileName)
+    public string GetAttachmentPath(string workspaceId, string sessionId, string storedFileName)
     {
-        return Path.Combine(worktreePath, AttachmentsDir, storedFileName);
+        return Path.Combine(AppPaths.AttachmentsForSession(workspaceId, sessionId), storedFileName);
     }
 
-    public async Task<FileAttachment> CopyFileToWorktreeAsync(string sourceFilePath, string worktreePath)
+    public async Task<FileAttachment> CopyFileToSessionAsync(string sourceFilePath, string workspaceId,
+        string sessionId)
     {
         Guard.NotNullOrWhiteSpace(sourceFilePath, nameof(sourceFilePath));
-        Guard.NotNullOrWhiteSpace(worktreePath, nameof(worktreePath));
+        Guard.NotNullOrWhiteSpace(workspaceId, nameof(workspaceId));
+        Guard.NotNullOrWhiteSpace(sessionId, nameof(sessionId));
 
-        var dir = await EnsureAttachmentsDirAsync(worktreePath);
+        var dir = EnsureSessionDir(workspaceId, sessionId);
         var originalName = Path.GetFileName(sourceFilePath);
         var ext = Path.GetExtension(originalName);
         var storedName = $"{Guid.NewGuid():N}{ext}";
@@ -78,15 +83,16 @@ public class AttachmentService(ILogger<AttachmentService> logger) : IAttachmentS
         };
     }
 
-    public async Task<FileAttachment> SaveBytesToWorktreeAsync(byte[] data, string fileName, string contentType,
-        string worktreePath)
+    public async Task<FileAttachment> SaveBytesToSessionAsync(byte[] data, string fileName, string contentType,
+        string workspaceId, string sessionId)
     {
         Guard.NotNull(data, nameof(data));
         Guard.NotNullOrWhiteSpace(fileName, nameof(fileName));
         Guard.NotNullOrWhiteSpace(contentType, nameof(contentType));
-        Guard.NotNullOrWhiteSpace(worktreePath, nameof(worktreePath));
+        Guard.NotNullOrWhiteSpace(workspaceId, nameof(workspaceId));
+        Guard.NotNullOrWhiteSpace(sessionId, nameof(sessionId));
 
-        var dir = await EnsureAttachmentsDirAsync(worktreePath);
+        var dir = EnsureSessionDir(workspaceId, sessionId);
         var ext = Path.GetExtension(fileName);
         if (string.IsNullOrEmpty(ext) && contentType.StartsWith("image/"))
         {
@@ -145,29 +151,10 @@ public class AttachmentService(ILogger<AttachmentService> logger) : IAttachmentS
         };
     }
 
-    private static async Task EnsureGitignoreAsync(string worktreePath)
+    private static string EnsureSessionDir(string workspaceId, string sessionId)
     {
-        var gitignorePath = Path.Combine(worktreePath, ".gitignore");
-        var entry = AttachmentsDir + "/";
-
-        if (File.Exists(gitignorePath))
-        {
-            var lines = await File.ReadAllLinesAsync(gitignorePath);
-            if (lines.Any(line => line.Trim() == entry))
-                return;
-            await AtomicFileWriter.AppendAsync(gitignorePath, $"\n{entry}\n");
-        }
-        else
-        {
-            await AtomicFileWriter.WriteAsync(gitignorePath, $"{entry}\n");
-        }
-    }
-
-    private async Task<string> EnsureAttachmentsDirAsync(string worktreePath)
-    {
-        var dir = Path.Combine(worktreePath, AttachmentsDir);
+        var dir = AppPaths.AttachmentsForSession(workspaceId, sessionId);
         Directory.CreateDirectory(dir);
-        await EnsureGitignoreAsync(worktreePath);
         return dir;
     }
 }
