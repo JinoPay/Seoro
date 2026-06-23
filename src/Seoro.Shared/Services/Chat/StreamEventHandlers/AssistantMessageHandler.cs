@@ -5,7 +5,7 @@ namespace Seoro.Shared.Services.Chat.StreamEventHandlers;
 
 public class AssistantMessageHandler(
     IChatState chatState,
-    IChatEventBus eventBus,
+    IEventBus eventBus,
     ISessionService sessionService,
     ILogger<AssistantMessageHandler> logger) : IStreamEventHandler
 {

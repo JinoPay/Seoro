@@ -19,7 +19,7 @@ public class ChatState : IChatState
     private readonly Dictionary<string, string> _skillDrafts = new();
 
     // 중재자: 타입화된 이벤트 버스
-    private readonly IChatEventBus _eventBus;
+    private readonly IEventBus _eventBus;
 
     // 디바운스 — 단일 지속적 타이머, Change()를 통해 활성화/비활성화
     private readonly Timer _debounceTimer;
@@ -27,7 +27,7 @@ public class ChatState : IChatState
     private volatile bool _timerActive;
     private volatile string? _pendingMessage;
 
-    public ChatState(IActiveSessionRegistry activeSessionRegistry, IChatEventBus eventBus)
+    public ChatState(IActiveSessionRegistry activeSessionRegistry, IEventBus eventBus)
     {
         _eventBus = eventBus;
         _debounceTimer = new Timer(_ =>

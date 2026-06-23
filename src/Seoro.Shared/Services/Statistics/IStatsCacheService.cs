@@ -1,5 +1,5 @@
 
-namespace Seoro.Shared.Services.Gamification;
+namespace Seoro.Shared.Services.Statistics;
 
 /// <summary>
 ///     Reads ~/.claude/stats-cache.json (Claude CLI가 작성, 직접 수정 없음)

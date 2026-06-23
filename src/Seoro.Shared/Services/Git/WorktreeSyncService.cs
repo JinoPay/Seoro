@@ -14,7 +14,7 @@ public class WorktreeSyncService : IWorktreeSyncService
     private const string StateFileName = "sync-state.json";
     private readonly HashSet<string> _copiedSet = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _pendingPaths = new(StringComparer.OrdinalIgnoreCase);
-    private readonly IChatEventBus _eventBus;
+    private readonly IEventBus _eventBus;
     private readonly IGitService _gitService;
     private readonly ILogger<WorktreeSyncService> _logger;
     private readonly Lock _pendingLock = new();
@@ -25,7 +25,7 @@ public class WorktreeSyncService : IWorktreeSyncService
     private SyncState? _state;
     private Timer? _debounceTimer;
 
-    public WorktreeSyncService(IGitService gitService, IChatEventBus eventBus, ILogger<WorktreeSyncService> logger)
+    public WorktreeSyncService(IGitService gitService, IEventBus eventBus, ILogger<WorktreeSyncService> logger)
     {
         _gitService = gitService;
         _eventBus = eventBus;

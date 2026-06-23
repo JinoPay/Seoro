@@ -99,7 +99,7 @@ public class MergeStatusService : IMergeStatusService
     public event Action<string>? StatusChanged;
 
     public MergeStatusService(
-        IChatEventBus eventBus,
+        IEventBus eventBus,
         IGitService gitService,
         ISessionService sessionService,
         IWorkspaceService workspaceService,

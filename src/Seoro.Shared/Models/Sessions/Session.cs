@@ -139,7 +139,7 @@ public class Session
         if (Status == target)
             return;
 
-        if (!SessionStatusMachine.IsValidTransition(Status, target))
+        if (!SessionStatusPolicy.IsValidTransition(Status, target))
             throw new InvalidOperationException(
                 $"Invalid session status transition: {Status} → {target} (session {Id})");
 

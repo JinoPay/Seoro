@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace Seoro.Shared.Services.Gamification;
+namespace Seoro.Shared.Services.Statistics;
 
 /// <summary>
 ///     Reads ~/.claude/stats-cache.json (Claude CLI 외부 인덱서가 작성)

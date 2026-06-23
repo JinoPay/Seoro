@@ -28,7 +28,7 @@ public class ConflictWatcherService : IConflictWatcherService
 {
     private const int DebounceMs = 200;
 
-    private readonly IChatEventBus _eventBus;
+    private readonly IEventBus _eventBus;
     private readonly IGitService _gitService;
     private readonly ILogger<ConflictWatcherService> _logger;
     private readonly IDisposable _sessionChangeSub;
@@ -42,7 +42,7 @@ public class ConflictWatcherService : IConflictWatcherService
     private string? _activeSessionWorkDir;
 
     public ConflictWatcherService(
-        IChatEventBus eventBus,
+        IEventBus eventBus,
         IGitService gitService,
         ILogger<ConflictWatcherService> logger)
     {

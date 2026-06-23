@@ -1,10 +1,10 @@
-namespace Seoro.Shared.Services.Chat;
+namespace Seoro.Shared.Services.Events;
 
 /// <summary>
 ///     Lightweight publish/subscribe bus that replaces the monolithic ChatState.OnChange.
 ///     Services publish typed events; UI components subscribe to only the events they need.
 /// </summary>
-public interface IChatEventBus
+public interface IEventBus
 {
     /// <summary>
     ///     Legacy bridge: fires on every event for components that haven't migrated
@@ -12,6 +12,6 @@ public interface IChatEventBus
     /// </summary>
     event Action? OnAny;
 
-    IDisposable Subscribe<T>(Action<T> handler) where T : ChatEvent;
-    void Publish<T>(T evt) where T : ChatEvent;
+    IDisposable Subscribe<T>(Action<T> handler) where T : DomainEvent;
+    void Publish<T>(T evt) where T : DomainEvent;
 }

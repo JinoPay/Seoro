@@ -54,14 +54,6 @@ public enum AchievementRarity
     Legendary
 }
 
-public class DailyActivityEntry
-{
-    public int MessageCount { get; set; }
-    public int SessionCount { get; set; }
-    public int ToolCallCount { get; set; }
-    public string Date { get; set; } = "";
-}
-
 public class CostSummary
 {
     public bool DailyExceeded { get; set; }

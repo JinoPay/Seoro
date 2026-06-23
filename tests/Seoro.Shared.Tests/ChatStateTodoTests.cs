@@ -154,11 +154,11 @@ public class ChatStateTodoTests
         Assert.Equal(TodoFloaterVisibility.Chip, s.TodoFloaterState);
     }
 
-    private sealed class FakeBus : IChatEventBus
+    private sealed class FakeBus : IEventBus
     {
         public event Action? OnAny;
-        public void Publish<T>(T evt) where T : ChatEvent => OnAny?.Invoke();
-        public IDisposable Subscribe<T>(Action<T> handler) where T : ChatEvent => new Noop();
+        public void Publish<T>(T evt) where T : DomainEvent => OnAny?.Invoke();
+        public IDisposable Subscribe<T>(Action<T> handler) where T : DomainEvent => new Noop();
         private sealed class Noop : IDisposable { public void Dispose() { } }
     }
 }

@@ -8,7 +8,7 @@ public class PlanModeTests
     [Fact]
     public async Task FinalizeAsync_CodexPlanMode_UsesAssistantTextWithoutExitPlanMode()
     {
-        var chatState = new ChatState(new ActiveSessionRegistry(), new FakeChatEventBus());
+        var chatState = new ChatState(new ActiveSessionRegistry(), new FakeEventBus());
         var sut = new StreamEventProcessor([], chatState, NullLogger<StreamEventProcessor>.Instance);
         var session = new Session
         {
@@ -140,11 +140,11 @@ public class PlanModeTests
         public string BuildContextPrompt(ContextInfo context) => "";
     }
 
-    private sealed class FakeChatEventBus : IChatEventBus
+    private sealed class FakeEventBus : IEventBus
     {
         public event Action? OnAny;
-        public void Publish<T>(T evt) where T : ChatEvent => OnAny?.Invoke();
-        public IDisposable Subscribe<T>(Action<T> handler) where T : ChatEvent => new NoopDisposable();
+        public void Publish<T>(T evt) where T : DomainEvent => OnAny?.Invoke();
+        public IDisposable Subscribe<T>(Action<T> handler) where T : DomainEvent => new NoopDisposable();
     }
 
     private sealed class NoopDisposable : IDisposable

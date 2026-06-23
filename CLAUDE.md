@@ -34,15 +34,17 @@ src/
       Cli/                          # CLI 프로바이더 추상화 (7개)
       Claude/                       # Claude CLI 서비스 (9개)
       Codex/                        # Codex CLI 서비스 (3개)
-      Chat/                         # 채팅 & 스트리밍 (16개)
+      Chat/                         # 채팅 & 스트리밍 (17개)
         StreamEventHandlers/          # 스트림 이벤트 핸들러 파이프라인 (12개)
+      Events/                       # 도메인 중립 이벤트 버스 (3개)
       Sessions/                     # 세션 관리 (12개)
       Git/                          # Git 통합 (15개)
       Settings/                     # 설정 관리 (8개)
       Knowledge/                    # 컨텐츠 & 지식 (12개)
       Account/                      # 계정 관리 (4개)
       Plugin/                       # 플러그인 시스템 (8개)
-      Gamification/                 # 게이미피케이션 (4개)
+      Gamification/                 # 게이미피케이션 (2개)
+      Statistics/                   # 사용량 통계 (2개)
       Notification/                 # 알림 (3개)
       Infrastructure/               # 인프라 (18개)
       Migration/                    # 스키마 마이그레이션 (9개)
@@ -100,11 +102,13 @@ tests/
 ### Session & Workspace
 - `SessionService` - 세션 CRUD 및 영속화
 - `SessionInitializer` - 새 세션 초기화 로직
-- `SessionStatusMachine` - 세션 상태 머신 (idle/running/error)
+- `SessionStatusPolicy` - 세션 상태 전이 유효성 검증 (정적 정책, 상태 변경은 Session.TransitionStatus가 수행)
 - `SessionReplayService` - 세션 타임라인 리플레이 및 내비게이션
 - `SessionListDataService` / `SessionListFacade` - 세션 목록 데이터 및 UI 파사드
 - `ActiveSessionRegistry` - 활성 세션 레지스트리 (동시 세션 제한)
-- `StatsCacheService` - 사용량 통계 캐싱 및 집계 (stats-cache.json)
+
+### Statistics / Usage (`Services/Statistics/`)
+- `StatsCacheService` / `IStatsCacheService` - 사용량 통계(토큰/비용/활동) 읽기 전용 집계. `~/.claude/stats-cache.json` + `history.jsonl`을 수정하지 않고 그대로 읽음 (게임화 전용이 아니라 일반 사용량 대시보드가 소비)
 
 ### Git
 - `GitService` / `IGitService` - Git 작업 (clone, diff, branches, merge-tree 시뮬레이션) + 캐싱
@@ -145,7 +149,7 @@ tests/
 - `HooksEngine` / `HooksFileEnvelope` - 커스텀 훅 실행 엔진
 
 ### Gamification & Notification
-- `GamificationService` - 업적 계산, 스트릭, 레벨 진행 (9카테고리, 105업적)
+- `GamificationService` - 업적 계산, 스트릭, 레벨 진행 (9카테고리, 105업적). 사용량 통계는 `StatsCacheService`(Statistics)에 위임
 - `NotificationHistoryService` - 알림 이력 관리
 - `ReleaseNotesService` (Desktop) - 인앱 릴리스 노트 (changelog.json)
 
@@ -199,7 +203,7 @@ tests/
 - `ClaudeSettings` / `CliCapabilities` - CLI 설정 및 기능
 - `ModelDefinitions` - 지원 모델 목록
 - `GamificationModels` - 레벨, 업적, 스트릭
-- `StatsCacheModels` - 통계 캐시
+- `StatsCacheModels` - 통계 캐시 역직렬화 모델 (Models/Statistics)
 - `SessionReplayModels` - 리플레이
 - `GitContext` / `GitRepoInfo` / `BranchInfo` / `DiffInfo` / `TrackedPullRequest` - Git
 - `RemoteInfo` - 원격 저장소 URL 및 리모트 모드 (GitHub / Other)
@@ -218,7 +222,7 @@ tests/
 - `NotificationRecord` - 알림
 - `ReleaseNote` - 릴리스 노트
 - `SyncState` - 동기화 상태
-- `UsageEntry` - 사용량
+- `UsageStats` - 사용량 통계 (토큰/비용/모델별, Models/Statistics)
 - `AgentType` / `ConventionalCommitType` / `RightPanelMode` - 열거형
 - `CityNames` - 세션 자동 이름용 도시명
 

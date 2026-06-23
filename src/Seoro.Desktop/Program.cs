@@ -194,7 +194,7 @@ public static class Program
         // App Services
         appBuilder.Services.AddSingleton<IShellService, ShellService>();
         appBuilder.Services.AddSingleton<IActiveSessionRegistry, ActiveSessionRegistry>();
-        appBuilder.Services.AddSingleton<IChatEventBus, ChatEventBus>();
+        appBuilder.Services.AddSingleton<IEventBus, EventBus>();
         appBuilder.Services.AddSingleton<IChatState, ChatState>();
         appBuilder.Services.AddSingleton<IMessageQueueService, MessageQueueService>();
         appBuilder.Services.AddSingleton<LightboxService>();
@@ -336,7 +336,7 @@ public static class Program
                 if (chatState?.HasAnyStreaming() != true) return false; // allow close
 
                 // Block the OS close and let the Blazor UI handle the confirmation dialog
-                var eventBus = app.Services.GetService<IChatEventBus>();
+                var eventBus = app.Services.GetService<IEventBus>();
                 eventBus?.Publish(new WindowCloseRequestedEvent());
                 return true; // cancel close
             }

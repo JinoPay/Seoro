@@ -3,7 +3,7 @@ using Seoro.Shared.Services;
 
 namespace Seoro.Shared.Tests;
 
-public class SessionStatusMachineTests
+public class SessionStatusPolicyTests
 {
     [Theory]
     [InlineData(SessionStatus.Initializing, SessionStatus.Pending, true)]
@@ -22,7 +22,7 @@ public class SessionStatusMachineTests
     [InlineData(SessionStatus.Archived, SessionStatus.Initializing, false)]
     public void IsValidTransition_ReturnsExpected(SessionStatus from, SessionStatus to, bool expected)
     {
-        Assert.Equal(expected, SessionStatusMachine.IsValidTransition(from, to));
+        Assert.Equal(expected, SessionStatusPolicy.IsValidTransition(from, to));
     }
 
     [Theory]
@@ -31,7 +31,7 @@ public class SessionStatusMachineTests
     [InlineData(SessionStatus.Archived)]
     public void IsValidTransition_SameStatus_AlwaysTrue(SessionStatus status)
     {
-        Assert.True(SessionStatusMachine.IsValidTransition(status, status));
+        Assert.True(SessionStatusPolicy.IsValidTransition(status, status));
     }
 
     [Fact]

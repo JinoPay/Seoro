@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Seoro.Shared.Services.Chat.StreamEventHandlers;
 
-public class ContentBlockDeltaHandler(IChatState chatState, IChatEventBus eventBus, ILogger<ContentBlockDeltaHandler> logger) : IStreamEventHandler
+public class ContentBlockDeltaHandler(IChatState chatState, IEventBus eventBus, ILogger<ContentBlockDeltaHandler> logger) : IStreamEventHandler
 {
     public string EventType => "content_block_delta";
 

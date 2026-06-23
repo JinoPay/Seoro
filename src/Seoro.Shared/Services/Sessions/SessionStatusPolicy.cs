@@ -1,7 +1,7 @@
 
 namespace Seoro.Shared.Services.Sessions;
 
-public static class SessionStatusMachine
+public static class SessionStatusPolicy
 {
     private static readonly Dictionary<SessionStatus, HashSet<SessionStatus>> ValidTransitions = new()
     {

@@ -16,7 +16,7 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
 {
     private const int DebounceMs = 200;
     private readonly IChatState _chatState;
-    private readonly IChatEventBus _eventBus;
+    private readonly IEventBus _eventBus;
     private readonly IDisposable _sessionChangeSub;
     private readonly IGitService _gitService;
     private readonly ILogger<GitBranchWatcherService> _logger;
@@ -28,7 +28,7 @@ public partial class GitBranchWatcherService : IGitBranchWatcherService
 
     public GitBranchWatcherService(
         IChatState chatState,
-        IChatEventBus eventBus,
+        IEventBus eventBus,
         IGitService gitService,
         ILogger<GitBranchWatcherService> logger)
     {

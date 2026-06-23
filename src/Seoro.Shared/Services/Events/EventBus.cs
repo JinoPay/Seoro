@@ -1,15 +1,15 @@
 using System.Collections.Concurrent;
 
-namespace Seoro.Shared.Services.Chat;
+namespace Seoro.Shared.Services.Events;
 
-public class ChatEventBus : IChatEventBus
+public class EventBus : IEventBus
 {
     private readonly ConcurrentDictionary<Type, List<Delegate>> _handlers = new();
     private readonly Lock _lock = new();
 
     public event Action? OnAny;
 
-    public IDisposable Subscribe<T>(Action<T> handler) where T : ChatEvent
+    public IDisposable Subscribe<T>(Action<T> handler) where T : DomainEvent
     {
         var list = _handlers.GetOrAdd(typeof(T), _ => new List<Delegate>());
         lock (_lock)
@@ -26,7 +26,7 @@ public class ChatEventBus : IChatEventBus
         });
     }
 
-    public void Publish<T>(T evt) where T : ChatEvent
+    public void Publish<T>(T evt) where T : DomainEvent
     {
         // Typed subscribers
         if (_handlers.TryGetValue(typeof(T), out var list))

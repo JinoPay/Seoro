@@ -1,4 +1,4 @@
-namespace Seoro.Shared.Models.Common;
+namespace Seoro.Shared.Models.Statistics;
 
 public class UsageStats
 {

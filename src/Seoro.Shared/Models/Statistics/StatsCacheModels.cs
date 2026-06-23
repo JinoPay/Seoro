@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Seoro.Shared.Models.Gamification;
+namespace Seoro.Shared.Models.Statistics;
 
 /// <summary>
 ///     ~/.claude/stats-cache.json을 위한 역직렬화 모델
