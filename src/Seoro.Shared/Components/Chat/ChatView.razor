@@ -12,7 +12,9 @@
 @inject IEventBus EventBus
 @inject ISettingsService SettingsService
 @inject IMessageQueueService MessageQueue
+@inject IToolPermissionCoordinator Coordinator
 @using Microsoft.Extensions.Logging
+@using Seoro.Shared.Services.Cli
 @implements IDisposable
 
 @ChatContentFragment
@@ -75,7 +77,7 @@
             @* 사용자 질문 막대 *@
             <AskUserQuestionBar IsVisible="@(_askUserBarVisible && !_planReviewVisible)"
                                 QuestionInput="@_askUserQuestionInput"
-                                OnResponse="HandleAskUserBarResponse"/>
+                                OnAnswer="HandleAskUserBarResponse"/>
 
             @* 플랜 리뷰 막대 *@
             <PlanReviewBar IsVisible="_planReviewVisible"
@@ -147,6 +149,7 @@
     private IDisposable? _effortLevelSub;
     private IDisposable? _mergeRequestSub;
     private IDisposable? _approvePlanSub;
+    private IDisposable? _toolPermissionSub;
 
     protected override void OnInitialized()
     {
@@ -183,6 +186,41 @@
                 if (!_planReviewVisible) return;
                 await HandlePlanReviewAction(PlanReviewAction.Approve);
             }));
+
+        // 대화형 권한 요청(AskUserQuestion/ExitPlanMode): 턴 진행 중에 콜백→코디네이터가 발행한다.
+        _toolPermissionSub = EventBus.Subscribe<ToolPermissionRequestedEvent>(e =>
+            InvokeAsync(() => HandleToolPermissionRequested(e)));
+    }
+
+    private void HandleToolPermissionRequested(ToolPermissionRequestedEvent e)
+    {
+        // UI 막대는 현재 보고 있는 세션일 때만 띄운다. 다른 세션의 보류 요청은 코디네이터가
+        // 보관하며, 사용자가 그 세션으로 전환하면 HandleStateChanged가 PeekPending으로 복원한다.
+        if (e.SessionId != ChatState.CurrentSession?.Id)
+            return;
+
+        ApplyPendingPermission(e.Request);
+        StateHasChanged();
+    }
+
+    private void ApplyPendingPermission(ToolPermissionRequest req)
+    {
+        if (req.Kind == ToolPermissionKind.AskUserQuestion)
+        {
+            _askUserBarVisible = true;
+            _askUserQuestionInput = req.RawInputJson;
+            _planReviewVisible = false;
+        }
+        else if (req.Kind == ToolPermissionKind.ExitPlanMode)
+        {
+            _planReviewVisible = true;
+            _planContent = req.PlanText;
+            _planFilePath = null;
+            _planSessionId = ChatState.CurrentSession?.Id;
+            _lastPlanContent = req.PlanText;
+            _lastPlanFilePath = null;
+            _askUserBarVisible = false;
+        }
     }
 
     private void HandleStateChanged()
@@ -204,75 +242,85 @@
                     return;
                 }
 
-                // 세션에서 사용자 질문 막대 상태 복원 (세션 전환 중에도 유지됨)
+                // 대화형 권한 보류 복원: 양방향(Claude)은 코디네이터가 권위 소스다.
+                // 권한 콜백 대기 중에는 IsStreaming=true이므로 아래 세션필드 기반 복원은 트리거되지 않는다.
                 var currentId = ChatState.CurrentSession?.Id;
-                var pendingAskInput = ChatState.CurrentSession?.PendingAskUserQuestionInput;
-                if (!ChatState.IsStreaming && pendingAskInput != null)
+                var pendingPerm = currentId != null ? Coordinator.PeekPending(currentId) : null;
+                if (pendingPerm != null)
                 {
-                    _askUserBarVisible = true;
-                    _askUserQuestionInput = pendingAskInput;
-                    // 사용자 질문이 플랜 리뷰를 대체함
-                    _planReviewVisible = false;
+                    ApplyPendingPermission(pendingPerm);
                 }
                 else
                 {
-                    // 세션 전환 시에만 막대 지우기 (모든 상태 변경이 아님)
-                    if (pendingAskInput == null)
+                    // 세션에서 사용자 질문 막대 상태 복원 (Codex/폴백 경로)
+                    var pendingAskInput = ChatState.CurrentSession?.PendingAskUserQuestionInput;
+                    if (!ChatState.IsStreaming && pendingAskInput != null)
                     {
-                        _askUserBarVisible = false;
-                        _askUserQuestionInput = null;
+                        _askUserBarVisible = true;
+                        _askUserQuestionInput = pendingAskInput;
+                        // 사용자 질문이 플랜 리뷰를 대체함
+                        _planReviewVisible = false;
                     }
-                }
-
-                // 현재 세션의 플랜 리뷰 상태 복원 (사용자 질문이 없는 경우만)
-                if (!_askUserBarVisible
-                    && ChatState.CurrentSession is { PlanCompleted: true, PermissionMode: "plan" }
-                    && !ChatState.IsStreaming)
-                {
-                    _planReviewVisible = true;
-
-                    // 이 세션의 콘텐츠가 없을 때만 콘텐츠 복원
-                    if (_planSessionId != currentId || _planContent == null)
+                    else
                     {
-                        _planSessionId = currentId;
-                        _planContent = null;
-                        _planFilePath = ChatState.CurrentSession.PlanFilePath;
-
-                        if (!string.IsNullOrEmpty(ChatState.CurrentSession.Git.WorktreePath))
-                            _ = RestorePlanContentAsync(
-                                ChatState.CurrentSession.Git.WorktreePath,
-                                ChatState.CurrentSession.PlanFilePath,
-                                ChatState.CurrentSession.PlanContent);
+                        // 세션 전환 시에만 막대 지우기 (모든 상태 변경이 아님)
+                        if (pendingAskInput == null)
+                        {
+                            _askUserBarVisible = false;
+                            _askUserQuestionInput = null;
+                        }
                     }
-                }
-                else if (!_askUserBarVisible)
-                {
-                    _planReviewVisible = false;
 
-                    if (_planSessionId != currentId)
+                    // 현재 세션의 플랜 리뷰 상태 복원 (사용자 질문이 없는 경우만)
+                    if (!_askUserBarVisible
+                        && ChatState.CurrentSession is { PlanCompleted: true, PermissionMode: "plan" }
+                        && !ChatState.IsStreaming)
                     {
-                        _planContent = null;
-                        _planFilePath = null;
-                        _planSessionId = currentId;
+                        _planReviewVisible = true;
 
-                        // 이 세션이 이전에 플랜 파일을 가지고 있었다면 뷰어 버튼 복원
-                        if (!string.IsNullOrEmpty(ChatState.CurrentSession?.PlanFilePath)
-                            && !string.IsNullOrEmpty(ChatState.CurrentSession?.Git.WorktreePath))
+                        // 이 세션의 콘텐츠가 없을 때만 콘텐츠 복원
+                        if (_planSessionId != currentId || _planContent == null)
                         {
-                            _ = RestorePlanContentAsync(
-                                ChatState.CurrentSession.Git.WorktreePath,
-                                ChatState.CurrentSession.PlanFilePath,
-                                ChatState.CurrentSession.PlanContent);
+                            _planSessionId = currentId;
+                            _planContent = null;
+                            _planFilePath = ChatState.CurrentSession.PlanFilePath;
+
+                            if (!string.IsNullOrEmpty(ChatState.CurrentSession.Git.WorktreePath))
+                                _ = RestorePlanContentAsync(
+                                    ChatState.CurrentSession.Git.WorktreePath,
+                                    ChatState.CurrentSession.PlanFilePath,
+                                    ChatState.CurrentSession.PlanContent);
                         }
-                        else if (!string.IsNullOrEmpty(ChatState.CurrentSession?.PlanContent))
+                    }
+                    else if (!_askUserBarVisible)
+                    {
+                        _planReviewVisible = false;
+
+                        if (_planSessionId != currentId)
                         {
-                            _lastPlanFilePath = ChatState.CurrentSession.PlanFilePath;
-                            _lastPlanContent = ChatState.CurrentSession.PlanContent;
-                        }
-                        else
-                        {
-                            _lastPlanFilePath = null;
-                            _lastPlanContent = null;
+                            _planContent = null;
+                            _planFilePath = null;
+                            _planSessionId = currentId;
+
+                            // 이 세션이 이전에 플랜 파일을 가지고 있었다면 뷰어 버튼 복원
+                            if (!string.IsNullOrEmpty(ChatState.CurrentSession?.PlanFilePath)
+                                && !string.IsNullOrEmpty(ChatState.CurrentSession?.Git.WorktreePath))
+                            {
+                                _ = RestorePlanContentAsync(
+                                    ChatState.CurrentSession.Git.WorktreePath,
+                                    ChatState.CurrentSession.PlanFilePath,
+                                    ChatState.CurrentSession.PlanContent);
+                            }
+                            else if (!string.IsNullOrEmpty(ChatState.CurrentSession?.PlanContent))
+                            {
+                                _lastPlanFilePath = ChatState.CurrentSession.PlanFilePath;
+                                _lastPlanContent = ChatState.CurrentSession.PlanContent;
+                            }
+                            else
+                            {
+                                _lastPlanFilePath = null;
+                                _lastPlanContent = null;
+                            }
                         }
                     }
                 }
@@ -461,42 +509,41 @@
         return HandleSend(new ChatInputMessage { Text = response });
     }
 
-    private Task HandleAskUserBarResponse(string response)
+    private void HandleAskUserBarResponse(AllowAnswerDecision answer)
     {
         _askUserBarVisible = false;
         _askUserQuestionInput = null;
+        var session = ChatState.CurrentSession;
+        if (session == null) return;
+
         // 세션 전환 시 표시줄이 다시 나타나지 않도록 보관된 상태 지우기
-        if (ChatState.CurrentSession != null)
-            ChatState.CurrentSession.PendingAskUserQuestionInput = null;
-        return HandleSend(new ChatInputMessage { Text = response });
+        session.PendingAskUserQuestionInput = null;
+        // 사용자 선택을 도구 응답으로 회신 → 같은 턴이 이어진다(새 메시지 아님).
+        Coordinator.Resolve(session.Id, answer);
     }
 
     private async Task HandlePlanReviewAction(PlanReviewAction action)
     {
         _planReviewVisible = false;
+        var session = ChatState.CurrentSession;
+        if (session == null) return;
 
         switch (action)
         {
             case PlanReviewAction.Approve:
+                session.PlanCompleted = false;
+                // 도구 응답으로 승인 회신 + 권한 모드 전환(bypassAll). CLI 측 전환은 코디네이터 결정이 수행.
+                Coordinator.Resolve(session.Id, new AllowDecision("bypassAll"));
                 await HandlePermissionModeChanged("bypassAll");
-                var planRef = !string.IsNullOrEmpty(_planFilePath)
-                    ? "저장된 플랜 파일을 참고하여 "
-                    : "방금 검토한 플랜 내용을 참고하여 ";
-                await HandleSend(new ChatInputMessage
-                {
-                    Text = $"플랜을 승인합니다. {planRef}구현을 진행해주세요. 플랜의 각 단계를 순서대로 실행하세요."
-                });
-                if (ChatState.CurrentSession != null)
-                {
-                    ChatState.CurrentSession.PlanCompleted = false;
-                }
-
                 break;
 
             case PlanReviewAction.Advice:
+                // 피드백은 InputArea 경로(HandleSend)에서 DenyDecision으로 처리된다.
                 break;
 
             case PlanReviewAction.Reject:
+                // 플랜 거부 → 도구 거부(중단)로 회신하고 스트림도 취소해 확실히 종료한다.
+                Coordinator.Resolve(session.Id, new DenyDecision("사용자가 플랜을 거부함", Interrupt: true));
                 HandleCancel();
                 break;
         }
@@ -518,6 +565,34 @@
             return Task.CompletedTask;
 
         var isCurrentSession = ChatState.CurrentSession?.Id == session.Id;
+
+        // 대화형 권한 보류 중에는 입력을 새 메시지가 아닌 권한 응답으로 라우팅한다(스트림이 콜백 대기 중).
+        if (Coordinator.PeekPending(session.Id) is { } pendingPerm
+            && !string.IsNullOrWhiteSpace(input.Text))
+        {
+            if (pendingPerm.Kind == ToolPermissionKind.ExitPlanMode)
+            {
+                if (isCurrentSession) _planReviewVisible = false;
+                ChatState.AddUserMessage(session, input.Text);
+                Coordinator.Resolve(session.Id, new DenyDecision(
+                    $"플랜에 대한 피드백: {input.Text}\n\n이 피드백을 반영하여 플랜을 수정해주세요."));
+                return Task.CompletedTask;
+            }
+
+            if (pendingPerm.Kind == ToolPermissionKind.AskUserQuestion)
+            {
+                if (isCurrentSession)
+                {
+                    _askUserBarVisible = false;
+                    _askUserQuestionInput = null;
+                }
+                session.PendingAskUserQuestionInput = null;
+                ChatState.AddUserMessage(session, input.Text);
+                Coordinator.Resolve(session.Id, new AllowAnswerDecision(
+                    new Dictionary<string, IReadOnlyList<string>>(), input.Text));
+                return Task.CompletedTask;
+            }
+        }
 
         // 스트리밍 중에는 큐로 라우팅 (해당 세션 기준)
         if (ChatState.Streaming.IsSessionStreaming(session.Id))
@@ -782,9 +857,12 @@
         _effortLevelSub?.Dispose();
         _mergeRequestSub?.Dispose();
         _approvePlanSub?.Dispose();
+        _toolPermissionSub?.Dispose();
 
-        foreach (var (_, (cts, task)) in _sessionTasks)
+        foreach (var (sessionId, (cts, task)) in _sessionTasks)
         {
+            // 보류 중인 권한 콜백을 풀어 백그라운드 스트림이 매달리지 않게 한다.
+            Coordinator.CancelPending(sessionId, "채팅 뷰 종료");
             cts.Cancel();
             // Observe the task to prevent UnobservedTaskException
             if (task is { IsCompleted: false })

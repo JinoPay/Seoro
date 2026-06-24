@@ -1,4 +1,5 @@
 @using System.Text.Json
+@using Seoro.Shared.Services.Cli
 @if (IsVisible && _questions.Count > 0)
 {
     <div class="askbar-panel">
@@ -125,7 +126,9 @@
 @code {
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public string? QuestionInput { get; set; }
-    [Parameter] public EventCallback<string> OnResponse { get; set; }
+
+    /// <summary>사용자 선택을 구조화 응답(질문 텍스트→선택값)으로 회신한다.</summary>
+    [Parameter] public EventCallback<AllowAnswerDecision> OnAnswer { get; set; }
 
     private record AskOption(string Label, string? Description, string? Preview = null);
 
@@ -210,21 +213,20 @@
         if (!CanSubmit || _submitted) return;
         _submitted = true;
 
-        if (OnResponse.HasDelegate)
+        if (OnAnswer.HasDelegate)
         {
-            string GetAnswer(int i)
+            // 질문 텍스트 → 선택값 목록. 커스텀 텍스트는 자유응답("Other")으로 동일 키에 넣는다.
+            var selections = new Dictionary<string, IReadOnlyList<string>>();
+            for (var i = 0; i < _questions.Count; i++)
             {
-                return !string.IsNullOrWhiteSpace(_customTexts[i])
-                    ? _customTexts[i].Trim()
-                    : string.Join(", ", _selections[i]);
+                var custom = _customTexts[i]?.Trim();
+                if (!string.IsNullOrWhiteSpace(custom))
+                    selections[_questions[i].Question] = new List<string> { custom };
+                else if (_selections[i].Count > 0)
+                    selections[_questions[i].Question] = _selections[i].ToList();
             }
 
-            var response = _questions.Count == 1
-                ? GetAnswer(0)
-                : string.Join("\n", _questions.Select((q, i) =>
-                    $"{q.Header ?? q.Question}: {GetAnswer(i)}"));
-
-            await OnResponse.InvokeAsync(response);
+            await OnAnswer.InvokeAsync(new AllowAnswerDecision(selections));
         }
     }
 

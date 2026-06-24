@@ -35,6 +35,17 @@ public class StreamEventProcessor : IStreamEventProcessor
         ctx.Session.PendingInputTokens = 0;
         ctx.Session.PendingOutputTokens = 0;
 
+        // 양방향 권한 콜백(Claude)이 처리하는 경우 사후 휴리스틱 감지는 건너뛴다(중복 표시 방지).
+        if (ctx.SuppressInteractiveDetection)
+        {
+            ctx.PlanReviewVisible = false;
+            ctx.QuickResponseVisible = false;
+            ctx.QuickResponseOptions = [];
+            if (ctx.Session.Git.IsLocalDir)
+                ExtractAndApplyTitleMarker(ctx);
+            return;
+        }
+
         // Detect plan completion
         if (ctx.Session.PermissionMode == "plan")
         {

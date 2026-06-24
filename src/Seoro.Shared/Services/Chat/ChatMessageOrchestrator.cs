@@ -15,6 +15,7 @@ public class ChatMessageOrchestrator(
     IGitBranchWatcherService branchWatcher,
     IClaudeSettingsService claudeSettingsService,
     IEventBus eventBus,
+    IToolPermissionCoordinator toolPermissionCoordinator,
     ILogger<ChatMessageOrchestrator> logger)
     : IChatMessageOrchestrator
 {
@@ -116,7 +117,10 @@ public class ChatMessageOrchestrator(
         {
             Session = session,
             AssistantMessage = assistantMsg,
-            StreamStartTime = DateTime.UtcNow
+            StreamStartTime = DateTime.UtcNow,
+            // Claude는 대화형 권한 콜백으로 AskUserQuestion/ExitPlanMode를 실시간 처리하므로
+            // 사후 휴리스틱 감지를 끈다. Codex는 콜백 미지원이라 기존 휴리스틱을 유지한다.
+            SuppressInteractiveDetection = !session.IsCodex
         };
         string? errorMessage = null;
         var wasCancelled = false;
@@ -149,7 +153,10 @@ public class ChatMessageOrchestrator(
                 SystemPrompt = systemPrompt,
                 ContinueMode = continueMode,
                 AllowedTools = mcpAllowedTools,
-                AdditionalDirs = session.Git.AdditionalDirs.Count > 0 ? session.Git.AdditionalDirs : null
+                AdditionalDirs = session.Git.AdditionalDirs.Count > 0 ? session.Git.AdditionalDirs : null,
+                // 대화형 도구(AskUserQuestion/ExitPlanMode) 권한 요청을 코디네이터→UI로 라우팅한다.
+                // Claude 프로바이더만 사용하며, Codex 경로에서는 무시된다.
+                PermissionHandler = (req, hct) => toolPermissionCoordinator.RequestAsync(session.Id, req, hct)
             };
 
             await foreach (var evt in provider.SendMessageAsync(sendOptions, ct).WithCancellation(ct))

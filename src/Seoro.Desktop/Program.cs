@@ -254,6 +254,7 @@ public static class Program
         appBuilder.Services.AddSingleton<ITerminalService, TerminalService>();
         appBuilder.Services.AddSingleton<ISystemPromptBuilder, SystemPromptBuilder>();
         appBuilder.Services.AddSingleton<ISessionInitializer, SessionInitializer>();
+        appBuilder.Services.AddSingleton<IToolPermissionCoordinator, ToolPermissionCoordinator>();
         appBuilder.Services.AddSingleton<IChatMessageOrchestrator, ChatMessageOrchestrator>();
         appBuilder.Services.AddSingleton<ISessionDiffStatsService, SessionListDiffStatsService>();
         appBuilder.Services.AddSingleton<SessionListState>();

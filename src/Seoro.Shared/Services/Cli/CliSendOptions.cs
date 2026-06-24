@@ -50,4 +50,10 @@ public record CliSendOptions
 
     /// <summary>차단할 도구 목록. Claude 전용 (Codex에서는 무시).</summary>
     public List<string>? DisallowedTools { get; init; }
+
+    /// <summary>
+    ///     대화형 도구(AskUserQuestion/ExitPlanMode) 권한 요청 핸들러. Claude 전용.
+    ///     지정 시 세션 기반 control 프로토콜로 사용자 응답을 도구에 회신한다. null이면 비활성.
+    /// </summary>
+    public ToolPermissionHandler? PermissionHandler { get; init; }
 }

@@ -37,6 +37,13 @@ public class StreamProcessingContext
     public string? CurrentParentToolUseId { get; set; }
 
     /// <summary>
+    ///     true면 AskUserQuestion/ExitPlanMode 사후 휴리스틱 감지를 건너뛴다.
+    ///     양방향 권한 콜백(Claude)이 활성일 때 설정 — 대화형 도구는 콜백→코디네이터→UI 경로로
+    ///     실시간 처리되므로, 턴 종료 후 다시 감지해 바를 중복 표시하면 안 된다.
+    /// </summary>
+    public bool SuppressInteractiveDetection { get; set; }
+
+    /// <summary>
     ///     Plan file path detected from Write/Edit tool calls targeting worktree-local plan directories.
     ///     Used to avoid picking up unrelated plan files from other sessions.
     /// </summary>

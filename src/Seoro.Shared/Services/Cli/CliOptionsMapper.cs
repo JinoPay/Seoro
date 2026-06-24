@@ -76,7 +76,7 @@ public static class CliOptionsMapper
             ? null
             : effort;
 
-    private static PermissionMode? MapPermissionMode(string? mode) => mode switch
+    internal static PermissionMode? MapPermissionMode(string? mode) => mode switch
     {
         "plan" => PermissionMode.Plan,
         "acceptEdits" => PermissionMode.AcceptEdits,

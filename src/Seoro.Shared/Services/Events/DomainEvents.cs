@@ -32,6 +32,12 @@ public sealed record ToggleSyncEvent : DomainEvent;
 
 public sealed record ApprovePlanEvent : DomainEvent;
 
+/// <summary>
+///     CLI가 대화형 도구(AskUserQuestion/ExitPlanMode) 실행 전 사용자 승인을 요청할 때 발행.
+///     <see cref="Chat.ToolPermissionCoordinator"/>가 발행하고, ChatView가 받아 응답 바를 띄운다.
+/// </summary>
+public sealed record ToolPermissionRequestedEvent(string SessionId, Cli.ToolPermissionRequest Request) : DomainEvent;
+
 public sealed record WorktreeSyncStartedEvent(string SessionId, string WorkspaceId) : DomainEvent;
 
 public sealed record WorktreeSyncStoppedEvent(string SessionId, string WorkspaceId) : DomainEvent;
